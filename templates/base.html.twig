@@ -18,9 +18,26 @@
             <div class="container">
                 <a href="{{ path('app_home') }}" class="navbar-brand">👨‍👩‍👧‍👦 Family Plan</a>
                 <ul class="navbar-nav">
-                    <li><a href="{{ path('app_task_list') }}">Tasks</a></li>
-                    <li><a href="{{ path('app_user_list') }}">Users</a></li>
+                    {% if is_granted('ROLE_USER') %}
+                        <li><a href="{{ path('app_task_list') }}">Tasks</a></li>
+                    {% endif %}
+                    {% if is_granted('ROLE_ADMIN') %}
+                        <li><a href="{{ path('app_user_list') }}">Users</a></li>
+                    {% endif %}
                 </ul>
+                <div class="navbar-user">
+                    {% if app.user %}
+                        <span class="user-info">
+                            👤 {{ app.user.name }}
+                            {% if is_granted('ROLE_ADMIN') %}
+                                <span class="badge badge-admin">ADMIN</span>
+                            {% endif %}
+                        </span>
+                        <a href="{{ path('app_logout') }}" class="btn-logout">Logout</a>
+                    {% else %}
+                        <a href="{{ path('app_login') }}" class="btn-login">Login</a>
+                    {% endif %}
+                </div>
             </div>
         </nav>
         <main class="container">

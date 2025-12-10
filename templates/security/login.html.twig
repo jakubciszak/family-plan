@@ -1,0 +1,94 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Login - Family Plan{% endblock %}
+
+{% block body %}
+<div class="container" style="max-width: 500px; margin-top: 50px;">
+    <div class="card">
+        <div class="card-header">
+            <h1 class="text-center">🔐 Login to Family Plan</h1>
+        </div>
+        <div class="card-body">
+            {% if error %}
+                <div class="alert alert-danger">
+                    {{ error.messageKey|trans(error.messageData, 'security') }}
+                </div>
+            {% endif %}
+
+            <form method="post">
+                <div class="form-group mb-3">
+                    <label for="username">Email</label>
+                    <input type="email" 
+                           id="username" 
+                           name="_username" 
+                           class="form-control" 
+                           value="{{ last_username }}" 
+                           required 
+                           autofocus
+                           placeholder="admin@familyplan.local">
+                </div>
+
+                <div class="form-group mb-3">
+                    <label for="password">Password</label>
+                    <input type="password" 
+                           id="password" 
+                           name="_password" 
+                           class="form-control" 
+                           required
+                           placeholder="Enter your password">
+                </div>
+
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token('authenticate') }}">
+
+                <div class="d-grid gap-2">
+                    <button type="submit" class="btn btn-primary btn-lg">
+                        🔓 Sign in
+                    </button>
+                </div>
+
+                <div class="text-center mt-3">
+                    <small class="text-muted">
+                        Default credentials: admin@familyplan.local / admin123
+                    </small>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+    .card {
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        border-radius: 10px;
+        border: none;
+    }
+    
+    .card-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 10px 10px 0 0 !important;
+        padding: 1.5rem;
+    }
+    
+    .card-header h1 {
+        margin: 0;
+        font-size: 1.5rem;
+    }
+    
+    .form-control {
+        border-radius: 5px;
+        padding: 0.75rem;
+    }
+    
+    .btn-primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+        border-radius: 5px;
+        padding: 0.75rem;
+    }
+    
+    .btn-primary:hover {
+        background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+    }
+</style>
+{% endblock %}

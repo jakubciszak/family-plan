@@ -6,6 +6,7 @@ A modern Symfony web application for organizing family house works with children
 
 - **Task Management**: Create tasks with points, frequency, and descriptions
 - **User Management**: Create user and admin accounts with role-based permissions
+- **Security & Authentication**: Symfony Security with form login and role-based access control
 - **Approval Workflow**: Admins can review and approve completed tasks
 - **Points System**: Reward system with configurable points (0-1000) per task
 - **Frequency-Based Tasks**: Support for Once, Daily, Weekly, and Monthly recurring tasks
@@ -68,11 +69,25 @@ npm run build
 # Create database and run migrations
 php bin/console doctrine:migrations:migrate
 
+# Create super admin user from .env configuration
+php bin/console app:create-super-admin
+
 # Start development server
 php -S localhost:8000 -t public
 ```
 
 Visit http://localhost:8000 in your browser.
+
+**Default Credentials:**
+- Email: `admin@familyplan.local`
+- Password: `admin123`
+
+You can change these in your `.env` file:
+```bash
+SUPER_ADMIN_EMAIL=admin@familyplan.local
+SUPER_ADMIN_NAME="Super Admin"
+SUPER_ADMIN_PASSWORD=admin123
+```
 
 ## 📁 Project Structure
 
@@ -97,6 +112,7 @@ src/
 │   │   └── Handler/                 # Command/Query handlers
 │   └── Infrastructure/
 │       ├── Persistence/             # Doctrine repositories
+│       └── Security/                # UserProvider for authentication
 │       └── Security/                # Security adapters (TODO)
 ├── TaskManagement/                  # Task Bounded Context
 │   ├── Domain/
@@ -136,17 +152,64 @@ npm run build
 npm run watch
 ```
 
+## 🔐 Security & Authentication
+
+The application uses Symfony Security with form-based authentication and role-based access control.
+
+### User Roles
+
+- **ROLE_USER**: Can view and complete tasks
+- **ROLE_ADMIN**: Can manage users, create tasks, and approve completed tasks
+
+### Access Control
+
+- `/login` - Public access
+- `/task` - Requires ROLE_USER
+- `/task/approve` - Requires ROLE_ADMIN
+- `/user` - Requires ROLE_ADMIN
+
+### Super Admin Setup
+
+The application uses environment variables to configure a super admin user. This allows easy deployment and configuration across different environments.
+
+1. Configure super admin credentials in `.env`:
+```bash
+SUPER_ADMIN_EMAIL=admin@familyplan.local
+SUPER_ADMIN_NAME="Super Admin"
+SUPER_ADMIN_PASSWORD=admin123
+```
+
+2. Create/update the super admin user:
+```bash
+php bin/console app:create-super-admin
+```
+
+This command will:
+- Create a new admin user if one doesn't exist with the configured email
+- Update the password if the user already exists
+- Promote the user to admin if they aren't already
+
+### Authentication Flow
+
+1. User visits protected route
+2. Redirected to `/login` if not authenticated
+3. Form login with email/password
+4. On success, redirected to home page
+5. User info and logout button shown in navbar
+
+### Security Architecture
+
+- **UserProvider**: Custom provider that loads users from the database via UserRepository
+- **Password Hashing**: Automatic hashing using Symfony's password hasher (bcrypt)
+- **CSRF Protection**: Enabled on login form
+- **User Entity**: Implements Symfony's `UserInterface` and `PasswordAuthenticatedUserInterface`
+
 ## 🚧 Known Issues & TODO
 
-### ORM Mapping for Value Objects
-The application currently has an issue with Doctrine ORM persistence of Value Objects and Enums. This needs to be resolved by:
-1. Creating custom Doctrine types for value objects
-2. Or using Doctrine lifecycle callbacks
-3. Or adding property accessors with proper annotations
-
-### Security Implementation
-- [ ] Configure Symfony Security
-- [ ] Implement user authentication
+### Future Enhancements
+- [ ] Implement password reset functionality
+- [ ] Add "Remember Me" functionality
+- [ ] Implement user registration (optional)
 - [ ] Add login/logout functionality
 - [ ] Implement role-based authorization
 

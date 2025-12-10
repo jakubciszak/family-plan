@@ -10,11 +10,13 @@ use App\UserManagement\Domain\ValueObject\Role;
 use App\UserManagement\Domain\Event\UserCreated;
 use DateTimeImmutable;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
+use Symfony\Component\Security\Core\User\UserInterface;
 
 #[ORM\Entity]
 #[ORM\Table(name: 'users')]
 #[ORM\Index(columns: ['email'])]
-class User
+class User implements UserInterface, PasswordAuthenticatedUserInterface
 {
     #[ORM\Transient]
     private array $domainEvents = [];
@@ -139,5 +141,21 @@ class User
     private function record(object $event): void
     {
         $this->domainEvents[] = $event;
+    }
+
+    // Symfony Security UserInterface methods
+    public function getUserIdentifier(): string
+    {
+        return $this->email->value();
+    }
+
+    public function getRoles(): array
+    {
+        return [$this->role->value];
+    }
+
+    public function eraseCredentials(): void
+    {
+        // Nothing to erase - we don't store plain passwords
     }
 }

@@ -51,6 +51,47 @@ body {
     color: #667eea;
 }
 
+.navbar-user {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.user-info {
+    color: #495057;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.btn-login,
+.btn-logout {
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    text-decoration: none;
+    font-size: 0.9rem;
+    transition: all 0.3s;
+}
+
+.btn-login {
+    background: #667eea;
+    color: white;
+}
+
+.btn-login:hover {
+    background: #5568d3;
+}
+
+.btn-logout {
+    background: #dc3545;
+    color: white;
+}
+
+.btn-logout:hover {
+    background: #c82333;
+}
+
 /* Container */
 .container {
     max-width: 1200px;
