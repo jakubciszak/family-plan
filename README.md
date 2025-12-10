@@ -25,6 +25,7 @@ A modern Symfony web application for organizing family house works with children
 - **Value Objects**: Email, Role, TaskName, Points, Frequency, TaskStatus, Uuid
 - **Domain Events**: UserCreated, TaskCreated, TaskCompleted, TaskApproved
 - **Repository Pattern**: Abstract persistence concerns
+- **State Pattern**: Task state management with clear transition rules (see [docs/STATE_PATTERN.md](docs/STATE_PATTERN.md))
 
 ### CQRS
 - **Commands**: CreateUser, CreateTask, CompleteTask, ApproveTask
