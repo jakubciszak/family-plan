@@ -8,6 +8,10 @@ doctrine:
 
         profiling_collect_backtrace: '%kernel.debug%'
         use_savepoints: true
+        types:
+            frequency_enum: 'App\TaskManagement\Infrastructure\Persistence\Doctrine\Type\FrequencyType'
+            task_status_enum: 'App\TaskManagement\Infrastructure\Persistence\Doctrine\Type\TaskStatusType'
+            role_enum: 'App\UserManagement\Infrastructure\Persistence\Doctrine\Type\RoleType'
     orm:
         auto_generate_proxy_classes: true
         enable_lazy_ghost_objects: true
@@ -18,12 +22,18 @@ doctrine:
             Doctrine\DBAL\Platforms\PostgreSQLPlatform: identity
         auto_mapping: true
         mappings:
-            App:
+            UserManagement:
                 type: attribute
                 is_bundle: false
-                dir: '%kernel.project_dir%/src/Entity'
-                prefix: 'App\Entity'
-                alias: App
+                dir: '%kernel.project_dir%/src/UserManagement/Domain/Entity'
+                prefix: 'App\UserManagement\Domain\Entity'
+                alias: UserManagement
+            TaskManagement:
+                type: attribute
+                is_bundle: false
+                dir: '%kernel.project_dir%/src/TaskManagement/Domain/Entity'
+                prefix: 'App\TaskManagement\Domain\Entity'
+                alias: TaskManagement
         controller_resolver:
             auto_mapping: false
 

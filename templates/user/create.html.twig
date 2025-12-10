@@ -1,0 +1,41 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Create User - Family Plan{% endblock %}
+
+{% block body %}
+<div class="create-user-container">
+    <h1>👤 Create New User</h1>
+    
+    <form method="post" class="user-form">
+        <div class="form-group">
+            <label for="name">Name *</label>
+            <input type="text" id="name" name="name" class="form-control" required maxlength="255">
+        </div>
+        
+        <div class="form-group">
+            <label for="email">Email *</label>
+            <input type="email" id="email" name="email" class="form-control" required>
+        </div>
+        
+        <div class="form-group">
+            <label for="password">Password *</label>
+            <input type="password" id="password" name="password" class="form-control" required minlength="6">
+            <small class="form-text">At least 6 characters</small>
+        </div>
+        
+        <div class="form-group">
+            <label for="role">Role *</label>
+            <select id="role" name="role" class="form-control" required>
+                <option value="ROLE_USER">👤 User</option>
+                <option value="ROLE_ADMIN">👑 Admin</option>
+            </select>
+            <small class="form-text">Admins can approve tasks and modify plans</small>
+        </div>
+        
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Create User</button>
+            <a href="{{ path('app_user_list') }}" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

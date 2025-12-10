@@ -13,24 +13,52 @@ use App\TaskManagement\Domain\Event\TaskCreated;
 use App\TaskManagement\Domain\Event\TaskCompleted;
 use App\TaskManagement\Domain\Event\TaskApproved;
 use DateTimeImmutable;
+use Doctrine\ORM\Mapping as ORM;
 
+#[ORM\Entity]
+#[ORM\Table(name: 'tasks')]
+#[ORM\Index(columns: ['status'])]
+#[ORM\Index(columns: ['assigned_user_id'])]
 class Task
 {
+    #[ORM\Transient]
     private array $domainEvents = [];
 
     private function __construct(
+        #[ORM\Id]
+        #[ORM\Column(type: 'string')]
         private Uuid $id,
+        
         private TaskName $name,
+        
+        #[ORM\Column(type: 'text')]
         private string $description,
+        
         private Points $points,
+        
         private Frequency $frequency,
+        
         private TaskStatus $status,
-        private ?Uuid $assignedUserId,
-        private ?Uuid $completedByUserId,
+        
+        #[ORM\Column(type: 'string', nullable: true)]
+        private ?string $assignedUserId,
+        
+        #[ORM\Column(type: 'string', nullable: true)]
+        private ?string $completedByUserId,
+        
+        #[ORM\Column(type: 'datetime_immutable', nullable: true)]
         private ?DateTimeImmutable $completedAt,
-        private ?Uuid $approvedByAdminId,
+        
+        #[ORM\Column(type: 'string', nullable: true)]
+        private ?string $approvedByAdminId,
+        
+        #[ORM\Column(type: 'datetime_immutable', nullable: true)]
         private ?DateTimeImmutable $approvedAt,
+        
+        #[ORM\Column(type: 'datetime_immutable')]
         private DateTimeImmutable $createdAt,
+        
+        #[ORM\Column(type: 'datetime_immutable', nullable: true)]
         private ?DateTimeImmutable $updatedAt = null
     ) {
     }
@@ -177,5 +205,50 @@ class Task
     private function record(object $event): void
     {
         $this->domainEvents[] = $event;
+    }
+
+    // Doctrine mapping methods
+    #[ORM\Column(type: 'string')]
+    private function getNameForPersistence(): string
+    {
+        return $this->name->value();
+    }
+
+    private function setNameFromPersistence(string $name): void
+    {
+        $this->name = TaskName::fromString($name);
+    }
+
+    #[ORM\Column(type: 'integer')]
+    private function getPointsForPersistence(): int
+    {
+        return $this->points->value();
+    }
+
+    private function setPointsFromPersistence(int $points): void
+    {
+        $this->points = Points::fromInt($points);
+    }
+
+    #[ORM\Column(type: 'string')]
+    private function getFrequencyForPersistence(): string
+    {
+        return $this->frequency->value;
+    }
+
+    private function setFrequencyFromPersistence(string $frequency): void
+    {
+        $this->frequency = Frequency::fromString($frequency);
+    }
+
+    #[ORM\Column(type: 'string')]
+    private function getStatusForPersistence(): string
+    {
+        return $this->status->value;
+    }
+
+    private function setStatusFromPersistence(string $status): void
+    {
+        $this->status = TaskStatus::fromString($status);
     }
 }
