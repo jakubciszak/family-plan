@@ -9,9 +9,13 @@ doctrine:
         profiling_collect_backtrace: '%kernel.debug%'
         use_savepoints: true
         types:
-            frequency_enum: 'App\TaskManagement\Infrastructure\Persistence\Doctrine\Type\FrequencyType'
-            task_status_enum: 'App\TaskManagement\Infrastructure\Persistence\Doctrine\Type\TaskStatusType'
-            role_enum: 'App\UserManagement\Infrastructure\Persistence\Doctrine\Type\RoleType'
+            uuid: App\Shared\Infrastructure\Persistence\Doctrine\Type\UuidType
+            email: App\UserManagement\Infrastructure\Persistence\Doctrine\Type\EmailType
+            role: App\UserManagement\Infrastructure\Persistence\Doctrine\Type\RoleType
+            task_name: App\TaskManagement\Infrastructure\Persistence\Doctrine\Type\TaskNameType
+            points: App\TaskManagement\Infrastructure\Persistence\Doctrine\Type\PointsType
+            frequency: App\TaskManagement\Infrastructure\Persistence\Doctrine\Type\FrequencyType
+            task_status: App\TaskManagement\Infrastructure\Persistence\Doctrine\Type\TaskStatusType
     orm:
         auto_generate_proxy_classes: true
         enable_lazy_ghost_objects: true

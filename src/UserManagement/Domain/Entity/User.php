@@ -9,18 +9,37 @@ use App\UserManagement\Domain\ValueObject\Email;
 use App\UserManagement\Domain\ValueObject\Role;
 use App\UserManagement\Domain\Event\UserCreated;
 use DateTimeImmutable;
+use Doctrine\ORM\Mapping as ORM;
 
+#[ORM\Entity]
+#[ORM\Table(name: 'users')]
+#[ORM\Index(columns: ['email'])]
 class User
 {
+    #[ORM\Transient]
     private array $domainEvents = [];
 
     private function __construct(
+        #[ORM\Id]
+        #[ORM\Column(type: 'uuid')]
         private Uuid $id,
+        
+        #[ORM\Column(type: 'string', length: 255)]
         private string $name,
+        
+        #[ORM\Column(type: 'email', unique: true)]
         private Email $email,
+        
+        #[ORM\Column(type: 'string', length: 255)]
         private string $password,
+        
+        #[ORM\Column(type: 'role')]
         private Role $role,
+        
+        #[ORM\Column(type: 'datetime_immutable')]
         private DateTimeImmutable $createdAt,
+        
+        #[ORM\Column(type: 'datetime_immutable', nullable: true)]
         private ?DateTimeImmutable $updatedAt = null
     ) {
     }
