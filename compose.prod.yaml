@@ -1,0 +1,10 @@
+services:
+  react-prod:
+    build:
+      context: .
+      dockerfile: docker/react/Dockerfile.prod
+    ports:
+      - "${REACT_PORT:-3001}:80"
+    environment:
+      - NGINX_HOST=localhost
+      - NGINX_PORT=80

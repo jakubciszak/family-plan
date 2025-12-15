@@ -7,6 +7,40 @@ This document describes the refactoring to separate the frontend (React) and bac
 The application has been refactored to follow a modern architecture:
 - **Backend**: REST API built with Symfony (PHP 8.5)
 - **Frontend**: React Single Page Application
+- **Docker**: Complete containerization for development and production
+- **API Docs**: OpenAPI/Swagger documentation
+
+## Quick Start
+
+### Using Docker (Recommended)
+
+```bash
+# Start all services
+docker compose up
+
+# Access points:
+# - Main app: http://localhost:8080
+# - React SPA: http://localhost:8080/app
+# - API: http://localhost:8080/api/*
+# - API Docs: http://localhost:8080/api-docs.html
+
+# For production build:
+docker compose -f compose.yaml -f compose.prod.yaml up
+```
+
+### Without Docker
+
+```bash
+# Install dependencies
+composer install
+npm install
+
+# Build frontend
+npm run build
+
+# Start server
+symfony server:start
+```
 
 ## Architecture Changes
 
@@ -32,6 +66,22 @@ Three new API controller classes have been created in `src/Presentation/Api/`:
    - `POST /api/auth/login` - Login
    - `GET /api/auth/me` - Get current authenticated user
    - `POST /api/auth/logout` - Logout
+
+#### API Documentation
+
+Interactive API documentation is available via OpenAPI/Swagger:
+
+- **Swagger UI**: http://localhost:8080/api-docs.html
+- **OpenAPI Spec**: http://localhost:8080/openapi.yaml
+
+Features:
+- Complete endpoint documentation
+- Interactive "Try it out" functionality
+- Request/response examples
+- Schema definitions
+- Authentication testing
+
+See `OPENAPI_DOCUMENTATION.md` for detailed information.
 
 #### API Response Format
 
@@ -103,12 +153,50 @@ assets/react/
 
 ### Installation
 
+#### Using Docker (Recommended)
+
+```bash
+# 1. Start all services (PHP, Nginx, PostgreSQL, Node/React)
+docker compose up -d
+
+# 2. Install PHP dependencies
+docker compose run --rm php composer install
+
+# 3. Run database migrations
+docker compose exec php php bin/console doctrine:migrations:migrate
+
+# 4. Create super admin
+docker compose exec php php bin/console app:create-super-admin
+
+# 5. Access the application
+# - Main app: http://localhost:8080
+# - React SPA: http://localhost:8080/app
+# - API: http://localhost:8080/api/*
+# - API Docs: http://localhost:8080/api-docs.html
+```
+
+The Docker setup includes:
+- **php**: PHP 8.5-fpm with Composer
+- **nginx**: Web server
+- **database**: PostgreSQL 16
+- **node**: Node.js 20 for asset compilation (watch mode)
+- **react-dev**: Dedicated React development server with hot reload
+
+For production deployment:
+```bash
+# Build and run production services
+docker compose -f compose.yaml -f compose.prod.yaml up --build
+
+# React production build is served by Nginx on port 3001
+```
+
+See `docker/react/README.md` for detailed Docker configuration information.
+
+#### Without Docker
+
 1. **Install PHP dependencies:**
    ```bash
-   # Using Docker (recommended)
-   docker compose run --rm php composer install
-   
-   # Or locally if you have PHP 8.5
+   # Requires PHP 8.5 locally
    composer install
    ```
 
@@ -141,10 +229,7 @@ assets/react/
 
 5. **Start the application:**
    ```bash
-   # Using Docker
-   docker compose up
-   
-   # Or using Symfony CLI
+   # Using Symfony CLI
    symfony server:start
    ```
 
