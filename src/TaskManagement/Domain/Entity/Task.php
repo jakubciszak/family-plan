@@ -9,7 +9,6 @@ use App\TaskManagement\Domain\ValueObject\TaskName;
 use App\TaskManagement\Domain\ValueObject\Points;
 use App\TaskManagement\Domain\ValueObject\Frequency;
 use App\TaskManagement\Domain\ValueObject\TaskStatus;
-use App\TaskManagement\Domain\ValueObject\ScheduleConfig;
 use App\TaskManagement\Domain\Event\TaskCreated;
 use App\TaskManagement\Domain\Event\TaskCompleted;
 use App\TaskManagement\Domain\Event\TaskApproved;
@@ -22,9 +21,6 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Table(name: 'tasks')]
 #[ORM\Index(columns: ['status'])]
 #[ORM\Index(columns: ['assigned_user_id'])]
-#[ORM\Index(columns: ['parent_task_id'])]
-#[ORM\Index(columns: ['is_template'])]
-#[ORM\Index(columns: ['scheduled_for'])]
 class Task
 {
     #[ORM\Transient]
@@ -49,21 +45,6 @@ class Task
         
         #[ORM\Column(type: 'frequency')]
         private Frequency $frequency,
-        
-        #[ORM\Column(type: 'schedule_config', nullable: true)]
-        private ?ScheduleConfig $scheduleConfig,
-        
-        #[ORM\Column(type: 'boolean')]
-        private bool $isTemplate,
-        
-        #[ORM\Column(type: 'boolean')]
-        private bool $isActive,
-        
-        #[ORM\Column(type: 'uuid', nullable: true)]
-        private ?Uuid $parentTaskId,
-        
-        #[ORM\Column(type: 'datetime_immutable', nullable: true)]
-        private ?DateTimeImmutable $scheduledFor,
         
         #[ORM\Column(type: 'task_status')]
         private TaskStatus $status,
@@ -105,11 +86,6 @@ class Task
             $description,
             $points,
             $frequency,
-            null, // scheduleConfig
-            false, // isTemplate
-            true, // isActive
-            null, // parentTaskId
-            null, // scheduledFor
             TaskStatus::PENDING,
             $assignedUserId,
             null,
@@ -120,104 +96,6 @@ class Task
         );
 
         $task->record(new TaskCreated($id, $name, $points, $frequency, new DateTimeImmutable()));
-
-        return $task;
-    }
-
-    public static function createTemplate(
-        Uuid $id,
-        TaskName $name,
-        string $description,
-        Points $points,
-        Frequency $frequency,
-        ScheduleConfig $scheduleConfig,
-        ?Uuid $assignedUserId = null
-    ): self {
-        $task = new self(
-            $id,
-            $name,
-            $description,
-            $points,
-            $frequency,
-            $scheduleConfig,
-            true, // isTemplate
-            true, // isActive
-            null, // parentTaskId
-            null, // scheduledFor
-            TaskStatus::PENDING,
-            $assignedUserId,
-            null,
-            null,
-            null,
-            null,
-            new DateTimeImmutable()
-        );
-
-        $task->record(new TaskCreated($id, $name, $points, $frequency, new DateTimeImmutable()));
-
-        return $task;
-    }
-
-    public static function createFromTemplate(
-        Uuid $id,
-        Uuid $parentTaskId,
-        DateTimeImmutable $scheduledFor,
-        ?Uuid $assignedUserId = null
-    ): self {
-        $task = new self(
-            $id,
-            TaskName::fromString('Pending'), // Will be populated from parent
-            '', // Will be populated from parent
-            Points::fromInt(0), // Will be populated from parent
-            Frequency::ONCE,
-            null,
-            false, // isTemplate
-            true, // isActive
-            $parentTaskId,
-            $scheduledFor,
-            TaskStatus::PENDING,
-            $assignedUserId,
-            null,
-            null,
-            null,
-            null,
-            new DateTimeImmutable()
-        );
-
-        $task->record(new TaskCreated($id, $task->name, $task->points, $task->frequency, new DateTimeImmutable()));
-
-        return $task;
-    }
-
-    public static function createScheduled(
-        Uuid $id,
-        TaskName $name,
-        string $description,
-        Points $points,
-        DateTimeImmutable $scheduledFor,
-        ?Uuid $assignedUserId = null
-    ): self {
-        $task = new self(
-            $id,
-            $name,
-            $description,
-            $points,
-            Frequency::ONCE,
-            null,
-            false, // isTemplate
-            true, // isActive
-            null, // parentTaskId
-            $scheduledFor,
-            TaskStatus::PENDING,
-            $assignedUserId,
-            null,
-            null,
-            null,
-            null,
-            new DateTimeImmutable()
-        );
-
-        $task->record(new TaskCreated($id, $name, $points, $task->frequency, new DateTimeImmutable()));
 
         return $task;
     }
@@ -245,31 +123,6 @@ class Task
     public function frequency(): Frequency
     {
         return $this->frequency;
-    }
-
-    public function scheduleConfig(): ?ScheduleConfig
-    {
-        return $this->scheduleConfig;
-    }
-
-    public function isTemplate(): bool
-    {
-        return $this->isTemplate;
-    }
-
-    public function isActive(): bool
-    {
-        return $this->isActive;
-    }
-
-    public function parentTaskId(): ?Uuid
-    {
-        return $this->parentTaskId;
-    }
-
-    public function scheduledFor(): ?DateTimeImmutable
-    {
-        return $this->scheduledFor;
     }
 
     public function status(): TaskStatus
@@ -344,39 +197,12 @@ class Task
         return $this->state;
     }
 
-    public function update(TaskName $name, string $description, Points $points, Frequency $frequency, ?ScheduleConfig $scheduleConfig = null): void
+    public function update(TaskName $name, string $description, Points $points, Frequency $frequency): void
     {
         $this->name = $name;
         $this->description = $description;
         $this->points = $points;
         $this->frequency = $frequency;
-        if ($scheduleConfig !== null) {
-            $this->scheduleConfig = $scheduleConfig;
-        }
-        $this->updatedAt = new DateTimeImmutable();
-    }
-
-    public function deactivate(): void
-    {
-        $this->isActive = false;
-        $this->updatedAt = new DateTimeImmutable();
-    }
-
-    public function activate(): void
-    {
-        $this->isActive = true;
-        $this->updatedAt = new DateTimeImmutable();
-    }
-
-    public function populateFromTemplate(Task $template): void
-    {
-        if (!$template->isTemplate()) {
-            throw new \DomainException('Can only populate from template tasks');
-        }
-        
-        $this->name = $template->name();
-        $this->description = $template->description();
-        $this->points = $template->points();
         $this->updatedAt = new DateTimeImmutable();
     }
 

@@ -14,7 +14,7 @@ use DateTimeImmutable;
 final class TaskExecutionMother
 {
     private ?Uuid $id = null;
-    private ?Uuid $routineTaskId = null;
+    private ?Uuid $taskTemplateId = null;
     private ?TaskName $name = null;
     private ?string $description = null;
     private ?Points $points = null;
@@ -26,7 +26,7 @@ final class TaskExecutionMother
     private ?Uuid $approvingAdminId = null;
     private bool $shouldReject = false;
     private bool $clearEvents = false;
-    private bool $noRoutineTask = false;
+    private bool $noTaskTemplate = false;
 
     private function __construct()
     {
@@ -43,31 +43,31 @@ final class TaskExecutionMother
         return $this;
     }
 
-    public function withRoutineTaskId(Uuid $routineTaskId): self
+    public function withTaskTemplateId(Uuid $taskTemplateId): self
     {
-        $this->routineTaskId = $routineTaskId;
-        $this->noRoutineTask = false;
+        $this->taskTemplateId = $taskTemplateId;
+        $this->noTaskTemplate = false;
         return $this;
     }
 
     public function withTemplateTaskId(Uuid $templateTaskId): self
     {
-        $this->routineTaskId = $templateTaskId;
-        $this->noRoutineTask = false;
+        $this->taskTemplateId = $templateTaskId;
+        $this->noTaskTemplate = false;
         return $this;
     }
 
-    public function withoutRoutineTask(): self
+    public function withoutTaskTemplate(): self
     {
-        $this->routineTaskId = null;
-        $this->noRoutineTask = true;
+        $this->taskTemplateId = null;
+        $this->noTaskTemplate = true;
         return $this;
     }
 
     public function withoutTemplateTask(): self
     {
-        $this->routineTaskId = null;
-        $this->noRoutineTask = true;
+        $this->taskTemplateId = null;
+        $this->noTaskTemplate = true;
         return $this;
     }
 
@@ -136,7 +136,7 @@ final class TaskExecutionMother
         $id = $this->id ?? UuidMother::random();
         $scheduledFor = $this->scheduledFor ?? new DateTimeImmutable();
 
-        if ($this->noRoutineTask) {
+        if ($this->noTaskTemplate) {
             // One-time task execution
             $taskExecution = TaskExecution::createOneTime(
                 $id,
@@ -150,7 +150,7 @@ final class TaskExecutionMother
             // Task execution from template task
             $taskExecution = TaskExecution::createFromTemplate(
                 $id,
-                $this->routineTaskId ?? UuidMother::random(),
+                $this->taskTemplateId ?? UuidMother::random(),
                 $scheduledFor,
                 $this->assignedUserId
             );
@@ -181,10 +181,10 @@ final class TaskExecutionMother
         return self::aTaskExecution()->build();
     }
 
-    public static function fromRoutineTask(Uuid $routineTaskId): TaskExecution
+    public static function fromTaskTemplate(Uuid $taskTemplateId): TaskExecution
     {
         return self::aTaskExecution()
-            ->withRoutineTaskId($routineTaskId)
+            ->withTaskTemplateId($taskTemplateId)
             ->build();
     }
 
@@ -198,7 +198,7 @@ final class TaskExecutionMother
     public static function oneTime(): TaskExecution
     {
         return self::aTaskExecution()
-            ->withoutRoutineTask()
+            ->withoutTaskTemplate()
             ->withName(TaskNameMother::create('One-time task'))
             ->build();
     }
@@ -209,14 +209,14 @@ final class TaskExecutionMother
         
         if ($isOneTime) {
             return self::aTaskExecution()
-                ->withoutRoutineTask()
+                ->withoutTaskTemplate()
                 ->withName(TaskNameMother::random())
                 ->withPoints(PointsMother::random())
                 ->build();
         }
 
         return self::aTaskExecution()
-            ->withRoutineTaskId(UuidMother::random())
+            ->withTaskTemplateId(UuidMother::random())
             ->build();
     }
 }

@@ -24,16 +24,16 @@ final class TaskExecutionAssert
         );
     }
 
-    public static function assertTaskExecutionHasRoutineTaskId(Uuid $expectedRoutineTaskId, TaskExecution $execution): void
+    public static function assertTaskExecutionHasTaskTemplateId(Uuid $expectedTaskTemplateId, TaskExecution $execution): void
     {
         Assert::assertNotNull(
             $execution->templateTaskId(),
             'Expected task execution to have a routine task ID'
         );
         Assert::assertTrue(
-            $expectedRoutineTaskId->equals($execution->templateTaskId()),
+            $expectedTaskTemplateId->equals($execution->templateTaskId()),
             sprintf('Expected task execution routine task ID to be %s, but got %s', 
-                $expectedRoutineTaskId->value(), 
+                $expectedTaskTemplateId->value(), 
                 $execution->templateTaskId()->value()
             )
         );
@@ -54,7 +54,7 @@ final class TaskExecutionAssert
         );
     }
 
-    public static function assertTaskExecutionHasNoRoutineTask(TaskExecution $execution): void
+    public static function assertTaskExecutionHasNoTaskTemplate(TaskExecution $execution): void
     {
         Assert::assertNull(
             $execution->templateTaskId(),

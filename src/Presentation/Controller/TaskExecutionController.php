@@ -12,7 +12,7 @@ use App\TaskManagement\Application\Handler\CreateTaskExecutionHandler;
 use App\TaskManagement\Application\Handler\CompleteTaskExecutionHandler;
 use App\TaskManagement\Application\Handler\ApproveTaskExecutionHandler;
 use App\TaskManagement\Domain\Repository\TaskExecutionRepositoryInterface;
-use App\TaskManagement\Domain\Repository\TaskRepositoryInterface;
+use App\TaskManagement\Domain\Repository\TaskTemplateRepositoryInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -23,7 +23,7 @@ class TaskExecutionController extends AbstractController
 {
     public function __construct(
         private TaskExecutionRepositoryInterface $taskExecutionRepository,
-        private TaskRepositoryInterface $taskRepository,
+        private TaskTemplateRepositoryInterface $taskTemplateRepository,
         private CreateTaskExecutionHandler $createTaskExecutionHandler,
         private CompleteTaskExecutionHandler $completeTaskExecutionHandler,
         private ApproveTaskExecutionHandler $approveTaskExecutionHandler
@@ -75,11 +75,11 @@ class TaskExecutionController extends AbstractController
     public function create(Request $request): Response
     {
         if ($request->isMethod('POST')) {
-            $templateTaskId = $request->request->get('template_task_id');
+            $taskTemplateId = $request->request->get('task_template_id');
             
             $command = new CreateTaskExecutionCommand(
                 Uuid::generate()->value(),
-                $templateTaskId ?: null,
+                $taskTemplateId ?: null,
                 $request->request->get('name'),
                 $request->request->get('description'),
                 $request->request->get('points') ? (int) $request->request->get('points') : null,
@@ -92,26 +92,26 @@ class TaskExecutionController extends AbstractController
             return $this->redirectToRoute('app_task_execution_list');
         }
 
-        $templates = $this->taskRepository->findActiveTemplates();
+        $templates = $this->taskTemplateRepository->findActive();
 
         return $this->render('task_execution/create.html.twig', [
             'templates' => $templates,
         ]);
     }
 
-    #[Route('/create-from-template/{templateTaskId}', name: 'app_task_execution_create_from_template', methods: ['GET', 'POST'])]
-    public function createFromTemplate(string $templateTaskId, Request $request): Response
+    #[Route('/create-from-template/{taskTemplateId}', name: 'app_task_execution_create_from_template', methods: ['GET', 'POST'])]
+    public function createFromTemplate(string $taskTemplateId, Request $request): Response
     {
-        $template = $this->taskRepository->findById(Uuid::fromString($templateTaskId));
+        $template = $this->taskTemplateRepository->findById(Uuid::fromString($taskTemplateId));
 
-        if (!$template || !$template->isTemplate()) {
+        if (!$template) {
             throw $this->createNotFoundException('Task template not found');
         }
 
         if ($request->isMethod('POST')) {
             $command = new CreateTaskExecutionCommand(
                 Uuid::generate()->value(),
-                $templateTaskId,
+                $taskTemplateId,
                 null,
                 null,
                 null,
@@ -139,8 +139,8 @@ class TaskExecutionController extends AbstractController
         }
 
         $template = null;
-        if ($execution->templateTaskId()) {
-            $template = $this->taskRepository->findById($execution->templateTaskId());
+        if ($execution->taskTemplateId()) {
+            $template = $this->taskTemplateRepository->findById($execution->taskTemplateId());
         }
 
         return $this->render('task_execution/view.html.twig', [

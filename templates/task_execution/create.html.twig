@@ -15,10 +15,10 @@
             </select>
         </div>
         
-        <div id="template_task_select" style="display: none;">
+        <div id="template_select" style="display: none;">
             <div class="form-group">
-                <label for="template_task_id">Select Task Template</label>
-                <select id="template_task_id" name="template_task_id" class="form-control">
+                <label for="task_template_id">Select Task Template</label>
+                <select id="task_template_id" name="task_template_id" class="form-control">
                     <option value="">-- Select a task template --</option>
                     {% for template in templates %}
                         <option value="{{ template.id().value() }}">
@@ -62,11 +62,11 @@
 document.getElementById('execution_type').addEventListener('change', function() {
     const isTemplate = this.value === 'from_template';
     
-    document.getElementById('template_task_select').style.display = isTemplate ? 'block' : 'none';
+    document.getElementById('template_select').style.display = isTemplate ? 'block' : 'none';
     document.getElementById('one_time_fields').style.display = isTemplate ? 'none' : 'block';
     
     // Toggle required attributes
-    document.getElementById('template_task_id').required = isTemplate;
+    document.getElementById('task_template_id').required = isTemplate;
     document.getElementById('name').required = !isTemplate;
     document.getElementById('description').required = !isTemplate;
     document.getElementById('points').required = !isTemplate;

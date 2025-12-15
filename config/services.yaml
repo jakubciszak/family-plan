@@ -32,6 +32,9 @@ services:
     App\TaskManagement\Domain\Repository\TaskRepositoryInterface:
         class: App\TaskManagement\Infrastructure\Persistence\DoctrineTaskRepository
 
+    App\TaskManagement\Domain\Repository\TaskTemplateRepositoryInterface:
+        class: App\TaskManagement\Infrastructure\Persistence\DoctrineTaskTemplateRepository
+
     App\TaskManagement\Domain\Repository\TaskExecutionRepositoryInterface:
         class: App\TaskManagement\Infrastructure\Persistence\DoctrineTaskExecutionRepository
 

@@ -19,7 +19,7 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Entity]
 #[ORM\Table(name: 'task_executions')]
 #[ORM\Index(columns: ['status'])]
-#[ORM\Index(columns: ['template_task_id'])]
+#[ORM\Index(columns: ['task_template_id'])]
 #[ORM\Index(columns: ['assigned_user_id'])]
 #[ORM\Index(columns: ['scheduled_for'])]
 class TaskExecution
@@ -36,7 +36,7 @@ class TaskExecution
         private Uuid $id,
         
         #[ORM\Column(type: 'uuid', nullable: true)]
-        private ?Uuid $templateTaskId,
+        private ?Uuid $taskTemplateId,
         
         #[ORM\Column(type: 'task_name', nullable: true)]
         private ?TaskName $name,
@@ -78,16 +78,16 @@ class TaskExecution
 
     public static function createFromTemplate(
         Uuid $id,
-        Uuid $templateTaskId,
+        Uuid $taskTemplateId,
         DateTimeImmutable $scheduledFor,
         ?Uuid $assignedUserId = null
     ): self {
         $execution = new self(
             $id,
-            $templateTaskId,
-            null,  // Name will be fetched from template Task
-            null,  // Description will be fetched from template Task
-            null,  // Points will be fetched from template Task
+            $taskTemplateId,
+            null,  // Name will be fetched from TaskTemplate
+            null,  // Description will be fetched from TaskTemplate
+            null,  // Points will be fetched from TaskTemplate
             $scheduledFor,
             ExecutionStatus::PENDING,
             $assignedUserId,
@@ -100,7 +100,7 @@ class TaskExecution
 
         $execution->record(new TaskExecutionCreated(
             $id,
-            $templateTaskId,
+            $taskTemplateId,
             $scheduledFor,
             new DateTimeImmutable()
         ));
@@ -147,9 +147,9 @@ class TaskExecution
         return $this->id;
     }
 
-    public function templateTaskId(): ?Uuid
+    public function taskTemplateId(): ?Uuid
     {
-        return $this->templateTaskId;
+        return $this->taskTemplateId;
     }
 
     public function name(): ?TaskName
