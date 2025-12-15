@@ -1,0 +1,62 @@
+# Production Dockerfile for PHP backend
+FROM php:8.5-fpm AS base
+
+ENV APP_ENV=prod \
+    COMPOSER_ALLOW_SUPERUSER=1
+
+WORKDIR /app
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        git \
+        libicu-dev \
+        libpq-dev \
+        libzip-dev \
+        unzip \
+        postgresql-client \
+    && docker-php-ext-configure intl \
+    && docker-php-ext-install intl pdo_pgsql zip opcache \
+    && { \
+        echo 'opcache.enable=1'; \
+        echo 'opcache.enable_cli=1'; \
+        echo 'opcache.validate_timestamps=0'; \
+        echo 'opcache.memory_consumption=256'; \
+        echo 'opcache.max_accelerated_files=20000'; \
+        echo 'opcache.interned_strings_buffer=16'; \
+    } > /usr/local/etc/php/conf.d/opcache.ini \
+    && { \
+        echo 'memory_limit=256M'; \
+        echo 'upload_max_filesize=20M'; \
+        echo 'post_max_size=20M'; \
+    } > /usr/local/etc/php/conf.d/php.ini \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+
+# Builder stage - install dependencies and build
+FROM base AS builder
+
+COPY composer.json composer.lock symfony.lock ./
+RUN composer install --no-dev --no-scripts --no-progress --optimize-autoloader
+
+COPY . .
+
+RUN composer dump-autoload --optimize --no-dev --classmap-authoritative \
+    && php bin/console cache:clear --env=prod \
+    && php bin/console cache:warmup --env=prod
+
+# Final production stage
+FROM base AS production
+
+COPY --from=builder /app /app
+
+# Copy entrypoint script
+COPY docker/php/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+
+# Set proper permissions
+RUN chown -R www-data:www-data /app/var
+
+USER www-data
+
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
