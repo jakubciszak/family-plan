@@ -1,0 +1,82 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ title|default('Task Executions') }} - Family Plan{% endblock %}
+
+{% block body %}
+<div class="task-execution-list-container">
+    <div class="page-header">
+        <h1>✅ {{ title|default('Task Executions') }}</h1>
+        <div class="header-actions">
+            <a href="{{ path('app_task_execution_today') }}" class="btn btn-secondary">📅 Today</a>
+            <a href="{{ path('app_task_execution_pending') }}" class="btn btn-secondary">⏳ Pending</a>
+            <a href="{{ path('app_task_execution_completed') }}" class="btn btn-secondary">✓ Completed</a>
+            <a href="{{ path('app_task_execution_create') }}" class="btn btn-primary">➕ Create Task</a>
+        </div>
+    </div>
+    
+    {% if executions is empty %}
+        <div class="alert alert-info">
+            <p>No task executions found. <a href="{{ path('app_task_execution_create') }}">Create a task!</a></p>
+        </div>
+    {% else %}
+        <div class="task-grid">
+            {% for execution in executions %}
+                <div class="task-card task-status-{{ execution.status().value }}">
+                    <div class="task-header">
+                        <h3>
+                            {% if execution.name() %}
+                                {{ execution.name().value() }}
+                            {% else %}
+                                Task from Routine
+                            {% endif %}
+                        </h3>
+                        {% if execution.points() %}
+                            <span class="task-points">{{ execution.points().value() }} pts</span>
+                        {% endif %}
+                    </div>
+                    
+                    {% if execution.description() %}
+                        <p class="task-description">{{ execution.description() }}</p>
+                    {% endif %}
+                    
+                    <div class="task-meta">
+                        <span class="task-scheduled">📅 {{ execution.scheduledFor()|date('Y-m-d H:i') }}</span>
+                        <span class="task-status">{{ execution.status().label() }}</span>
+                        {% if execution.routineTaskId() %}
+                            <span class="badge badge-info">Recurring</span>
+                        {% else %}
+                            <span class="badge badge-secondary">One-time</span>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="task-actions">
+                        <a href="{{ path('app_task_execution_view', {id: execution.id().value()}) }}" class="btn btn-info btn-sm">View</a>
+                        
+                        {% if execution.status().value == 'pending' %}
+                            <form method="post" action="{{ path('app_task_execution_complete', {id: execution.id().value()}) }}" style="display: inline;">
+                                <button type="submit" class="btn btn-success btn-sm">✓ Complete</button>
+                            </form>
+                        {% endif %}
+                        
+                        {% if execution.status().value == 'completed' %}
+                            <form method="post" action="{{ path('app_task_execution_approve', {id: execution.id().value()}) }}" style="display: inline;">
+                                <button type="submit" class="btn btn-primary btn-sm">⭐ Approve</button>
+                            </form>
+                            <form method="post" action="{{ path('app_task_execution_reject', {id: execution.id().value()}) }}" style="display: inline;">
+                                <button type="submit" class="btn btn-warning btn-sm">✗ Reject</button>
+                            </form>
+                        {% endif %}
+                    </div>
+                    
+                    {% if execution.completedAt() %}
+                        <small class="text-muted">Completed: {{ execution.completedAt()|date('Y-m-d H:i') }}</small>
+                    {% endif %}
+                    {% if execution.approvedAt() %}
+                        <small class="text-success">Approved: {{ execution.approvedAt()|date('Y-m-d H:i') }}</small>
+                    {% endif %}
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

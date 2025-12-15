@@ -1,0 +1,93 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Create Task Template - Family Plan{% endblock %}
+
+{% block body %}
+<div class="create-task-container">
+    <h1>📋 Create New Task Template</h1>
+    
+    <form method="post" class="task-form">
+        <div class="form-group">
+            <label for="name">Template Name *</label>
+            <input type="text" id="name" name="name" class="form-control" required maxlength="255" placeholder="e.g., Weekly Room Cleaning">
+        </div>
+        
+        <div class="form-group">
+            <label for="description">Description *</label>
+            <textarea id="description" name="description" class="form-control" required rows="4" placeholder="Describe what needs to be done..."></textarea>
+        </div>
+        
+        <div class="form-row">
+            <div class="form-group col-md-6">
+                <label for="points">Points *</label>
+                <input type="number" id="points" name="points" class="form-control" required min="0" max="1000" value="10">
+                <small class="form-text">Reward points (0-1000)</small>
+            </div>
+            
+            <div class="form-group col-md-6">
+                <label for="frequency">Frequency *</label>
+                <select id="frequency" name="frequency" class="form-control" required>
+                    <option value="daily">Daily</option>
+                    <option value="weekly">Weekly</option>
+                    <option value="monthly">Monthly</option>
+                    <option value="once">Once</option>
+                </select>
+            </div>
+        </div>
+        
+        <div class="form-group">
+            <label for="schedule_type">Schedule Configuration *</label>
+            <select id="schedule_type" name="schedule_type" class="form-control" required>
+                <option value="daily">Every Day</option>
+                <option value="weekly">Specific Day of Week</option>
+                <option value="monthly">Specific Day of Month</option>
+                <option value="times_per_week">X Times Per Week</option>
+                <option value="once">One Time Only</option>
+            </select>
+        </div>
+        
+        <div id="day_of_week_field" class="form-group" style="display: none;">
+            <label for="day_of_week">Day of Week</label>
+            <select id="day_of_week" name="day_of_week" class="form-control">
+                <option value="1">Monday</option>
+                <option value="2">Tuesday</option>
+                <option value="3">Wednesday</option>
+                <option value="4">Thursday</option>
+                <option value="5">Friday</option>
+                <option value="6">Saturday</option>
+                <option value="7">Sunday</option>
+            </select>
+        </div>
+        
+        <div id="day_of_month_field" class="form-group" style="display: none;">
+            <label for="day_of_month">Day of Month</label>
+            <input type="number" id="day_of_month" name="day_of_month" class="form-control" min="1" max="31">
+        </div>
+        
+        <div id="times_per_week_field" class="form-group" style="display: none;">
+            <label for="times_per_week">Times Per Week</label>
+            <input type="number" id="times_per_week" name="times_per_week" class="form-control" min="1" max="7">
+        </div>
+        
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Create Template</button>
+            <a href="{{ path('app_task_template_list') }}" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+
+<script>
+document.getElementById('schedule_type').addEventListener('change', function() {
+    const scheduleType = this.value;
+    
+    document.getElementById('day_of_week_field').style.display = scheduleType === 'weekly' ? 'block' : 'none';
+    document.getElementById('day_of_month_field').style.display = scheduleType === 'monthly' ? 'block' : 'none';
+    document.getElementById('times_per_week_field').style.display = scheduleType === 'times_per_week' ? 'block' : 'none';
+    
+    // Update required attributes
+    document.getElementById('day_of_week').required = scheduleType === 'weekly';
+    document.getElementById('day_of_month').required = scheduleType === 'monthly';
+    document.getElementById('times_per_week').required = scheduleType === 'times_per_week';
+});
+</script>
+{% endblock %}

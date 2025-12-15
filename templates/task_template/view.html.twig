@@ -1,0 +1,75 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ template.name().value() }} - Family Plan{% endblock %}
+
+{% block body %}
+<div class="task-view-container">
+    <div class="task-header">
+        <h1>{{ template.name().value() }}</h1>
+        <span class="badge badge-{{ template.isActive() ? 'success' : 'secondary' }}">
+            {{ template.isActive() ? 'Active' : 'Inactive' }}
+        </span>
+    </div>
+    
+    <div class="task-details">
+        <div class="detail-group">
+            <h3>Description</h3>
+            <p>{{ template.description() }}</p>
+        </div>
+        
+        <div class="detail-row">
+            <div class="detail-group">
+                <h3>Points</h3>
+                <p class="highlight">⭐ {{ template.points().value() }}</p>
+            </div>
+            
+            <div class="detail-group">
+                <h3>Frequency</h3>
+                <p>🔄 {{ template.frequency().label() }}</p>
+            </div>
+        </div>
+        
+        {% if template.scheduleConfig() %}
+        <div class="detail-group">
+            <h3>Schedule</h3>
+            <p>📅 
+                {% if template.scheduleConfig().type == 'daily' %}
+                    Every day
+                {% elseif template.scheduleConfig().type == 'weekly' %}
+                    Every {{ ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'][template.scheduleConfig().dayOfWeek - 1] }}
+                {% elseif template.scheduleConfig().type == 'monthly' %}
+                    Day {{ template.scheduleConfig().dayOfMonth }} of every month
+                {% elseif template.scheduleConfig().type == 'times_per_week' %}
+                    {{ template.scheduleConfig().timesPerWeek }} times per week
+                {% elseif template.scheduleConfig().type == 'once' %}
+                    One time only
+                {% endif %}
+            </p>
+        </div>
+        {% endif %}
+        
+        <div class="detail-group">
+            <h3>Created</h3>
+            <p>{{ template.createdAt()|date('F j, Y \a\t g:i A') }}</p>
+        </div>
+    </div>
+    
+    <div class="task-actions">
+        <a href="{{ path('app_task_execution_create_from_template', {templateTaskId: template.id().value()}) }}" class="btn btn-primary">
+            ✅ Create Execution
+        </a>
+        
+        {% if template.isActive() %}
+            <form method="post" action="{{ path('app_task_template_deactivate', {id: template.id().value()}) }}" style="display: inline;">
+                <button type="submit" class="btn btn-warning">Deactivate</button>
+            </form>
+        {% else %}
+            <form method="post" action="{{ path('app_task_template_activate', {id: template.id().value()}) }}" style="display: inline;">
+                <button type="submit" class="btn btn-success">Activate</button>
+            </form>
+        {% endif %}
+        
+        <a href="{{ path('app_task_template_list') }}" class="btn btn-secondary">Back to Templates</a>
+    </div>
+</div>
+{% endblock %}

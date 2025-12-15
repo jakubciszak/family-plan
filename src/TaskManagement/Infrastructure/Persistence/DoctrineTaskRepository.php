@@ -63,6 +63,28 @@ final class DoctrineTaskRepository implements TaskRepositoryInterface
             ->getResult();
     }
 
+    public function findTemplates(): array
+    {
+        return $this->entityManager->getRepository(Task::class)
+            ->createQueryBuilder('t')
+            ->where('t.isTemplate = :isTemplate')
+            ->setParameter('isTemplate', true)
+            ->getQuery()
+            ->getResult();
+    }
+
+    public function findActiveTemplates(): array
+    {
+        return $this->entityManager->getRepository(Task::class)
+            ->createQueryBuilder('t')
+            ->where('t.isTemplate = :isTemplate')
+            ->andWhere('t.isActive = :isActive')
+            ->setParameter('isTemplate', true)
+            ->setParameter('isActive', true)
+            ->getQuery()
+            ->getResult();
+    }
+
     public function delete(Task $task): void
     {
         $this->entityManager->remove($task);
