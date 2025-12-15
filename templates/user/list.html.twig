@@ -1,0 +1,47 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Users - Family Plan{% endblock %}
+
+{% block body %}
+<div class="user-list-container">
+    <div class="page-header">
+        <h1>👥 Users</h1>
+        <a href="{{ path('app_user_create') }}" class="btn btn-primary">➕ Create User</a>
+    </div>
+    
+    {% if users is empty %}
+        <div class="alert alert-info">
+            <p>No users yet. <a href="{{ path('app_user_create') }}">Create your first user!</a></p>
+        </div>
+    {% else %}
+        <div class="user-table">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Role</th>
+                        <th>Created</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in users %}
+                        <tr>
+                            <td>{{ user.name() }}</td>
+                            <td>{{ user.email().value() }}</td>
+                            <td>
+                                {% if user.isAdmin() %}
+                                    <span class="badge badge-admin">👑 Admin</span>
+                                {% else %}
+                                    <span class="badge badge-user">👤 User</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ user.createdAt()|date('Y-m-d H:i') }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

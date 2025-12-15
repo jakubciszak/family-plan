@@ -1,0 +1,47 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Welcome - Family Plan{% endblock %}
+
+{% block body %}
+<div class="home-container">
+    <h1>Welcome to Family Plan!</h1>
+    <p class="lead">Organize family house works together with your children</p>
+    
+    <div class="features">
+        <div class="feature-card">
+            <h2>📝 Create Tasks</h2>
+            <p>Define house work tasks with points and frequency</p>
+            <a href="{{ path('app_task_create') }}" class="btn btn-primary">Create Task</a>
+        </div>
+        
+        <div class="feature-card">
+            <h2>✅ Track Completion</h2>
+            <p>Mark tasks as completed and earn points</p>
+            <a href="{{ path('app_task_list') }}" class="btn btn-primary">View Tasks</a>
+        </div>
+        
+        <div class="feature-card">
+            <h2>👥 Manage Users</h2>
+            <p>Create user and admin accounts</p>
+            <a href="{{ path('app_user_create') }}" class="btn btn-primary">Add User</a>
+        </div>
+        
+        <div class="feature-card">
+            <h2>⭐ Approve Tasks</h2>
+            <p>Admins can review and approve completed tasks</p>
+            <a href="{{ path('app_task_list') }}" class="btn btn-primary">Review Tasks</a>
+        </div>
+    </div>
+    
+    <div class="architecture-info">
+        <h3>Built with Modern Architecture</h3>
+        <ul>
+            <li>🏗️ Hexagonal Architecture (Ports & Adapters)</li>
+            <li>🎯 Domain-Driven Design (DDD)</li>
+            <li>📨 CQRS (Command Query Responsibility Segregation)</li>
+            <li>⚡ Symfony UX for Single Page Application experience</li>
+            <li>🐘 PHP 8.3+ with modern features</li>
+        </ul>
+    </div>
+</div>
+{% endblock %}

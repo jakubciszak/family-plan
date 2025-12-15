@@ -1,0 +1,52 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Tasks - Family Plan{% endblock %}
+
+{% block body %}
+<div class="task-list-container">
+    <div class="page-header">
+        <h1>📋 Tasks</h1>
+        <a href="{{ path('app_task_create') }}" class="btn btn-primary">➕ Create Task</a>
+    </div>
+    
+    {% if tasks is empty %}
+        <div class="alert alert-info">
+            <p>No tasks yet. <a href="{{ path('app_task_create') }}">Create your first task!</a></p>
+        </div>
+    {% else %}
+        <div class="task-grid">
+            {% for task in tasks %}
+                <div class="task-card task-status-{{ task.status().value }}">
+                    <div class="task-header">
+                        <h3>{{ task.name().value() }}</h3>
+                        <span class="task-points">{{ task.points().value() }} pts</span>
+                    </div>
+                    <p class="task-description">{{ task.description() }}</p>
+                    <div class="task-meta">
+                        <span class="task-frequency">🔄 {{ task.frequency().label() }}</span>
+                        <span class="task-status">{{ task.status().label() }}</span>
+                    </div>
+                    <div class="task-actions">
+                        {% if task.status().isPending() %}
+                            <form method="post" action="{{ path('app_task_complete', {id: task.id().value()}) }}" style="display: inline;">
+                                <button type="submit" class="btn btn-success">✓ Complete</button>
+                            </form>
+                        {% endif %}
+                        {% if task.status().isCompleted() %}
+                            <form method="post" action="{{ path('app_task_approve', {id: task.id().value()}) }}" style="display: inline;">
+                                <button type="submit" class="btn btn-info">⭐ Approve (Admin)</button>
+                            </form>
+                        {% endif %}
+                    </div>
+                    {% if task.completedAt() %}
+                        <small class="text-muted">Completed: {{ task.completedAt()|date('Y-m-d H:i') }}</small>
+                    {% endif %}
+                    {% if task.approvedAt() %}
+                        <small class="text-success">Approved: {{ task.approvedAt()|date('Y-m-d H:i') }}</small>
+                    {% endif %}
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <title>{% block title %}Family Plan{% endblock %}</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 128 128%22><text y=%221.2em%22 font-size=%2296%22>👨‍👩‍👧‍👦</text></svg>">
+        {% block stylesheets %}
+            {{ encore_entry_link_tags('app') }}
+        {% endblock %}
+
+        {% block javascripts %}
+            {{ encore_entry_script_tags('app') }}
+        {% endblock %}
+    </head>
+    <body>
+        <nav class="navbar">
+            <div class="container">
+                <a href="{{ path('app_home') }}" class="navbar-brand">👨‍👩‍👧‍👦 Family Plan</a>
+                <ul class="navbar-nav">
+                    {% if is_granted('ROLE_USER') %}
+                        <li><a href="{{ path('app_task_list') }}">Tasks</a></li>
+                    {% endif %}
+                    {% if is_granted('ROLE_ADMIN') %}
+                        <li><a href="{{ path('app_user_list') }}">Users</a></li>
+                    {% endif %}
+                </ul>
+                <div class="navbar-user">
+                    {% if app.user %}
+                        <span class="user-info">
+                            👤 {{ app.user.name }}
+                            {% if is_granted('ROLE_ADMIN') %}
+                                <span class="badge badge-admin">ADMIN</span>
+                            {% endif %}
+                        </span>
+                        <a href="{{ path('app_logout') }}" class="btn-logout">Logout</a>
+                    {% else %}
+                        <a href="{{ path('app_login') }}" class="btn-login">Login</a>
+                    {% endif %}
+                </div>
+            </div>
+        </nav>
+        <main class="container">
+            {% block body %}{% endblock %}
+        </main>
+    </body>
+</html>
