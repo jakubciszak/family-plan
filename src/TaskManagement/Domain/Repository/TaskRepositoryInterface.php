@@ -21,5 +21,9 @@ interface TaskRepositoryInterface
 
     public function findCompleted(): array;
 
+    public function findTemplates(): array;
+
+    public function findActiveTemplates(): array;
+
     public function delete(Task $task): void;
 }

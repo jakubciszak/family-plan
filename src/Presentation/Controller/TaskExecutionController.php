@@ -12,7 +12,7 @@ use App\TaskManagement\Application\Handler\CreateTaskExecutionHandler;
 use App\TaskManagement\Application\Handler\CompleteTaskExecutionHandler;
 use App\TaskManagement\Application\Handler\ApproveTaskExecutionHandler;
 use App\TaskManagement\Domain\Repository\TaskExecutionRepositoryInterface;
-use App\TaskManagement\Domain\Repository\RoutineTaskRepositoryInterface;
+use App\TaskManagement\Domain\Repository\TaskRepositoryInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -23,7 +23,7 @@ class TaskExecutionController extends AbstractController
 {
     public function __construct(
         private TaskExecutionRepositoryInterface $taskExecutionRepository,
-        private RoutineTaskRepositoryInterface $routineTaskRepository,
+        private TaskRepositoryInterface $taskRepository,
         private CreateTaskExecutionHandler $createTaskExecutionHandler,
         private CompleteTaskExecutionHandler $completeTaskExecutionHandler,
         private ApproveTaskExecutionHandler $approveTaskExecutionHandler
@@ -75,11 +75,11 @@ class TaskExecutionController extends AbstractController
     public function create(Request $request): Response
     {
         if ($request->isMethod('POST')) {
-            $routineTaskId = $request->request->get('routine_task_id');
+            $templateTaskId = $request->request->get('template_task_id');
             
             $command = new CreateTaskExecutionCommand(
                 Uuid::generate()->value(),
-                $routineTaskId ?: null,
+                $templateTaskId ?: null,
                 $request->request->get('name'),
                 $request->request->get('description'),
                 $request->request->get('points') ? (int) $request->request->get('points') : null,
@@ -92,26 +92,26 @@ class TaskExecutionController extends AbstractController
             return $this->redirectToRoute('app_task_execution_list');
         }
 
-        $routineTasks = $this->routineTaskRepository->findActive();
+        $templates = $this->taskRepository->findActiveTemplates();
 
         return $this->render('task_execution/create.html.twig', [
-            'routineTasks' => $routineTasks,
+            'templates' => $templates,
         ]);
     }
 
-    #[Route('/create-from-routine/{routineTaskId}', name: 'app_task_execution_create_from_routine', methods: ['GET', 'POST'])]
-    public function createFromRoutine(string $routineTaskId, Request $request): Response
+    #[Route('/create-from-template/{templateTaskId}', name: 'app_task_execution_create_from_template', methods: ['GET', 'POST'])]
+    public function createFromTemplate(string $templateTaskId, Request $request): Response
     {
-        $routineTask = $this->routineTaskRepository->findById(Uuid::fromString($routineTaskId));
+        $template = $this->taskRepository->findById(Uuid::fromString($templateTaskId));
 
-        if (!$routineTask) {
-            throw $this->createNotFoundException('Routine task not found');
+        if (!$template || !$template->isTemplate()) {
+            throw $this->createNotFoundException('Task template not found');
         }
 
         if ($request->isMethod('POST')) {
             $command = new CreateTaskExecutionCommand(
                 Uuid::generate()->value(),
-                $routineTaskId,
+                $templateTaskId,
                 null,
                 null,
                 null,
@@ -120,12 +120,12 @@ class TaskExecutionController extends AbstractController
 
             ($this->createTaskExecutionHandler)($command);
 
-            $this->addFlash('success', 'Task execution created from routine task!');
+            $this->addFlash('success', 'Task execution created from template!');
             return $this->redirectToRoute('app_task_execution_list');
         }
 
-        return $this->render('task_execution/create_from_routine.html.twig', [
-            'routineTask' => $routineTask,
+        return $this->render('task_execution/create_from_template.html.twig', [
+            'template' => $template,
         ]);
     }
 
@@ -138,14 +138,14 @@ class TaskExecutionController extends AbstractController
             throw $this->createNotFoundException('Task execution not found');
         }
 
-        $routineTask = null;
-        if ($execution->routineTaskId()) {
-            $routineTask = $this->routineTaskRepository->findById($execution->routineTaskId());
+        $template = null;
+        if ($execution->templateTaskId()) {
+            $template = $this->taskRepository->findById($execution->templateTaskId());
         }
 
         return $this->render('task_execution/view.html.twig', [
             'execution' => $execution,
-            'routineTask' => $routineTask,
+            'template' => $template,
         ]);
     }
 

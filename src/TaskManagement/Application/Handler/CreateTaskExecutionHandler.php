@@ -24,11 +24,11 @@ final readonly class CreateTaskExecutionHandler
         $scheduledFor = new DateTimeImmutable($command->scheduledFor);
         $assignedUserId = $command->assignedUserId ? Uuid::fromString($command->assignedUserId) : null;
 
-        if ($command->routineTaskId !== null) {
-            // Create execution from routine task
-            $execution = TaskExecution::createFromRoutineTask(
+        if ($command->templateTaskId !== null) {
+            // Create execution from template task
+            $execution = TaskExecution::createFromTemplate(
                 Uuid::fromString($command->id),
-                Uuid::fromString($command->routineTaskId),
+                Uuid::fromString($command->templateTaskId),
                 $scheduledFor,
                 $assignedUserId
             );

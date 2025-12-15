@@ -8,7 +8,7 @@ final readonly class CreateTaskExecutionCommand
 {
     public function __construct(
         public string $id,
-        public ?string $routineTaskId,
+        public ?string $templateTaskId,
         public ?string $name,
         public ?string $description,
         public ?int $points,

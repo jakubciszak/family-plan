@@ -50,7 +50,21 @@ final class TaskExecutionMother
         return $this;
     }
 
+    public function withTemplateTaskId(Uuid $templateTaskId): self
+    {
+        $this->routineTaskId = $templateTaskId;
+        $this->noRoutineTask = false;
+        return $this;
+    }
+
     public function withoutRoutineTask(): self
+    {
+        $this->routineTaskId = null;
+        $this->noRoutineTask = true;
+        return $this;
+    }
+
+    public function withoutTemplateTask(): self
     {
         $this->routineTaskId = null;
         $this->noRoutineTask = true;
@@ -133,8 +147,8 @@ final class TaskExecutionMother
                 $this->assignedUserId
             );
         } else {
-            // Task execution from routine task
-            $taskExecution = TaskExecution::createFromRoutineTask(
+            // Task execution from template task
+            $taskExecution = TaskExecution::createFromTemplate(
                 $id,
                 $this->routineTaskId ?? UuidMother::random(),
                 $scheduledFor,
@@ -171,6 +185,13 @@ final class TaskExecutionMother
     {
         return self::aTaskExecution()
             ->withRoutineTaskId($routineTaskId)
+            ->build();
+    }
+
+    public static function fromTemplate(Uuid $templateTaskId): TaskExecution
+    {
+        return self::aTaskExecution()
+            ->withTemplateTaskId($templateTaskId)
             ->build();
     }
 

@@ -19,7 +19,7 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Entity]
 #[ORM\Table(name: 'task_executions')]
 #[ORM\Index(columns: ['status'])]
-#[ORM\Index(columns: ['routine_task_id'])]
+#[ORM\Index(columns: ['template_task_id'])]
 #[ORM\Index(columns: ['assigned_user_id'])]
 #[ORM\Index(columns: ['scheduled_for'])]
 class TaskExecution
@@ -36,7 +36,7 @@ class TaskExecution
         private Uuid $id,
         
         #[ORM\Column(type: 'uuid', nullable: true)]
-        private ?Uuid $routineTaskId,
+        private ?Uuid $templateTaskId,
         
         #[ORM\Column(type: 'task_name', nullable: true)]
         private ?TaskName $name,
@@ -76,18 +76,18 @@ class TaskExecution
     ) {
     }
 
-    public static function createFromRoutineTask(
+    public static function createFromTemplate(
         Uuid $id,
-        Uuid $routineTaskId,
+        Uuid $templateTaskId,
         DateTimeImmutable $scheduledFor,
         ?Uuid $assignedUserId = null
     ): self {
         $execution = new self(
             $id,
-            $routineTaskId,
-            null,  // Name will be fetched from RoutineTask
-            null,  // Description will be fetched from RoutineTask
-            null,  // Points will be fetched from RoutineTask
+            $templateTaskId,
+            null,  // Name will be fetched from template Task
+            null,  // Description will be fetched from template Task
+            null,  // Points will be fetched from template Task
             $scheduledFor,
             ExecutionStatus::PENDING,
             $assignedUserId,
@@ -100,7 +100,7 @@ class TaskExecution
 
         $execution->record(new TaskExecutionCreated(
             $id,
-            $routineTaskId,
+            $templateTaskId,
             $scheduledFor,
             new DateTimeImmutable()
         ));
@@ -118,7 +118,7 @@ class TaskExecution
     ): self {
         $execution = new self(
             $id,
-            null,  // No routine task for one-time executions
+            null,  // No template task for one-time executions
             $name,
             $description,
             $points,
@@ -147,9 +147,9 @@ class TaskExecution
         return $this->id;
     }
 
-    public function routineTaskId(): ?Uuid
+    public function templateTaskId(): ?Uuid
     {
-        return $this->routineTaskId;
+        return $this->templateTaskId;
     }
 
     public function name(): ?TaskName

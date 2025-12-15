@@ -27,14 +27,29 @@ final class TaskExecutionAssert
     public static function assertTaskExecutionHasRoutineTaskId(Uuid $expectedRoutineTaskId, TaskExecution $execution): void
     {
         Assert::assertNotNull(
-            $execution->routineTaskId(),
+            $execution->templateTaskId(),
             'Expected task execution to have a routine task ID'
         );
         Assert::assertTrue(
-            $expectedRoutineTaskId->equals($execution->routineTaskId()),
+            $expectedRoutineTaskId->equals($execution->templateTaskId()),
             sprintf('Expected task execution routine task ID to be %s, but got %s', 
                 $expectedRoutineTaskId->value(), 
-                $execution->routineTaskId()->value()
+                $execution->templateTaskId()->value()
+            )
+        );
+    }
+
+    public static function assertTaskExecutionHasTemplateTaskId(Uuid $expectedTemplateTaskId, TaskExecution $execution): void
+    {
+        Assert::assertNotNull(
+            $execution->templateTaskId(),
+            'Expected task execution to have a template task ID'
+        );
+        Assert::assertTrue(
+            $expectedTemplateTaskId->equals($execution->templateTaskId()),
+            sprintf('Expected task execution template task ID to be %s, but got %s', 
+                $expectedTemplateTaskId->value(), 
+                $execution->templateTaskId()->value()
             )
         );
     }
@@ -42,8 +57,16 @@ final class TaskExecutionAssert
     public static function assertTaskExecutionHasNoRoutineTask(TaskExecution $execution): void
     {
         Assert::assertNull(
-            $execution->routineTaskId(),
+            $execution->templateTaskId(),
             'Expected task execution to not have a routine task ID'
+        );
+    }
+
+    public static function assertTaskExecutionHasNoTemplateTask(TaskExecution $execution): void
+    {
+        Assert::assertNull(
+            $execution->templateTaskId(),
+            'Expected task execution to not have a template task ID'
         );
     }
 

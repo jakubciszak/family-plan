@@ -12,7 +12,7 @@ final readonly class TaskExecutionCreated implements DomainEvent
 {
     public function __construct(
         private Uuid $executionId,
-        private ?Uuid $routineTaskId,
+        private ?Uuid $templateTaskId,
         private DateTimeImmutable $scheduledFor,
         private DateTimeImmutable $occurredOn
     ) {
@@ -23,9 +23,9 @@ final readonly class TaskExecutionCreated implements DomainEvent
         return $this->executionId;
     }
 
-    public function routineTaskId(): ?Uuid
+    public function templateTaskId(): ?Uuid
     {
-        return $this->routineTaskId;
+        return $this->templateTaskId;
     }
 
     public function scheduledFor(): DateTimeImmutable
@@ -47,7 +47,7 @@ final readonly class TaskExecutionCreated implements DomainEvent
     {
         return [
             'execution_id' => $this->executionId->value(),
-            'routine_task_id' => $this->routineTaskId?->value(),
+            'template_task_id' => $this->templateTaskId?->value(),
             'scheduled_for' => $this->scheduledFor->format(DateTimeImmutable::ATOM),
             'occurred_on' => $this->occurredOn->format(DateTimeImmutable::ATOM),
         ];

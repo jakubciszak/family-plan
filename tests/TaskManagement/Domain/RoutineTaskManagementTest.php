@@ -5,142 +5,37 @@ declare(strict_types=1);
 namespace App\Tests\TaskManagement\Domain;
 
 use App\Tests\Shared\Mother\UuidMother;
-use App\Tests\TaskManagement\Assert\RoutineTaskAssert;
 use App\Tests\TaskManagement\Assert\TaskExecutionAssert;
 use App\Tests\TaskManagement\Mother\FrequencyMother;
 use App\Tests\TaskManagement\Mother\PointsMother;
-use App\Tests\TaskManagement\Mother\RoutineTaskMother;
 use App\Tests\TaskManagement\Mother\ScheduleConfigMother;
 use App\Tests\TaskManagement\Mother\TaskExecutionMother;
 use App\Tests\TaskManagement\Mother\TaskNameMother;
 use PHPUnit\Framework\TestCase;
 
 /**
- * Detroit school unit test for Routine Task Management functionality
+ * Detroit school unit test for Routine Task Management functionality (merged into Task)
  * Tests real object interactions using Builder pattern and custom Asserts
  */
 class RoutineTaskManagementTest extends TestCase
 {
-    public function testRoutineTaskCanBeCreatedWithValidData(): void
+    public function testTaskExecutionCanBeCreatedFromTemplateTask(): void
     {
         // Given
-        $id = UuidMother::random();
-        $name = TaskNameMother::create('Clean the kitchen');
-        $description = 'Wash dishes and wipe counters';
-        $points = PointsMother::medium();
-        $frequency = FrequencyMother::daily();
-        $scheduleConfig = ScheduleConfigMother::daily();
-
-        // When
-        $routineTask = RoutineTaskMother::aRoutineTask()
-            ->withId($id)
-            ->withName($name)
-            ->withDescription($description)
-            ->withPoints($points)
-            ->withFrequency($frequency)
-            ->withScheduleConfig($scheduleConfig)
-            ->build();
-
-        // Then
-        RoutineTaskAssert::assertRoutineTaskHasId($id, $routineTask);
-        RoutineTaskAssert::assertRoutineTaskHasName($name, $routineTask);
-        RoutineTaskAssert::assertRoutineTaskHasDescription($description, $routineTask);
-        RoutineTaskAssert::assertRoutineTaskHasPoints($points, $routineTask);
-        RoutineTaskAssert::assertRoutineTaskHasFrequency($frequency, $routineTask);
-        RoutineTaskAssert::assertRoutineTaskHasScheduleConfig($scheduleConfig, $routineTask);
-        RoutineTaskAssert::assertRoutineTaskIsActive($routineTask);
-        RoutineTaskAssert::assertRoutineTaskHasCreatedAt($routineTask);
-    }
-
-    public function testRoutineTaskCreationRecordsDomainEvent(): void
-    {
-        // Given
-        $id = UuidMother::random();
-        $name = TaskNameMother::create('Weekly cleaning');
-
-        // When
-        $routineTask = RoutineTaskMother::aRoutineTask()
-            ->withId($id)
-            ->withName($name)
-            ->build();
-
-        // Then
-        RoutineTaskAssert::assertRoutineTaskRecordedRoutineTaskCreatedEvent($routineTask, $id, $name);
-    }
-
-    public function testWeeklyRoutineTaskCanBeConfiguredForSpecificDay(): void
-    {
-        // Given
-        $scheduleConfig = ScheduleConfigMother::weeklyOnMonday();
-
-        // When
-        $routineTask = RoutineTaskMother::aRoutineTask()
-            ->withFrequency(FrequencyMother::weekly())
-            ->withScheduleConfig($scheduleConfig)
-            ->build();
-
-        // Then
-        RoutineTaskAssert::assertRoutineTaskHasScheduleConfig($scheduleConfig, $routineTask);
-        RoutineTaskAssert::assertRoutineTaskHasFrequency(FrequencyMother::weekly(), $routineTask);
-    }
-
-    public function testMonthlyRoutineTaskCanBeConfiguredForSpecificDayOfMonth(): void
-    {
-        // Given
-        $scheduleConfig = ScheduleConfigMother::monthlyOnDay(15);
-
-        // When
-        $routineTask = RoutineTaskMother::aRoutineTask()
-            ->withFrequency(FrequencyMother::monthly())
-            ->withScheduleConfig($scheduleConfig)
-            ->build();
-
-        // Then
-        RoutineTaskAssert::assertRoutineTaskHasScheduleConfig($scheduleConfig, $routineTask);
-        RoutineTaskAssert::assertRoutineTaskHasFrequency(FrequencyMother::monthly(), $routineTask);
-    }
-
-    public function testRoutineTaskCanBeDeactivated(): void
-    {
-        // Given
-        $routineTask = RoutineTaskMother::active();
-
-        // When
-        $routineTask->deactivate();
-
-        // Then
-        RoutineTaskAssert::assertRoutineTaskIsInactive($routineTask);
-    }
-
-    public function testRoutineTaskCanBeReactivated(): void
-    {
-        // Given
-        $routineTask = RoutineTaskMother::inactive();
-
-        // When
-        $routineTask->activate();
-
-        // Then
-        RoutineTaskAssert::assertRoutineTaskIsActive($routineTask);
-    }
-
-    public function testTaskExecutionCanBeCreatedFromRoutineTask(): void
-    {
-        // Given
-        $routineTaskId = UuidMother::random();
+        $templateTaskId = UuidMother::random();
         $executionId = UuidMother::random();
         $scheduledFor = new \DateTimeImmutable('2025-01-15 10:00:00');
 
         // When
         $execution = TaskExecutionMother::aTaskExecution()
             ->withId($executionId)
-            ->withRoutineTaskId($routineTaskId)
+            ->withTemplateTaskId($templateTaskId)
             ->withScheduledFor($scheduledFor)
             ->build();
 
         // Then
         TaskExecutionAssert::assertTaskExecutionHasId($executionId, $execution);
-        TaskExecutionAssert::assertTaskExecutionHasRoutineTaskId($routineTaskId, $execution);
+        TaskExecutionAssert::assertTaskExecutionHasTemplateTaskId($templateTaskId, $execution);
         TaskExecutionAssert::assertTaskExecutionHasScheduledFor($scheduledFor, $execution);
         TaskExecutionAssert::assertTaskExecutionIsPending($execution);
         TaskExecutionAssert::assertTaskExecutionIsNotCompleted($execution);
@@ -170,7 +65,7 @@ class RoutineTaskManagementTest extends TestCase
         TaskExecutionAssert::assertTaskExecutionHasName($name, $execution);
         TaskExecutionAssert::assertTaskExecutionHasDescription($description, $execution);
         TaskExecutionAssert::assertTaskExecutionHasPoints($points, $execution);
-        TaskExecutionAssert::assertTaskExecutionHasNoRoutineTask($execution);
+        TaskExecutionAssert::assertTaskExecutionHasNoTemplateTask($execution);
         TaskExecutionAssert::assertTaskExecutionIsPending($execution);
     }
 
@@ -276,13 +171,13 @@ class RoutineTaskManagementTest extends TestCase
     {
         // Given
         $id = UuidMother::random();
-        $routineTaskId = UuidMother::random();
+        $templateTaskId = UuidMother::random();
         $scheduledFor = new \DateTimeImmutable('2025-01-15');
 
         // When
         $execution = TaskExecutionMother::aTaskExecution()
             ->withId($id)
-            ->withRoutineTaskId($routineTaskId)
+            ->withTemplateTaskId($templateTaskId)
             ->withScheduledFor($scheduledFor)
             ->build();
 
