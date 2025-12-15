@@ -1,0 +1,87 @@
+# Docker Compose configuration for Hostinger deployment
+# This file orchestrates the complete Family Plan application stack
+
+services:
+  # PostgreSQL Database
+  database:
+    image: postgres:16-alpine
+    container_name: family-plan-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-app}
+      POSTGRES_USER: ${POSTGRES_USER:-app}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-!ChangeMe!}
+    volumes:
+      - database_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-d", "${POSTGRES_DB:-app}", "-U", "${POSTGRES_USER:-app}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+    networks:
+      - family-plan-network
+
+  # PHP-FPM Backend
+  php:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile.prod
+    container_name: family-plan-php
+    restart: unless-stopped
+    working_dir: /app
+    environment:
+      APP_ENV: ${APP_ENV:-prod}
+      APP_SECRET: ${APP_SECRET:-CHANGE_ME_GENERATE_RANDOM_SECRET_KEY_FOR_PRODUCTION}
+      DATABASE_URL: "postgresql://${POSTGRES_USER:-app}:${POSTGRES_PASSWORD:-!ChangeMe!}@database:5432/${POSTGRES_DB:-app}?serverVersion=16&charset=utf8"
+      SUPER_ADMIN_EMAIL: ${SUPER_ADMIN_EMAIL:-admin@familyplan.local}
+      SUPER_ADMIN_NAME: ${SUPER_ADMIN_NAME:-Super Admin}
+      SUPER_ADMIN_PASSWORD: ${SUPER_ADMIN_PASSWORD:-CHANGE_ME_TO_STRONG_PASSWORD}
+    depends_on:
+      database:
+        condition: service_healthy
+    networks:
+      - family-plan-network
+
+  # Nginx Web Server
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: family-plan-nginx
+    restart: unless-stopped
+    ports:
+      - "${APP_PORT:-8080}:80"
+    volumes:
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+    # Using volumes_from to share application files from PHP container
+    # This is intentional to ensure Nginx serves files from the same source as PHP-FPM
+    volumes_from:
+      - php:ro
+    depends_on:
+      - php
+    networks:
+      - family-plan-network
+
+  # React Frontend (optional - serves built assets)
+  # Note: In production, React assets are typically served through Nginx/PHP
+  # This service is included for standalone frontend deployment if needed
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/react/Dockerfile.prod
+    container_name: family-plan-frontend
+    restart: unless-stopped
+    ports:
+      - "${REACT_PORT:-3001}:80"
+    environment:
+      NGINX_HOST: ${NGINX_HOST:-localhost}
+      NGINX_PORT: 80
+    networks:
+      - family-plan-network
+
+volumes:
+  database_data:
+    driver: local
+
+networks:
+  family-plan-network:
+    driver: bridge
