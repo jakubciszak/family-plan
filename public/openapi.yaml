@@ -1,0 +1,446 @@
+openapi: 3.0.0
+info:
+  title: Family Plan API
+  description: REST API for Family Plan application - Task and User management
+  version: 1.0.0
+  contact:
+    name: Family Plan Team
+servers:
+  - url: http://localhost:8080
+    description: Development server
+  - url: https://api.familyplan.local
+    description: Production server
+
+tags:
+  - name: Authentication
+    description: Authentication endpoints
+  - name: Tasks
+    description: Task management endpoints
+  - name: Users
+    description: User management endpoints
+
+paths:
+  /api/auth/login:
+    post:
+      tags:
+        - Authentication
+      summary: Login user
+      description: Authenticate user with email and password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: admin@familyplan.local
+                password:
+                  type: string
+                  format: password
+                  example: admin123
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Login successful
+                  user:
+                    $ref: '#/components/schemas/User'
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/auth/me:
+    get:
+      tags:
+        - Authentication
+      summary: Get current user
+      description: Get currently authenticated user information
+      responses:
+        '200':
+          description: Current user information
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/auth/logout:
+    post:
+      tags:
+        - Authentication
+      summary: Logout user
+      description: Logout current user
+      responses:
+        '200':
+          description: Logout successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Logout successful
+
+  /api/tasks:
+    get:
+      tags:
+        - Tasks
+      summary: List all tasks
+      description: Get a list of all tasks
+      responses:
+        '200':
+          description: List of tasks
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tasks:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Task'
+    post:
+      tags:
+        - Tasks
+      summary: Create a new task
+      description: Create a new task with the provided information
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - points
+                - frequency
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                  maxLength: 255
+                  example: Clean the kitchen
+                description:
+                  type: string
+                  example: Wash dishes and mop floor
+                points:
+                  type: integer
+                  minimum: 0
+                  maximum: 1000
+                  example: 50
+                frequency:
+                  type: string
+                  enum: [once, daily, weekly, monthly]
+                  example: daily
+      responses:
+        '201':
+          description: Task created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/tasks/{id}:
+    get:
+      tags:
+        - Tasks
+      summary: Get task by ID
+      description: Get a specific task by its UUID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Task UUID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Task details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '404':
+          description: Task not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/tasks/{id}/complete:
+    post:
+      tags:
+        - Tasks
+      summary: Complete a task
+      description: Mark a task as completed by a user
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Task UUID
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - userId
+              properties:
+                userId:
+                  type: string
+                  format: uuid
+                  example: 550e8400-e29b-41d4-a716-446655440002
+      responses:
+        '200':
+          description: Task completed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '404':
+          description: Task not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/tasks/{id}/approve:
+    post:
+      tags:
+        - Tasks
+      summary: Approve a completed task
+      description: Approve a completed task (admin only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Task UUID
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - adminId
+              properties:
+                adminId:
+                  type: string
+                  format: uuid
+                  example: 550e8400-e29b-41d4-a716-446655440003
+      responses:
+        '200':
+          description: Task approved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '403':
+          description: Forbidden - Admin access required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Task not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/users:
+    get:
+      tags:
+        - Users
+      summary: List all users
+      description: Get a list of all users
+      responses:
+        '200':
+          description: List of users
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  users:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/User'
+    post:
+      tags:
+        - Users
+      summary: Create a new user
+      description: Create a new user account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - email
+                - password
+              properties:
+                name:
+                  type: string
+                  example: John Doe
+                email:
+                  type: string
+                  format: email
+                  example: john@example.com
+                password:
+                  type: string
+                  format: password
+                  minLength: 8
+                  example: securePassword123
+                role:
+                  type: string
+                  enum: [ROLE_USER, ROLE_ADMIN]
+                  default: ROLE_USER
+                  example: ROLE_USER
+      responses:
+        '201':
+          description: User created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/users/{id}:
+    get:
+      tags:
+        - Users
+      summary: Get user by ID
+      description: Get a specific user by their UUID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: User UUID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: User details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: 550e8400-e29b-41d4-a716-446655440000
+        name:
+          type: string
+          example: Super Admin
+        email:
+          type: string
+          format: email
+          example: admin@familyplan.local
+        role:
+          type: string
+          enum: [ROLE_USER, ROLE_ADMIN]
+          example: ROLE_ADMIN
+
+    Task:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: 550e8400-e29b-41d4-a716-446655440000
+        name:
+          type: string
+          example: Clean the kitchen
+        description:
+          type: string
+          example: Wash dishes and mop floor
+        points:
+          type: integer
+          minimum: 0
+          maximum: 1000
+          example: 50
+        frequency:
+          type: string
+          enum: [once, daily, weekly, monthly]
+          example: daily
+        status:
+          type: string
+          enum: [pending, completed, approved]
+          example: pending
+        createdAt:
+          type: string
+          format: date-time
+          example: 2024-01-15T10:30:00+00:00
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+          example: Error message describing what went wrong
+
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: PHPSESSID
+      description: Session-based authentication using cookies
+
+security:
+  - cookieAuth: []

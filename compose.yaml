@@ -52,6 +52,20 @@ services:
       - ./:/app
       - node_modules:/app/node_modules
 
+  react-dev:
+    image: node:20-alpine
+    working_dir: /app
+    environment:
+      NODE_ENV: development
+      CHOKIDAR_USEPOLLING: "1"
+      FAST_REFRESH: "true"
+    command: sh -c "npm install && npm run watch"
+    volumes:
+      - ./:/app
+      - node_modules:/app/node_modules
+    ports:
+      - "${REACT_DEV_PORT:-3000}:3000"
+
 volumes:
 ###> doctrine/doctrine-bundle ###
   database_data:
