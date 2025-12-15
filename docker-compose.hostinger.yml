@@ -1,6 +1,5 @@
 # Docker Compose configuration for Hostinger deployment
 # This file orchestrates the complete Family Plan application stack
-version: '3.8'
 
 services:
   # PostgreSQL Database

@@ -1,0 +1,62 @@
+# Git files
+.git
+.gitignore
+.gitattributes
+
+# Documentation
+*.md
+docs/
+IMPLEMENTATION_SUMMARY.md
+API_SPECIFICATION.md
+MIGRATION_GUIDE.md
+TESTING_STRATEGY.md
+OPENAPI_DOCUMENTATION.md
+
+# Development files
+.env.local
+.env.*.local
+.env.test
+.env.dev
+
+# IDE files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Dependencies (will be installed in container)
+/vendor/
+/node_modules/
+
+# Build artifacts
+/public/build/
+/var/
+!/var/cache/.gitkeep
+!/var/log/.gitkeep
+
+# Test files
+/tests/
+phpunit.xml.dist
+.phpunit.result.cache
+
+# CI/CD
+/.github/
+
+# Temporary files
+/tmp/
+*.tmp
+*.temp
+
+# Docker files (except the ones we need)
+docker-compose.override.yml
+compose.override.yaml
+
+# Backup files
+*.bak
+*.backup
+*.sql

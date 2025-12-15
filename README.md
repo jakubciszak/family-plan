@@ -52,6 +52,8 @@ A modern Symfony web application for organizing family house works with children
 
 ## 🚀 Installation
 
+### Local Development
+
 ```bash
 # Clone the repository
 git clone https://github.com/jakubciszak/family-plan.git
@@ -150,6 +152,30 @@ npm run build
 ### Watch Assets
 ```bash
 npm run watch
+```
+
+## 🚀 Production Deployment
+
+### Docker Deployment to Hostinger
+
+For production deployment using Docker on Hostinger VPS, see the comprehensive deployment guide:
+
+**[📖 Hostinger Deployment Guide](HOSTINGER_DEPLOYMENT.md)**
+
+The guide includes:
+- Complete Docker setup for production
+- Database configuration
+- SSL/HTTPS setup
+- Monitoring and maintenance
+- Troubleshooting
+
+Quick deployment:
+```bash
+# Verify deployment setup
+./verify-deployment.sh
+
+# Build and deploy
+docker compose -f docker-compose.hostinger.yml up -d --build
 ```
 
 ## 🔐 Security & Authentication
