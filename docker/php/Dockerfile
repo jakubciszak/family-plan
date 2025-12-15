@@ -19,8 +19,6 @@ RUN apt-get update \
         echo 'opcache.enable_cli=1'; \
         echo 'opcache.validate_timestamps=0'; \
     } > /usr/local/etc/php/conf.d/opcache.ini \
-    && pecl install apcu \
-    && docker-php-ext-enable apcu \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
