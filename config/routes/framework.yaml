@@ -1,4 +1,6 @@
-when@dev:
-    _errors:
-        resource: '@FrameworkBundle/Resources/config/routing/errors.xml'
-        prefix: /_error
+# Specjalny routing dla stron błędów w dev nie jest wymagany w nowszych wersjach Symfony.
+# Po migracji na Symfony 8 można bezpiecznie usunąć import starego errors.xml,
+# a obsługa błędów będzie realizowana przez domyślny ErrorController.
+
+# Jeśli w przyszłości będziesz mieć własny ErrorController z atrybutami,
+# możesz tu dodać odpowiednią konfigurację routingu.

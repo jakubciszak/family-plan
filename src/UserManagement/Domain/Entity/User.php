@@ -154,6 +154,11 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         return [$this->role->value];
     }
 
+    public function getPassword(): string
+    {
+        return $this->password;
+    }
+
     public function eraseCredentials(): void
     {
         // Nothing to erase - we don't store plain passwords

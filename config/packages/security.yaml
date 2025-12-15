@@ -9,7 +9,8 @@ security:
     providers:
         app_user_provider:
             id: App\UserManagement\Infrastructure\Security\UserProvider
-
+    role_hierarchy:
+        ROLE_ADMIN: ROLE_USER
     firewalls:
         dev:
             pattern: ^/(_(profiler|wdt)|css|images|js)/

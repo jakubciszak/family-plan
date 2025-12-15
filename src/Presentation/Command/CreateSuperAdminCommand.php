@@ -64,11 +64,11 @@ class CreateSuperAdminCommand extends Command
                 $hashedPassword = password_hash($plainPassword, PASSWORD_BCRYPT);
                 
                 $command = new CreateUserCommand(
-                    Uuid::generate(),
+                    Uuid::generate()->value(),
                     $name,
-                    $emailVO,
+                    $email,
                     $hashedPassword,
-                    Role::ADMIN
+                    Role::ADMIN->value
                 );
                 
                 ($this->createUserHandler)($command);
