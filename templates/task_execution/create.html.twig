@@ -11,18 +11,18 @@
             <label for="execution_type">Task Type *</label>
             <select id="execution_type" class="form-control" required>
                 <option value="one_time">One-time Task</option>
-                <option value="from_routine">From Routine Task</option>
+                <option value="from_template">From Task Template</option>
             </select>
         </div>
         
-        <div id="routine_task_select" style="display: none;">
+        <div id="template_task_select" style="display: none;">
             <div class="form-group">
-                <label for="routine_task_id">Select Routine Task</label>
-                <select id="routine_task_id" name="routine_task_id" class="form-control">
-                    <option value="">-- Select a routine task --</option>
-                    {% for routineTask in routineTasks %}
-                        <option value="{{ routineTask.id().value() }}">
-                            {{ routineTask.name().value() }} ({{ routineTask.points().value() }} pts)
+                <label for="template_task_id">Select Task Template</label>
+                <select id="template_task_id" name="template_task_id" class="form-control">
+                    <option value="">-- Select a task template --</option>
+                    {% for template in templates %}
+                        <option value="{{ template.id().value() }}">
+                            {{ template.name().value() }} ({{ template.points().value() }} pts)
                         </option>
                     {% endfor %}
                 </select>
@@ -60,16 +60,16 @@
 
 <script>
 document.getElementById('execution_type').addEventListener('change', function() {
-    const isRoutine = this.value === 'from_routine';
+    const isTemplate = this.value === 'from_template';
     
-    document.getElementById('routine_task_select').style.display = isRoutine ? 'block' : 'none';
-    document.getElementById('one_time_fields').style.display = isRoutine ? 'none' : 'block';
+    document.getElementById('template_task_select').style.display = isTemplate ? 'block' : 'none';
+    document.getElementById('one_time_fields').style.display = isTemplate ? 'none' : 'block';
     
     // Toggle required attributes
-    document.getElementById('routine_task_id').required = isRoutine;
-    document.getElementById('name').required = !isRoutine;
-    document.getElementById('description').required = !isRoutine;
-    document.getElementById('points').required = !isRoutine;
+    document.getElementById('template_task_id').required = isTemplate;
+    document.getElementById('name').required = !isTemplate;
+    document.getElementById('description').required = !isTemplate;
+    document.getElementById('points').required = !isTemplate;
 });
 </script>
 {% endblock %}

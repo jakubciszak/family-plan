@@ -43,10 +43,10 @@
                 
                 <dt>Type</dt>
                 <dd>
-                    {% if execution.routineTaskId() %}
-                        <span class="badge badge-info">Recurring Task</span>
-                        {% if routineTask %}
-                            - <a href="{{ path('app_routine_task_view', {id: routineTask.id().value()}) }}">{{ routineTask.name().value() }}</a>
+                    {% if execution.templateTaskId() %}
+                        <span class="badge badge-info">From Template</span>
+                        {% if template %}
+                            - <a href="{{ path('app_task_template_view', {id: template.id().value()}) }}">{{ template.name().value() }}</a>
                         {% endif %}
                     {% else %}
                         <span class="badge badge-secondary">One-time Task</span>
