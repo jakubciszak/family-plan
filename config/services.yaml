@@ -32,5 +32,11 @@ services:
     App\TaskManagement\Domain\Repository\TaskRepositoryInterface:
         class: App\TaskManagement\Infrastructure\Persistence\DoctrineTaskRepository
 
+    App\TaskManagement\Domain\Repository\RoutineTaskRepositoryInterface:
+        class: App\TaskManagement\Infrastructure\Persistence\DoctrineRoutineTaskRepository
+
+    App\TaskManagement\Domain\Repository\TaskExecutionRepositoryInterface:
+        class: App\TaskManagement\Infrastructure\Persistence\DoctrineTaskExecutionRepository
+
     # add more service definitions when explicit configuration is needed
     # please note that last definitions always *replace* previous ones

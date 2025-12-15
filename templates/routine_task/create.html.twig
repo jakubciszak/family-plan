@@ -1,0 +1,98 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Create Routine Task - Family Plan{% endblock %}
+
+{% block body %}
+<div class="create-routine-task-container">
+    <h1>🔄 Create New Routine Task</h1>
+    
+    <form method="post" class="task-form">
+        <div class="form-group">
+            <label for="name">Task Name *</label>
+            <input type="text" id="name" name="name" class="form-control" required maxlength="255">
+        </div>
+        
+        <div class="form-group">
+            <label for="description">Description *</label>
+            <textarea id="description" name="description" class="form-control" rows="4" required></textarea>
+        </div>
+        
+        <div class="form-row">
+            <div class="form-group">
+                <label for="points">Points *</label>
+                <input type="number" id="points" name="points" class="form-control" required min="0" max="1000" value="10">
+                <small class="form-text">Points earned for completing this task</small>
+            </div>
+            
+            <div class="form-group">
+                <label for="frequency">Frequency *</label>
+                <select id="frequency" name="frequency" class="form-control" required>
+                    <option value="once">Once</option>
+                    <option value="daily">Daily</option>
+                    <option value="weekly">Weekly</option>
+                    <option value="monthly">Monthly</option>
+                </select>
+            </div>
+        </div>
+        
+        <div class="form-group">
+            <label for="schedule_type">Schedule Type *</label>
+            <select id="schedule_type" name="schedule_type" class="form-control" required>
+                <option value="daily">Daily</option>
+                <option value="weekly">Weekly (specific day)</option>
+                <option value="monthly">Monthly (specific day)</option>
+                <option value="times_per_week">X times per week</option>
+                <option value="once">One time</option>
+            </select>
+        </div>
+        
+        <div class="form-group" id="day_of_week_group" style="display: none;">
+            <label for="day_of_week">Day of Week</label>
+            <select id="day_of_week" name="day_of_week" class="form-control">
+                <option value="1">Monday</option>
+                <option value="2">Tuesday</option>
+                <option value="3">Wednesday</option>
+                <option value="4">Thursday</option>
+                <option value="5">Friday</option>
+                <option value="6">Saturday</option>
+                <option value="7">Sunday</option>
+            </select>
+        </div>
+        
+        <div class="form-group" id="day_of_month_group" style="display: none;">
+            <label for="day_of_month">Day of Month (1-31)</label>
+            <input type="number" id="day_of_month" name="day_of_month" class="form-control" min="1" max="31">
+        </div>
+        
+        <div class="form-group" id="times_per_week_group" style="display: none;">
+            <label for="times_per_week">Times per Week (1-7)</label>
+            <input type="number" id="times_per_week" name="times_per_week" class="form-control" min="1" max="7">
+        </div>
+        
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Create Routine Task</button>
+            <a href="{{ path('app_routine_task_list') }}" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+
+<script>
+document.getElementById('schedule_type').addEventListener('change', function() {
+    const scheduleType = this.value;
+    
+    // Hide all conditional fields
+    document.getElementById('day_of_week_group').style.display = 'none';
+    document.getElementById('day_of_month_group').style.display = 'none';
+    document.getElementById('times_per_week_group').style.display = 'none';
+    
+    // Show relevant field
+    if (scheduleType === 'weekly') {
+        document.getElementById('day_of_week_group').style.display = 'block';
+    } else if (scheduleType === 'monthly') {
+        document.getElementById('day_of_month_group').style.display = 'block';
+    } else if (scheduleType === 'times_per_week') {
+        document.getElementById('times_per_week_group').style.display = 'block';
+    }
+});
+</script>
+{% endblock %}

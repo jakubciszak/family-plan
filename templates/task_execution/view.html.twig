@@ -1,0 +1,103 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Task Execution Details - Family Plan{% endblock %}
+
+{% block body %}
+<div class="task-execution-view-container">
+    <div class="page-header">
+        <h1>✅ 
+            {% if execution.name() %}
+                {{ execution.name().value() }}
+            {% else %}
+                Task Execution
+            {% endif %}
+        </h1>
+        <div class="header-actions">
+            <a href="{{ path('app_task_execution_list') }}" class="btn btn-secondary">← Back to List</a>
+        </div>
+    </div>
+    
+    <div class="task-details">
+        <div class="detail-section">
+            <h3>Details</h3>
+            <dl>
+                {% if execution.description() %}
+                <dt>Description</dt>
+                <dd>{{ execution.description() }}</dd>
+                {% endif %}
+                
+                {% if execution.points() %}
+                <dt>Points</dt>
+                <dd>{{ execution.points().value() }} points</dd>
+                {% endif %}
+                
+                <dt>Scheduled For</dt>
+                <dd>{{ execution.scheduledFor()|date('Y-m-d H:i') }}</dd>
+                
+                <dt>Status</dt>
+                <dd>
+                    <span class="badge badge-{{ execution.status().value == 'approved' ? 'success' : (execution.status().value == 'completed' ? 'info' : (execution.status().value == 'rejected' ? 'danger' : 'secondary')) }}">
+                        {{ execution.status().label() }}
+                    </span>
+                </dd>
+                
+                <dt>Type</dt>
+                <dd>
+                    {% if execution.routineTaskId() %}
+                        <span class="badge badge-info">Recurring Task</span>
+                        {% if routineTask %}
+                            - <a href="{{ path('app_routine_task_view', {id: routineTask.id().value()}) }}">{{ routineTask.name().value() }}</a>
+                        {% endif %}
+                    {% else %}
+                        <span class="badge badge-secondary">One-time Task</span>
+                    {% endif %}
+                </dd>
+                
+                <dt>Created At</dt>
+                <dd>{{ execution.createdAt()|date('Y-m-d H:i') }}</dd>
+                
+                {% if execution.completedAt() %}
+                <dt>Completed At</dt>
+                <dd>{{ execution.completedAt()|date('Y-m-d H:i') }}</dd>
+                {% endif %}
+                
+                {% if execution.approvedAt() %}
+                <dt>Approved At</dt>
+                <dd>{{ execution.approvedAt()|date('Y-m-d H:i') }}</dd>
+                {% endif %}
+                
+                {% if execution.updatedAt() %}
+                <dt>Updated At</dt>
+                <dd>{{ execution.updatedAt()|date('Y-m-d H:i') }}</dd>
+                {% endif %}
+            </dl>
+        </div>
+        
+        <div class="action-section">
+            <h3>Actions</h3>
+            
+            {% if execution.status().value == 'pending' %}
+                <form method="post" action="{{ path('app_task_execution_complete', {id: execution.id().value()}) }}">
+                    <button type="submit" class="btn btn-success btn-block">✓ Complete Task</button>
+                </form>
+            {% endif %}
+            
+            {% if execution.status().value == 'completed' %}
+                <form method="post" action="{{ path('app_task_execution_approve', {id: execution.id().value()}) }}">
+                    <button type="submit" class="btn btn-primary btn-block">⭐ Approve Task</button>
+                </form>
+                <form method="post" action="{{ path('app_task_execution_reject', {id: execution.id().value()}) }}" style="margin-top: 10px;">
+                    <button type="submit" class="btn btn-warning btn-block">✗ Reject Task</button>
+                </form>
+            {% endif %}
+            
+            {% if routineTask %}
+                <hr>
+                <a href="{{ path('app_task_execution_create_from_routine', {routineTaskId: routineTask.id().value()}) }}" class="btn btn-info btn-block">
+                    Create Another Execution
+                </a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,68 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Routine Tasks - Family Plan{% endblock %}
+
+{% block body %}
+<div class="routine-task-list-container">
+    <div class="page-header">
+        <h1>🔄 Routine Tasks</h1>
+        <div class="header-actions">
+            <a href="{{ path('app_routine_task_active') }}" class="btn btn-secondary">Active Only</a>
+            <a href="{{ path('app_routine_task_create') }}" class="btn btn-primary">➕ Create Routine Task</a>
+        </div>
+    </div>
+    
+    {% if routineTasks is empty %}
+        <div class="alert alert-info">
+            <p>No routine tasks yet. <a href="{{ path('app_routine_task_create') }}">Create your first routine task!</a></p>
+        </div>
+    {% else %}
+        <div class="task-grid">
+            {% for routineTask in routineTasks %}
+                <div class="task-card routine-task-card {% if not routineTask.isActive() %}inactive{% endif %}">
+                    <div class="task-header">
+                        <h3>{{ routineTask.name().value() }}</h3>
+                        <span class="task-points">{{ routineTask.points().value() }} pts</span>
+                    </div>
+                    <p class="task-description">{{ routineTask.description() }}</p>
+                    <div class="task-meta">
+                        <span class="task-frequency">🔄 {{ routineTask.frequency().label() }}</span>
+                        <span class="task-schedule">
+                            📅 
+                            {% if routineTask.scheduleConfig().type == 'daily' %}
+                                Every day
+                            {% elseif routineTask.scheduleConfig().type == 'weekly' %}
+                                Every {{ ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'][routineTask.scheduleConfig().dayOfWeek - 1] }}
+                            {% elseif routineTask.scheduleConfig().type == 'monthly' %}
+                                Day {{ routineTask.scheduleConfig().dayOfMonth }} of month
+                            {% elseif routineTask.scheduleConfig().type == 'times_per_week' %}
+                                {{ routineTask.scheduleConfig().timesPerWeek }} times per week
+                            {% elseif routineTask.scheduleConfig().type == 'once' %}
+                                One time
+                            {% endif %}
+                        </span>
+                        {% if routineTask.isActive() %}
+                            <span class="badge badge-success">Active</span>
+                        {% else %}
+                            <span class="badge badge-secondary">Inactive</span>
+                        {% endif %}
+                    </div>
+                    <div class="task-actions">
+                        <a href="{{ path('app_routine_task_view', {id: routineTask.id().value()}) }}" class="btn btn-info">View</a>
+                        <a href="{{ path('app_task_execution_create_from_routine', {routineTaskId: routineTask.id().value()}) }}" class="btn btn-success">Create Execution</a>
+                        {% if routineTask.isActive() %}
+                            <form method="post" action="{{ path('app_routine_task_deactivate', {id: routineTask.id().value()}) }}" style="display: inline;">
+                                <button type="submit" class="btn btn-warning">Deactivate</button>
+                            </form>
+                        {% else %}
+                            <form method="post" action="{{ path('app_routine_task_activate', {id: routineTask.id().value()}) }}" style="display: inline;">
+                                <button type="submit" class="btn btn-success">Activate</button>
+                            </form>
+                        {% endif %}
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
