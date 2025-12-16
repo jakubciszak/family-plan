@@ -15,7 +15,10 @@
     "test:chromium": "playwright test --project=chromium",
     "test:firefox": "playwright test --project=firefox",
     "test:webkit": "playwright test --project=webkit",
-    "test:report": "playwright show-report"
+    "test:report": "playwright show-report",
+    "test:integration": "playwright test --config=playwright.integration.config.js",
+    "test:integration:headed": "playwright test --config=playwright.integration.config.js --headed",
+    "test:integration:debug": "playwright test --config=playwright.integration.config.js --debug"
   },
   "dependencies": {
     "react": "^18.2.0",
