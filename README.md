@@ -215,8 +215,14 @@ npm run watch               # Watch mode
 
 ### Backend Development
 ```bash
-# Run tests
+# Run PHPUnit tests
 php bin/phpunit
+
+# Run Behat E2E tests (once dependencies are installed)
+vendor/bin/behat
+
+# Run specific Behat feature
+vendor/bin/behat features/api/task_management.feature
 
 # Database migrations
 php bin/console doctrine:migrations:migrate
@@ -224,6 +230,44 @@ php bin/console doctrine:migrations:migrate
 # Clear cache
 php bin/console cache:clear
 ```
+
+### Testing
+
+The project includes comprehensive test coverage:
+
+#### Unit & Integration Tests (PHPUnit)
+```bash
+# Run all tests
+vendor/bin/phpunit
+
+# Run with coverage
+vendor/bin/phpunit --coverage-text
+
+# Run specific test suite
+vendor/bin/phpunit tests/TaskManagement/
+```
+
+#### E2E Tests (Behat)
+```bash
+# Run all Behat scenarios
+vendor/bin/behat
+
+# Run specific feature
+vendor/bin/behat features/api/task_management.feature
+
+# Verbose output
+vendor/bin/behat --verbose
+```
+
+**Note:** Behat tests use business-oriented language (BDD):
+- "I create a task..." instead of "I send a POST request..."
+- "the task should be completed" instead of "status code should be 200"
+
+See `features/README.md` for detailed documentation on writing and running Behat tests.
+
+#### GitHub Actions CI/CD
+All tests run automatically on push and pull requests. See `.github/workflows/backend-tests.yml`.
+
 
 ### Docker Development
 ```bash
@@ -356,9 +400,14 @@ This command will:
 - [ ] Set up event dispatcher
 
 ### Testing
-- [ ] Add unit tests for domain layer
-- [ ] Add integration tests
-- [ ] Add functional tests
+- [x] Unit tests for domain layer (PHPUnit)
+- [x] Integration tests for application layer
+- [x] Functional API tests (PHPUnit)
+- [x] E2E acceptance tests (Behat with business-oriented language)
+- [x] GitHub Actions CI/CD pipeline
+- [ ] Frontend E2E tests (Playwright/Cypress)
+- [ ] Performance testing
+- [ ] Load testing
 
 ## 📝 License
 
