@@ -108,7 +108,7 @@ jobs:
         echo "Waiting for backend API to be ready..."
         for i in {1..30}; do
           response=$(curl -s http://localhost:8080/api/auth/me 2>&1)
-          if echo "$response" | grep -q "Unauthorized" || curl -f -s http://localhost:8080/api/auth/me > /dev/null 2>&1; then
+          if echo "$response" | grep -q "Unauthorized"; then
             echo "Backend API is ready!"
             break
           fi

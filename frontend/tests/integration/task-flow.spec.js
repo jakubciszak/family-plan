@@ -63,11 +63,11 @@ test.describe('Task Management Integration Tests', () => {
     await page.selectOption('select#frequency', 'once');
     await page.click('.task-create-form button[type="submit"]');
     
-    // Wait for task to appear
-    await page.waitForSelector(`.task-card:has-text("${taskName}")`, { timeout: TIMEOUTS.SHORT });
-    
-    // Find the task and complete it
+    // Wait for task to appear using filter approach for robust text matching
     const taskCard = page.locator('.task-card').filter({ hasText: taskName });
+    await expect(taskCard).toBeVisible({ timeout: TIMEOUTS.SHORT });
+    
+    // Complete the task
     await taskCard.locator('.btn-success:has-text("Complete")').click();
     
     // Wait for status to update to completed
@@ -134,10 +134,7 @@ test.describe('Task List Display Integration Tests', () => {
     const taskCards = page.locator('.task-card');
     const count = await taskCards.count();
     
-    // Verify tasks are displayed
-    expect(count).toBeGreaterThanOrEqual(0);
-    
-    // Each task should have a status
+    // Each task should have a status (if any tasks exist)
     if (count > 0) {
       for (let i = 0; i < count; i++) {
         await expect(taskCards.nth(i).locator('.task-status')).toBeVisible();
