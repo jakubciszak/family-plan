@@ -116,7 +116,7 @@ CORS_ALLOWED_ORIGIN=http://localhost:3000
 ### Production Setup
 ```bash
 # .env.prod or .env.prod.local
-CORS_ALLOWED_ORIGIN=https://app.yourdomian.com
+CORS_ALLOWED_ORIGIN=https://app.yourdomain.com
 ```
 
 ### Docker Setup
