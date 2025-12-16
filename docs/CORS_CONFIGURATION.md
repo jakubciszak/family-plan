@@ -11,25 +11,28 @@ This project uses the [Nelmio CORS Bundle](https://github.com/nelmio/NelmioCorsB
 Set the allowed origin in your `.env` file:
 
 ```bash
-# For development (single origin)
+# For development (single origin) - NO REGEX
 CORS_ALLOWED_ORIGIN=http://localhost:3000
 
-# For production (single origin)
+# For production (single origin) - NO REGEX
 CORS_ALLOWED_ORIGIN=https://your-frontend-domain.com
 
 # For multiple origins (using regex pattern)
+# IMPORTANT: Set origin_regex: true in config/packages/nelmio_cors.yaml
 # Match localhost:3000 OR app.example.com (both http and https)
 CORS_ALLOWED_ORIGIN=^https?://(localhost:3000|app\.example\.com)$
 
 # For development and staging (regex)
+# IMPORTANT: Set origin_regex: true in config/packages/nelmio_cors.yaml
 CORS_ALLOWED_ORIGIN=^https?://(localhost:3000|staging\.example\.com|app\.example\.com)$
 ```
 
-**Note**: When using regex patterns, make sure to:
-- Escape special regex characters like `.` with `\.`
-- Start with `^` and end with `$` for exact matching
-- Use `|` to separate multiple domains
-- Use `https?` to match both http and https
+**Note**: When using regex patterns:
+1. Set `origin_regex: true` in `config/packages/nelmio_cors.yaml` (both in `defaults` and `paths` sections)
+2. Escape special regex characters like `.` with `\.`
+3. Start with `^` and end with `$` for exact matching
+4. Use `|` to separate multiple domains
+5. Use `https?` to match both http and https
 
 ### Nelmio CORS Bundle Configuration
 
@@ -38,6 +41,8 @@ The CORS configuration is located in `config/packages/nelmio_cors.yaml`:
 ```yaml
 nelmio_cors:
     defaults:
+        # Set to false for simple exact-match origins (default)
+        # Set to true if using regex patterns in CORS_ALLOWED_ORIGIN
         origin_regex: false
         allow_origin: ['%env(CORS_ALLOWED_ORIGIN)%']
         allow_methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS']
@@ -46,7 +51,10 @@ nelmio_cors:
         max_age: 3600
         allow_credentials: true
     paths:
-        '^/api/':
+        '^/api':
+            # Set to false for simple exact-match origins (default)
+            # Set to true if using regex patterns in CORS_ALLOWED_ORIGIN
+            origin_regex: false
             allow_origin: ['%env(CORS_ALLOWED_ORIGIN)%']
             allow_methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS']
             allow_headers: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept']
@@ -54,6 +62,8 @@ nelmio_cors:
             max_age: 3600
             allow_credentials: true
 ```
+
+**Important**: If you use regex patterns in `CORS_ALLOWED_ORIGIN` (e.g., `^https?://(localhost:3000|app\.example\.com)$`), you **must** set `origin_regex: true` in both the `defaults` and `paths` sections above.
 
 ### Frontend Configuration
 
