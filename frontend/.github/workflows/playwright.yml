@@ -4,7 +4,7 @@ on:
   push:
     branches: [ '**' ]
   pull_request:
-    branches: [ main, develop ]
+    branches: [ '**' ]
 
 jobs:
   # Mocked E2E tests - run on all branches
