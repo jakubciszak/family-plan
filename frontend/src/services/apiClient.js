@@ -4,6 +4,7 @@ const apiClient = {
     async get(url) {
         const fullUrl = url.startsWith('http') ? url : `${API_BASE_URL}${url}`;
         const response = await fetch(fullUrl, {
+            credentials: 'include',
             headers: {
                 'Accept': 'application/json',
             },
@@ -20,6 +21,7 @@ const apiClient = {
         const fullUrl = url.startsWith('http') ? url : `${API_BASE_URL}${url}`;
         const response = await fetch(fullUrl, {
             method: 'POST',
+            credentials: 'include',
             headers: {
                 'Content-Type': 'application/json',
                 'Accept': 'application/json',
@@ -38,6 +40,7 @@ const apiClient = {
         const fullUrl = url.startsWith('http') ? url : `${API_BASE_URL}${url}`;
         const response = await fetch(fullUrl, {
             method: 'PUT',
+            credentials: 'include',
             headers: {
                 'Content-Type': 'application/json',
                 'Accept': 'application/json',
@@ -56,6 +59,7 @@ const apiClient = {
         const fullUrl = url.startsWith('http') ? url : `${API_BASE_URL}${url}`;
         const response = await fetch(fullUrl, {
             method: 'DELETE',
+            credentials: 'include',
             headers: {
                 'Accept': 'application/json',
             },
