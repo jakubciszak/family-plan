@@ -17,7 +17,12 @@ final class ApiContext implements Context
     private ?array $responseData = null;
     private array $requestData = [];
     private ?string $lastCreatedId = null;
+    private string $lastResourceType = 'task'; // Track resource type: 'task' or 'user'
     private KernelInterface $kernel;
+
+    // Test user IDs - can be overridden via environment variables
+    private string $testUserId;
+    private string $testAdminId;
 
     public function __construct()
     {
@@ -25,6 +30,25 @@ final class ApiContext implements Context
         require_once dirname(__DIR__) . '/bootstrap.php';
         $this->kernel = new \App\Kernel('test', true);
         $this->kernel->boot();
+        
+        // Initialize test IDs - generate UUIDs or use env vars
+        $this->testUserId = $_ENV['TEST_USER_ID'] ?? $this->generateTestUuid();
+        $this->testAdminId = $_ENV['TEST_ADMIN_ID'] ?? $this->generateTestUuid();
+    }
+
+    private function generateTestUuid(): string
+    {
+        return sprintf(
+            '%04x%04x-%04x-%04x-%04x-%04x%04x%04x',
+            mt_rand(0, 0xffff),
+            mt_rand(0, 0xffff),
+            mt_rand(0, 0xffff),
+            mt_rand(0, 0x0fff) | 0x4000,
+            mt_rand(0, 0x3fff) | 0x8000,
+            mt_rand(0, 0xffff),
+            mt_rand(0, 0xffff),
+            mt_rand(0, 0xffff)
+        );
     }
 
     /**
@@ -74,6 +98,7 @@ final class ApiContext implements Context
         foreach ($table->getRowsHash() as $key => $value) {
             $data[$key] = is_numeric($value) ? (int)$value : $value;
         }
+        $this->lastResourceType = 'task';
         $this->sendRequest('POST', '/api/tasks', $data);
     }
 
@@ -86,6 +111,7 @@ final class ApiContext implements Context
         foreach ($table->getRowsHash() as $key => $value) {
             $data[$key] = $value;
         }
+        $this->lastResourceType = 'user';
         $this->sendRequest('POST', '/api/users', $data);
     }
 
@@ -100,6 +126,7 @@ final class ApiContext implements Context
             'points' => $points,
             'frequency' => $frequency,
         ];
+        $this->lastResourceType = 'task';
         $this->sendRequest('POST', '/api/tasks', $data);
         $this->parseJsonResponse();
         $this->lastCreatedId = $this->responseData['id'] ?? null;
@@ -116,6 +143,7 @@ final class ApiContext implements Context
             'password' => 'password123',
             'role' => 'ROLE_USER',
         ];
+        $this->lastResourceType = 'user';
         $this->sendRequest('POST', '/api/users', $data);
         $this->parseJsonResponse();
         $this->lastCreatedId = $this->responseData['id'] ?? null;
@@ -129,9 +157,8 @@ final class ApiContext implements Context
     {
         Assert::assertNotNull($this->lastCreatedId, 'No resource was created before');
         
-        // Determine if it's a task or user based on previous request
-        $endpoint = str_contains((string)$this->response?->getContent(), 'tasks') || 
-                   isset($this->responseData['frequency']) ? 'tasks' : 'users';
+        // Use tracked resource type instead of guessing from response
+        $endpoint = $this->lastResourceType === 'user' ? 'users' : 'tasks';
         
         $this->sendRequest('GET', "/api/{$endpoint}/{$this->lastCreatedId}");
     }
@@ -144,7 +171,7 @@ final class ApiContext implements Context
     {
         Assert::assertNotNull($this->lastCreatedId, 'No task was created before');
         $this->sendRequest('POST', "/api/tasks/{$this->lastCreatedId}/complete", [
-            'userId' => 'test-user-id',
+            'userId' => $this->testUserId,
         ]);
     }
 
@@ -155,22 +182,24 @@ final class ApiContext implements Context
     {
         Assert::assertNotNull($this->lastCreatedId, 'No task was created before');
         $this->sendRequest('POST', "/api/tasks/{$this->lastCreatedId}/approve", [
-            'adminId' => 'test-admin-id',
+            'adminId' => $this->testAdminId,
         ]);
     }
 
     /**
      * @When I try to view a task that doesn't exist
+     */
+    public function iTryToViewATaskThatDoesntExist(): void
+    {
+        $this->sendRequest('GET', '/api/tasks/00000000-0000-0000-0000-000000000000');
+    }
+
+    /**
      * @When I try to view a user account that doesn't exist
      */
-    public function iTryToViewAResourceThatDoesntExist(): void
+    public function iTryToViewAUserAccountThatDoesntExist(): void
     {
-        // Determine resource type from scenario context
-        $endpoint = 'tasks'; // default
-        if (strpos((string)$this->kernel->getContainer()->get('request_stack')->getCurrentRequest()?->getUri(), 'user') !== false) {
-            $endpoint = 'users';
-        }
-        $this->sendRequest('GET', "/api/{$endpoint}/00000000-0000-0000-0000-000000000000");
+        $this->sendRequest('GET', '/api/users/00000000-0000-0000-0000-000000000000');
     }
 
     /**
