@@ -17,6 +17,7 @@ class ApiDocTest extends WebTestCase
         $this->assertResponseHeaderSame('Content-Type', 'text/html; charset=UTF-8');
         
         $content = $client->getResponse()->getContent();
+        $this->assertNotFalse($content, 'Response content should not be false');
         $this->assertStringContainsString('swagger-ui', $content);
         $this->assertStringContainsString('Family Plan API Documentation', $content);
     }
@@ -30,6 +31,7 @@ class ApiDocTest extends WebTestCase
         $this->assertResponseHeaderSame('Content-Type', 'application/x-yaml');
         
         $content = $client->getResponse()->getContent();
+        $this->assertNotFalse($content, 'Response content should not be false');
         $this->assertStringContainsString('openapi:', $content);
         $this->assertStringContainsString('Family Plan API', $content);
     }

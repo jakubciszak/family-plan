@@ -25,7 +25,11 @@ class ApiDocController extends AbstractController
             throw $this->createNotFoundException('OpenAPI specification not found');
         }
 
-        $content = file_get_contents($specPath);
+        $content = @file_get_contents($specPath);
+        
+        if ($content === false) {
+            throw $this->createNotFoundException('Unable to read OpenAPI specification');
+        }
 
         return new Response($content, Response::HTTP_OK, [
             'Content-Type' => 'application/x-yaml',
