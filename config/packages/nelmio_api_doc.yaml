@@ -1,0 +1,14 @@
+nelmio_api_doc:
+    documentation:
+        info:
+            title: Family Plan API
+            description: REST API for Family Plan application - Task and User management
+            version: 1.0.0
+        servers:
+            - url: http://localhost:8080
+              description: Development server
+            - url: https://api.familyplan.local
+              description: Production server
+    areas:
+        path_patterns:
+            - ^/api # Accepts all routes starting with /api
