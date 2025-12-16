@@ -1,4 +1,4 @@
-name: Backend Tests
+name: Backend Tests (PHPUnit)
 
 on:
   push:
@@ -8,7 +8,7 @@ on:
 
 jobs:
   tests:
-    name: Run PHPUnit and Behat Tests
+    name: Run PHPUnit Tests
     runs-on: ubuntu-latest
     
     permissions:
@@ -67,8 +67,9 @@ jobs:
       - name: Run PHPUnit tests
         run: vendor/bin/phpunit --testdox
 
-      - name: Run Behat tests
-        run: vendor/bin/behat --strict --no-interaction
+      # Behat tests temporarily disabled until Behat 4.x adds Symfony 8.0 support
+      # - name: Run Behat tests
+      #   run: vendor/bin/behat --strict --no-interaction
 
       - name: Upload test results
         if: failure()
