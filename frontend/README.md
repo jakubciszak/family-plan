@@ -46,6 +46,89 @@ The application will be available at http://localhost:3000 with hot reload enabl
 - `npm run dev` - Build in development mode
 - `npm run build` - Build for production
 - `npm run watch` - Watch mode for development
+- `npm test` - Run all Playwright tests
+- `npm run test:headed` - Run tests with browser visible
+- `npm run test:ui` - Run tests with Playwright UI mode
+- `npm run test:debug` - Run tests in debug mode
+- `npm run test:chromium` - Run tests only in Chromium
+- `npm run test:firefox` - Run tests only in Firefox
+- `npm run test:webkit` - Run tests only in WebKit/Safari
+- `npm run test:report` - Show HTML test report
+
+## Testing
+
+This project uses Playwright for end-to-end testing of the frontend application.
+
+### Running Tests
+
+```bash
+# Run all tests
+npm test
+
+# Run tests with browser visible
+npm run test:headed
+
+# Run tests in interactive UI mode
+npm run test:ui
+
+# Run tests in a specific browser
+npm run test:chromium
+npm run test:firefox
+npm run test:webkit
+
+# Debug tests
+npm run test:debug
+```
+
+### Test Structure
+
+Tests are located in `tests/e2e/` directory:
+
+- `login.spec.js` - Login page and authentication flow tests
+- `task-list.spec.js` - Task list display and filtering tests
+- `task-creation.spec.js` - Task creation form tests
+- `task-actions.spec.js` - Task completion and approval tests
+- `logout.spec.js` - Logout and session management tests
+- `fixtures.js` - Test fixtures and helper functions
+
+### Writing Tests
+
+Tests use Playwright's testing framework with fixtures for mock API responses:
+
+```javascript
+const { test, expect } = require('@playwright/test');
+const { setupAuthenticatedSession } = require('./fixtures');
+
+test.describe('My Feature', () => {
+  test.beforeEach(async ({ page }) => {
+    await setupAuthenticatedSession(page, 'user');
+    await page.goto('/');
+  });
+
+  test('should test something', async ({ page }) => {
+    // Your test code
+  });
+});
+```
+
+### Test Configuration
+
+Playwright configuration is in `playwright.config.js`. Key settings:
+
+- Tests run in Chromium, Firefox, and WebKit browsers
+- Base URL: http://localhost:3000 (configurable via BASE_URL env var)
+- Test timeout: 30 seconds
+- Automatic test server startup
+- Screenshots and videos on failure
+- HTML reporter for test results
+
+### CI/CD Integration
+
+Tests are configured to run in CI with:
+- No retries in development, 2 retries in CI
+- Serial execution in CI for stability
+- HTML report generation
+- Screenshot and video capture on failures
 
 ## Docker Development
 

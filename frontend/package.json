@@ -7,7 +7,15 @@
     "start": "webpack serve --mode development --open",
     "build": "webpack --mode production",
     "dev": "webpack --mode development",
-    "watch": "webpack --mode development --watch"
+    "watch": "webpack --mode development --watch",
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "test:ui": "playwright test --ui",
+    "test:debug": "playwright test --debug",
+    "test:chromium": "playwright test --project=chromium",
+    "test:firefox": "playwright test --project=firefox",
+    "test:webkit": "playwright test --project=webkit",
+    "test:report": "playwright show-report"
   },
   "dependencies": {
     "react": "^18.2.0",
@@ -17,6 +25,7 @@
     "@babel/core": "^7.17.0",
     "@babel/preset-env": "^7.16.0",
     "@babel/preset-react": "^7.18.0",
+    "@playwright/test": "^1.57.0",
     "babel-loader": "^9.1.0",
     "css-loader": "^6.7.0",
     "html-webpack-plugin": "^5.5.0",
