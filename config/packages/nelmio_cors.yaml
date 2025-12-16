@@ -1,5 +1,9 @@
+# CORS Configuration using Nelmio CORS Bundle
+# See docs/CORS_CONFIGURATION.md for detailed documentation
 nelmio_cors:
     defaults:
+        # Set to true if using regex patterns in CORS_ALLOWED_ORIGIN
+        # Set to false for simple exact-match origins
         origin_regex: false
         allow_origin: ['%env(CORS_ALLOWED_ORIGIN)%']
         allow_methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS']
@@ -8,7 +12,9 @@ nelmio_cors:
         max_age: 3600
         allow_credentials: true
     paths:
-        '^/api/':
+        # Apply CORS to all API routes
+        '^/api':
+            origin_regex: false
             allow_origin: ['%env(CORS_ALLOWED_ORIGIN)%']
             allow_methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS']
             allow_headers: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept']
