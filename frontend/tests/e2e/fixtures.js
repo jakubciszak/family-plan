@@ -3,7 +3,7 @@
  */
 
 // Mock API responses for testing
-export const mockApiResponses = {
+const mockApiResponses = {
   // User authentication responses
   loginSuccess: {
     user: {
@@ -88,7 +88,7 @@ export const mockApiResponses = {
 };
 
 // Test credentials
-export const testCredentials = {
+const testCredentials = {
   user: {
     email: 'test@example.com',
     password: 'password123'
@@ -104,7 +104,7 @@ export const testCredentials = {
 };
 
 // Helper to setup authenticated session
-export async function setupAuthenticatedSession(page, role = 'user') {
+async function setupAuthenticatedSession(page, role = 'user') {
   const userData = role === 'admin' ? mockApiResponses.currentAdmin : mockApiResponses.currentUser;
   
   // Mock the /api/auth/me endpoint to return authenticated user
@@ -129,7 +129,7 @@ export async function setupAuthenticatedSession(page, role = 'user') {
 }
 
 // Helper to setup unauthenticated session
-export async function setupUnauthenticatedSession(page) {
+async function setupUnauthenticatedSession(page) {
   // Mock the /api/auth/me endpoint to return 401
   await page.route('**/api/auth/me', async route => {
     await route.fulfill({
@@ -141,11 +141,21 @@ export async function setupUnauthenticatedSession(page) {
 }
 
 // Helper to wait for network idle
-export async function waitForNetworkIdle(page) {
+async function waitForNetworkIdle(page) {
   await page.waitForLoadState('networkidle');
 }
 
 // Helper to take screenshot with name
-export async function takeScreenshot(page, name) {
+async function takeScreenshot(page, name) {
   await page.screenshot({ path: `tests/screenshots/${name}.png`, fullPage: true });
 }
+
+// Export all fixtures and helpers
+module.exports = {
+  mockApiResponses,
+  testCredentials,
+  setupAuthenticatedSession,
+  setupUnauthenticatedSession,
+  waitForNetworkIdle,
+  takeScreenshot
+};

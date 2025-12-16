@@ -118,10 +118,7 @@ test.describe('Task Creation', () => {
     // Wait for form to close
     await expect(page.locator('.task-create-form')).not.toBeVisible();
     
-    // Wait for task list to update
-    await page.waitForTimeout(500);
-    
-    // Verify new task appears in list
+    // Wait for task list to update by checking task count
     const taskCards = page.locator('.task-card');
     await expect(taskCards).toHaveCount(4);
   });
@@ -167,9 +164,12 @@ test.describe('Task Creation', () => {
     // Submit
     await page.click('.task-create-form button[type="submit"]');
     
-    // Wait for form to close and reopen
-    await page.waitForTimeout(500);
+    // Wait for form to close
+    await expect(page.locator('.task-create-form')).not.toBeVisible();
+    
+    // Reopen the form
     await page.click('.task-list-header button:has-text("Create Task")');
+    await expect(page.locator('.task-create-form')).toBeVisible();
     
     // Verify form is empty
     await expect(page.locator('input#name')).toHaveValue('');

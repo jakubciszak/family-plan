@@ -62,8 +62,8 @@ test.describe('Task Actions - Complete', () => {
     const pendingTask = page.locator('.task-card').filter({ hasText: 'Clean the kitchen' });
     await pendingTask.locator('.btn-success:has-text("Complete")').click();
     
-    // Wait for update
-    await page.waitForTimeout(500);
+    // Wait for the request to complete by checking for network idle
+    await page.waitForLoadState('networkidle');
   });
 
   test('should send correct data when completing task', async ({ page }) => {
@@ -83,8 +83,8 @@ test.describe('Task Actions - Complete', () => {
     const pendingTask = page.locator('.task-card').filter({ hasText: 'Clean the kitchen' });
     await pendingTask.locator('.btn-success:has-text("Complete")').click();
     
-    // Wait for request
-    await page.waitForTimeout(500);
+    // Wait for request to complete
+    await page.waitForLoadState('networkidle');
     
     // Verify request data includes userId
     expect(requestData).toBeTruthy();
@@ -209,8 +209,8 @@ test.describe('Task Actions - Approve (Admin)', () => {
     const completedTask = page.locator('.task-card').filter({ hasText: 'Vacuum living room' });
     await completedTask.locator('.btn-primary:has-text("Approve")').click();
     
-    // Wait for update
-    await page.waitForTimeout(500);
+    // Wait for request to complete
+    await page.waitForLoadState('networkidle');
   });
 
   test('should send correct data when approving task', async ({ page }) => {
@@ -230,8 +230,8 @@ test.describe('Task Actions - Approve (Admin)', () => {
     const completedTask = page.locator('.task-card').filter({ hasText: 'Vacuum living room' });
     await completedTask.locator('.btn-primary:has-text("Approve")').click();
     
-    // Wait for request
-    await page.waitForTimeout(500);
+    // Wait for request to complete
+    await page.waitForLoadState('networkidle');
     
     // Verify request data includes adminId
     expect(requestData).toBeTruthy();
