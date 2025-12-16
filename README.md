@@ -1,16 +1,40 @@
 # 👨‍👩‍👧‍👦 Family Plan
 
-A modern Symfony web application for organizing family house works with children, built with Hexagonal Architecture, Domain-Driven Design (DDD), and CQRS patterns.
+A modern web application for organizing family house works with children, built with **separated frontend and backend architecture**.
+
+## 🏗️ Architecture Overview
+
+Family Plan now consists of two completely independent applications:
+
+### 🎨 Frontend (React SPA)
+- **Location**: `/frontend` directory
+- **Technology**: React 18, Webpack 5
+- **Deployment**: Standalone container with Nginx
+- **Communication**: REST API calls to backend
+- **Port**: 3000 (development), 80 (production container)
+
+### ⚙️ Backend (Symfony API)
+- **Location**: Root directory (main repository)
+- **Technology**: Symfony 7.1, PHP 8.3+
+- **Architecture**: Hexagonal Architecture with DDD and CQRS
+- **API**: RESTful endpoints under `/api/*`
+- **Port**: 8080 (development), exposed via Nginx
+
+See detailed documentation:
+- [Frontend README](frontend/README.md) - React application setup and development
+- [Backend Documentation](BACKEND.md) - Symfony API architecture and structure
 
 ## 🚀 Features
 
+- **Separated Architecture**: Independent frontend and backend applications
 - **Task Management**: Create tasks with points, frequency, and descriptions
 - **User Management**: Create user and admin accounts with role-based permissions
-- **Security & Authentication**: Symfony Security with form login and role-based access control
+- **Security & Authentication**: JWT/Session-based authentication via REST API
 - **Approval Workflow**: Admins can review and approve completed tasks
 - **Points System**: Reward system with configurable points (0-1000) per task
 - **Frequency-Based Tasks**: Support for Once, Daily, Weekly, and Monthly recurring tasks
-- **Modern UI**: Single Page Application experience with Symfony UX components
+- **Modern React SPA**: Single Page Application with responsive design
+- **RESTful API**: Complete REST API for all operations
 
 ## 🏗️ Architecture
 
@@ -35,147 +59,233 @@ A modern Symfony web application for organizing family house works with children
 
 ## 🛠️ Technology Stack
 
+### Frontend
+- React 18.2
+- Webpack 5
+- Babel
+- Docker + Nginx
+
+### Backend
 - PHP 8.3+ (ready for PHP 8.4+)
 - Symfony 7.1 (ready for Symfony 8 upgrade)
 - Doctrine ORM 3.x
-- Symfony UX (Turbo, Live Components, Stimulus)
-- Webpack Encore
-- SQLite Database
-- Twig Templates
+- PostgreSQL Database
+- Docker + PHP-FPM + Nginx
 
 ## 📋 Requirements
 
-- PHP 8.3 or higher
-- Composer 2.x
-- Node.js 18+ & npm
-- SQLite3
+- Docker & Docker Compose (recommended)
+- OR for local development:
+  - PHP 8.3 or higher
+  - Composer 2.x
+  - Node.js 20+ & npm
+  - PostgreSQL 16+
 
-## 🚀 Installation
+## 🚀 Quick Start with Docker
 
-### Local Development
+The easiest way to run the complete application:
 
 ```bash
 # Clone the repository
 git clone https://github.com/jakubciszak/family-plan.git
 cd family-plan
 
-# Install PHP dependencies
-composer install
+# Start all services (backend + frontend)
+docker compose up -d
 
-# Install JavaScript dependencies
-npm install
-
-# Build assets
-npm run build
-
-# Create database and run migrations
-php bin/console doctrine:migrations:migrate
-
-# Create super admin user from .env configuration
-php bin/console app:create-super-admin
-
-# Start development server
-php -S localhost:8000 -t public
+# Initialize the database (first time only)
+docker compose exec php php bin/console doctrine:migrations:migrate --no-interaction
+docker compose exec php php bin/console app:create-super-admin
 ```
 
-Visit http://localhost:8000 in your browser.
+**Access the application:**
+- Frontend (React SPA): http://localhost:3000
+- Backend API: http://localhost:8080/api
+- API Documentation: http://localhost:8080/api-docs.html
 
 **Default Credentials:**
 - Email: `admin@familyplan.local`
 - Password: `admin123`
 
-You can change these in your `.env` file:
+## 🚀 Installation
+
+### Frontend Development
+
 ```bash
-SUPER_ADMIN_EMAIL=admin@familyplan.local
-SUPER_ADMIN_NAME="Super Admin"
-SUPER_ADMIN_PASSWORD=admin123
+cd frontend
+
+# Install dependencies
+npm install
+
+# Configure API URL
+cp .env.example .env
+# Edit .env and set REACT_APP_API_URL=http://localhost:8080
+
+# Start development server
+npm start
+```
+
+Frontend will be available at http://localhost:3000
+
+### Backend Development
+
+```bash
+# Install PHP dependencies
+composer install
+
+# Configure environment
+cp .env .env.local
+# Edit .env.local with your database credentials
+
+# Create database and run migrations
+php bin/console doctrine:migrations:migrate
+
+# Create super admin user
+php bin/console app:create-super-admin
+
+# Start development server
+symfony serve
+# OR
+php -S localhost:8080 -t public
+```
+
+Backend API will be available at http://localhost:8080
+
+### Building Frontend Assets (Legacy)
+
+The main repository still contains Webpack Encore for legacy Symfony frontend support:
+
+```bash
+npm install
+npm run build
 ```
 
 ## 📁 Project Structure
 
 ```
-src/
-├── Shared/                          # Shared Kernel
-│   ├── Domain/
-│   │   ├── Event/                   # Domain Event interfaces
-│   │   └── ValueObject/             # Shared Value Objects (Uuid)
-│   └── Infrastructure/
-│       ├── Bus/                     # Command/Query buses (TODO)
-│       └── Persistence/
-├── UserManagement/                  # User Bounded Context
-│   ├── Domain/
-│   │   ├── Entity/                  # User aggregate
-│   │   ├── ValueObject/             # Email, Role
-│   │   ├── Event/                   # Domain events
-│   │   └── Repository/              # Repository interfaces
-│   ├── Application/
-│   │   ├── Command/                 # Commands (CreateUser)
-│   │   ├── Query/                   # Queries
-│   │   └── Handler/                 # Command/Query handlers
-│   └── Infrastructure/
-│       ├── Persistence/             # Doctrine repositories
-│       └── Security/                # UserProvider for authentication
-│       └── Security/                # Security adapters (TODO)
-├── TaskManagement/                  # Task Bounded Context
-│   ├── Domain/
-│   │   ├── Entity/                  # Task aggregate
-│   │   ├── ValueObject/             # TaskName, Points, Frequency, TaskStatus
-│   │   ├── Event/                   # Domain events
-│   │   └── Repository/              # Repository interfaces
-│   ├── Application/
-│   │   ├── Command/                 # Commands (CreateTask, CompleteTask, etc.)
-│   │   ├── Query/                   # Queries
-│   │   └── Handler/                 # Command/Query handlers
-│   └── Infrastructure/
-│       └── Persistence/             # Doctrine repositories
-└── Presentation/
-    └── Controller/                  # HTTP Controllers
+family-plan/
+├── frontend/                        # Frontend React Application (STANDALONE)
+│   ├── src/                         # React source code
+│   │   ├── App.jsx                  # Main application component
+│   │   ├── pages/                   # Page components
+│   │   ├── services/                # API client
+│   │   └── styles/                  # CSS styles
+│   ├── public/                      # Static files
+│   ├── Dockerfile                   # Development container
+│   ├── Dockerfile.prod              # Production container
+│   ├── webpack.config.js            # Build configuration
+│   └── package.json                 # Frontend dependencies
+│
+├── src/                             # Backend Symfony Application
+│   ├── Shared/                      # Shared Kernel
+│   │   ├── Domain/                  # Shared domain concepts
+│   │   └── Infrastructure/          # Shared infrastructure
+│   ├── UserManagement/              # User Bounded Context
+│   │   ├── Domain/                  # User domain logic
+│   │   ├── Application/             # User use cases
+│   │   └── Infrastructure/          # User infrastructure
+│   ├── TaskManagement/              # Task Bounded Context
+│   │   ├── Domain/                  # Task domain logic
+│   │   ├── Application/             # Task use cases
+│   │   └── Infrastructure/          # Task infrastructure
+│   └── Presentation/
+│       ├── Api/                     # REST API Controllers
+│       └── Controller/              # Traditional Controllers (legacy)
+│
+├── docker/                          # Docker configurations
+│   ├── php/                         # PHP-FPM container
+│   ├── nginx/                       # Nginx container
+│   └── react/                       # Legacy React container (deprecated)
+│
+├── compose.yaml                     # Development compose file
+├── compose.prod.yaml                # Production compose file
+├── docker-compose.hostinger.yml     # Hostinger deployment compose
+└── README.md                        # This file
 ```
 
 ## 🔧 Development
 
-### Run Tests
+### Frontend Development
 ```bash
+cd frontend
+npm start                    # Start dev server with hot reload
+npm run build               # Production build
+npm run watch               # Watch mode
+```
+
+### Backend Development
+```bash
+# Run tests
 php bin/phpunit
+
+# Database migrations
+php bin/console doctrine:migrations:migrate
+
+# Clear cache
+php bin/console cache:clear
 ```
 
-### Build Assets (Development)
+### Docker Development
 ```bash
-npm run dev
-```
+# Start all services
+docker compose up -d
 
-### Build Assets (Production)
-```bash
-npm run build
-```
+# View logs
+docker compose logs -f frontend
+docker compose logs -f php
 
-### Watch Assets
-```bash
-npm run watch
+# Rebuild containers
+docker compose up -d --build
+
+# Stop all services
+docker compose down
 ```
 
 ## 🚀 Production Deployment
 
 ### Docker Deployment to Hostinger
 
-For production deployment using Docker on Hostinger VPS, see the comprehensive deployment guide:
+The application is designed for containerized deployment with separate frontend and backend containers:
 
-**[📖 Hostinger Deployment Guide](HOSTINGER_DEPLOYMENT.md)**
+```bash
+# Verify deployment setup
+./verify-deployment.sh
+
+# Deploy with Docker Compose
+docker compose -f docker-compose.hostinger.yml up -d --build
+```
+
+**Services:**
+- `frontend` - React SPA served by Nginx (port 3000)
+- `php` - Symfony backend API (PHP-FPM)
+- `nginx` - Backend API gateway (port 8080)
+- `database` - PostgreSQL database
+
+For complete deployment instructions, see:
+- **[📖 Hostinger Deployment Guide](HOSTINGER_DEPLOYMENT.md)**
 
 The guide includes:
 - Complete Docker setup for production
 - Database configuration
 - SSL/HTTPS setup
+- Frontend-backend communication
 - Monitoring and maintenance
 - Troubleshooting
 
-Quick deployment:
-```bash
-# Verify deployment setup
-./verify-deployment.sh
+### Environment Configuration
 
-# Build and deploy
-docker compose -f docker-compose.hostinger.yml up -d --build
+**Frontend (.env):**
+```bash
+REACT_APP_API_URL=https://your-api-domain.com
+```
+
+**Backend (.env.prod):**
+```bash
+APP_ENV=prod
+APP_SECRET=your-secret-key
+DATABASE_URL=postgresql://user:pass@database:5432/dbname
+SUPER_ADMIN_EMAIL=admin@example.com
+SUPER_ADMIN_PASSWORD=secure-password
 ```
 
 ## 🔐 Security & Authentication

@@ -61,22 +61,23 @@ services:
     networks:
       - family-plan-network
 
-  # React Frontend (optional - serves built assets)
-  # Note: In production, React assets are typically served through Nginx/PHP
-  # This service is included for standalone frontend deployment if needed
+  # React Frontend (Standalone Container)
   frontend:
     build:
-      context: .
-      dockerfile: docker/react/Dockerfile.prod
+      context: ./frontend
+      dockerfile: Dockerfile.prod
     container_name: family-plan-frontend
     restart: unless-stopped
     ports:
-      - "${REACT_PORT:-3001}:80"
+      - "${FRONTEND_PORT:-3000}:80"
     environment:
       NGINX_HOST: ${NGINX_HOST:-localhost}
       NGINX_PORT: 80
+      REACT_APP_API_URL: "http://nginx:80"
     networks:
       - family-plan-network
+    depends_on:
+      - nginx
 
 volumes:
   database_data:
