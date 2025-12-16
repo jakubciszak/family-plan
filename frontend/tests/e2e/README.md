@@ -100,6 +100,34 @@ Tests use mocked API responses to avoid dependencies on the backend:
 5. **Verify both happy and error paths** - Test success and failure scenarios
 6. **Keep tests isolated** - Each test should be independent
 
+## Test Artifacts
+
+Playwright automatically captures the following artifacts during test execution:
+
+### Screenshots
+- Captured after each test completes
+- Location: `test-results/[test-name]/test-finished-1.png`
+- Useful for visual verification of test states
+- Automatically uploaded in CI pipeline
+
+### Videos
+- Recorded for all tests
+- Location: `test-results/[test-name]/video.webm`
+- Shows complete test execution flow
+- Helps debug test failures
+
+### Traces
+- Captured on test retry/failure
+- Location: `test-results/[test-name]/trace.zip`
+- Contains detailed execution information
+- View with: `npx playwright show-trace path/to/trace.zip`
+
+### HTML Report
+- Interactive test results dashboard
+- Location: `playwright-report/index.html`
+- Includes screenshots and test timings
+- View with: `npm run test:report`
+
 ## Configuration
 
 See `playwright.config.js` for:
@@ -107,7 +135,8 @@ See `playwright.config.js` for:
 - Timeout settings
 - Test server setup
 - Reporter options
-- Screenshot and video settings
+- Screenshot and video settings (enabled for all tests)
+- Trace capture settings
 
 ## Troubleshooting
 
@@ -120,6 +149,12 @@ See `playwright.config.js` for:
 - Check for race conditions in async operations
 - Use proper wait strategies instead of arbitrary timeouts
 - Verify mock responses match expected format
+- Review video recordings to see what happened
+
+### Viewing test artifacts
+- Check `test-results/` directory for screenshots and videos
+- Use `npm run test:report` to view HTML report with screenshots
+- Use `npx playwright show-trace [trace-file]` for detailed debugging
 
 ### Dev server conflicts
 - Ensure only one test run at a time
@@ -132,6 +167,17 @@ Tests are configured to run in CI with:
 - Automatic retries on failure (2 retries in CI)
 - Serial execution for stability
 - HTML report generation
-- Screenshot and video capture on failures
+- **Screenshots and videos captured for all tests**
+- **All test artifacts uploaded and retained for 30 days**
+- Trace files captured on failures for debugging
+
+### CI Artifacts
+
+The GitHub Actions workflow automatically uploads:
+1. **playwright-report** - HTML test report with screenshots (always uploaded)
+2. **playwright-test-results** - All screenshots and videos (always uploaded)
+3. **playwright-traces** - Trace files for failed tests (uploaded on failure)
+
+Access artifacts from the Actions tab in GitHub after the workflow completes.
 
 Environment variable `CI=true` enables CI-specific behavior.

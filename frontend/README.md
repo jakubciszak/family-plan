@@ -119,8 +119,29 @@ Playwright configuration is in `playwright.config.js`. Key settings:
 - Base URL: http://localhost:3000 (configurable via BASE_URL env var)
 - Test timeout: 30 seconds
 - Automatic test server startup
-- Screenshots and videos on failure
+- **Screenshots captured for all tests**
+- **Videos recorded for all tests**
 - HTML reporter for test results
+- Trace files captured on retry failures
+
+### Test Artifacts
+
+After running tests, the following artifacts are generated:
+
+- **Screenshots**: `test-results/[test-name]/test-finished-1.png` - Screenshot after each test
+- **Videos**: `test-results/[test-name]/video.webm` - Video recording of each test
+- **HTML Report**: `playwright-report/index.html` - Interactive test report with screenshots
+- **Traces**: `test-results/[test-name]/trace.zip` - Detailed trace for debugging failures
+
+View the HTML report:
+```bash
+npm run test:report
+```
+
+View a specific trace:
+```bash
+npx playwright show-trace test-results/[test-name]/trace.zip
+```
 
 ### CI/CD Integration
 
@@ -128,7 +149,9 @@ Tests are configured to run in CI with:
 - No retries in development, 2 retries in CI
 - Serial execution in CI for stability
 - HTML report generation
-- Screenshot and video capture on failures
+- **Screenshot and video artifacts uploaded for all tests**
+- **Test artifacts retained for 30 days**
+- Trace files uploaded on failures for debugging
 
 ## Docker Development
 

@@ -37,11 +37,11 @@ module.exports = defineConfig({
     // Collect trace when retrying the failed test
     trace: 'on-first-retry',
     
-    // Screenshot on failure
-    screenshot: 'only-on-failure',
+    // Take screenshots after each test
+    screenshot: 'on',
     
-    // Video on failure
-    video: 'retain-on-failure',
+    // Record video for all tests
+    video: 'on',
   },
 
   // Configure projects for major browsers
