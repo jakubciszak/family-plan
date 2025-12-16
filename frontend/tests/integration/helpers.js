@@ -3,6 +3,15 @@
  */
 
 /**
+ * Timeout constants for integration tests
+ */
+const TIMEOUTS = {
+  SHORT: 5000,    // 5 seconds - for quick UI updates
+  MEDIUM: 10000,  // 10 seconds - for API calls and page loads
+  LONG: 15000     // 15 seconds - for complex operations
+};
+
+/**
  * Login to the application with given credentials
  * @param {import('@playwright/test').Page} page - Playwright page object
  * @param {string} email - User email
@@ -13,7 +22,7 @@ async function login(page, email, password) {
   await page.fill('input#email', email);
   await page.fill('input#password', password);
   await page.click('button[type="submit"]');
-  await page.waitForSelector('.app-header', { timeout: 10000 });
+  await page.waitForSelector('.app-header', { timeout: TIMEOUTS.MEDIUM });
 }
 
 /**
@@ -29,5 +38,6 @@ function getAdminCredentials() {
 
 module.exports = {
   login,
-  getAdminCredentials
+  getAdminCredentials,
+  TIMEOUTS
 };

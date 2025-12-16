@@ -1,5 +1,5 @@
 const { test, expect } = require('@playwright/test');
-const { login, getAdminCredentials } = require('./helpers');
+const { login, getAdminCredentials, TIMEOUTS } = require('./helpers');
 
 /**
  * Integration tests for complete Task workflow
@@ -44,10 +44,10 @@ test.describe('Task Management Integration Tests', () => {
     await page.click('.task-create-form button[type="submit"]');
     
     // Wait for form to close
-    await expect(page.locator('.task-create-form')).not.toBeVisible({ timeout: 5000 });
+    await expect(page.locator('.task-create-form')).not.toBeVisible({ timeout: TIMEOUTS.SHORT });
     
     // Verify new task appears in list
-    await expect(page.locator('.task-card').filter({ hasText: taskName })).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('.task-card').filter({ hasText: taskName })).toBeVisible({ timeout: TIMEOUTS.SHORT });
   });
 
   test('should complete and approve task workflow', async ({ page }) => {
@@ -64,20 +64,20 @@ test.describe('Task Management Integration Tests', () => {
     await page.click('.task-create-form button[type="submit"]');
     
     // Wait for task to appear
-    await page.waitForSelector(`.task-card:has-text("${taskName}")`, { timeout: 5000 });
+    await page.waitForSelector(`.task-card:has-text("${taskName}")`, { timeout: TIMEOUTS.SHORT });
     
     // Find the task and complete it
     const taskCard = page.locator('.task-card').filter({ hasText: taskName });
     await taskCard.locator('.btn-success:has-text("Complete")').click();
     
     // Wait for status to update to completed
-    await expect(taskCard.locator('.status-completed')).toBeVisible({ timeout: 10000 });
+    await expect(taskCard.locator('.status-completed')).toBeVisible({ timeout: TIMEOUTS.MEDIUM });
     
     // As admin, approve the task
     await taskCard.locator('.btn-primary:has-text("Approve")').click();
     
     // Wait for status to update to approved
-    await expect(taskCard.locator('.status-approved')).toBeVisible({ timeout: 10000 });
+    await expect(taskCard.locator('.status-approved')).toBeVisible({ timeout: TIMEOUTS.MEDIUM });
   });
 
   test('should display task with correct metadata', async ({ page }) => {
@@ -101,7 +101,7 @@ test.describe('Task Management Integration Tests', () => {
     await page.click('.user-info button:has-text("Logout")');
     
     // Wait for redirect to login page
-    await page.waitForSelector('h2:has-text("Login")', { timeout: 5000 });
+    await page.waitForSelector('h2:has-text("Login")', { timeout: TIMEOUTS.SHORT });
     
     // Verify we're on login page
     await expect(page.locator('h2')).toContainText('Login');

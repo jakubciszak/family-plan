@@ -1,5 +1,5 @@
 const { test, expect } = require('@playwright/test');
-const { login, getAdminCredentials } = require('./helpers');
+const { login, getAdminCredentials, TIMEOUTS } = require('./helpers');
 
 /**
  * Integration tests for Login functionality
@@ -60,7 +60,7 @@ test.describe('Login Integration Tests', () => {
     await page.click('button[type="submit"]');
     
     // Wait for navigation and check for successful login
-    await page.waitForSelector('.app-header', { timeout: 10000 });
+    await page.waitForSelector('.app-header', { timeout: TIMEOUTS.MEDIUM });
     
     // Verify we're on the main app page
     await expect(page.locator('h1')).toContainText('Family Plan');

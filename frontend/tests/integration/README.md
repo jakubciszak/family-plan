@@ -112,17 +112,11 @@ When adding new integration tests:
 Example:
 ```javascript
 const { test, expect } = require('@playwright/test');
-
-async function login(page, email, password) {
-  await page.goto('/');
-  await page.fill('input#email', email);
-  await page.fill('input#password', password);
-  await page.click('button[type="submit"]');
-  await page.waitForSelector('.app-header', { timeout: 10000 });
-}
+const { login, getAdminCredentials } = require('./helpers');
 
 test('my integration test', async ({ page }) => {
-  await login(page, 'admin@familyplan.local', 'admin123');
+  const { email, password } = getAdminCredentials();
+  await login(page, email, password);
   // Your test code here
 });
 ```
