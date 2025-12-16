@@ -92,14 +92,46 @@ jobs:
     - name: Start services with Docker Compose
       run: |
         docker-compose up -d database php nginx frontend
-        echo "Waiting for services to be ready..."
-        sleep 30
     
-    - name: Check services are running
+    - name: Wait for services to be ready
+      run: |
+        echo "Waiting for database to be ready..."
+        for i in {1..30}; do
+          if docker-compose exec -T database pg_isready -U app -d app > /dev/null 2>&1; then
+            echo "Database is ready!"
+            break
+          fi
+          echo "Waiting for database... ($i/30)"
+          sleep 2
+        done
+        
+        echo "Waiting for backend API to be ready..."
+        for i in {1..30}; do
+          if curl -f -s http://localhost:8080/api/auth/me > /dev/null 2>&1 || curl -s http://localhost:8080/api/auth/me | grep -q "Unauthorized"; then
+            echo "Backend API is ready!"
+            break
+          fi
+          echo "Waiting for backend API... ($i/30)"
+          sleep 2
+        done
+        
+        echo "Waiting for frontend to be ready..."
+        for i in {1..30}; do
+          if curl -f -s http://localhost:3000 > /dev/null 2>&1; then
+            echo "Frontend is ready!"
+            break
+          fi
+          echo "Waiting for frontend... ($i/30)"
+          sleep 2
+        done
+    
+    - name: Verify services are running
       run: |
         docker-compose ps
-        curl --retry 10 --retry-delay 3 --retry-connrefused http://localhost:8080/api/auth/me || true
-        curl --retry 10 --retry-delay 3 --retry-connrefused http://localhost:3000 || true
+        echo "Testing backend API..."
+        curl -v http://localhost:8080/api/auth/me
+        echo "Testing frontend..."
+        curl -I http://localhost:3000
     
     - name: Run database migrations
       run: |

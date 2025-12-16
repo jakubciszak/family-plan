@@ -1,4 +1,5 @@
 const { test, expect } = require('@playwright/test');
+const { login, getAdminCredentials } = require('./helpers');
 
 /**
  * Integration tests for complete Task workflow
@@ -9,22 +10,11 @@ const { test, expect } = require('@playwright/test');
  * - Database must be seeded with test user
  */
 
-// Helper function to login
-async function login(page, email, password) {
-  await page.goto('/');
-  await page.fill('input#email', email);
-  await page.fill('input#password', password);
-  await page.click('button[type="submit"]');
-  await page.waitForSelector('.app-header', { timeout: 10000 });
-}
-
 test.describe('Task Management Integration Tests', () => {
-  const adminEmail = process.env.SUPER_ADMIN_EMAIL || 'admin@familyplan.local';
-  const adminPassword = process.env.SUPER_ADMIN_PASSWORD || 'admin123';
-
   test.beforeEach(async ({ page }) => {
     // Login before each test
-    await login(page, adminEmail, adminPassword);
+    const { email, password } = getAdminCredentials();
+    await login(page, email, password);
   });
 
   test('should display task list after login', async ({ page }) => {
@@ -120,11 +110,9 @@ test.describe('Task Management Integration Tests', () => {
 });
 
 test.describe('Task List Display Integration Tests', () => {
-  const adminEmail = process.env.SUPER_ADMIN_EMAIL || 'admin@familyplan.local';
-  const adminPassword = process.env.SUPER_ADMIN_PASSWORD || 'admin123';
-
   test.beforeEach(async ({ page }) => {
-    await login(page, adminEmail, adminPassword);
+    const { email, password } = getAdminCredentials();
+    await login(page, email, password);
   });
 
   test('should show admin buttons for completed tasks', async ({ page }) => {

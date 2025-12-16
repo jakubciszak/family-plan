@@ -1,4 +1,5 @@
 const { test, expect } = require('@playwright/test');
+const { login, getAdminCredentials } = require('./helpers');
 
 /**
  * Integration tests for Login functionality
@@ -48,9 +49,8 @@ test.describe('Login Integration Tests', () => {
   });
 
   test('should login successfully with valid credentials', async ({ page }) => {
-    // Use default admin credentials from environment or defaults
-    const email = process.env.SUPER_ADMIN_EMAIL || 'admin@familyplan.local';
-    const password = process.env.SUPER_ADMIN_PASSWORD || 'admin123';
+    // Use admin credentials from helper
+    const { email, password } = getAdminCredentials();
     
     // Fill in login form
     await page.fill('input#email', email);
