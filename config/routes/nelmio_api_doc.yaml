@@ -1,0 +1,4 @@
+# Expose API documentation at /api/doc
+nelmio_api_doc:
+    resource: '@NelmioApiDocBundle/Resources/config/routing.yaml'
+    prefix: /api/doc

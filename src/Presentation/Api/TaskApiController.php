@@ -13,6 +13,7 @@ use App\TaskManagement\Application\Handler\CompleteTaskHandler;
 use App\TaskManagement\Application\Handler\CreateTaskHandler;
 use App\TaskManagement\Domain\Entity\Task;
 use App\TaskManagement\Domain\Repository\TaskRepositoryInterface;
+use OpenApi\Attributes as OA;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -20,6 +21,7 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 
 #[Route('/api/tasks', name: 'api_task_')]
+#[OA\Tag(name: 'Tasks')]
 class TaskApiController extends AbstractController
 {
     public function __construct(
@@ -31,6 +33,34 @@ class TaskApiController extends AbstractController
     }
 
     #[Route('', name: 'list', methods: ['GET'])]
+    #[OA\Get(
+        path: '/api/tasks',
+        summary: 'List all tasks',
+        tags: ['Tasks']
+    )]
+    #[OA\Response(
+        response: 200,
+        description: 'List of tasks',
+        content: new OA\JsonContent(
+            properties: [
+                new OA\Property(
+                    property: 'tasks',
+                    type: 'array',
+                    items: new OA\Items(
+                        properties: [
+                            new OA\Property(property: 'id', type: 'string', format: 'uuid'),
+                            new OA\Property(property: 'name', type: 'string'),
+                            new OA\Property(property: 'description', type: 'string'),
+                            new OA\Property(property: 'points', type: 'integer'),
+                            new OA\Property(property: 'frequency', type: 'string', enum: ['once', 'daily', 'weekly', 'monthly']),
+                            new OA\Property(property: 'status', type: 'string', enum: ['pending', 'completed', 'approved']),
+                            new OA\Property(property: 'createdAt', type: 'string', format: 'date-time')
+                        ]
+                    )
+                )
+            ]
+        )
+    )]
     public function list(): JsonResponse
     {
         $tasks = $this->taskRepository->findAll();
@@ -41,6 +71,38 @@ class TaskApiController extends AbstractController
     }
 
     #[Route('', name: 'create', methods: ['POST'])]
+    #[OA\Post(
+        path: '/api/tasks',
+        summary: 'Create a new task',
+        tags: ['Tasks']
+    )]
+    #[OA\RequestBody(
+        required: true,
+        content: new OA\JsonContent(
+            required: ['name', 'points', 'frequency'],
+            properties: [
+                new OA\Property(property: 'name', type: 'string', minLength: 1, maxLength: 255, example: 'Clean the kitchen'),
+                new OA\Property(property: 'description', type: 'string', example: 'Wash dishes and mop floor'),
+                new OA\Property(property: 'points', type: 'integer', minimum: 0, maximum: 1000, example: 50),
+                new OA\Property(property: 'frequency', type: 'string', enum: ['once', 'daily', 'weekly', 'monthly'], example: 'daily')
+            ]
+        )
+    )]
+    #[OA\Response(
+        response: 201,
+        description: 'Task created successfully',
+        content: new OA\JsonContent(
+            properties: [
+                new OA\Property(property: 'id', type: 'string', format: 'uuid'),
+                new OA\Property(property: 'name', type: 'string'),
+                new OA\Property(property: 'description', type: 'string'),
+                new OA\Property(property: 'points', type: 'integer'),
+                new OA\Property(property: 'frequency', type: 'string'),
+                new OA\Property(property: 'status', type: 'string'),
+                new OA\Property(property: 'createdAt', type: 'string', format: 'date-time')
+            ]
+        )
+    )]
     public function create(Request $request): JsonResponse
     {
         $data = json_decode($request->getContent(), true);
@@ -62,6 +124,42 @@ class TaskApiController extends AbstractController
     }
 
     #[Route('/{id}', name: 'get', methods: ['GET'])]
+    #[OA\Get(
+        path: '/api/tasks/{id}',
+        summary: 'Get task by ID',
+        tags: ['Tasks']
+    )]
+    #[OA\Parameter(
+        name: 'id',
+        in: 'path',
+        required: true,
+        description: 'Task UUID',
+        schema: new OA\Schema(type: 'string', format: 'uuid')
+    )]
+    #[OA\Response(
+        response: 200,
+        description: 'Task details',
+        content: new OA\JsonContent(
+            properties: [
+                new OA\Property(property: 'id', type: 'string', format: 'uuid'),
+                new OA\Property(property: 'name', type: 'string'),
+                new OA\Property(property: 'description', type: 'string'),
+                new OA\Property(property: 'points', type: 'integer'),
+                new OA\Property(property: 'frequency', type: 'string'),
+                new OA\Property(property: 'status', type: 'string'),
+                new OA\Property(property: 'createdAt', type: 'string', format: 'date-time')
+            ]
+        )
+    )]
+    #[OA\Response(
+        response: 404,
+        description: 'Task not found',
+        content: new OA\JsonContent(
+            properties: [
+                new OA\Property(property: 'error', type: 'string', example: 'Task not found')
+            ]
+        )
+    )]
     public function get(string $id): JsonResponse
     {
         $task = $this->taskRepository->findById($id);
@@ -74,6 +172,42 @@ class TaskApiController extends AbstractController
     }
 
     #[Route('/{id}/complete', name: 'complete', methods: ['POST'])]
+    #[OA\Post(
+        path: '/api/tasks/{id}/complete',
+        summary: 'Complete a task',
+        tags: ['Tasks']
+    )]
+    #[OA\Parameter(
+        name: 'id',
+        in: 'path',
+        required: true,
+        description: 'Task UUID',
+        schema: new OA\Schema(type: 'string', format: 'uuid')
+    )]
+    #[OA\RequestBody(
+        required: true,
+        content: new OA\JsonContent(
+            required: ['userId'],
+            properties: [
+                new OA\Property(property: 'userId', type: 'string', format: 'uuid', example: '550e8400-e29b-41d4-a716-446655440002')
+            ]
+        )
+    )]
+    #[OA\Response(
+        response: 200,
+        description: 'Task completed successfully',
+        content: new OA\JsonContent(
+            properties: [
+                new OA\Property(property: 'id', type: 'string', format: 'uuid'),
+                new OA\Property(property: 'name', type: 'string'),
+                new OA\Property(property: 'description', type: 'string'),
+                new OA\Property(property: 'points', type: 'integer'),
+                new OA\Property(property: 'frequency', type: 'string'),
+                new OA\Property(property: 'status', type: 'string'),
+                new OA\Property(property: 'createdAt', type: 'string', format: 'date-time')
+            ]
+        )
+    )]
     public function complete(string $id, Request $request): JsonResponse
     {
         $data = json_decode($request->getContent(), true);
@@ -88,6 +222,42 @@ class TaskApiController extends AbstractController
     }
 
     #[Route('/{id}/approve', name: 'approve', methods: ['POST'])]
+    #[OA\Post(
+        path: '/api/tasks/{id}/approve',
+        summary: 'Approve a completed task',
+        tags: ['Tasks']
+    )]
+    #[OA\Parameter(
+        name: 'id',
+        in: 'path',
+        required: true,
+        description: 'Task UUID',
+        schema: new OA\Schema(type: 'string', format: 'uuid')
+    )]
+    #[OA\RequestBody(
+        required: true,
+        content: new OA\JsonContent(
+            required: ['adminId'],
+            properties: [
+                new OA\Property(property: 'adminId', type: 'string', format: 'uuid', example: '550e8400-e29b-41d4-a716-446655440003')
+            ]
+        )
+    )]
+    #[OA\Response(
+        response: 200,
+        description: 'Task approved successfully',
+        content: new OA\JsonContent(
+            properties: [
+                new OA\Property(property: 'id', type: 'string', format: 'uuid'),
+                new OA\Property(property: 'name', type: 'string'),
+                new OA\Property(property: 'description', type: 'string'),
+                new OA\Property(property: 'points', type: 'integer'),
+                new OA\Property(property: 'frequency', type: 'string'),
+                new OA\Property(property: 'status', type: 'string'),
+                new OA\Property(property: 'createdAt', type: 'string', format: 'date-time')
+            ]
+        )
+    )]
     public function approve(string $id, Request $request): JsonResponse
     {
         $data = json_decode($request->getContent(), true);

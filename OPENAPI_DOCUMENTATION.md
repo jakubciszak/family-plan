@@ -4,21 +4,14 @@ The Family Plan API is documented using OpenAPI 3.0 specification with Swagger U
 
 ## Accessing the Documentation
 
-### Swagger UI (Interactive) - Recommended
-Visit the dynamic interactive API documentation in your browser:
+### Swagger UI (Interactive)
+Visit the interactive API documentation in your browser:
 
-```
-http://localhost:8080/api/doc
-```
-
-This is the recommended way to access the API documentation as it's dynamically served through Symfony routing.
-
-**Alternative Static Access:**
 ```
 http://localhost:8080/api-docs.html
 ```
 
-Both provide:
+This provides:
 - Complete API endpoint listing
 - Request/response examples
 - Interactive "Try it out" functionality
@@ -28,12 +21,6 @@ Both provide:
 ### OpenAPI Specification (YAML)
 The raw OpenAPI specification is available at:
 
-**Dynamic endpoint (Recommended):**
-```
-http://localhost:8080/api/openapi.yaml
-```
-
-**Static file:**
 ```
 http://localhost:8080/openapi.yaml
 ```
@@ -83,7 +70,7 @@ The API uses session-based authentication:
 
 ### Testing with Swagger UI
 
-1. Open http://localhost:8080/api/doc (or http://localhost:8080/api-docs.html for static version)
+1. Open http://localhost:8080/api-docs.html
 2. Click on an endpoint to expand it
 3. Click "Try it out"
 4. Fill in required parameters
