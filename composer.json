@@ -31,7 +31,7 @@
         "twig/twig": "*"
     },
     "require-dev": {
-        "behat/behat": "3.x-dev",
+        "behat/behat": "3.x-dev@dev",
         "phpunit/phpunit": "^11.0",
         "symfony/browser-kit": "8.0.*",
         "symfony/css-selector": "8.0.*",
@@ -49,9 +49,7 @@
         "sort-packages": true,
         "audit": {
             "ignore": ["PKSA-365x-2zjk-pt47"]
-        },
-        "minimum-stability": "dev",
-        "prefer-stable": true
+        }
     },
     "autoload": {
         "psr-4": {
