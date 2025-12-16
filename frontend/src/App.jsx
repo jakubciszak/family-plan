@@ -1,6 +1,7 @@
 import React from 'react';
 import TaskList from './pages/TaskList';
 import Login from './pages/Login';
+import apiClient from './services/apiClient';
 import './styles/app.css';
 
 function App() {
@@ -9,13 +10,7 @@ function App() {
 
     React.useEffect(() => {
         // Check if user is authenticated
-        fetch('/api/auth/me')
-            .then(response => {
-                if (response.ok) {
-                    return response.json();
-                }
-                throw new Error('Not authenticated');
-            })
+        apiClient.get('/api/auth/me')
             .then(data => {
                 setUser(data);
                 setIsAuthenticated(true);
@@ -31,8 +26,13 @@ function App() {
     };
 
     const handleLogout = () => {
-        fetch('/api/auth/logout', { method: 'POST' })
+        apiClient.post('/api/auth/logout', {})
             .then(() => {
+                setUser(null);
+                setIsAuthenticated(false);
+            })
+            .catch(() => {
+                // Even if request fails, clear local state
                 setUser(null);
                 setIsAuthenticated(false);
             });

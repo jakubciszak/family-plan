@@ -1,4 +1,4 @@
-const API_BASE_URL = process.env.REACT_APP_API_URL || '';
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8080';
 
 const apiClient = {
     async get(url) {
@@ -63,6 +63,11 @@ const apiClient = {
 
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        // Handle empty response body (204 No Content)
+        if (response.status === 204 || response.headers.get('content-length') === '0') {
+            return null;
         }
 
         return await response.json();

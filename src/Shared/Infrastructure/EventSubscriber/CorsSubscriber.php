@@ -43,10 +43,7 @@ class CorsSubscriber implements EventSubscriberInterface
         // Handle preflight OPTIONS request
         if ($request->getMethod() === 'OPTIONS') {
             $response = new Response();
-            $response->headers->set('Access-Control-Allow-Origin', $this->allowedOrigin);
-            $response->headers->set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-            $response->headers->set('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
-            $response->headers->set('Access-Control-Allow-Credentials', 'true');
+            $this->addCorsHeaders($response);
             $response->headers->set('Access-Control-Max-Age', '3600');
             $event->setResponse($response);
         }
@@ -60,8 +57,11 @@ class CorsSubscriber implements EventSubscriberInterface
         }
 
         $response = $event->getResponse();
-        
-        // Add CORS headers to all responses
+        $this->addCorsHeaders($response);
+    }
+
+    private function addCorsHeaders(Response $response): void
+    {
         $response->headers->set('Access-Control-Allow-Origin', $this->allowedOrigin);
         $response->headers->set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
         $response->headers->set('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');

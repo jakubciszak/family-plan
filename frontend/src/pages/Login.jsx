@@ -1,4 +1,5 @@
 import React from 'react';
+import apiClient from '../services/apiClient';
 
 function Login({ onLogin }) {
     const [email, setEmail] = React.useState('');
@@ -10,19 +11,7 @@ function Login({ onLogin }) {
         setError('');
 
         try {
-            const response = await fetch('/api/auth/login', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ email, password }),
-            });
-
-            if (!response.ok) {
-                throw new Error('Login failed');
-            }
-
-            const data = await response.json();
+            const data = await apiClient.post('/api/auth/login', { email, password });
             onLogin(data.user);
         } catch (err) {
             setError('Invalid email or password');
