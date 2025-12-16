@@ -33,6 +33,9 @@ Thumbs.db
 /vendor/
 /node_modules/
 
+# Frontend application (separate container)
+/frontend/
+
 # Build artifacts
 /public/build/
 /var/
