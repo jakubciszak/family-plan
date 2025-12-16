@@ -33,23 +33,32 @@ test.describe('Login Page', () => {
   });
 
   test('should login successfully with valid credentials', async ({ page }) => {
-    await page.goto('/');
+    // Initially mock as unauthenticated
+    let authenticated = false;
+    
+    await page.route('**/api/auth/me', async route => {
+      if (!authenticated) {
+        await route.fulfill({
+          status: 401,
+          contentType: 'application/json',
+          body: JSON.stringify({ error: 'Unauthorized' })
+        });
+      } else {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify(mockApiResponses.currentUser)
+        });
+      }
+    });
     
     // Mock successful login response
     await page.route('**/api/auth/login', async route => {
+      authenticated = true; // Mark as authenticated after login
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify(mockApiResponses.loginSuccess)
-      });
-    });
-    
-    // Mock authenticated user endpoint
-    await page.route('**/api/auth/me', async route => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify(mockApiResponses.currentUser)
       });
     });
     
@@ -61,6 +70,11 @@ test.describe('Login Page', () => {
         body: JSON.stringify(mockApiResponses.emptyTasks)
       });
     });
+    
+    await page.goto('/');
+    
+    // Wait for login form to be visible
+    await page.waitForSelector('input#email', { timeout: 10000 });
     
     // Fill in login form
     await page.fill('input#email', testCredentials.user.email);
@@ -78,8 +92,6 @@ test.describe('Login Page', () => {
   });
 
   test('should show error message for invalid credentials', async ({ page }) => {
-    await page.goto('/');
-    
     // Mock failed login response
     await page.route('**/api/auth/login', async route => {
       await route.fulfill({
@@ -88,6 +100,8 @@ test.describe('Login Page', () => {
         body: JSON.stringify(mockApiResponses.loginError)
       });
     });
+    
+    await page.goto('/');
     
     // Fill in login form with invalid credentials
     await page.fill('input#email', testCredentials.invalid.email);

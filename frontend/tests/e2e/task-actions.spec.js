@@ -6,8 +6,16 @@ const {
 
 test.describe('Task Actions - Complete', () => {
   test.beforeEach(async ({ page }) => {
-    // Setup authenticated session as regular user
-    await setupAuthenticatedSession(page, 'user');
+    // Setup authenticated session manually without using the helper
+    // because we need custom task list mocking
+    await page.route('**/api/auth/me', async route => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(mockApiResponses.currentUser)
+      });
+    });
+    
     await page.goto('/');
     await page.waitForSelector('.task-card');
   });
@@ -27,7 +35,14 @@ test.describe('Task Actions - Complete', () => {
     await page.route('**/api/tasks', async (route) => {
       if (route.request().method() === 'GET') {
         requestCount++;
-        if (requestCount > 1) {
+        if (requestCount === 1) {
+          // First request - return original tasks
+          await route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify(mockApiResponses.sampleTasks)
+          });
+        } else {
           // Second request - return updated tasks
           const updatedTasks = {
             tasks: mockApiResponses.sampleTasks.tasks.map(task => 
@@ -39,8 +54,6 @@ test.describe('Task Actions - Complete', () => {
             contentType: 'application/json',
             body: JSON.stringify(updatedTasks)
           });
-        } else {
-          await route.continue();
         }
       }
     });
@@ -88,12 +101,20 @@ test.describe('Task Actions - Complete', () => {
       });
     });
     
-    // Mock updated task list
+    // Mock updated task list - second request should return completed task
     let requestCount = 0;
     await page.route('**/api/tasks', async (route) => {
       if (route.request().method() === 'GET') {
         requestCount++;
-        if (requestCount > 1) {
+        if (requestCount === 1) {
+          // First request - return original tasks
+          await route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify(mockApiResponses.sampleTasks)
+          });
+        } else {
+          // Subsequent requests - return updated tasks with completed status
           const updatedTasks = {
             tasks: mockApiResponses.sampleTasks.tasks.map(task => 
               task.id === 1 ? { ...task, status: 'completed' } : task
@@ -104,8 +125,6 @@ test.describe('Task Actions - Complete', () => {
             contentType: 'application/json',
             body: JSON.stringify(updatedTasks)
           });
-        } else {
-          await route.continue();
         }
       }
     });
@@ -114,11 +133,11 @@ test.describe('Task Actions - Complete', () => {
     const pendingTask = page.locator('.task-card').filter({ hasText: 'Clean the kitchen' });
     await pendingTask.locator('.btn-success:has-text("Complete")').click();
     
-    // Wait for update
-    await page.waitForTimeout(1000);
-    
-    // Reload to check updated state
+    // Wait for the status to change to 'completed' as a signal that the UI updated
     const taskCard = page.locator('.task-card').filter({ hasText: 'Clean the kitchen' });
+    await expect(taskCard.locator('.status-completed')).toBeVisible({ timeout: 3000 });
+    
+    // Now verify the complete button is not present
     const completeButton = taskCard.locator('.btn-success:has-text("Complete")');
     await expect(completeButton).not.toBeVisible();
   });
@@ -126,8 +145,15 @@ test.describe('Task Actions - Complete', () => {
 
 test.describe('Task Actions - Approve (Admin)', () => {
   test.beforeEach(async ({ page }) => {
-    // Setup authenticated session as admin
-    await setupAuthenticatedSession(page, 'admin');
+    // Setup authenticated session manually without using the helper
+    await page.route('**/api/auth/me', async route => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(mockApiResponses.currentAdmin)
+      });
+    });
+    
     await page.goto('/');
     await page.waitForSelector('.task-card');
   });
@@ -156,7 +182,15 @@ test.describe('Task Actions - Approve (Admin)', () => {
     await page.route('**/api/tasks', async (route) => {
       if (route.request().method() === 'GET') {
         requestCount++;
-        if (requestCount > 1) {
+        if (requestCount === 1) {
+          // First request - return original tasks
+          await route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify(mockApiResponses.sampleTasks)
+          });
+        } else {
+          // Subsequent requests - return updated tasks with approved status
           const updatedTasks = {
             tasks: mockApiResponses.sampleTasks.tasks.map(task => 
               task.id === 3 ? { ...task, status: 'approved' } : task
@@ -167,8 +201,6 @@ test.describe('Task Actions - Approve (Admin)', () => {
             contentType: 'application/json',
             body: JSON.stringify(updatedTasks)
           });
-        } else {
-          await route.continue();
         }
       }
     });
