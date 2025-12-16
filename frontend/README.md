@@ -46,6 +46,158 @@ The application will be available at http://localhost:3000 with hot reload enabl
 - `npm run dev` - Build in development mode
 - `npm run build` - Build for production
 - `npm run watch` - Watch mode for development
+- `npm test` - Run all Playwright tests
+- `npm run test:headed` - Run tests with browser visible
+- `npm run test:ui` - Run tests with Playwright UI mode
+- `npm run test:debug` - Run tests in debug mode
+- `npm run test:chromium` - Run tests only in Chromium
+- `npm run test:firefox` - Run tests only in Firefox
+- `npm run test:webkit` - Run tests only in WebKit/Safari
+- `npm run test:report` - Show HTML test report
+- `npm run test:integration` - Run integration tests (requires full stack)
+- `npm run test:integration:headed` - Run integration tests with browser visible
+- `npm run test:integration:debug` - Debug integration tests
+
+## Testing
+
+This project uses Playwright for end-to-end testing with **two types of tests**:
+
+### 1. Mocked E2E Tests (`tests/e2e/`)
+
+Fast tests with mocked API responses - **run on all branches**.
+
+```bash
+# Run mocked E2E tests (default)
+npm test
+
+# Run with browser visible
+npm run test:headed
+
+# Run in interactive UI mode
+npm run test:ui
+
+# Run in a specific browser
+npm run test:chromium
+npm run test:firefox
+npm run test:webkit
+
+# Debug tests
+npm run test:debug
+```
+
+**Test files:**
+- `login.spec.js` - Login page and authentication flow tests
+- `task-list.spec.js` - Task list display and filtering tests
+- `task-creation.spec.js` - Task creation form tests
+- `task-actions.spec.js` - Task completion and approval tests
+- `logout.spec.js` - Logout and session management tests
+- `fixtures.js` - Test fixtures and helper functions
+
+### 2. Integration Tests (`tests/integration/`)
+
+Tests with real backend API - **run only on main branch in CI**.
+
+**Prerequisites:** Full application stack must be running:
+```bash
+# Start all services
+docker-compose up -d
+
+# Run integration tests
+npm run test:integration
+```
+
+**Test files:**
+- `login.spec.js` - Login functionality with real API
+- `task-flow.spec.js` - Complete task workflows (create, complete, approve)
+- `README.md` - Detailed integration test documentation
+
+See [tests/integration/README.md](tests/integration/README.md) for more details.
+
+### Test Differences
+
+| Feature | Mocked E2E Tests | Integration Tests |
+|---------|------------------|-------------------|
+| **API Calls** | Mocked with `page.route()` | Real backend API |
+| **Speed** | Fast (~6 seconds) | Slower (~30+ seconds) |
+| **Prerequisites** | None | Docker-compose stack |
+| **CI Execution** | All branches | Main branch only |
+| **Purpose** | Fast feedback, unit-like | Full stack validation |
+
+### Writing Tests
+
+Tests use Playwright's testing framework with fixtures for mock API responses:
+
+```javascript
+const { test, expect } = require('@playwright/test');
+const { setupAuthenticatedSession } = require('./fixtures');
+
+test.describe('My Feature', () => {
+  test.beforeEach(async ({ page }) => {
+    await setupAuthenticatedSession(page, 'user');
+    await page.goto('/');
+  });
+
+  test('should test something', async ({ page }) => {
+    // Your test code
+  });
+});
+```
+
+### Test Configuration
+
+Playwright configuration is in `playwright.config.js`. Key settings:
+
+- Tests run in Chromium, Firefox, and WebKit browsers
+- Base URL: http://localhost:3000 (configurable via BASE_URL env var)
+- Test timeout: 30 seconds
+- Automatic test server startup
+- **Screenshots captured for all tests**
+- **Videos recorded for all tests**
+- HTML reporter for test results
+- Trace files captured on retry failures
+
+### Test Artifacts
+
+After running tests, the following artifacts are generated:
+
+- **Screenshots**: `test-results/[test-name]/test-finished-1.png` - Screenshot after each test
+- **Videos**: `test-results/[test-name]/video.webm` - Video recording of each test
+- **HTML Report**: `playwright-report/index.html` - Interactive test report with screenshots
+- **Traces**: `test-results/[test-name]/trace.zip` - Detailed trace for debugging failures
+
+View the HTML report:
+```bash
+npm run test:report
+```
+
+View a specific trace:
+```bash
+npx playwright show-trace test-results/[test-name]/trace.zip
+```
+
+### CI/CD Integration
+
+The GitHub Actions workflow runs two types of tests:
+
+#### Mocked E2E Tests (All Branches)
+- Run on every push and pull request
+- Fast execution (~6 seconds)
+- No external dependencies
+- Provides immediate feedback
+
+#### Integration Tests (Main Branch Only)
+- Run only on pushes to main branch
+- Requires full docker-compose stack
+- Includes database migrations and setup
+- Validates complete application flow
+
+**Common CI features:**
+- 2 retries on failure
+- HTML report generation
+- Screenshot and video artifacts uploaded for all tests
+- Test artifacts retained for 30 days
+- Trace files uploaded on failures for debugging
+- Separate artifact names for each test type
 
 ## Docker Development
 
