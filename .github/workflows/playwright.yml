@@ -138,16 +138,16 @@ jobs:
       run: |
         docker compose exec -T database psql -U app -d app -c "CREATE DATABASE app_test;"
     
+    - name: Run database migrations
+      run: |
+        docker compose exec -T php php bin/console doctrine:migrations:migrate --no-interaction
+    
     - name: Verify backend API is working
       run: |
         echo "Testing backend API..."
         curl -v http://localhost:8080/api/auth/me
         echo "Testing frontend..."
         curl -I http://localhost:3000
-    
-    - name: Run database migrations
-      run: |
-        docker compose exec -T php php bin/console doctrine:migrations:migrate --no-interaction
     
     - name: Create super admin user
       run: |
