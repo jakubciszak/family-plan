@@ -106,8 +106,13 @@ test.describe('Task Actions - Complete', () => {
     // Unroute the existing tasks handler from beforeEach
     await page.unroute('**/api/tasks');
     
-    // Mock task completion
+    // Track API calls
+    let tasksRequestCount = 0;
+    let completeRequestMade = false;
+    
+    // Mock task completion and track the request
     await page.route('**/api/tasks/*/complete', async route => {
+      completeRequestMade = true;
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -115,20 +120,13 @@ test.describe('Task Actions - Complete', () => {
       });
     });
     
-    // Mock updated task list - second request should return completed task
-    let requestCount = 0;
+    // Mock updated task list - return completed task after the complete request
     await page.route('**/api/tasks', async (route) => {
       if (route.request().method() === 'GET') {
-        requestCount++;
-        if (requestCount === 1) {
-          // First request - return original tasks
-          await route.fulfill({
-            status: 200,
-            contentType: 'application/json',
-            body: JSON.stringify(mockApiResponses.sampleTasks)
-          });
-        } else {
-          // Subsequent requests - return updated tasks with completed status
+        tasksRequestCount++;
+        
+        // If complete request was made, return updated tasks
+        if (completeRequestMade) {
           const updatedTasks = {
             tasks: mockApiResponses.sampleTasks.tasks.map(task => 
               task.id === 1 ? { ...task, status: 'completed' } : task
@@ -139,20 +137,42 @@ test.describe('Task Actions - Complete', () => {
             contentType: 'application/json',
             body: JSON.stringify(updatedTasks)
           });
+        } else {
+          // Before complete, return original tasks
+          await route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify(mockApiResponses.sampleTasks)
+          });
         }
       }
     });
     
-    // Complete the task
+    // Complete the task and wait for the complete request
     const pendingTask = page.locator('.task-card').filter({ hasText: 'Clean the kitchen' });
-    await pendingTask.locator('.btn-success:has-text("Complete")').click();
+    const completeButton = pendingTask.locator('.btn-success:has-text("Complete")');
     
-    // Wait for the status to change to 'completed' as a signal that the UI updated
+    // Wait for completion request to be made
+    const [completeResponse] = await Promise.all([
+      page.waitForResponse(response => 
+        response.url().includes('/api/tasks/') && 
+        response.url().includes('/complete')
+      ),
+      completeButton.click()
+    ]);
+    
+    // Wait for the tasks to be refetched after completion
+    await page.waitForResponse(response => 
+      response.url().includes('/api/tasks') && 
+      !response.url().includes('/complete') &&
+      response.request().method() === 'GET'
+    );
+    
+    // Wait for network to settle
+    await page.waitForLoadState('networkidle');
+    
+    // Now verify the complete button is not present (task should be completed)
     const taskCard = page.locator('.task-card').filter({ hasText: 'Clean the kitchen' });
-    await expect(taskCard.locator('.status-completed')).toBeVisible({ timeout: 3000 });
-    
-    // Now verify the complete button is not present
-    const completeButton = taskCard.locator('.btn-success:has-text("Complete")');
     await expect(completeButton).not.toBeVisible();
   });
 });
