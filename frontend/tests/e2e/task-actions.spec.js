@@ -16,6 +16,17 @@ test.describe('Task Actions - Complete', () => {
       });
     });
     
+    // Mock the tasks API to return sample tasks
+    await page.route('**/api/tasks', async route => {
+      if (route.request().method() === 'GET') {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify(mockApiResponses.sampleTasks)
+        });
+      }
+    });
+    
     await page.goto('/');
     await page.waitForSelector('.task-card');
   });
@@ -152,6 +163,17 @@ test.describe('Task Actions - Approve (Admin)', () => {
         contentType: 'application/json',
         body: JSON.stringify(mockApiResponses.currentAdmin)
       });
+    });
+    
+    // Mock the tasks API to return sample tasks
+    await page.route('**/api/tasks', async route => {
+      if (route.request().method() === 'GET') {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify(mockApiResponses.sampleTasks)
+        });
+      }
     });
     
     await page.goto('/');
