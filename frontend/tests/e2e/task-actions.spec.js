@@ -103,6 +103,9 @@ test.describe('Task Actions - Complete', () => {
   });
 
   test('should not show complete button after task is completed', async ({ page }) => {
+    // Unroute the existing tasks handler from beforeEach
+    await page.unroute('**/api/tasks');
+    
     // Mock task completion
     await page.route('**/api/tasks/*/complete', async route => {
       await route.fulfill({
