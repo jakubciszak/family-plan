@@ -66,6 +66,7 @@ final class Version20251215154000 extends AbstractMigration
         $this->addSql('CREATE INDEX IDX_task_executions_task_template_id ON task_executions (task_template_id)');
         $this->addSql('CREATE INDEX IDX_task_executions_assigned_user_id ON task_executions (assigned_user_id)');
         $this->addSql('CREATE INDEX IDX_task_executions_scheduled_for ON task_executions (scheduled_for)');
+        // Foreign keys use ON DELETE SET NULL to preserve historical data when templates/users are deleted
         $this->addSql('ALTER TABLE task_executions ADD CONSTRAINT FK_task_executions_task_template_id FOREIGN KEY (task_template_id) REFERENCES task_templates (id) ON DELETE SET NULL NOT DEFERRABLE INITIALLY IMMEDIATE');
         $this->addSql('ALTER TABLE task_executions ADD CONSTRAINT FK_task_executions_assigned_user_id FOREIGN KEY (assigned_user_id) REFERENCES users (id) ON DELETE SET NULL NOT DEFERRABLE INITIALLY IMMEDIATE');
         $this->addSql('ALTER TABLE task_executions ADD CONSTRAINT FK_task_executions_completed_by_user_id FOREIGN KEY (completed_by_user_id) REFERENCES users (id) ON DELETE SET NULL NOT DEFERRABLE INITIALLY IMMEDIATE');

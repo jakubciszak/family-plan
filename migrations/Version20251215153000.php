@@ -29,7 +29,6 @@ final class Version20251215153000 extends AbstractMigration
         )');
         
         $this->addSql('CREATE UNIQUE INDEX UNIQ_users_email ON users (email)');
-        $this->addSql('CREATE INDEX IDX_users_email ON users (email)');
         $this->addSql('COMMENT ON COLUMN users.id IS \'(DC2Type:uuid)\'');
         $this->addSql('COMMENT ON COLUMN users.email IS \'(DC2Type:email)\'');
         $this->addSql('COMMENT ON COLUMN users.role IS \'(DC2Type:role)\'');
