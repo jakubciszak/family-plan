@@ -53,6 +53,22 @@ final class InMemoryTaskRepository implements TaskRepositoryInterface
         ));
     }
 
+    public function findTemplates(): array
+    {
+        return array_values(array_filter(
+            $this->tasks,
+            fn(Task $task) => $task->isTemplate()
+        ));
+    }
+
+    public function findActiveTemplates(): array
+    {
+        return array_values(array_filter(
+            $this->tasks,
+            fn(Task $task) => $task->isTemplate() && $task->isActive()
+        ));
+    }
+
     public function delete(Task $task): void
     {
         unset($this->tasks[$task->id()->value()]);

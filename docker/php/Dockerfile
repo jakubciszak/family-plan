@@ -1,4 +1,4 @@
-FROM php:8.5-fpm
+FROM php:8.4-fpm
 
 ENV APP_ENV=dev \
     COMPOSER_ALLOW_SUPERUSER=1
