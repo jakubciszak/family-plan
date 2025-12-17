@@ -141,6 +141,7 @@ jobs:
     - name: Run database migrations
       run: |
         docker compose exec -T php php bin/console doctrine:migrations:migrate --no-interaction --env=test
+        docker compose exec -T php php bin/console app:create-super-admin --env=test
     
     - name: Verify backend API is working
       run: |
@@ -148,10 +149,6 @@ jobs:
         curl -v http://localhost:8080/api/auth/me
         echo "Testing frontend..."
         curl -I http://localhost:3000
-    
-    - name: Create super admin user
-      run: |
-        docker compose exec -T php php bin/console app:create-super-admin --env=test
     
     - name: Install frontend dependencies
       working-directory: ./frontend
