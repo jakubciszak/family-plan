@@ -127,6 +127,13 @@ jobs:
     - name: Verify services are running
       run: |
         docker compose ps
+    
+    - name: Install PHP dependencies
+      run: |
+        docker compose exec -T php composer install --no-interaction --prefer-dist --optimize-autoloader
+    
+    - name: Verify backend API is working
+      run: |
         echo "Testing backend API..."
         curl -v http://localhost:8080/api/auth/me
         echo "Testing frontend..."
