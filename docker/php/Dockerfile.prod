@@ -54,7 +54,7 @@ WORKDIR /app
 COPY package*.json webpack.config.js babel.config.js ./
 COPY assets ./assets
 
-RUN npm ci --only=production && npm run build
+RUN npm ci && npm run build
 
 # Final production stage
 FROM base AS production
