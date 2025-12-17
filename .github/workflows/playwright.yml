@@ -133,6 +133,10 @@ jobs:
       run: |
         docker compose exec -T php composer install --no-interaction --prefer-dist --optimize-autoloader
     
+    - name: Create test database
+      run: |
+        docker compose exec -T database psql -U app -d app -c "CREATE DATABASE app_test;"
+    
     - name: Verify backend API is working
       run: |
         echo "Testing backend API..."
