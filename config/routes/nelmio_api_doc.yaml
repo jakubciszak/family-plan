@@ -1,4 +1,4 @@
 # Expose API documentation at /api/doc
 nelmio_api_doc:
-    resource: '@NelmioApiDocBundle/Resources/config/routing.yaml'
+    resource: '@NelmioApiDocBundle/config/routing/swaggerui.xml'
     prefix: /api/doc

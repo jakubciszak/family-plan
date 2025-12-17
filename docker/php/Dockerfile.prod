@@ -1,5 +1,5 @@
 # Production Dockerfile for PHP backend
-FROM php:8.5-fpm AS base
+FROM php:8.4-fpm AS base
 
 ENV APP_ENV=prod \
     COMPOSER_ALLOW_SUPERUSER=1
