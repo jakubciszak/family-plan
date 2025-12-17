@@ -59,13 +59,11 @@ jobs:
         path: frontend/test-results/**/*.zip
         retention-days: 30
 
-  # Integration tests with real API - run only on main branch
+  # Integration tests with real API - run on all branches
   test-integration:
     name: Integration Tests (Real API)
     timeout-minutes: 60
     runs-on: ubuntu-latest
-    # Only run on main branch
-    if: github.ref == 'refs/heads/main'
     needs: test-mocked
     
     steps:
@@ -91,13 +89,13 @@ jobs:
     
     - name: Start services with Docker Compose
       run: |
-        docker-compose up -d database php nginx frontend
+        docker compose up -d database php nginx frontend
     
     - name: Wait for services to be ready
       run: |
         echo "Waiting for database to be ready..."
         for i in {1..30}; do
-          if docker-compose exec -T database pg_isready -U app -d app > /dev/null 2>&1; then
+          if docker compose exec -T database pg_isready -U app -d app > /dev/null 2>&1; then
             echo "Database is ready!"
             break
           fi
@@ -128,7 +126,7 @@ jobs:
     
     - name: Verify services are running
       run: |
-        docker-compose ps
+        docker compose ps
         echo "Testing backend API..."
         curl -v http://localhost:8080/api/auth/me
         echo "Testing frontend..."
@@ -136,11 +134,11 @@ jobs:
     
     - name: Run database migrations
       run: |
-        docker-compose exec -T php php bin/console doctrine:migrations:migrate --no-interaction
+        docker compose exec -T php php bin/console doctrine:migrations:migrate --no-interaction
     
     - name: Create super admin user
       run: |
-        docker-compose exec -T php php bin/console app:create-super-admin
+        docker compose exec -T php php bin/console app:create-super-admin
     
     - name: Install frontend dependencies
       working-directory: ./frontend
@@ -186,12 +184,12 @@ jobs:
       if: failure()
       run: |
         echo "=== PHP Logs ==="
-        docker-compose logs php
+        docker compose logs php
         echo "=== Nginx Logs ==="
-        docker-compose logs nginx
+        docker compose logs nginx
         echo "=== Database Logs ==="
-        docker-compose logs database
+        docker compose logs database
     
     - name: Stop services
       if: always()
-      run: docker-compose down -v
+      run: docker compose down -v
