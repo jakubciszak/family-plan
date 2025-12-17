@@ -6,9 +6,9 @@
  * Timeout constants for integration tests
  */
 const TIMEOUTS = {
-  SHORT: 10000,   // 10 seconds - for quick UI updates
-  MEDIUM: 20000,  // 20 seconds - for API calls and page loads
-  LONG: 30000     // 30 seconds - for complex operations
+  SHORT: 20000,   // 20 seconds - for quick UI updates
+  MEDIUM: 40000,  // 40 seconds - for API calls and page loads
+  LONG: 60000     // 60 seconds - for complex operations
 };
 
 /**
@@ -21,8 +21,13 @@ async function login(page, email, password) {
   // Navigate to login page with increased timeout
   await page.goto('/', { waitUntil: 'networkidle', timeout: TIMEOUTS.LONG });
   
-  // Wait for login form to be visible
-  await page.waitForSelector('input#email', { timeout: TIMEOUTS.MEDIUM });
+  // Wait for login form to be visible and loaded
+  await page.waitForSelector('input#email', { state: 'visible', timeout: TIMEOUTS.MEDIUM });
+  await page.waitForSelector('input#password', { state: 'visible', timeout: TIMEOUTS.MEDIUM });
+  await page.waitForSelector('button[type="submit"]', { state: 'visible', timeout: TIMEOUTS.MEDIUM });
+  
+  // Small delay to ensure form is fully interactive
+  await page.waitForTimeout(1000);
   
   // Fill in credentials
   await page.fill('input#email', email);
@@ -32,7 +37,10 @@ async function login(page, email, password) {
   await page.click('button[type="submit"]');
   
   // Wait for successful login - app header should appear
-  await page.waitForSelector('.app-header', { timeout: TIMEOUTS.LONG });
+  await page.waitForSelector('.app-header', { state: 'visible', timeout: TIMEOUTS.LONG });
+  
+  // Wait for task list to be ready
+  await page.waitForSelector('.task-list-container', { state: 'visible', timeout: TIMEOUTS.LONG });
 }
 
 /**

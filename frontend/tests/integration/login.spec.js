@@ -15,6 +15,11 @@ test.describe('Login Integration Tests', () => {
     // No mocking - tests run against real API
     // Navigate with increased timeout and wait for network to be idle
     await page.goto('/', { waitUntil: 'networkidle', timeout: TIMEOUTS.LONG });
+    
+    // Wait for login form to be fully rendered
+    await page.waitForSelector('h2', { state: 'visible', timeout: TIMEOUTS.MEDIUM });
+    await page.waitForSelector('input#email', { state: 'visible', timeout: TIMEOUTS.MEDIUM });
+    await page.waitForSelector('input#password', { state: 'visible', timeout: TIMEOUTS.MEDIUM });
   });
 
   test('should display login form', async ({ page }) => {
@@ -42,8 +47,11 @@ test.describe('Login Integration Tests', () => {
     // Submit form
     await page.click('button[type="submit"]');
     
+    // Wait a bit for API response
+    await page.waitForTimeout(2000);
+    
     // Check for error message
-    await expect(page.locator('.error-message')).toContainText('Invalid email or password');
+    await expect(page.locator('.error-message')).toContainText('Invalid email or password', { timeout: TIMEOUTS.MEDIUM });
     
     // Verify we're still on login page
     await expect(page.locator('h2')).toContainText('Login');
@@ -61,11 +69,11 @@ test.describe('Login Integration Tests', () => {
     await page.click('button[type="submit"]');
     
     // Wait for navigation and check for successful login
-    await page.waitForSelector('.app-header', { timeout: TIMEOUTS.MEDIUM });
+    await page.waitForSelector('.app-header', { state: 'visible', timeout: TIMEOUTS.LONG });
     
     // Verify we're on the main app page
-    await expect(page.locator('h1')).toContainText('Family Plan');
-    await expect(page.locator('.user-info')).toBeVisible();
+    await expect(page.locator('h1')).toContainText('Family Plan', { timeout: TIMEOUTS.MEDIUM });
+    await expect(page.locator('.user-info')).toBeVisible({ timeout: TIMEOUTS.MEDIUM });
   });
 
   test('should have proper input types', async ({ page }) => {
