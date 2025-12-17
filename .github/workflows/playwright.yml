@@ -83,7 +83,7 @@ jobs:
         APP_SECRET=test_secret_key_for_ci
         DATABASE_URL=postgresql://app:!ChangeMe!@database:5432/app?serverVersion=16&charset=utf8
         SUPER_ADMIN_EMAIL=admin@familyplan.local
-        SUPER_ADMIN_NAME=Super Admin
+        SUPER_ADMIN_NAME="Super Admin"
         SUPER_ADMIN_PASSWORD=admin123
         EOF
     
