@@ -152,7 +152,10 @@ jobs:
     
     - name: Install frontend dependencies
       working-directory: ./frontend
-      run: npm ci
+      run: |
+        # Remove node_modules if it exists with wrong permissions from Docker
+        sudo rm -rf node_modules || true
+        npm ci
     
     - name: Install Playwright Browsers
       working-directory: ./frontend
