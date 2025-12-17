@@ -13,7 +13,8 @@ const { login, getAdminCredentials, TIMEOUTS } = require('./helpers');
 test.describe('Login Integration Tests', () => {
   test.beforeEach(async ({ page }) => {
     // No mocking - tests run against real API
-    await page.goto('/');
+    // Navigate with increased timeout and wait for network to be idle
+    await page.goto('/', { waitUntil: 'networkidle', timeout: TIMEOUTS.LONG });
   });
 
   test('should display login form', async ({ page }) => {
