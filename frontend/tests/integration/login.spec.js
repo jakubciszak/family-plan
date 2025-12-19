@@ -13,16 +13,14 @@ const { login, getAdminCredentials, TIMEOUTS } = require('./helpers');
 test.describe('Login Integration Tests', () => {
   test.beforeEach(async ({ page }) => {
     // No mocking - tests run against real API
-    // Navigate with increased timeout and wait for network to be idle
+    // Just navigate to the page, let individual tests wait for what they need
     await page.goto('/', { waitUntil: 'networkidle', timeout: TIMEOUTS.LONG });
-    
-    // Wait for login form to be fully rendered
-    await page.waitForSelector('h2', { state: 'visible', timeout: TIMEOUTS.MEDIUM });
-    await page.waitForSelector('input#email', { state: 'visible', timeout: TIMEOUTS.MEDIUM });
-    await page.waitForSelector('input#password', { state: 'visible', timeout: TIMEOUTS.MEDIUM });
   });
 
   test('should display login form', async ({ page }) => {
+    // Wait for login form to be visible
+    await page.waitForSelector('input#email', { timeout: TIMEOUTS.MEDIUM });
+    
     // Check that login form is visible
     await expect(page.locator('h2')).toContainText('Login');
     await expect(page.locator('input#email')).toBeVisible();
@@ -31,6 +29,9 @@ test.describe('Login Integration Tests', () => {
   });
 
   test('should show validation for empty fields', async ({ page }) => {
+    // Wait for login form to be visible
+    await page.waitForSelector('input#email', { timeout: TIMEOUTS.MEDIUM });
+    
     // Try to submit empty form
     await page.click('button[type="submit"]');
     
@@ -40,6 +41,9 @@ test.describe('Login Integration Tests', () => {
   });
 
   test('should show error for invalid credentials', async ({ page }) => {
+    // Wait for login form to be visible
+    await page.waitForSelector('input#email', { timeout: TIMEOUTS.MEDIUM });
+    
     // Fill in login form with invalid credentials
     await page.fill('input#email', 'invalid@example.com');
     await page.fill('input#password', 'wrongpassword');
@@ -58,6 +62,9 @@ test.describe('Login Integration Tests', () => {
   });
 
   test('should login successfully with valid credentials', async ({ page }) => {
+    // Wait for login form to be visible
+    await page.waitForSelector('input#email', { timeout: TIMEOUTS.MEDIUM });
+    
     // Use admin credentials from helper
     const { email, password } = getAdminCredentials();
     
@@ -77,12 +84,18 @@ test.describe('Login Integration Tests', () => {
   });
 
   test('should have proper input types', async ({ page }) => {
+    // Wait for login form to be visible
+    await page.waitForSelector('input#email', { timeout: TIMEOUTS.MEDIUM });
+    
     // Check input types
     await expect(page.locator('input#email')).toHaveAttribute('type', 'email');
     await expect(page.locator('input#password')).toHaveAttribute('type', 'password');
   });
 
   test('should have accessible form labels', async ({ page }) => {
+    // Wait for login form to be visible
+    await page.waitForSelector('input#email', { timeout: TIMEOUTS.MEDIUM });
+    
     // Check for proper labels
     const emailLabel = page.locator('label[for="email"]');
     const passwordLabel = page.locator('label[for="password"]');
