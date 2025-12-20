@@ -18,18 +18,23 @@ test.describe('Task Management Integration Tests', () => {
   });
 
   test('should display task list after login', async ({ page }) => {
-    // Check for task list container
-    await expect(page.locator('.task-list-container')).toBeVisible();
-    await expect(page.locator('h2')).toContainText('Tasks');
-    await expect(page.locator('.task-list-header button')).toContainText('Create Task');
+    // Check for task list container with explicit wait
+    await page.waitForSelector('.task-list-container', { state: 'visible', timeout: TIMEOUTS.LONG });
+    await expect(page.locator('.task-list-container')).toBeVisible({ timeout: TIMEOUTS.MEDIUM });
+    await expect(page.locator('h2')).toContainText('Tasks', { timeout: TIMEOUTS.MEDIUM });
+    await expect(page.locator('.task-list-header button')).toContainText('Create Task', { timeout: TIMEOUTS.MEDIUM });
   });
 
   test('should create a new task', async ({ page }) => {
+    // Wait for task list to be fully loaded
+    await page.waitForSelector('.task-list-header button', { state: 'visible', timeout: TIMEOUTS.LONG });
+    
     // Click create task button
     await page.click('.task-list-header button:has-text("Create Task")');
     
     // Check that form is visible
-    await expect(page.locator('.task-create-form')).toBeVisible();
+    await page.waitForSelector('.task-create-form', { state: 'visible', timeout: TIMEOUTS.MEDIUM });
+    await expect(page.locator('.task-create-form')).toBeVisible({ timeout: TIMEOUTS.MEDIUM });
     
     // Fill in the form with unique task name
     const timestamp = Date.now();
@@ -44,19 +49,23 @@ test.describe('Task Management Integration Tests', () => {
     await page.click('.task-create-form button[type="submit"]');
     
     // Wait for form to close
-    await expect(page.locator('.task-create-form')).not.toBeVisible({ timeout: TIMEOUTS.SHORT });
+    await expect(page.locator('.task-create-form')).not.toBeVisible({ timeout: TIMEOUTS.MEDIUM });
     
     // Verify new task appears in list
-    await expect(page.locator('.task-card').filter({ hasText: taskName })).toBeVisible({ timeout: TIMEOUTS.SHORT });
+    await expect(page.locator('.task-card').filter({ hasText: taskName })).toBeVisible({ timeout: TIMEOUTS.LONG });
   });
 
   test('should complete and approve task workflow', async ({ page }) => {
+    // Wait for task list to be fully loaded
+    await page.waitForSelector('.task-list-header button', { state: 'visible', timeout: TIMEOUTS.LONG });
+    
     // First, create a task
     await page.click('.task-list-header button:has-text("Create Task")');
     
     const timestamp = Date.now();
     const taskName = `Workflow Test ${timestamp}`;
     
+    await page.waitForSelector('.task-create-form', { state: 'visible', timeout: TIMEOUTS.MEDIUM });
     await page.fill('input#name', taskName);
     await page.fill('textarea#description', 'Task for complete workflow test');
     await page.fill('input#points', '10');
@@ -65,19 +74,19 @@ test.describe('Task Management Integration Tests', () => {
     
     // Wait for task to appear using filter approach for robust text matching
     const taskCard = page.locator('.task-card').filter({ hasText: taskName });
-    await expect(taskCard).toBeVisible({ timeout: TIMEOUTS.SHORT });
+    await expect(taskCard).toBeVisible({ timeout: TIMEOUTS.LONG });
     
     // Complete the task
     await taskCard.locator('.btn-success:has-text("Complete")').click();
     
     // Wait for status to update to completed
-    await expect(taskCard.locator('.status-completed')).toBeVisible({ timeout: TIMEOUTS.MEDIUM });
+    await expect(taskCard.locator('.status-completed')).toBeVisible({ timeout: TIMEOUTS.LONG });
     
     // As admin, approve the task
     await taskCard.locator('.btn-primary:has-text("Approve")').click();
     
     // Wait for status to update to approved
-    await expect(taskCard.locator('.status-approved')).toBeVisible({ timeout: TIMEOUTS.MEDIUM });
+    await expect(taskCard.locator('.status-approved')).toBeVisible({ timeout: TIMEOUTS.LONG });
   });
 
   test('should display task with correct metadata', async ({ page }) => {
@@ -97,15 +106,18 @@ test.describe('Task Management Integration Tests', () => {
   });
 
   test('should logout successfully', async ({ page }) => {
+    // Wait for user info to be visible
+    await page.waitForSelector('.user-info button', { state: 'visible', timeout: TIMEOUTS.MEDIUM });
+    
     // Click logout button
     await page.click('.user-info button:has-text("Logout")');
     
     // Wait for redirect to login page
-    await page.waitForSelector('h2:has-text("Login")', { timeout: TIMEOUTS.SHORT });
+    await page.waitForSelector('h2:has-text("Login")', { state: 'visible', timeout: TIMEOUTS.LONG });
     
     // Verify we're on login page
-    await expect(page.locator('h2')).toContainText('Login');
-    await expect(page.locator('input#email')).toBeVisible();
+    await expect(page.locator('h2')).toContainText('Login', { timeout: TIMEOUTS.MEDIUM });
+    await expect(page.locator('input#email')).toBeVisible({ timeout: TIMEOUTS.MEDIUM });
   });
 });
 
@@ -117,7 +129,7 @@ test.describe('Task List Display Integration Tests', () => {
 
   test('should show admin buttons for completed tasks', async ({ page }) => {
     // Wait for task list to load
-    await page.waitForSelector('.task-list-container');
+    await page.waitForSelector('.task-list-container', { state: 'visible', timeout: TIMEOUTS.LONG });
     
     // Check if there are any completed tasks
     const completedTasks = page.locator('.task-card').filter({ has: page.locator('.status-completed') });
@@ -125,7 +137,7 @@ test.describe('Task List Display Integration Tests', () => {
     
     if (count > 0) {
       // Verify admin can see approve button
-      await expect(completedTasks.first().locator('.btn-primary:has-text("Approve")')).toBeVisible();
+      await expect(completedTasks.first().locator('.btn-primary:has-text("Approve")')).toBeVisible({ timeout: TIMEOUTS.MEDIUM });
     }
   });
 

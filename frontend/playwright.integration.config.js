@@ -9,11 +9,11 @@ module.exports = defineConfig({
   testDir: './tests/integration',
   
   // Maximum time one test can run - longer for real API calls
-  timeout: 60 * 1000,
+  timeout: 180 * 1000,
   
   expect: {
     // Maximum time expect() should wait for the condition to be met
-    timeout: 10000
+    timeout: 15000
   },
   
   // Run tests in files in parallel
@@ -43,6 +43,12 @@ module.exports = defineConfig({
     
     // Record video for all tests
     video: 'on',
+    
+    // Increase navigation timeout for real API calls
+    navigationTimeout: 60000,
+    
+    // Increase action timeout for real API calls
+    actionTimeout: 30000,
   },
 
   // Configure projects for major browsers

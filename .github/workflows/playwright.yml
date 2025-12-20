@@ -59,13 +59,11 @@ jobs:
         path: frontend/test-results/**/*.zip
         retention-days: 30
 
-  # Integration tests with real API - run only on main branch
+  # Integration tests with real API - run on all branches
   test-integration:
     name: Integration Tests (Real API)
     timeout-minutes: 60
     runs-on: ubuntu-latest
-    # Only run on main branch
-    if: github.ref == 'refs/heads/main'
     needs: test-mocked
     
     steps:
@@ -84,20 +82,22 @@ jobs:
         APP_ENV=test
         APP_SECRET=test_secret_key_for_ci
         DATABASE_URL=postgresql://app:!ChangeMe!@database:5432/app?serverVersion=16&charset=utf8
+        DEFAULT_URI=http://localhost
+        CORS_ALLOWED_ORIGIN=http://localhost:3000
         SUPER_ADMIN_EMAIL=admin@familyplan.local
-        SUPER_ADMIN_NAME=Super Admin
+        SUPER_ADMIN_NAME="Super Admin"
         SUPER_ADMIN_PASSWORD=admin123
         EOF
     
     - name: Start services with Docker Compose
       run: |
-        docker-compose up -d database php nginx frontend
+        docker compose up -d database php nginx frontend
     
     - name: Wait for services to be ready
       run: |
         echo "Waiting for database to be ready..."
         for i in {1..30}; do
-          if docker-compose exec -T database pg_isready -U app -d app > /dev/null 2>&1; then
+          if docker compose exec -T database pg_isready -U app -d app > /dev/null 2>&1; then
             echo "Database is ready!"
             break
           fi
@@ -128,23 +128,34 @@ jobs:
     
     - name: Verify services are running
       run: |
-        docker-compose ps
+        docker compose ps
+    
+    - name: Install PHP dependencies
+      run: |
+        docker compose exec -T php composer install --no-interaction --prefer-dist --optimize-autoloader
+    
+    - name: Create test database
+      run: |
+        docker compose exec -T database psql -U app -d app -c "CREATE DATABASE app_test;"
+    
+    - name: Run database migrations
+      run: |
+        docker compose exec -T php php bin/console doctrine:migrations:migrate --no-interaction --env=test
+        docker compose exec -T php php bin/console app:create-super-admin --env=test
+    
+    - name: Verify backend API is working
+      run: |
         echo "Testing backend API..."
         curl -v http://localhost:8080/api/auth/me
         echo "Testing frontend..."
         curl -I http://localhost:3000
     
-    - name: Run database migrations
-      run: |
-        docker-compose exec -T php php bin/console doctrine:migrations:migrate --no-interaction
-    
-    - name: Create super admin user
-      run: |
-        docker-compose exec -T php php bin/console app:create-super-admin
-    
     - name: Install frontend dependencies
       working-directory: ./frontend
-      run: npm ci
+      run: |
+        # Remove node_modules if it exists with wrong permissions from Docker
+        sudo rm -rf node_modules || true
+        npm ci
     
     - name: Install Playwright Browsers
       working-directory: ./frontend
@@ -186,12 +197,12 @@ jobs:
       if: failure()
       run: |
         echo "=== PHP Logs ==="
-        docker-compose logs php
+        docker compose logs php
         echo "=== Nginx Logs ==="
-        docker-compose logs nginx
+        docker compose logs nginx
         echo "=== Database Logs ==="
-        docker-compose logs database
+        docker compose logs database
     
     - name: Stop services
       if: always()
-      run: docker-compose down -v
+      run: docker compose down -v

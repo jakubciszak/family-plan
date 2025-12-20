@@ -17,7 +17,7 @@ use PHPUnit\Framework\TestCase;
  * Detroit school unit test for Routine Task Management functionality (merged into Task)
  * Tests real object interactions using Builder pattern and custom Asserts
  */
-class RoutineTaskManagementTest extends TestCase
+class TaskTemplateManagementTest extends TestCase
 {
     public function testTaskExecutionCanBeCreatedFromTemplateTask(): void
     {
@@ -41,7 +41,7 @@ class RoutineTaskManagementTest extends TestCase
         TaskExecutionAssert::assertTaskExecutionIsNotCompleted($execution);
     }
 
-    public function testOneTimeTaskExecutionCanBeCreatedWithoutRoutineTask(): void
+    public function testOneTimeTaskExecutionCanBeCreatedWithoutTaskTemplate(): void
     {
         // Given
         $executionId = UuidMother::random();
@@ -57,7 +57,7 @@ class RoutineTaskManagementTest extends TestCase
             ->withDescription($description)
             ->withPoints($points)
             ->withScheduledFor($scheduledFor)
-            ->withoutRoutineTask()
+            ->withoutTaskTemplate()
             ->build();
 
         // Then

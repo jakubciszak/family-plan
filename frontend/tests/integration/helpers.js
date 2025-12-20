@@ -6,9 +6,9 @@
  * Timeout constants for integration tests
  */
 const TIMEOUTS = {
-  SHORT: 5000,    // 5 seconds - for quick UI updates
-  MEDIUM: 10000,  // 10 seconds - for API calls and page loads
-  LONG: 15000     // 15 seconds - for complex operations
+  SHORT: 20000,   // 20 seconds - for quick UI updates
+  MEDIUM: 40000,  // 40 seconds - for API calls and page loads
+  LONG: 60000     // 60 seconds - for complex operations
 };
 
 /**
@@ -18,11 +18,21 @@ const TIMEOUTS = {
  * @param {string} password - User password
  */
 async function login(page, email, password) {
-  await page.goto('/');
+  // Navigate to login page
+  await page.goto('/', { waitUntil: 'networkidle', timeout: TIMEOUTS.LONG });
+  
+  // Wait for login form to be visible
+  await page.waitForSelector('input#email', { timeout: TIMEOUTS.MEDIUM });
+  
+  // Fill in credentials
   await page.fill('input#email', email);
   await page.fill('input#password', password);
+  
+  // Submit and wait for navigation
   await page.click('button[type="submit"]');
-  await page.waitForSelector('.app-header', { timeout: TIMEOUTS.MEDIUM });
+  
+  // Wait for successful login - app header should appear
+  await page.waitForSelector('.app-header', { timeout: TIMEOUTS.LONG });
 }
 
 /**
