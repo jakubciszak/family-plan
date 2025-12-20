@@ -12,6 +12,26 @@ const TIMEOUTS = {
 };
 
 /**
+ * Wait for an API response matching a URL fragment and optional predicate.
+ * @param {import('@playwright/test').Page} page - Playwright page object
+ * @param {string} urlFragment - URL fragment to match
+ * @param {{ timeout?: number, predicate?: (response: import('@playwright/test').Response) => boolean }} options
+ */
+function waitForApiResponse(page, urlFragment, options = {}) {
+  const { timeout = TIMEOUTS.LONG, predicate } = options;
+
+  return page.waitForResponse(
+    (response) => {
+      if (!response.url().includes(urlFragment)) {
+        return false;
+      }
+      return predicate ? predicate(response) : true;
+    },
+    { timeout }
+  );
+}
+
+/**
  * Login to the application with given credentials
  * @param {import('@playwright/test').Page} page - Playwright page object
  * @param {string} email - User email
@@ -19,17 +39,24 @@ const TIMEOUTS = {
  */
 async function login(page, email, password) {
   // Navigate to login page
-  await page.goto('/', { waitUntil: 'networkidle', timeout: TIMEOUTS.LONG });
+  await page.goto('/', { waitUntil: 'domcontentloaded', timeout: TIMEOUTS.LONG });
   
   // Wait for login form to be visible
-  await page.waitForSelector('input#email', { timeout: TIMEOUTS.MEDIUM });
+  const emailInput = page.getByLabel('Email');
+  await emailInput.waitFor({ state: 'visible', timeout: TIMEOUTS.MEDIUM });
   
   // Fill in credentials
-  await page.fill('input#email', email);
-  await page.fill('input#password', password);
+  await emailInput.fill(email);
+  await page.getByLabel('Password').fill(password);
   
   // Submit and wait for navigation
-  await page.click('button[type="submit"]');
+  const loginResponse = waitForApiResponse(page, '/api/auth/login', {
+    predicate: (response) => response.request().method() === 'POST' && response.ok(),
+  });
+  await Promise.all([
+    loginResponse,
+    page.getByRole('button', { name: 'Login' }).click(),
+  ]);
   
   // Wait for successful login - app header should appear
   await page.waitForSelector('.app-header', { timeout: TIMEOUTS.LONG });
@@ -49,5 +76,6 @@ function getAdminCredentials() {
 module.exports = {
   login,
   getAdminCredentials,
-  TIMEOUTS
+  TIMEOUTS,
+  waitForApiResponse,
 };

@@ -1,5 +1,5 @@
 const { test, expect } = require('@playwright/test');
-const { login, getAdminCredentials, TIMEOUTS } = require('./helpers');
+const { login, getAdminCredentials, TIMEOUTS, waitForApiResponse } = require('./helpers');
 
 /**
  * Integration tests for complete Task workflow
@@ -15,6 +15,7 @@ test.describe('Task Management Integration Tests', () => {
     // Login before each test
     const { email, password } = getAdminCredentials();
     await login(page, email, password);
+    await page.locator('.task-list-container').waitFor({ state: 'visible', timeout: TIMEOUTS.LONG });
   });
 
   test('should display task list after login', async ({ page }) => {
@@ -30,7 +31,7 @@ test.describe('Task Management Integration Tests', () => {
     await page.waitForSelector('.task-list-header button', { state: 'visible', timeout: TIMEOUTS.LONG });
     
     // Click create task button
-    await page.click('.task-list-header button:has-text("Create Task")');
+    await page.getByRole('button', { name: 'Create Task' }).click();
     
     // Check that form is visible
     await page.waitForSelector('.task-create-form', { state: 'visible', timeout: TIMEOUTS.MEDIUM });
@@ -40,13 +41,19 @@ test.describe('Task Management Integration Tests', () => {
     const timestamp = Date.now();
     const taskName = `Integration Test Task ${timestamp}`;
     
-    await page.fill('input#name', taskName);
-    await page.fill('textarea#description', 'This is an integration test task');
-    await page.fill('input#points', '25');
-    await page.selectOption('select#frequency', 'once');
+    await page.getByLabel('Task Name').fill(taskName);
+    await page.getByLabel('Description').fill('This is an integration test task');
+    await page.getByLabel('Points').fill('25');
+    await page.getByLabel('Frequency').selectOption('once');
     
     // Submit form
-    await page.click('.task-create-form button[type="submit"]');
+    const createResponse = waitForApiResponse(page, '/api/tasks', {
+      predicate: (response) => response.request().method() === 'POST' && response.ok(),
+    });
+    await Promise.all([
+      createResponse,
+      page.getByRole('button', { name: 'Create Task' }).click(),
+    ]);
     
     // Wait for form to close
     await expect(page.locator('.task-create-form')).not.toBeVisible({ timeout: TIMEOUTS.MEDIUM });
@@ -60,30 +67,48 @@ test.describe('Task Management Integration Tests', () => {
     await page.waitForSelector('.task-list-header button', { state: 'visible', timeout: TIMEOUTS.LONG });
     
     // First, create a task
-    await page.click('.task-list-header button:has-text("Create Task")');
+    await page.getByRole('button', { name: 'Create Task' }).click();
     
     const timestamp = Date.now();
     const taskName = `Workflow Test ${timestamp}`;
     
     await page.waitForSelector('.task-create-form', { state: 'visible', timeout: TIMEOUTS.MEDIUM });
-    await page.fill('input#name', taskName);
-    await page.fill('textarea#description', 'Task for complete workflow test');
-    await page.fill('input#points', '10');
-    await page.selectOption('select#frequency', 'once');
-    await page.click('.task-create-form button[type="submit"]');
+    await page.getByLabel('Task Name').fill(taskName);
+    await page.getByLabel('Description').fill('Task for complete workflow test');
+    await page.getByLabel('Points').fill('10');
+    await page.getByLabel('Frequency').selectOption('once');
+    const createResponse = waitForApiResponse(page, '/api/tasks', {
+      predicate: (response) => response.request().method() === 'POST' && response.ok(),
+    });
+    await Promise.all([
+      createResponse,
+      page.getByRole('button', { name: 'Create Task' }).click(),
+    ]);
     
     // Wait for task to appear using filter approach for robust text matching
     const taskCard = page.locator('.task-card').filter({ hasText: taskName });
     await expect(taskCard).toBeVisible({ timeout: TIMEOUTS.LONG });
     
     // Complete the task
-    await taskCard.locator('.btn-success:has-text("Complete")').click();
+    const completeResponse = waitForApiResponse(page, '/complete', {
+      predicate: (response) => response.request().method() === 'POST' && response.ok(),
+    });
+    await Promise.all([
+      completeResponse,
+      taskCard.getByRole('button', { name: 'Complete' }).click(),
+    ]);
     
     // Wait for status to update to completed
     await expect(taskCard.locator('.status-completed')).toBeVisible({ timeout: TIMEOUTS.LONG });
     
     // As admin, approve the task
-    await taskCard.locator('.btn-primary:has-text("Approve")').click();
+    const approveResponse = waitForApiResponse(page, '/approve', {
+      predicate: (response) => response.request().method() === 'POST' && response.ok(),
+    });
+    await Promise.all([
+      approveResponse,
+      taskCard.getByRole('button', { name: 'Approve' }).click(),
+    ]);
     
     // Wait for status to update to approved
     await expect(taskCard.locator('.status-approved')).toBeVisible({ timeout: TIMEOUTS.LONG });
@@ -110,7 +135,13 @@ test.describe('Task Management Integration Tests', () => {
     await page.waitForSelector('.user-info button', { state: 'visible', timeout: TIMEOUTS.MEDIUM });
     
     // Click logout button
-    await page.click('.user-info button:has-text("Logout")');
+    const logoutResponse = waitForApiResponse(page, '/api/auth/logout', {
+      predicate: (response) => response.request().method() === 'POST',
+    });
+    await Promise.all([
+      logoutResponse,
+      page.getByRole('button', { name: 'Logout' }).click(),
+    ]);
     
     // Wait for redirect to login page
     await page.waitForSelector('h2:has-text("Login")', { state: 'visible', timeout: TIMEOUTS.LONG });
@@ -125,6 +156,7 @@ test.describe('Task List Display Integration Tests', () => {
   test.beforeEach(async ({ page }) => {
     const { email, password } = getAdminCredentials();
     await login(page, email, password);
+    await page.locator('.task-list-container').waitFor({ state: 'visible', timeout: TIMEOUTS.LONG });
   });
 
   test('should show admin buttons for completed tasks', async ({ page }) => {
