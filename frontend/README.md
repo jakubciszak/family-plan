@@ -54,20 +54,17 @@ The application will be available at http://localhost:3000 with hot reload enabl
 - `npm run test:firefox` - Run tests only in Firefox
 - `npm run test:webkit` - Run tests only in WebKit/Safari
 - `npm run test:report` - Show HTML test report
-- `npm run test:integration` - Run integration tests (requires full stack)
-- `npm run test:integration:headed` - Run integration tests with browser visible
-- `npm run test:integration:debug` - Debug integration tests
 
 ## Testing
 
-This project uses Playwright for end-to-end testing with **two types of tests**:
+This project uses Playwright for end-to-end testing.
 
-### 1. Mocked E2E Tests (`tests/e2e/`)
+### E2E Tests (`tests/e2e/`)
 
-Fast tests with mocked API responses - **run on all branches**.
+Tests with mocked API responses that run on all branches.
 
 ```bash
-# Run mocked E2E tests (default)
+# Run E2E tests (default)
 npm test
 
 # Run with browser visible
@@ -92,36 +89,6 @@ npm run test:debug
 - `task-actions.spec.js` - Task completion and approval tests
 - `logout.spec.js` - Logout and session management tests
 - `fixtures.js` - Test fixtures and helper functions
-
-### 2. Integration Tests (`tests/integration/`)
-
-Tests with real backend API - **run only on main branch in CI**.
-
-**Prerequisites:** Full application stack must be running:
-```bash
-# Start all services
-docker-compose up -d
-
-# Run integration tests
-npm run test:integration
-```
-
-**Test files:**
-- `login.spec.js` - Login functionality with real API
-- `task-flow.spec.js` - Complete task workflows (create, complete, approve)
-- `README.md` - Detailed integration test documentation
-
-See [tests/integration/README.md](tests/integration/README.md) for more details.
-
-### Test Differences
-
-| Feature | Mocked E2E Tests | Integration Tests |
-|---------|------------------|-------------------|
-| **API Calls** | Mocked with `page.route()` | Real backend API |
-| **Speed** | Fast (~6 seconds) | Slower (~30+ seconds) |
-| **Prerequisites** | None | Docker-compose stack |
-| **CI Execution** | All branches | Main branch only |
-| **Purpose** | Fast feedback, unit-like | Full stack validation |
 
 ### Writing Tests
 
@@ -177,27 +144,16 @@ npx playwright show-trace test-results/[test-name]/trace.zip
 
 ### CI/CD Integration
 
-The GitHub Actions workflow runs two types of tests:
+The GitHub Actions workflow runs E2E tests on every push and pull request:
 
-#### Mocked E2E Tests (All Branches)
-- Run on every push and pull request
 - Fast execution (~6 seconds)
 - No external dependencies
 - Provides immediate feedback
-
-#### Integration Tests (Main Branch Only)
-- Run only on pushes to main branch
-- Requires full docker-compose stack
-- Includes database migrations and setup
-- Validates complete application flow
-
-**Common CI features:**
 - 2 retries on failure
 - HTML report generation
 - Screenshot and video artifacts uploaded for all tests
 - Test artifacts retained for 30 days
 - Trace files uploaded on failures for debugging
-- Separate artifact names for each test type
 
 ## Docker Development
 
