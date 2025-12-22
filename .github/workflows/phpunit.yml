@@ -38,12 +38,12 @@ jobs:
       run: composer install --prefer-dist --no-progress --ignore-platform-req=ext-redis
     
     - name: Run PHPUnit tests
-      run: vendor/bin/phpunit --testdox
+      run: vendor/bin/phpunit --testdox --log-junit test-results/junit.xml
     
     - name: Upload test results
       uses: actions/upload-artifact@v4
       if: always()
       with:
         name: phpunit-results
-        path: .phpunit.cache
+        path: test-results/
         retention-days: 30
