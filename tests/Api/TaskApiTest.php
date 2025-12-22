@@ -73,7 +73,7 @@ class TaskApiTest extends ApiTestCase
 
         // Complete the task
         $response = $this->postJson("/api/tasks/{$taskId}/complete", [
-            'userId' => UuidMother::fixed()->value(),
+            'userId' => UuidMother::random()->value(),
         ]);
         $data = $this->assertJsonResponse($response, 200);
 
@@ -97,12 +97,12 @@ class TaskApiTest extends ApiTestCase
 
         // Complete the task
         $this->postJson("/api/tasks/{$taskId}/complete", [
-            'userId' => UuidMother::fixed()->value(),
+            'userId' => UuidMother::random()->value(),
         ]);
 
         // Approve the task
         $response = $this->postJson("/api/tasks/{$taskId}/approve", [
-            'adminId' => UuidMother::fixed()->value(),
+            'adminId' => UuidMother::random()->value(),
         ]);
         $data = $this->assertJsonResponse($response, 200);
 
