@@ -18,12 +18,12 @@ final class PendingState implements TaskStateInterface
     
     public function approve(Task $task, Uuid $adminId): void
     {
-        throw new \DomainException('Cannot approve a pending task. Task must be completed first.');
+        throw new \DomainException('Only completed tasks can be approved');
     }
     
     public function reject(Task $task): void
     {
-        throw new \DomainException('Cannot reject a pending task. Task must be completed first.');
+        throw new \DomainException('Only completed tasks can be rejected');
     }
     
     public function canTransitionTo(string $newState): bool

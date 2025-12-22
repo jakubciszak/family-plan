@@ -78,7 +78,7 @@ class UserManagementTest extends TestCase
     public function testUserNameCanBeUpdated(): void
     {
         // Given
-        $user = UserMother::withName('Original Name');
+        $user = UserMother::aUser()->withName('Original Name')->build();
         UserAssert::assertUserHasNoUpdatedAt($user);
 
         // When

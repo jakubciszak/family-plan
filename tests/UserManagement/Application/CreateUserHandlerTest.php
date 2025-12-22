@@ -12,6 +12,8 @@ use App\Tests\UserManagement\Assert\UserAssert;
 use App\Tests\UserManagement\Mother\EmailMother;
 use App\Tests\UserManagement\Mother\RoleMother;
 use PHPUnit\Framework\TestCase;
+use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
+use Symfony\Component\PasswordHasher\PasswordHasherInterface;
 
 /**
  * Detroit school test for CreateUserHandler
@@ -25,7 +27,22 @@ class CreateUserHandlerTest extends TestCase
     protected function setUp(): void
     {
         $this->repository = new InMemoryUserRepository();
-        $this->handler = new CreateUserHandler($this->repository);
+        // Create a simple stub for password hasher (not actually used in handler currently)
+        $passwordHasher = new class implements UserPasswordHasherInterface {
+            public function hashPassword(object $user, string $plainPassword): string
+            {
+                return password_hash($plainPassword, PASSWORD_BCRYPT);
+            }
+            public function isPasswordValid(object $user, string $plainPassword): bool
+            {
+                return true;
+            }
+            public function needsRehash(object $user): bool
+            {
+                return false;
+            }
+        };
+        $this->handler = new CreateUserHandler($this->repository, $passwordHasher);
     }
 
     public function testHandlerCreatesUserAndPersistsToRepository(): void
@@ -38,11 +55,11 @@ class CreateUserHandlerTest extends TestCase
         $role = RoleMother::user();
 
         $command = new CreateUserCommand(
-            $userId,
+            $userId->value(),
             $name,
-            $email,
+            $email->value(),
             $password,
-            $role
+            $role->value
         );
 
         // When
@@ -64,11 +81,11 @@ class CreateUserHandlerTest extends TestCase
         $adminRole = RoleMother::admin();
 
         $command = new CreateUserCommand(
-            $userId,
+            $userId->value(),
             'Admin User',
-            EmailMother::admin(),
+            EmailMother::admin()->value(),
             password_hash('secure', PASSWORD_BCRYPT),
-            $adminRole
+            $adminRole->value
         );
 
         // When
@@ -85,11 +102,11 @@ class CreateUserHandlerTest extends TestCase
         // Given
         $email = EmailMother::create('unique@example.com');
         $command = new CreateUserCommand(
-            UuidMother::random(),
+            UuidMother::random()->value(),
             'Test User',
-            $email,
+            $email->value(),
             password_hash('pass', PASSWORD_BCRYPT),
-            RoleMother::user()
+            RoleMother::user()->value
         );
 
         // When
@@ -108,19 +125,19 @@ class CreateUserHandlerTest extends TestCase
         $secondUserId = UuidMother::random();
 
         $firstCommand = new CreateUserCommand(
-            $firstUserId,
+            $firstUserId->value(),
             'First User',
-            EmailMother::create('first@example.com'),
+            EmailMother::create('first@example.com')->value(),
             password_hash('pass', PASSWORD_BCRYPT),
-            RoleMother::user()
+            RoleMother::user()->value
         );
 
         $secondCommand = new CreateUserCommand(
-            $secondUserId,
+            $secondUserId->value(),
             'Second User',
-            EmailMother::create('second@example.com'),
+            EmailMother::create('second@example.com')->value(),
             password_hash('pass', PASSWORD_BCRYPT),
-            RoleMother::admin()
+            RoleMother::admin()->value
         );
 
         // When

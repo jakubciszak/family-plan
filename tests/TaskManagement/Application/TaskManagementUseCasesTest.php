@@ -47,11 +47,11 @@ class TaskManagementUseCasesTest extends TestCase
         $frequency = FrequencyMother::daily();
 
         $command = new CreateTaskCommand(
-            $taskId,
-            $name,
+            $taskId->value(),
+            $name->value(),
             $description,
-            $points,
-            $frequency,
+            $points->value(),
+            $frequency->value,
             null
         );
 
@@ -76,16 +76,16 @@ class TaskManagementUseCasesTest extends TestCase
         $userId = UuidMother::random();
 
         $createCommand = new CreateTaskCommand(
-            $taskId,
-            TaskNameMother::create(),
+            $taskId->value(),
+            TaskNameMother::create()->value(),
             'Task description',
-            PointsMother::medium(),
-            FrequencyMother::daily(),
+            PointsMother::medium()->value(),
+            FrequencyMother::daily()->value,
             null
         );
         ($this->createHandler)($createCommand);
 
-        $completeCommand = new CompleteTaskCommand($taskId, $userId);
+        $completeCommand = new CompleteTaskCommand($taskId->value(), $userId->value());
 
         // When
         ($this->completeHandler)($completeCommand);
@@ -105,19 +105,19 @@ class TaskManagementUseCasesTest extends TestCase
         $adminId = UuidMother::random();
 
         $createCommand = new CreateTaskCommand(
-            $taskId,
-            TaskNameMother::create(),
+            $taskId->value(),
+            TaskNameMother::create()->value(),
             'Task description',
-            PointsMother::medium(),
-            FrequencyMother::daily(),
+            PointsMother::medium()->value(),
+            FrequencyMother::daily()->value,
             null
         );
         ($this->createHandler)($createCommand);
 
-        $completeCommand = new CompleteTaskCommand($taskId, $userId);
+        $completeCommand = new CompleteTaskCommand($taskId->value(), $userId->value());
         ($this->completeHandler)($completeCommand);
 
-        $approveCommand = new ApproveTaskCommand($taskId, $adminId);
+        $approveCommand = new ApproveTaskCommand($taskId->value(), $adminId->value());
 
         // When
         ($this->approveHandler)($approveCommand);
@@ -138,12 +138,12 @@ class TaskManagementUseCasesTest extends TestCase
 
         // When - Create task
         $createCommand = new CreateTaskCommand(
-            $taskId,
-            TaskNameMother::create('Important task'),
+            $taskId->value(),
+            TaskNameMother::create('Important task')->value(),
             'This needs to be done',
-            PointsMother::high(),
-            FrequencyMother::weekly(),
-            $userId
+            PointsMother::high()->value(),
+            FrequencyMother::weekly()->value,
+            $userId->value()
         );
         ($this->createHandler)($createCommand);
 
@@ -153,7 +153,7 @@ class TaskManagementUseCasesTest extends TestCase
         TaskAssert::assertTaskIsAssignedTo($userId, $task);
 
         // When - User completes the task
-        $completeCommand = new CompleteTaskCommand($taskId, $userId);
+        $completeCommand = new CompleteTaskCommand($taskId->value(), $userId->value());
         ($this->completeHandler)($completeCommand);
 
         // Then - Task is completed
@@ -161,7 +161,7 @@ class TaskManagementUseCasesTest extends TestCase
         TaskAssert::assertTaskIsCompleted($task);
 
         // When - Admin approves the task
-        $approveCommand = new ApproveTaskCommand($taskId, $adminId);
+        $approveCommand = new ApproveTaskCommand($taskId->value(), $adminId->value());
         ($this->approveHandler)($approveCommand);
 
         // Then - Task is approved
@@ -176,25 +176,25 @@ class TaskManagementUseCasesTest extends TestCase
         $completedTaskId = UuidMother::random();
 
         $pendingCommand = new CreateTaskCommand(
-            $pendingTaskId,
-            TaskNameMother::create(),
+            $pendingTaskId->value(),
+            TaskNameMother::create()->value(),
             'Pending task',
-            PointsMother::medium(),
-            FrequencyMother::daily(),
+            PointsMother::medium()->value(),
+            FrequencyMother::daily()->value,
             null
         );
         ($this->createHandler)($pendingCommand);
 
         $completedCommand = new CreateTaskCommand(
-            $completedTaskId,
-            TaskNameMother::create(),
+            $completedTaskId->value(),
+            TaskNameMother::create()->value(),
             'To be completed',
-            PointsMother::medium(),
-            FrequencyMother::daily(),
+            PointsMother::medium()->value(),
+            FrequencyMother::daily()->value,
             null
         );
         ($this->createHandler)($completedCommand);
-        ($this->completeHandler)(new CompleteTaskCommand($completedTaskId, UuidMother::random()));
+        ($this->completeHandler)(new CompleteTaskCommand($completedTaskId->value(), UuidMother::random()->value()));
 
         // When
         $pendingTasks = $this->repository->findPending();
@@ -209,15 +209,15 @@ class TaskManagementUseCasesTest extends TestCase
         // Given
         $taskId = UuidMother::random();
         $createCommand = new CreateTaskCommand(
-            $taskId,
-            TaskNameMother::create(),
+            $taskId->value(),
+            TaskNameMother::create()->value(),
             'Task',
-            PointsMother::medium(),
-            FrequencyMother::daily(),
+            PointsMother::medium()->value(),
+            FrequencyMother::daily()->value,
             null
         );
         ($this->createHandler)($createCommand);
-        ($this->completeHandler)(new CompleteTaskCommand($taskId, UuidMother::random()));
+        ($this->completeHandler)(new CompleteTaskCommand($taskId->value(), UuidMother::random()->value()));
 
         // When
         $completedTasks = $this->repository->findCompleted();
@@ -235,32 +235,32 @@ class TaskManagementUseCasesTest extends TestCase
         $taskId2 = UuidMother::random();
 
         $command1 = new CreateTaskCommand(
-            $taskId1,
-            TaskNameMother::create(),
+            $taskId1->value(),
+            TaskNameMother::create()->value(),
             'Task 1',
-            PointsMother::medium(),
-            FrequencyMother::daily(),
-            $userId
+            PointsMother::medium()->value(),
+            FrequencyMother::daily()->value,
+            $userId->value()
         );
         ($this->createHandler)($command1);
 
         $command2 = new CreateTaskCommand(
-            $taskId2,
-            TaskNameMother::create(),
+            $taskId2->value(),
+            TaskNameMother::create()->value(),
             'Task 2',
-            PointsMother::medium(),
-            FrequencyMother::daily(),
-            $userId
+            PointsMother::medium()->value(),
+            FrequencyMother::daily()->value,
+            $userId->value()
         );
         ($this->createHandler)($command2);
 
         $command3 = new CreateTaskCommand(
-            UuidMother::random(),
-            TaskNameMother::create(),
+            UuidMother::random()->value(),
+            TaskNameMother::create()->value(),
             'Task 3',
-            PointsMother::medium(),
-            FrequencyMother::daily(),
-            UuidMother::random() // Different user
+            PointsMother::medium()->value(),
+            FrequencyMother::daily()->value,
+            UuidMother::random()->value() // Different user
         );
         ($this->createHandler)($command3);
 

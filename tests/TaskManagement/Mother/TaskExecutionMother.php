@@ -71,6 +71,13 @@ final class TaskExecutionMother
         return $this;
     }
 
+    public function withoutRoutineTask(): self
+    {
+        $this->taskTemplateId = null;
+        $this->noTaskTemplate = true;
+        return $this;
+    }
+
     public function withName(TaskName $name): self
     {
         $this->name = $name;

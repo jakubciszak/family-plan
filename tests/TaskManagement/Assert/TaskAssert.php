@@ -194,7 +194,7 @@ final class TaskAssert
             'Expected TaskCreated event to have matching task ID'
         );
         Assert::assertTrue(
-            $taskName->equals($event->taskName()),
+            $taskName->equals($event->name()),
             'Expected TaskCreated event to have matching task name'
         );
         Assert::assertSame(
