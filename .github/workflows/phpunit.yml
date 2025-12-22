@@ -91,7 +91,6 @@ jobs:
           ${{ runner.os }}-composer-
     
     - name: Install dependencies
-      # Ignore ext-redis as it's only needed for caching in production, not for unit tests
       run: composer install --prefer-dist --no-progress --ignore-platform-req=ext-redis
     
     - name: Run Integration Tests
