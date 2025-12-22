@@ -29,12 +29,15 @@ jobs:
     - name: Cache Composer dependencies
       uses: actions/cache@v4
       with:
-        path: vendor
+        path: |
+          vendor
+          ~/.composer/cache/files
         key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
         restore-keys: |
           ${{ runner.os }}-composer-
     
     - name: Install dependencies
+      # Ignore ext-redis as it's only needed for caching in production, not for unit tests
       run: composer install --prefer-dist --no-progress --ignore-platform-req=ext-redis
     
     - name: Run PHPUnit tests
