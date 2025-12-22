@@ -11,3 +11,15 @@ if (method_exists(Dotenv::class, 'bootEnv')) {
 if ($_SERVER['APP_DEBUG']) {
     umask(0000);
 }
+
+// Clean up test database before running tests
+$testDbPath = dirname(__DIR__).'/var/test.db';
+if (file_exists($testDbPath)) {
+    unlink($testDbPath);
+}
+
+// Recreate the test database schema
+passthru(sprintf(
+    'APP_ENV=test php "%s/bin/console" doctrine:schema:create --no-interaction --quiet',
+    dirname(__DIR__)
+));
