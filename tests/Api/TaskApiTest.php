@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Api;
 
+use App\Tests\Shared\Mother\UuidMother;
+
 class TaskApiTest extends ApiTestCase
 {
     public function testListTasksReturnsEmptyArray(): void
@@ -71,7 +73,7 @@ class TaskApiTest extends ApiTestCase
 
         // Complete the task
         $response = $this->postJson("/api/tasks/{$taskId}/complete", [
-            'userId' => 'test-user-id',
+            'userId' => UuidMother::random()->value(),
         ]);
         $data = $this->assertJsonResponse($response, 200);
 
@@ -95,12 +97,12 @@ class TaskApiTest extends ApiTestCase
 
         // Complete the task
         $this->postJson("/api/tasks/{$taskId}/complete", [
-            'userId' => 'test-user-id',
+            'userId' => UuidMother::random()->value(),
         ]);
 
         // Approve the task
         $response = $this->postJson("/api/tasks/{$taskId}/approve", [
-            'adminId' => 'test-admin-id',
+            'adminId' => UuidMother::random()->value(),
         ]);
         $data = $this->assertJsonResponse($response, 200);
 
