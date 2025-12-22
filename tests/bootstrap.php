@@ -19,7 +19,15 @@ if (file_exists($testDbPath)) {
 }
 
 // Recreate the test database schema
-passthru(sprintf(
-    'APP_ENV=test php "%s/bin/console" doctrine:schema:create --no-interaction --quiet',
-    dirname(__DIR__)
-));
+$output = [];
+$result = 0;
+exec(sprintf(
+    'APP_ENV=test php %s/bin/console doctrine:schema:create --no-interaction --quiet 2>&1',
+    escapeshellarg(dirname(__DIR__))
+), $output, $result);
+
+if ($result !== 0) {
+    echo "Failed to create test database schema:\n";
+    echo implode("\n", $output);
+    exit(1);
+}
