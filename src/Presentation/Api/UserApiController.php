@@ -106,7 +106,7 @@ class UserApiController extends AbstractController
 
         ($this->createUserHandler)($command);
 
-        $user = $this->userRepository->findById($id);
+        $user = $this->userRepository->findById(Uuid::fromString($id));
 
         return $this->json($this->serializeUser($user), Response::HTTP_CREATED);
     }
@@ -147,7 +147,7 @@ class UserApiController extends AbstractController
     )]
     public function get(string $id): JsonResponse
     {
-        $user = $this->userRepository->findById($id);
+        $user = $this->userRepository->findById(Uuid::fromString($id));
 
         if (!$user) {
             return $this->json(['error' => 'User not found'], Response::HTTP_NOT_FOUND);
@@ -159,10 +159,10 @@ class UserApiController extends AbstractController
     private function serializeUser(User $user): array
     {
         return [
-            'id' => $user->getId()->value(),
-            'name' => $user->getName(),
-            'email' => $user->getEmail()->value(),
-            'role' => $user->getRole()->value,
+            'id' => $user->id()->value(),
+            'name' => $user->name(),
+            'email' => $user->email()->value(),
+            'role' => $user->role()->value,
         ];
     }
 }

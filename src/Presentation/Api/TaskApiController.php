@@ -118,7 +118,7 @@ class TaskApiController extends AbstractController
 
         ($this->createTaskHandler)($command);
 
-        $task = $this->taskRepository->findById($id);
+        $task = $this->taskRepository->findById(Uuid::fromString($id));
 
         return $this->json($this->serializeTask($task), Response::HTTP_CREATED);
     }
@@ -162,7 +162,7 @@ class TaskApiController extends AbstractController
     )]
     public function get(string $id): JsonResponse
     {
-        $task = $this->taskRepository->findById($id);
+        $task = $this->taskRepository->findById(Uuid::fromString($id));
 
         if (!$task) {
             return $this->json(['error' => 'Task not found'], Response::HTTP_NOT_FOUND);
@@ -216,7 +216,7 @@ class TaskApiController extends AbstractController
         $command = new CompleteTaskCommand($id, $userId);
         ($this->completeTaskHandler)($command);
 
-        $task = $this->taskRepository->findById($id);
+        $task = $this->taskRepository->findById(Uuid::fromString($id));
 
         return $this->json($this->serializeTask($task));
     }
@@ -266,7 +266,7 @@ class TaskApiController extends AbstractController
         $command = new ApproveTaskCommand($id, $adminId);
         ($this->approveTaskHandler)($command);
 
-        $task = $this->taskRepository->findById($id);
+        $task = $this->taskRepository->findById(Uuid::fromString($id));
 
         return $this->json($this->serializeTask($task));
     }
@@ -274,13 +274,13 @@ class TaskApiController extends AbstractController
     private function serializeTask(Task $task): array
     {
         return [
-            'id' => $task->getId()->value(),
-            'name' => $task->getName()->value(),
-            'description' => $task->getDescription(),
-            'points' => $task->getPoints()->value(),
-            'frequency' => $task->getFrequency()->value,
-            'status' => $task->getStatus()->value,
-            'createdAt' => $task->getCreatedAt()->format('c'),
+            'id' => $task->id()->value(),
+            'name' => $task->name()->value(),
+            'description' => $task->description(),
+            'points' => $task->points()->value(),
+            'frequency' => $task->frequency()->value,
+            'status' => $task->status()->value,
+            'createdAt' => $task->createdAt()->format('c'),
         ];
     }
 }

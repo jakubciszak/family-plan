@@ -152,6 +152,11 @@ class TaskExecution
         return $this->taskTemplateId;
     }
 
+    public function templateTaskId(): ?Uuid
+    {
+        return $this->taskTemplateId;
+    }
+
     public function name(): ?TaskName
     {
         return $this->name;
