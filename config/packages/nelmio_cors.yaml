@@ -11,6 +11,7 @@ nelmio_cors:
         expose_headers: ['Content-Length', 'Content-Type']
         max_age: 3600
         allow_credentials: true
+        skip_same_as_origin: false
     paths:
         # Apply CORS to all API routes
         '^/api':
@@ -21,3 +22,4 @@ nelmio_cors:
             expose_headers: ['Content-Length', 'Content-Type']
             max_age: 3600
             allow_credentials: true
+            skip_same_as_origin: false
