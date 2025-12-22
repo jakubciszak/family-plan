@@ -7,8 +7,8 @@ on:
     branches: [ '**' ]
 
 jobs:
-  phpunit:
-    name: PHPUnit Tests
+  unit-tests:
+    name: Unit Tests
     timeout-minutes: 30
     runs-on: ubuntu-latest
     
@@ -43,15 +43,66 @@ jobs:
       # Ignore ext-redis as it's only needed for caching in production, not for unit tests
       run: composer install --prefer-dist --no-progress --ignore-platform-req=ext-redis
     
-    - name: Run PHPUnit tests
+    - name: Run Unit Tests
       run: |
         mkdir -p test-results
-        vendor/bin/phpunit --testdox --log-junit test-results/junit.xml
+        vendor/bin/phpunit tests/TaskManagement tests/UserManagement tests/Shared --testdox --log-junit test-results/unit-tests.xml
     
-    - name: Upload test results
+    - name: Upload unit test results
       uses: actions/upload-artifact@v4
       if: always()
       with:
-        name: phpunit-results
+        name: unit-test-results
+        path: test-results/
+        retention-days: 30
+
+  integration-tests:
+    name: Integration Tests
+    timeout-minutes: 30
+    runs-on: ubuntu-latest
+    # Only run integration tests on main branch
+    if: github.ref == 'refs/heads/main'
+    
+    permissions:
+      contents: read
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.3'
+        extensions: ctype, iconv, pdo, pdo_sqlite, mbstring, xml, tokenizer, intl
+        coverage: none
+        tools: composer:v2
+    
+    - name: Validate composer.json and composer.lock
+      run: composer validate
+    
+    - name: Cache Composer dependencies
+      uses: actions/cache@v4
+      with:
+        path: |
+          vendor
+          ~/.composer/cache/files
+        key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-composer-
+    
+    - name: Install dependencies
+      # Ignore ext-redis as it's only needed for caching in production, not for unit tests
+      run: composer install --prefer-dist --no-progress --ignore-platform-req=ext-redis
+    
+    - name: Run Integration Tests
+      run: |
+        mkdir -p test-results
+        vendor/bin/phpunit tests/Api --testdox --log-junit test-results/integration-tests.xml
+    
+    - name: Upload integration test results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: integration-test-results
         path: test-results/
         retention-days: 30
