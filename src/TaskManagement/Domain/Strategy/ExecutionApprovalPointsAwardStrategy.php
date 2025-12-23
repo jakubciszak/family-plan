@@ -4,37 +4,42 @@ declare(strict_types=1);
 
 namespace App\TaskManagement\Domain\Strategy;
 
+use App\PointsManagement\Domain\Entity\UserWallet;
+use App\PointsManagement\Domain\Repository\UserWalletRepositoryInterface;
 use App\Shared\Domain\ValueObject\Uuid;
 use App\TaskManagement\Domain\Entity\TaskExecution;
-use App\UserManagement\Domain\Repository\UserRepositoryInterface;
 
 /**
- * Strategy that awards execution points to the user who completed the task execution.
+ * Strategy that awards execution points to the user's wallet when execution is approved.
  * Implements the Open/Closed Principle - new strategies can be added without modification.
  */
 final readonly class ExecutionApprovalPointsAwardStrategy implements ExecutionPointsAwardStrategyInterface
 {
     public function __construct(
-        private UserRepositoryInterface $userRepository
+        private UserWalletRepositoryInterface $walletRepository
     ) {
     }
 
     public function awardPoints(TaskExecution $execution, Uuid $userId): void
     {
-        $user = $this->userRepository->findById($userId);
-        
-        if ($user === null) {
-            throw new \DomainException(
-                sprintf('User with ID %s not found', $userId->value())
-            );
-        }
-        
         $points = $execution->points();
         if ($points === null) {
             throw new \DomainException('Task execution has no points assigned');
         }
         
-        $user->addPoints($points->value());
-        $this->userRepository->save($user);
+        $wallet = $this->walletRepository->findByUserId($userId);
+        
+        if ($wallet === null) {
+            // Create wallet if it doesn't exist
+            $wallet = UserWallet::create(Uuid::generate(), $userId);
+        }
+        
+        $executionName = $execution->name() ? $execution->name()->value() : 'Task execution';
+        $wallet->awardPoints(
+            $points->value(),
+            sprintf('Task execution approved: %s', $executionName)
+        );
+        
+        $this->walletRepository->save($wallet);
     }
 }

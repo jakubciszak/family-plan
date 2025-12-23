@@ -38,6 +38,9 @@ services:
     App\TaskManagement\Domain\Repository\TaskExecutionRepositoryInterface:
         class: App\TaskManagement\Infrastructure\Persistence\DoctrineTaskExecutionRepository
 
+    App\PointsManagement\Domain\Repository\UserWalletRepositoryInterface:
+        class: App\PointsManagement\Infrastructure\Persistence\DoctrineUserWalletRepository
+
     # Policy implementations
     App\TaskManagement\Domain\Policy\TaskApprovalPolicyInterface:
         class: App\TaskManagement\Domain\Policy\AdminApprovalPolicy

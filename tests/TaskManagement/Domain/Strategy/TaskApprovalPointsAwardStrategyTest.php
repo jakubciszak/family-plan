@@ -4,55 +4,57 @@ declare(strict_types=1);
 
 namespace App\Tests\TaskManagement\Domain\Strategy;
 
+use App\PointsManagement\Domain\Entity\UserWallet;
+use App\PointsManagement\Infrastructure\Persistence\InMemoryUserWalletRepository;
 use App\TaskManagement\Domain\Strategy\TaskApprovalPointsAwardStrategy;
 use App\Tests\Shared\Mother\UuidMother;
 use App\Tests\TaskManagement\Mother\PointsMother;
 use App\Tests\TaskManagement\Mother\TaskMother;
-use App\Tests\UserManagement\Mother\UserMother;
-use App\UserManagement\Infrastructure\Persistence\InMemoryUserRepository;
 use PHPUnit\Framework\TestCase;
 
 /**
- * Test for TaskApprovalPointsAwardStrategy
+ * Test for TaskApprovalPointsAwardStrategy with UserWallet aggregate
  */
 class TaskApprovalPointsAwardStrategyTest extends TestCase
 {
-    private InMemoryUserRepository $userRepository;
+    private InMemoryUserWalletRepository $walletRepository;
     private TaskApprovalPointsAwardStrategy $strategy;
 
     protected function setUp(): void
     {
-        $this->userRepository = new InMemoryUserRepository();
-        $this->strategy = new TaskApprovalPointsAwardStrategy($this->userRepository);
+        $this->walletRepository = new InMemoryUserWalletRepository();
+        $this->strategy = new TaskApprovalPointsAwardStrategy($this->walletRepository);
     }
 
-    public function testPointsAreAwardedToUser(): void
+    public function testPointsAreAwardedToUserWallet(): void
     {
         // Given
-        $user = UserMother::regularUser();
-        $this->userRepository->save($user);
+        $userId = UuidMother::random();
+        $wallet = UserWallet::create(UuidMother::random(), $userId);
+        $this->walletRepository->save($wallet);
         
         $taskPoints = PointsMother::fromInt(50);
         $task = TaskMother::aTask()
             ->withPoints($taskPoints)
             ->build();
         
-        $initialPoints = $user->points();
+        $initialBalance = $wallet->balance()->value();
 
         // When
-        $this->strategy->awardPoints($task, $user->id());
+        $this->strategy->awardPoints($task, $userId);
 
         // Then
-        $updatedUser = $this->userRepository->findById($user->id());
-        $this->assertNotNull($updatedUser);
-        $this->assertEquals($initialPoints + 50, $updatedUser->points());
+        $updatedWallet = $this->walletRepository->findByUserId($userId);
+        $this->assertNotNull($updatedWallet);
+        $this->assertEquals($initialBalance + 50, $updatedWallet->balance()->value());
     }
 
     public function testPointsAccumulateWithMultipleAwards(): void
     {
         // Given
-        $user = UserMother::regularUser();
-        $this->userRepository->save($user);
+        $userId = UuidMother::random();
+        $wallet = UserWallet::create(UuidMother::random(), $userId);
+        $this->walletRepository->save($wallet);
         
         $task1 = TaskMother::aTask()
             ->withPoints(PointsMother::fromInt(30))
@@ -63,26 +65,29 @@ class TaskApprovalPointsAwardStrategyTest extends TestCase
             ->build();
 
         // When
-        $this->strategy->awardPoints($task1, $user->id());
-        $this->strategy->awardPoints($task2, $user->id());
+        $this->strategy->awardPoints($task1, $userId);
+        $this->strategy->awardPoints($task2, $userId);
 
         // Then
-        $updatedUser = $this->userRepository->findById($user->id());
-        $this->assertNotNull($updatedUser);
-        $this->assertEquals(50, $updatedUser->points());
+        $updatedWallet = $this->walletRepository->findByUserId($userId);
+        $this->assertNotNull($updatedWallet);
+        $this->assertEquals(50, $updatedWallet->balance()->value());
     }
 
-    public function testExceptionWhenUserNotFound(): void
+    public function testWalletIsCreatedIfNotExists(): void
     {
         // Given
-        $nonExistentUserId = UuidMother::random();
-        $task = TaskMother::aTask()->build();
-
-        // Then
-        $this->expectException(\DomainException::class);
-        $this->expectExceptionMessageMatches('/User with ID .* not found/');
+        $userId = UuidMother::random();
+        $task = TaskMother::aTask()
+            ->withPoints(PointsMother::fromInt(100))
+            ->build();
 
         // When
-        $this->strategy->awardPoints($task, $nonExistentUserId);
+        $this->strategy->awardPoints($task, $userId);
+
+        // Then
+        $wallet = $this->walletRepository->findByUserId($userId);
+        $this->assertNotNull($wallet);
+        $this->assertEquals(100, $wallet->balance()->value());
     }
 }
