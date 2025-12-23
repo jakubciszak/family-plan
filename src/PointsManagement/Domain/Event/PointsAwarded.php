@@ -18,12 +18,28 @@ final readonly class PointsAwarded implements DomainEvent
         public Uuid $userId,
         public int $points,
         public string $reason,
-        public DateTimeImmutable $occurredAt
+        private DateTimeImmutable $occurredOn
     ) {
     }
 
-    public function occurredAt(): DateTimeImmutable
+    public function occurredOn(): DateTimeImmutable
     {
-        return $this->occurredAt;
+        return $this->occurredOn;
+    }
+
+    public function eventName(): string
+    {
+        return 'points.awarded';
+    }
+
+    public function toPrimitives(): array
+    {
+        return [
+            'wallet_id' => $this->walletId->value(),
+            'user_id' => $this->userId->value(),
+            'points' => $this->points,
+            'reason' => $this->reason,
+            'occurred_on' => $this->occurredOn->format(DateTimeImmutable::ATOM),
+        ];
     }
 }

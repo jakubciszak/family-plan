@@ -16,12 +16,26 @@ final readonly class UserWalletCreated implements DomainEvent
     public function __construct(
         public Uuid $walletId,
         public Uuid $userId,
-        public DateTimeImmutable $occurredAt
+        private DateTimeImmutable $occurredOn
     ) {
     }
 
-    public function occurredAt(): DateTimeImmutable
+    public function occurredOn(): DateTimeImmutable
     {
-        return $this->occurredAt;
+        return $this->occurredOn;
+    }
+
+    public function eventName(): string
+    {
+        return 'user_wallet.created';
+    }
+
+    public function toPrimitives(): array
+    {
+        return [
+            'wallet_id' => $this->walletId->value(),
+            'user_id' => $this->userId->value(),
+            'occurred_on' => $this->occurredOn->format(DateTimeImmutable::ATOM),
+        ];
     }
 }

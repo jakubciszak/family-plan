@@ -38,9 +38,6 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         #[ORM\Column(type: 'role')]
         private Role $role,
         
-        #[ORM\Column(type: 'integer', options: ['default' => 0])]
-        private int $points = 0,
-        
         #[ORM\Column(type: 'datetime_immutable')]
         private DateTimeImmutable $createdAt,
         
@@ -62,7 +59,6 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
             $email,
             $hashedPassword,
             $role,
-            0, // Default points
             new DateTimeImmutable()
         );
 
@@ -94,21 +90,6 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function role(): Role
     {
         return $this->role;
-    }
-
-    public function points(): int
-    {
-        return $this->points;
-    }
-
-    public function addPoints(int $points): void
-    {
-        if ($points < 0) {
-            throw new \DomainException('Cannot add negative points');
-        }
-        
-        $this->points += $points;
-        $this->updatedAt = new DateTimeImmutable();
     }
 
     public function isAdmin(): bool
