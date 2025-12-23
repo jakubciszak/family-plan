@@ -89,7 +89,7 @@ class TaskExecution
             null,  // Description will be fetched from TaskTemplate
             null,  // Points will be fetched from TaskTemplate
             $scheduledFor,
-            ExecutionStatus::PENDING,
+            ExecutionStatus::NEW,
             $assignedUserId,
             null,
             null,
@@ -123,7 +123,7 @@ class TaskExecution
             $description,
             $points,
             $scheduledFor,
-            ExecutionStatus::PENDING,
+            ExecutionStatus::NEW,
             $assignedUserId,
             null,
             null,

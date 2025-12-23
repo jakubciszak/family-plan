@@ -11,6 +11,7 @@ final class TaskStateFactory
     public static function createFromStatus(TaskStatus $status): TaskStateInterface
     {
         return match($status) {
+            TaskStatus::NEW => new NewState(),
             TaskStatus::PENDING => new PendingState(),
             TaskStatus::COMPLETED => new CompletedState(),
             TaskStatus::APPROVED => new ApprovedState(),

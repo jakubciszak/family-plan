@@ -8,6 +8,7 @@ use InvalidArgumentException;
 
 enum ExecutionStatus: string
 {
+    case NEW = 'new';
     case PENDING = 'pending';
     case COMPLETED = 'completed';
     case APPROVED = 'approved';
@@ -16,6 +17,7 @@ enum ExecutionStatus: string
     public static function fromString(string $value): self
     {
         return match(strtolower($value)) {
+            'new' => self::NEW,
             'pending' => self::PENDING,
             'completed' => self::COMPLETED,
             'approved' => self::APPROVED,
@@ -27,6 +29,7 @@ enum ExecutionStatus: string
     public function label(): string
     {
         return match($this) {
+            self::NEW => 'New',
             self::PENDING => 'Pending',
             self::COMPLETED => 'Completed',
             self::APPROVED => 'Approved',

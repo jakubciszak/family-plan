@@ -12,6 +12,7 @@ final class ExecutionStateFactory
     public static function createFromStatus(ExecutionStatus $status): ExecutionStateInterface
     {
         return match($status) {
+            ExecutionStatus::NEW => new NewExecutionState(),
             ExecutionStatus::PENDING => new PendingExecutionState(),
             ExecutionStatus::COMPLETED => new CompletedExecutionState(),
             ExecutionStatus::APPROVED => new ApprovedExecutionState(),
