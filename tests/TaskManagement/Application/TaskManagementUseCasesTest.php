@@ -15,6 +15,7 @@ use App\TaskManagement\Domain\Policy\AdminApprovalPolicy;
 use App\TaskManagement\Domain\Strategy\TaskApprovalPointsAwardStrategy;
 use App\UserManagement\Infrastructure\Persistence\InMemoryUserRepository;
 use App\PointsManagement\Infrastructure\Persistence\InMemoryUserWalletRepository;
+use App\Shared\Infrastructure\Clock\FixedClock;
 use App\Tests\Shared\Mother\UuidMother;
 use App\Tests\TaskManagement\Assert\TaskAssert;
 use App\Tests\TaskManagement\Mother\FrequencyMother;
@@ -32,6 +33,7 @@ class TaskManagementUseCasesTest extends TestCase
     private InMemoryTaskRepository $taskRepository;
     private InMemoryUserRepository $userRepository;
     private InMemoryUserWalletRepository $walletRepository;
+    private FixedClock $clock;
     private CreateTaskHandler $createHandler;
     private CompleteTaskHandler $completeHandler;
     private ApproveTaskHandler $approveHandler;
@@ -41,11 +43,12 @@ class TaskManagementUseCasesTest extends TestCase
         $this->taskRepository = new InMemoryTaskRepository();
         $this->userRepository = new InMemoryUserRepository();
         $this->walletRepository = new InMemoryUserWalletRepository();
+        $this->clock = new FixedClock();
         $this->createHandler = new CreateTaskHandler($this->taskRepository);
         $this->completeHandler = new CompleteTaskHandler($this->taskRepository);
         
         $approvalPolicy = new AdminApprovalPolicy($this->userRepository);
-        $pointsAwardStrategy = new TaskApprovalPointsAwardStrategy($this->walletRepository);
+        $pointsAwardStrategy = new TaskApprovalPointsAwardStrategy($this->walletRepository, $this->clock);
         $this->approveHandler = new ApproveTaskHandler(
             $this->taskRepository,
             $approvalPolicy,

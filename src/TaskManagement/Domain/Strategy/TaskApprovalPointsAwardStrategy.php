@@ -6,6 +6,7 @@ namespace App\TaskManagement\Domain\Strategy;
 
 use App\PointsManagement\Domain\Entity\UserWallet;
 use App\PointsManagement\Domain\Repository\UserWalletRepositoryInterface;
+use App\Shared\Domain\Clock\ClockInterface;
 use App\Shared\Domain\ValueObject\Uuid;
 use App\TaskManagement\Domain\Entity\Task;
 
@@ -16,7 +17,8 @@ use App\TaskManagement\Domain\Entity\Task;
 final readonly class TaskApprovalPointsAwardStrategy implements PointsAwardStrategyInterface
 {
     public function __construct(
-        private UserWalletRepositoryInterface $walletRepository
+        private UserWalletRepositoryInterface $walletRepository,
+        private ClockInterface $clock
     ) {
     }
 
@@ -26,12 +28,13 @@ final readonly class TaskApprovalPointsAwardStrategy implements PointsAwardStrat
         
         if ($wallet === null) {
             // Create wallet if it doesn't exist
-            $wallet = UserWallet::create(Uuid::generate(), $userId);
+            $wallet = UserWallet::create(Uuid::generate(), $userId, $this->clock);
         }
         
         $wallet->awardPoints(
             $task->points()->value(),
-            sprintf('Task approved: %s', $task->name()->value())
+            sprintf('Task approved: %s', $task->name()->value()),
+            $this->clock
         );
         
         $this->walletRepository->save($wallet);

@@ -6,6 +6,7 @@ namespace App\TaskManagement\Domain\Strategy;
 
 use App\PointsManagement\Domain\Entity\UserWallet;
 use App\PointsManagement\Domain\Repository\UserWalletRepositoryInterface;
+use App\Shared\Domain\Clock\ClockInterface;
 use App\Shared\Domain\ValueObject\Uuid;
 use App\TaskManagement\Domain\Entity\TaskExecution;
 
@@ -16,7 +17,8 @@ use App\TaskManagement\Domain\Entity\TaskExecution;
 final readonly class ExecutionApprovalPointsAwardStrategy implements ExecutionPointsAwardStrategyInterface
 {
     public function __construct(
-        private UserWalletRepositoryInterface $walletRepository
+        private UserWalletRepositoryInterface $walletRepository,
+        private ClockInterface $clock
     ) {
     }
 
@@ -31,13 +33,14 @@ final readonly class ExecutionApprovalPointsAwardStrategy implements ExecutionPo
         
         if ($wallet === null) {
             // Create wallet if it doesn't exist
-            $wallet = UserWallet::create(Uuid::generate(), $userId);
+            $wallet = UserWallet::create(Uuid::generate(), $userId, $this->clock);
         }
         
         $executionName = $execution->name() ? $execution->name()->value() : 'Task execution';
         $wallet->awardPoints(
             $points->value(),
-            sprintf('Task execution approved: %s', $executionName)
+            sprintf('Task execution approved: %s', $executionName),
+            $this->clock
         );
         
         $this->walletRepository->save($wallet);

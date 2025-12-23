@@ -7,6 +7,7 @@ namespace App\PointsManagement\Domain\Entity;
 use App\PointsManagement\Domain\Event\PointsAwarded;
 use App\PointsManagement\Domain\Event\UserWalletCreated;
 use App\PointsManagement\Domain\ValueObject\PointsBalance;
+use App\Shared\Domain\Clock\ClockInterface;
 use App\Shared\Domain\ValueObject\Uuid;
 use DateTimeImmutable;
 use Doctrine\ORM\Mapping as ORM;
@@ -42,16 +43,17 @@ class UserWallet
     ) {
     }
 
-    public static function create(Uuid $id, Uuid $userId): self
+    public static function create(Uuid $id, Uuid $userId, ClockInterface $clock): self
     {
+        $now = $clock->now();
         $wallet = new self(
             $id,
             $userId,
             0, // Start with zero balance
-            new DateTimeImmutable()
+            $now
         );
 
-        $wallet->record(new UserWalletCreated($id, $userId, new DateTimeImmutable()));
+        $wallet->record(new UserWalletCreated($id, $userId, $now));
 
         return $wallet;
     }
@@ -74,29 +76,30 @@ class UserWallet
     /**
      * Award points to the wallet (credit operation)
      */
-    public function awardPoints(int $points, string $reason): void
+    public function awardPoints(int $points, string $reason, ClockInterface $clock): void
     {
         if ($points <= 0) {
             throw new \DomainException('Points to award must be positive');
         }
 
+        $now = $clock->now();
         $newBalance = $this->balance()->add($points);
         $this->balance = $newBalance->value();
-        $this->updatedAt = new DateTimeImmutable();
+        $this->updatedAt = $now;
 
         $this->record(new PointsAwarded(
             $this->id,
             $this->userId,
             $points,
             $reason,
-            new DateTimeImmutable()
+            $now
         ));
     }
 
     /**
      * Deduct points from the wallet (debit operation)
      */
-    public function deductPoints(int $points, string $reason): void
+    public function deductPoints(int $points, string $reason, ClockInterface $clock): void
     {
         if ($points <= 0) {
             throw new \DomainException('Points to deduct must be positive');
@@ -104,7 +107,7 @@ class UserWallet
 
         $newBalance = $this->balance()->subtract($points);
         $this->balance = $newBalance->value();
-        $this->updatedAt = new DateTimeImmutable();
+        $this->updatedAt = $clock->now();
     }
 
     public function createdAt(): DateTimeImmutable

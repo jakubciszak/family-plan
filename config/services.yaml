@@ -52,6 +52,10 @@ services:
     App\TaskManagement\Domain\Strategy\ExecutionPointsAwardStrategyInterface:
         class: App\TaskManagement\Domain\Strategy\ExecutionApprovalPointsAwardStrategy
 
+    # Clock implementation
+    App\Shared\Domain\Clock\ClockInterface:
+        class: App\Shared\Infrastructure\Clock\SystemClock
+
     # add more service definitions when explicit configuration is needed
     # please note that last definitions always *replace* previous ones
 

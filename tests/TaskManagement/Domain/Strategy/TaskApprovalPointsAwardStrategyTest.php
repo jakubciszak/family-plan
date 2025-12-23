@@ -6,6 +6,7 @@ namespace App\Tests\TaskManagement\Domain\Strategy;
 
 use App\PointsManagement\Domain\Entity\UserWallet;
 use App\PointsManagement\Infrastructure\Persistence\InMemoryUserWalletRepository;
+use App\Shared\Infrastructure\Clock\FixedClock;
 use App\TaskManagement\Domain\Strategy\TaskApprovalPointsAwardStrategy;
 use App\Tests\Shared\Mother\UuidMother;
 use App\Tests\TaskManagement\Mother\PointsMother;
@@ -18,19 +19,21 @@ use PHPUnit\Framework\TestCase;
 class TaskApprovalPointsAwardStrategyTest extends TestCase
 {
     private InMemoryUserWalletRepository $walletRepository;
+    private FixedClock $clock;
     private TaskApprovalPointsAwardStrategy $strategy;
 
     protected function setUp(): void
     {
         $this->walletRepository = new InMemoryUserWalletRepository();
-        $this->strategy = new TaskApprovalPointsAwardStrategy($this->walletRepository);
+        $this->clock = new FixedClock();
+        $this->strategy = new TaskApprovalPointsAwardStrategy($this->walletRepository, $this->clock);
     }
 
     public function testPointsAreAwardedToUserWallet(): void
     {
         // Given
         $userId = UuidMother::random();
-        $wallet = UserWallet::create(UuidMother::random(), $userId);
+        $wallet = UserWallet::create(UuidMother::random(), $userId, $this->clock);
         $this->walletRepository->save($wallet);
         
         $taskPoints = PointsMother::fromInt(50);
@@ -53,7 +56,7 @@ class TaskApprovalPointsAwardStrategyTest extends TestCase
     {
         // Given
         $userId = UuidMother::random();
-        $wallet = UserWallet::create(UuidMother::random(), $userId);
+        $wallet = UserWallet::create(UuidMother::random(), $userId, $this->clock);
         $this->walletRepository->save($wallet);
         
         $task1 = TaskMother::aTask()
