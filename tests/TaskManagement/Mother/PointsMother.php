@@ -15,7 +15,7 @@ final class PointsMother
 
     public static function create(int $value = 10): Points
     {
-        return Points::fromInt($value);
+        return self::fromInt($value);
     }
 
     public static function random(): Points
