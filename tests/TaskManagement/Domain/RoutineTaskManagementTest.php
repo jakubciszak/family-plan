@@ -37,7 +37,7 @@ class RoutineTaskManagementTest extends TestCase
         TaskExecutionAssert::assertTaskExecutionHasId($executionId, $execution);
         TaskExecutionAssert::assertTaskExecutionHasTemplateTaskId($templateTaskId, $execution);
         TaskExecutionAssert::assertTaskExecutionHasScheduledFor($scheduledFor, $execution);
-        TaskExecutionAssert::assertTaskExecutionIsPending($execution);
+        TaskExecutionAssert::assertTaskExecutionIsNew($execution);
         TaskExecutionAssert::assertTaskExecutionIsNotCompleted($execution);
     }
 
@@ -66,7 +66,7 @@ class RoutineTaskManagementTest extends TestCase
         TaskExecutionAssert::assertTaskExecutionHasDescription($description, $execution);
         TaskExecutionAssert::assertTaskExecutionHasPoints($points, $execution);
         TaskExecutionAssert::assertTaskExecutionHasNoTemplateTask($execution);
-        TaskExecutionAssert::assertTaskExecutionIsPending($execution);
+        TaskExecutionAssert::assertTaskExecutionIsNew($execution);
     }
 
     public function testTaskExecutionCanBeCompleted(): void

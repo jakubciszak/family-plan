@@ -62,6 +62,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
             $email,
             $hashedPassword,
             $role,
+            0, // Default points
             new DateTimeImmutable()
         );
 

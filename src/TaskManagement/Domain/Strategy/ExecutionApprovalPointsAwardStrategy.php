@@ -25,7 +25,7 @@ final readonly class ExecutionApprovalPointsAwardStrategy implements ExecutionPo
         
         if ($user === null) {
             throw new \DomainException(
-                sprintf('User with ID %s not found', $userId->toString())
+                sprintf('User with ID %s not found', $userId->value())
             );
         }
         
