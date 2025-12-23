@@ -38,6 +38,17 @@ services:
     App\TaskManagement\Domain\Repository\TaskExecutionRepositoryInterface:
         class: App\TaskManagement\Infrastructure\Persistence\DoctrineTaskExecutionRepository
 
+    # Policy implementations
+    App\TaskManagement\Domain\Policy\TaskApprovalPolicyInterface:
+        class: App\TaskManagement\Domain\Policy\AdminApprovalPolicy
+
+    # Strategy implementations
+    App\TaskManagement\Domain\Strategy\PointsAwardStrategyInterface:
+        class: App\TaskManagement\Domain\Strategy\TaskApprovalPointsAwardStrategy
+
+    App\TaskManagement\Domain\Strategy\ExecutionPointsAwardStrategyInterface:
+        class: App\TaskManagement\Domain\Strategy\ExecutionApprovalPointsAwardStrategy
+
     # add more service definitions when explicit configuration is needed
     # please note that last definitions always *replace* previous ones
 
