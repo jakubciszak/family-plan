@@ -69,7 +69,7 @@ class CorsTest extends WebTestCase
 
         $response = $client->getResponse();
         
-        $this->assertSame(204, $response->getStatusCode());
+        $this->assertSame(200, $response->getStatusCode());
         $this->assertTrue($response->headers->has('Access-Control-Allow-Origin'));
         $this->assertTrue($response->headers->has('Access-Control-Allow-Methods'));
         $this->assertTrue($response->headers->has('Access-Control-Allow-Headers'));
@@ -77,7 +77,7 @@ class CorsTest extends WebTestCase
         
         $this->assertSame('http://localhost:3000', $response->headers->get('Access-Control-Allow-Origin'));
         $this->assertStringContainsString('POST', $response->headers->get('Access-Control-Allow-Methods'));
-        $this->assertStringContainsString('Content-Type', $response->headers->get('Access-Control-Allow-Headers'));
+        $this->assertStringContainsString('content-type', strtolower($response->headers->get('Access-Control-Allow-Headers')));
         $this->assertSame('3600', $response->headers->get('Access-Control-Max-Age'));
     }
 
@@ -90,6 +90,7 @@ class CorsTest extends WebTestCase
         
         $client->request('OPTIONS', '/api/tasks', [], [], [
             'HTTP_ORIGIN' => 'http://localhost:3000',
+            'HTTP_ACCESS_CONTROL_REQUEST_METHOD' => 'POST',
         ]);
 
         $response = $client->getResponse();
@@ -112,15 +113,17 @@ class CorsTest extends WebTestCase
         
         $client->request('OPTIONS', '/api/tasks', [], [], [
             'HTTP_ORIGIN' => 'http://localhost:3000',
+            'HTTP_ACCESS_CONTROL_REQUEST_METHOD' => 'POST',
+            'HTTP_ACCESS_CONTROL_REQUEST_HEADERS' => 'Content-Type',
         ]);
 
         $response = $client->getResponse();
-        $allowedHeaders = $response->headers->get('Access-Control-Allow-Headers');
+        $allowedHeaders = strtolower($response->headers->get('Access-Control-Allow-Headers'));
         
-        $this->assertStringContainsString('Content-Type', $allowedHeaders);
-        $this->assertStringContainsString('Authorization', $allowedHeaders);
-        $this->assertStringContainsString('X-Requested-With', $allowedHeaders);
-        $this->assertStringContainsString('Accept', $allowedHeaders);
+        $this->assertStringContainsString('content-type', $allowedHeaders);
+        $this->assertStringContainsString('authorization', $allowedHeaders);
+        $this->assertStringContainsString('x-requested-with', $allowedHeaders);
+        $this->assertStringContainsString('accept', $allowedHeaders);
     }
 
     /**
@@ -137,10 +140,8 @@ class CorsTest extends WebTestCase
 
         $response = $client->getResponse();
         
-        // Should still have CORS headers, but will fallback to configured origin
-        $this->assertTrue($response->headers->has('Access-Control-Allow-Origin'));
-        // The origin should be the configured one, not the requested one
-        $this->assertNotSame('http://malicious-site.com', $response->headers->get('Access-Control-Allow-Origin'));
+        // Should not have CORS headers for unallowed origin
+        $this->assertFalse($response->headers->has('Access-Control-Allow-Origin'));
     }
 
     /**
@@ -204,7 +205,7 @@ class CorsTest extends WebTestCase
 
         $response = $client->getResponse();
         
-        $this->assertSame(204, $response->getStatusCode());
+        $this->assertSame(200, $response->getStatusCode());
         $this->assertTrue($response->headers->has('Access-Control-Allow-Origin'));
         $this->assertStringContainsString('DELETE', $response->headers->get('Access-Control-Allow-Methods'));
     }

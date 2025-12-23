@@ -11,9 +11,10 @@ class ApiDocTest extends WebTestCase
     public function testApiDocEndpointIsAccessible(): void
     {
         $client = static::createClient();
+        $client->followRedirects();
         $client->request('GET', '/api/doc');
 
-        // The endpoint should be accessible (200) or redirect to the UI
+        // The endpoint should be accessible (200) after following redirects
         $this->assertResponseIsSuccessful();
     }
 }
