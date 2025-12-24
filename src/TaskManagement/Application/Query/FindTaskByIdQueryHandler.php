@@ -9,7 +9,7 @@ use App\TaskManagement\Domain\Entity\Task;
 use App\TaskManagement\Domain\Repository\TaskRepositoryInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 
-#[AsMessageHandler]
+#[AsMessageHandler(bus: 'query.bus')]
 final readonly class FindTaskByIdQueryHandler
 {
     public function __construct(

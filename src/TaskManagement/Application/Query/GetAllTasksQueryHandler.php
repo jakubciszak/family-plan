@@ -7,7 +7,7 @@ namespace App\TaskManagement\Application\Query;
 use App\TaskManagement\Domain\Repository\TaskRepositoryInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 
-#[AsMessageHandler]
+#[AsMessageHandler(bus: 'query.bus')]
 final readonly class GetAllTasksQueryHandler
 {
     public function __construct(

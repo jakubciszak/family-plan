@@ -7,7 +7,9 @@ namespace App\TaskManagement\Application\Handler;
 use App\Shared\Domain\ValueObject\Uuid;
 use App\TaskManagement\Application\Command\CompleteTaskCommand;
 use App\TaskManagement\Domain\Repository\TaskRepositoryInterface;
+use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 
+#[AsMessageHandler(bus: 'command.bus')]
 final readonly class CompleteTaskHandler
 {
     public function __construct(

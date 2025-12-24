@@ -9,7 +9,7 @@ use App\UserManagement\Domain\Entity\User;
 use App\UserManagement\Domain\Repository\UserRepositoryInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 
-#[AsMessageHandler]
+#[AsMessageHandler(bus: 'query.bus')]
 final readonly class FindUserByIdQueryHandler
 {
     public function __construct(

@@ -36,6 +36,12 @@ doctrine:
                 dir: '%kernel.project_dir%/src/TaskManagement/Domain/Entity'
                 prefix: 'App\TaskManagement\Domain\Entity'
                 alias: TaskManagement
+            PointsManagement:
+                type: attribute
+                is_bundle: false
+                dir: '%kernel.project_dir%/src/PointsManagement/Domain/Entity'
+                prefix: 'App\PointsManagement\Domain\Entity'
+                alias: PointsManagement
         controller_resolver:
             auto_mapping: false
 

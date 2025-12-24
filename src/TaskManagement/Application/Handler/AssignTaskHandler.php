@@ -9,7 +9,7 @@ use App\TaskManagement\Application\Command\AssignTaskCommand;
 use App\TaskManagement\Domain\Repository\TaskRepositoryInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 
-#[AsMessageHandler]
+#[AsMessageHandler(bus: 'command.bus')]
 final readonly class AssignTaskHandler
 {
     public function __construct(

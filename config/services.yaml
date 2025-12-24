@@ -23,7 +23,6 @@ services:
             - '../src/**/Domain/ValueObject/'
             - '../src/**/Domain/Event/'
             - '../src/**/Application/Command/'
-            - '../src/**/Application/Query/'
 
     # Repository implementations
     App\UserManagement\Domain\Repository\UserRepositoryInterface:
