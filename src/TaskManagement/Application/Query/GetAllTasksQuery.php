@@ -6,7 +6,4 @@ namespace App\TaskManagement\Application\Query;
 
 final readonly class GetAllTasksQuery
 {
-    public function __construct()
-    {
-    }
 }
