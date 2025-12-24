@@ -53,6 +53,17 @@ function TaskList({ user }) {
         }
     };
 
+    const handleAssignTask = async (taskId, userId) => {
+        try {
+            await apiClient.post(`/api/tasks/${taskId}/assign`, {
+                userId: userId,
+            });
+            loadTasks();
+        } catch (error) {
+            console.error('Error assigning task:', error);
+        }
+    };
+
     if (loading) {
         return <div className="loading">Loading tasks...</div>;
     }
@@ -84,6 +95,7 @@ function TaskList({ user }) {
                             user={user}
                             onComplete={handleCompleteTask}
                             onApprove={handleApproveTask}
+                            onAssign={handleAssignTask}
                         />
                     ))
                 )}
@@ -92,10 +104,13 @@ function TaskList({ user }) {
     );
 }
 
-function TaskCard({ task, user, onComplete, onApprove }) {
+function TaskCard({ task, user, onComplete, onApprove, onAssign }) {
     const isAdmin = user.role === 'ROLE_ADMIN';
-    const canComplete = task.status === 'pending';
+    const isAssigned = task.assignedUserId !== null;
+    const isAssignedToCurrentUser = task.assignedUserId === user.id;
+    const canComplete = task.status === 'pending' && isAssignedToCurrentUser;
     const canApprove = task.status === 'completed' && isAdmin;
+    const canAssign = task.status === 'pending' && !isAssigned;
 
     return (
         <div className="task-card">
@@ -111,8 +126,22 @@ function TaskCard({ task, user, onComplete, onApprove }) {
                     <span className="task-points">{task.points} points</span>
                     <span className="task-frequency">{task.frequency}</span>
                 </div>
+                {isAssigned && (
+                    <div className="task-assignment">
+                        <span className="assignment-label">Assigned to:</span>
+                        <span className="assignment-user">{task.assignedUserName}</span>
+                    </div>
+                )}
             </div>
             <div className="task-actions">
+                {canAssign && (
+                    <button
+                        onClick={() => onAssign(task.id, user.id)}
+                        className="btn-primary"
+                    >
+                        Assign to Me
+                    </button>
+                )}
                 {canComplete && (
                     <button
                         onClick={() => onComplete(task.id)}
