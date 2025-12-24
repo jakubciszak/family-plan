@@ -83,7 +83,29 @@ class TaskApiTest extends ApiTestCase
 
     public function testApproveTask(): void
     {
-        // Create and complete a task first
+        // Create an admin user
+        $adminData = [
+            'name' => 'Admin User',
+            'email' => 'admin@example.com',
+            'password' => 'adminpass123',
+            'role' => 'ROLE_ADMIN',
+        ];
+        $adminResponse = $this->postJson('/api/users', $adminData);
+        $admin = $this->assertJsonResponse($adminResponse, 201);
+        $adminId = $admin['id'];
+
+        // Create a regular user to assign the task to
+        $userData = [
+            'name' => 'Task User',
+            'email' => 'taskuser@example.com',
+            'password' => 'userpass123',
+            'role' => 'ROLE_USER',
+        ];
+        $userResponse = $this->postJson('/api/users', $userData);
+        $user = $this->assertJsonResponse($userResponse, 201);
+        $userId = $user['id'];
+
+        // Create a task
         $taskData = [
             'name' => 'Approve Task Test',
             'description' => 'Description',
@@ -95,14 +117,19 @@ class TaskApiTest extends ApiTestCase
         $createdTask = $this->assertJsonResponse($response, 201);
         $taskId = $createdTask['id'];
 
-        // Complete the task
-        $this->postJson("/api/tasks/{$taskId}/complete", [
-            'userId' => UuidMother::random()->value(),
+        // Assign the task to the user
+        $this->postJson("/api/tasks/{$taskId}/assign", [
+            'userId' => $userId,
         ]);
 
-        // Approve the task
+        // Complete the task
+        $this->postJson("/api/tasks/{$taskId}/complete", [
+            'userId' => $userId,
+        ]);
+
+        // Approve the task with admin user
         $response = $this->postJson("/api/tasks/{$taskId}/approve", [
-            'adminId' => UuidMother::random()->value(),
+            'adminId' => $adminId,
         ]);
         $data = $this->assertJsonResponse($response, 200);
 

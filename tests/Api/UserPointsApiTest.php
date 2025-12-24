@@ -10,10 +10,10 @@ class UserPointsApiTest extends ApiTestCase
 {
     public function testGetUserPointsReturnsZeroForNewUser(): void
     {
-        // Create a user first
+        // Create a user first with a unique email
         $userData = [
             'name' => 'Test User',
-            'email' => 'testuser@example.com',
+            'email' => 'testuser_points_' . time() . '@example.com',
             'password' => 'password123',
             'role' => 'ROLE_USER',
         ];
