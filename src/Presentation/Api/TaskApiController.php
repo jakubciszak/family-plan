@@ -9,22 +9,17 @@ use App\TaskManagement\Application\Command\ApproveTaskCommand;
 use App\TaskManagement\Application\Command\AssignTaskCommand;
 use App\TaskManagement\Application\Command\CompleteTaskCommand;
 use App\TaskManagement\Application\Command\CreateTaskCommand;
-use App\TaskManagement\Application\Handler\ApproveTaskHandler;
-use App\TaskManagement\Application\Handler\AssignTaskHandler;
-use App\TaskManagement\Application\Handler\CompleteTaskHandler;
-use App\TaskManagement\Application\Handler\CreateTaskHandler;
 use App\TaskManagement\Application\Query\FindTaskByIdQuery;
-use App\TaskManagement\Application\Query\FindTaskByIdQueryHandler;
 use App\TaskManagement\Application\Query\GetAllTasksQuery;
-use App\TaskManagement\Application\Query\GetAllTasksQueryHandler;
 use App\TaskManagement\Domain\Entity\Task;
 use App\UserManagement\Application\Query\FindUserByIdQuery;
-use App\UserManagement\Application\Query\FindUserByIdQueryHandler;
 use OpenApi\Attributes as OA;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Messenger\MessageBusInterface;
+use Symfony\Component\Messenger\Stamp\HandledStamp;
 use Symfony\Component\Routing\Attribute\Route;
 
 #[Route('/api/tasks', name: 'api_task_')]
@@ -32,13 +27,8 @@ use Symfony\Component\Routing\Attribute\Route;
 class TaskApiController extends AbstractController
 {
     public function __construct(
-        private readonly CreateTaskHandler $createTaskHandler,
-        private readonly CompleteTaskHandler $completeTaskHandler,
-        private readonly ApproveTaskHandler $approveTaskHandler,
-        private readonly AssignTaskHandler $assignTaskHandler,
-        private readonly GetAllTasksQueryHandler $getAllTasksQueryHandler,
-        private readonly FindTaskByIdQueryHandler $findTaskByIdQueryHandler,
-        private readonly FindUserByIdQueryHandler $findUserByIdQueryHandler
+        private readonly MessageBusInterface $commandBus,
+        private readonly MessageBusInterface $queryBus
     ) {
     }
 
@@ -75,7 +65,7 @@ class TaskApiController extends AbstractController
     )]
     public function list(): JsonResponse
     {
-        $tasks = ($this->getAllTasksQueryHandler)(new GetAllTasksQuery());
+        $tasks = $this->queryBus->dispatch(new GetAllTasksQuery())->last(HandledStamp::class)->getResult();
 
         return $this->json([
             'tasks' => array_map(fn(Task $task) => $this->serializeTask($task), $tasks),
@@ -128,9 +118,9 @@ class TaskApiController extends AbstractController
             $data['frequency'] ?? 'once'
         );
 
-        ($this->createTaskHandler)($command);
+        $this->commandBus->dispatch($command);
 
-        $task = ($this->findTaskByIdQueryHandler)(new FindTaskByIdQuery($id));
+        $task = $this->queryBus->dispatch(new FindTaskByIdQuery($id))->last(HandledStamp::class)->getResult();
 
         return $this->json($this->serializeTask($task), Response::HTTP_CREATED);
     }
@@ -174,7 +164,7 @@ class TaskApiController extends AbstractController
     )]
     public function get(string $id): JsonResponse
     {
-        $task = ($this->findTaskByIdQueryHandler)(new FindTaskByIdQuery($id));
+        $task = $this->queryBus->dispatch(new FindTaskByIdQuery($id))->last(HandledStamp::class)->getResult();
 
         if (!$task) {
             return $this->json(['error' => 'Task not found'], Response::HTTP_NOT_FOUND);
@@ -226,9 +216,9 @@ class TaskApiController extends AbstractController
         $userId = $data['userId'] ?? Uuid::generate()->value();
 
         $command = new CompleteTaskCommand($id, $userId);
-        ($this->completeTaskHandler)($command);
+        $this->commandBus->dispatch($command);
 
-        $task = ($this->findTaskByIdQueryHandler)(new FindTaskByIdQuery($id));
+        $task = $this->queryBus->dispatch(new FindTaskByIdQuery($id))->last(HandledStamp::class)->getResult();
 
         return $this->json($this->serializeTask($task));
     }
@@ -276,9 +266,9 @@ class TaskApiController extends AbstractController
         $adminId = $data['adminId'] ?? Uuid::generate()->value();
 
         $command = new ApproveTaskCommand($id, $adminId);
-        ($this->approveTaskHandler)($command);
+        $this->commandBus->dispatch($command);
 
-        $task = ($this->findTaskByIdQueryHandler)(new FindTaskByIdQuery($id));
+        $task = $this->queryBus->dispatch(new FindTaskByIdQuery($id))->last(HandledStamp::class)->getResult();
 
         return $this->json($this->serializeTask($task));
     }
@@ -341,22 +331,22 @@ class TaskApiController extends AbstractController
         }
 
         // Validate task exists
-        $task = ($this->findTaskByIdQueryHandler)(new FindTaskByIdQuery($id));
+        $task = $this->queryBus->dispatch(new FindTaskByIdQuery($id))->last(HandledStamp::class)->getResult();
         if (!$task) {
             return $this->json(['error' => 'Task not found'], Response::HTTP_NOT_FOUND);
         }
 
         // Validate user exists
-        $user = ($this->findUserByIdQueryHandler)(new FindUserByIdQuery($userId));
+        $user = $this->queryBus->dispatch(new FindUserByIdQuery($userId))->last(HandledStamp::class)->getResult();
         if (!$user) {
             return $this->json(['error' => 'User not found'], Response::HTTP_NOT_FOUND);
         }
 
         // Execute command
-        ($this->assignTaskHandler)(new AssignTaskCommand($id, $userId));
+        $this->commandBus->dispatch(new AssignTaskCommand($id, $userId));
 
         // Fetch updated task
-        $task = ($this->findTaskByIdQueryHandler)(new FindTaskByIdQuery($id));
+        $task = $this->queryBus->dispatch(new FindTaskByIdQuery($id))->last(HandledStamp::class)->getResult();
 
         return $this->json($this->serializeTask($task));
     }
@@ -366,7 +356,7 @@ class TaskApiController extends AbstractController
         $assignedUserId = $task->assignedUserId();
         $assignedUserName = null;
         if ($assignedUserId !== null) {
-            $assignedUser = ($this->findUserByIdQueryHandler)(new FindUserByIdQuery($assignedUserId->value()));
+            $assignedUser = $this->queryBus->dispatch(new FindUserByIdQuery($assignedUserId->value()))->last(HandledStamp::class)->getResult();
             if ($assignedUser !== null) {
                 $assignedUserName = $assignedUser->name();
             }

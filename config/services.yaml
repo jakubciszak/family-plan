@@ -56,6 +56,12 @@ services:
     App\Shared\Domain\Clock\ClockInterface:
         class: App\Shared\Infrastructure\Clock\SystemClock
 
+    # Message buses - bind specific buses to controller parameters
+    App\Presentation\Api\TaskApiController:
+        arguments:
+            $commandBus: '@command.bus'
+            $queryBus: '@query.bus'
+
     # add more service definitions when explicit configuration is needed
     # please note that last definitions always *replace* previous ones
 

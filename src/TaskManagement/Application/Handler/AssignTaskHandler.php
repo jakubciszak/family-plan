@@ -7,7 +7,9 @@ namespace App\TaskManagement\Application\Handler;
 use App\Shared\Domain\ValueObject\Uuid;
 use App\TaskManagement\Application\Command\AssignTaskCommand;
 use App\TaskManagement\Domain\Repository\TaskRepositoryInterface;
+use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 
+#[AsMessageHandler]
 final readonly class AssignTaskHandler
 {
     public function __construct(

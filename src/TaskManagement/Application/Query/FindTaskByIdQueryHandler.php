@@ -7,7 +7,9 @@ namespace App\TaskManagement\Application\Query;
 use App\Shared\Domain\ValueObject\Uuid;
 use App\TaskManagement\Domain\Entity\Task;
 use App\TaskManagement\Domain\Repository\TaskRepositoryInterface;
+use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 
+#[AsMessageHandler]
 final readonly class FindTaskByIdQueryHandler
 {
     public function __construct(

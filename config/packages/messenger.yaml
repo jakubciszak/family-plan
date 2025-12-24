@@ -1,0 +1,24 @@
+framework:
+    messenger:
+        # Separate buses for commands and queries
+        buses:
+            command.bus:
+                middleware:
+                    - validation
+            query.bus:
+                middleware:
+                    - validation
+
+        # Configure transports if needed (sync by default)
+        transports:
+            # async: '%env(MESSENGER_TRANSPORT_DSN)%'
+            sync: 'sync://'
+
+        routing:
+            # Route commands to sync transport
+            'App\TaskManagement\Application\Command\*': sync
+            'App\UserManagement\Application\Command\*': sync
+            
+            # Route queries to sync transport
+            'App\TaskManagement\Application\Query\*': sync
+            'App\UserManagement\Application\Query\*': sync
