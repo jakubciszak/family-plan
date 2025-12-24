@@ -6,14 +6,20 @@ namespace App\Presentation\Api;
 
 use App\Shared\Domain\ValueObject\Uuid;
 use App\TaskManagement\Application\Command\ApproveTaskCommand;
+use App\TaskManagement\Application\Command\AssignTaskCommand;
 use App\TaskManagement\Application\Command\CompleteTaskCommand;
 use App\TaskManagement\Application\Command\CreateTaskCommand;
 use App\TaskManagement\Application\Handler\ApproveTaskHandler;
+use App\TaskManagement\Application\Handler\AssignTaskHandler;
 use App\TaskManagement\Application\Handler\CompleteTaskHandler;
 use App\TaskManagement\Application\Handler\CreateTaskHandler;
+use App\TaskManagement\Application\Query\FindTaskByIdQuery;
+use App\TaskManagement\Application\Query\FindTaskByIdQueryHandler;
+use App\TaskManagement\Application\Query\GetAllTasksQuery;
+use App\TaskManagement\Application\Query\GetAllTasksQueryHandler;
 use App\TaskManagement\Domain\Entity\Task;
-use App\TaskManagement\Domain\Repository\TaskRepositoryInterface;
-use App\UserManagement\Domain\Repository\UserRepositoryInterface;
+use App\UserManagement\Application\Query\FindUserByIdQuery;
+use App\UserManagement\Application\Query\FindUserByIdQueryHandler;
 use OpenApi\Attributes as OA;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -26,11 +32,13 @@ use Symfony\Component\Routing\Attribute\Route;
 class TaskApiController extends AbstractController
 {
     public function __construct(
-        private readonly TaskRepositoryInterface $taskRepository,
         private readonly CreateTaskHandler $createTaskHandler,
         private readonly CompleteTaskHandler $completeTaskHandler,
         private readonly ApproveTaskHandler $approveTaskHandler,
-        private readonly UserRepositoryInterface $userRepository
+        private readonly AssignTaskHandler $assignTaskHandler,
+        private readonly GetAllTasksQueryHandler $getAllTasksQueryHandler,
+        private readonly FindTaskByIdQueryHandler $findTaskByIdQueryHandler,
+        private readonly FindUserByIdQueryHandler $findUserByIdQueryHandler
     ) {
     }
 
@@ -67,7 +75,7 @@ class TaskApiController extends AbstractController
     )]
     public function list(): JsonResponse
     {
-        $tasks = $this->taskRepository->findAll();
+        $tasks = ($this->getAllTasksQueryHandler)(new GetAllTasksQuery());
 
         return $this->json([
             'tasks' => array_map(fn(Task $task) => $this->serializeTask($task), $tasks),
@@ -122,7 +130,7 @@ class TaskApiController extends AbstractController
 
         ($this->createTaskHandler)($command);
 
-        $task = $this->taskRepository->findById(Uuid::fromString($id));
+        $task = ($this->findTaskByIdQueryHandler)(new FindTaskByIdQuery($id));
 
         return $this->json($this->serializeTask($task), Response::HTTP_CREATED);
     }
@@ -166,7 +174,7 @@ class TaskApiController extends AbstractController
     )]
     public function get(string $id): JsonResponse
     {
-        $task = $this->taskRepository->findById(Uuid::fromString($id));
+        $task = ($this->findTaskByIdQueryHandler)(new FindTaskByIdQuery($id));
 
         if (!$task) {
             return $this->json(['error' => 'Task not found'], Response::HTTP_NOT_FOUND);
@@ -220,7 +228,7 @@ class TaskApiController extends AbstractController
         $command = new CompleteTaskCommand($id, $userId);
         ($this->completeTaskHandler)($command);
 
-        $task = $this->taskRepository->findById(Uuid::fromString($id));
+        $task = ($this->findTaskByIdQueryHandler)(new FindTaskByIdQuery($id));
 
         return $this->json($this->serializeTask($task));
     }
@@ -270,7 +278,7 @@ class TaskApiController extends AbstractController
         $command = new ApproveTaskCommand($id, $adminId);
         ($this->approveTaskHandler)($command);
 
-        $task = $this->taskRepository->findById(Uuid::fromString($id));
+        $task = ($this->findTaskByIdQueryHandler)(new FindTaskByIdQuery($id));
 
         return $this->json($this->serializeTask($task));
     }
@@ -325,12 +333,6 @@ class TaskApiController extends AbstractController
     )]
     public function assign(string $id, Request $request): JsonResponse
     {
-        $task = $this->taskRepository->findById(Uuid::fromString($id));
-
-        if (!$task) {
-            return $this->json(['error' => 'Task not found'], Response::HTTP_NOT_FOUND);
-        }
-
         $data = json_decode($request->getContent(), true);
         $userId = $data['userId'] ?? null;
 
@@ -338,14 +340,23 @@ class TaskApiController extends AbstractController
             return $this->json(['error' => 'userId is required'], Response::HTTP_BAD_REQUEST);
         }
 
-        $user = $this->userRepository->findById(Uuid::fromString($userId));
+        // Validate task exists
+        $task = ($this->findTaskByIdQueryHandler)(new FindTaskByIdQuery($id));
+        if (!$task) {
+            return $this->json(['error' => 'Task not found'], Response::HTTP_NOT_FOUND);
+        }
 
+        // Validate user exists
+        $user = ($this->findUserByIdQueryHandler)(new FindUserByIdQuery($userId));
         if (!$user) {
             return $this->json(['error' => 'User not found'], Response::HTTP_NOT_FOUND);
         }
 
-        $task->assignTo(Uuid::fromString($userId));
-        $this->taskRepository->save($task);
+        // Execute command
+        ($this->assignTaskHandler)(new AssignTaskCommand($id, $userId));
+
+        // Fetch updated task
+        $task = ($this->findTaskByIdQueryHandler)(new FindTaskByIdQuery($id));
 
         return $this->json($this->serializeTask($task));
     }
@@ -355,7 +366,7 @@ class TaskApiController extends AbstractController
         $assignedUserId = $task->assignedUserId();
         $assignedUserName = null;
         if ($assignedUserId !== null) {
-            $assignedUser = $this->userRepository->findById($assignedUserId);
+            $assignedUser = ($this->findUserByIdQueryHandler)(new FindUserByIdQuery($assignedUserId->value()));
             if ($assignedUser !== null) {
                 $assignedUserName = $assignedUser->name();
             }
