@@ -105,6 +105,15 @@ final class TaskExecutionAssert
         );
     }
 
+    public static function assertTaskExecutionIsNew(TaskExecution $execution): void
+    {
+        Assert::assertSame(
+            ExecutionStatus::NEW,
+            $execution->status(),
+            'Expected task execution status to be NEW'
+        );
+    }
+
     public static function assertTaskExecutionIsPending(TaskExecution $execution): void
     {
         Assert::assertSame(

@@ -69,6 +69,11 @@ final class TaskAssert
         );
     }
 
+    public static function assertTaskIsNew(Task $task): void
+    {
+        self::assertTaskHasStatus(TaskStatus::NEW, $task);
+    }
+
     public static function assertTaskIsPending(Task $task): void
     {
         self::assertTaskHasStatus(TaskStatus::PENDING, $task);

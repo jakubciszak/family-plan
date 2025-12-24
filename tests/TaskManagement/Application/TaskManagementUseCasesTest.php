@@ -11,11 +11,17 @@ use App\TaskManagement\Application\Handler\ApproveTaskHandler;
 use App\TaskManagement\Application\Handler\CompleteTaskHandler;
 use App\TaskManagement\Application\Handler\CreateTaskHandler;
 use App\TaskManagement\Infrastructure\Persistence\InMemoryTaskRepository;
+use App\TaskManagement\Domain\Policy\AdminApprovalPolicy;
+use App\TaskManagement\Domain\Strategy\TaskApprovalPointsAwardStrategy;
+use App\UserManagement\Infrastructure\Persistence\InMemoryUserRepository;
+use App\PointsManagement\Infrastructure\Persistence\InMemoryUserWalletRepository;
+use App\Shared\Infrastructure\Clock\FixedClock;
 use App\Tests\Shared\Mother\UuidMother;
 use App\Tests\TaskManagement\Assert\TaskAssert;
 use App\Tests\TaskManagement\Mother\FrequencyMother;
 use App\Tests\TaskManagement\Mother\PointsMother;
 use App\Tests\TaskManagement\Mother\TaskNameMother;
+use App\Tests\UserManagement\Mother\UserMother;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -24,17 +30,30 @@ use PHPUnit\Framework\TestCase;
  */
 class TaskManagementUseCasesTest extends TestCase
 {
-    private InMemoryTaskRepository $repository;
+    private InMemoryTaskRepository $taskRepository;
+    private InMemoryUserRepository $userRepository;
+    private InMemoryUserWalletRepository $walletRepository;
+    private FixedClock $clock;
     private CreateTaskHandler $createHandler;
     private CompleteTaskHandler $completeHandler;
     private ApproveTaskHandler $approveHandler;
 
     protected function setUp(): void
     {
-        $this->repository = new InMemoryTaskRepository();
-        $this->createHandler = new CreateTaskHandler($this->repository);
-        $this->completeHandler = new CompleteTaskHandler($this->repository);
-        $this->approveHandler = new ApproveTaskHandler($this->repository);
+        $this->taskRepository = new InMemoryTaskRepository();
+        $this->userRepository = new InMemoryUserRepository();
+        $this->walletRepository = new InMemoryUserWalletRepository();
+        $this->clock = new FixedClock();
+        $this->createHandler = new CreateTaskHandler($this->taskRepository);
+        $this->completeHandler = new CompleteTaskHandler($this->taskRepository);
+        
+        $approvalPolicy = new AdminApprovalPolicy($this->userRepository);
+        $pointsAwardStrategy = new TaskApprovalPointsAwardStrategy($this->walletRepository, $this->clock);
+        $this->approveHandler = new ApproveTaskHandler(
+            $this->taskRepository,
+            $approvalPolicy,
+            $pointsAwardStrategy
+        );
     }
 
     public function testCreateTaskUseCaseCreatesAndPersistsTask(): void
@@ -59,14 +78,14 @@ class TaskManagementUseCasesTest extends TestCase
         ($this->createHandler)($command);
 
         // Then
-        $persistedTask = $this->repository->findById($taskId);
+        $persistedTask = $this->taskRepository->findById($taskId);
         $this->assertNotNull($persistedTask);
         TaskAssert::assertTaskHasId($taskId, $persistedTask);
         TaskAssert::assertTaskHasName($name, $persistedTask);
         TaskAssert::assertTaskHasDescription($description, $persistedTask);
         TaskAssert::assertTaskHasPoints($points, $persistedTask);
         TaskAssert::assertTaskHasFrequency($frequency, $persistedTask);
-        TaskAssert::assertTaskIsPending($persistedTask);
+        TaskAssert::assertTaskIsNew($persistedTask);
     }
 
     public function testCompleteTaskUseCaseMarksTaskAsCompleted(): void
@@ -91,7 +110,7 @@ class TaskManagementUseCasesTest extends TestCase
         ($this->completeHandler)($completeCommand);
 
         // Then
-        $completedTask = $this->repository->findById($taskId);
+        $completedTask = $this->taskRepository->findById($taskId);
         $this->assertNotNull($completedTask);
         TaskAssert::assertTaskIsCompleted($completedTask);
         TaskAssert::assertTaskWasCompletedAt($completedTask);
@@ -103,6 +122,20 @@ class TaskManagementUseCasesTest extends TestCase
         $taskId = UuidMother::random();
         $userId = UuidMother::random();
         $adminId = UuidMother::random();
+        
+        // Create an admin user
+        $admin = UserMother::aUser()
+            ->withId($adminId)
+            ->asAdmin()
+            ->build();
+        $this->userRepository->save($admin);
+        
+        // Create a regular user to assign the task to
+        $user = UserMother::aUser()
+            ->withId($userId)
+            ->asRegularUser()
+            ->build();
+        $this->userRepository->save($user);
 
         $createCommand = new CreateTaskCommand(
             $taskId->value(),
@@ -110,7 +143,7 @@ class TaskManagementUseCasesTest extends TestCase
             'Task description',
             PointsMother::medium()->value(),
             FrequencyMother::daily()->value,
-            null
+            $userId->value()
         );
         ($this->createHandler)($createCommand);
 
@@ -123,10 +156,15 @@ class TaskManagementUseCasesTest extends TestCase
         ($this->approveHandler)($approveCommand);
 
         // Then
-        $approvedTask = $this->repository->findById($taskId);
+        $approvedTask = $this->taskRepository->findById($taskId);
         $this->assertNotNull($approvedTask);
         TaskAssert::assertTaskIsApproved($approvedTask);
         TaskAssert::assertTaskWasApprovedAt($approvedTask);
+        
+        // Verify points were awarded to wallet
+        $wallet = $this->walletRepository->findByUserId($userId);
+        $this->assertNotNull($wallet);
+        $this->assertEquals(PointsMother::medium()->value(), $wallet->balance()->value());
     }
 
     public function testCompleteWorkflowFromCreationToApproval(): void
@@ -135,6 +173,20 @@ class TaskManagementUseCasesTest extends TestCase
         $taskId = UuidMother::random();
         $userId = UuidMother::random();
         $adminId = UuidMother::random();
+        
+        // Create an admin user
+        $admin = UserMother::aUser()
+            ->withId($adminId)
+            ->asAdmin()
+            ->build();
+        $this->userRepository->save($admin);
+        
+        // Create a regular user
+        $user = UserMother::aUser()
+            ->withId($userId)
+            ->asRegularUser()
+            ->build();
+        $this->userRepository->save($user);
 
         // When - Create task
         $createCommand = new CreateTaskCommand(
@@ -147,9 +199,9 @@ class TaskManagementUseCasesTest extends TestCase
         );
         ($this->createHandler)($createCommand);
 
-        // Then - Task is created and pending
-        $task = $this->repository->findById($taskId);
-        TaskAssert::assertTaskIsPending($task);
+        // Then - Task is created with NEW status
+        $task = $this->taskRepository->findById($taskId);
+        TaskAssert::assertTaskIsNew($task);
         TaskAssert::assertTaskIsAssignedTo($userId, $task);
 
         // When - User completes the task
@@ -157,33 +209,38 @@ class TaskManagementUseCasesTest extends TestCase
         ($this->completeHandler)($completeCommand);
 
         // Then - Task is completed
-        $task = $this->repository->findById($taskId);
+        $task = $this->taskRepository->findById($taskId);
         TaskAssert::assertTaskIsCompleted($task);
 
         // When - Admin approves the task
         $approveCommand = new ApproveTaskCommand($taskId->value(), $adminId->value());
         ($this->approveHandler)($approveCommand);
 
-        // Then - Task is approved
-        $task = $this->repository->findById($taskId);
+        // Then - Task is approved and points awarded
+        $task = $this->taskRepository->findById($taskId);
         TaskAssert::assertTaskIsApproved($task);
+        
+        $wallet = $this->walletRepository->findByUserId($userId);
+        $this->assertEquals(PointsMother::high()->value(), $wallet->balance()->value());
     }
 
     public function testRepositoryCanFindPendingTasks(): void
     {
+        // Note: This test is kept for backward compatibility with repository method
+        // Tasks are now created with NEW status, not PENDING
         // Given - Create multiple tasks with different statuses
-        $pendingTaskId = UuidMother::random();
+        $newTaskId = UuidMother::random();
         $completedTaskId = UuidMother::random();
 
-        $pendingCommand = new CreateTaskCommand(
-            $pendingTaskId->value(),
+        $newCommand = new CreateTaskCommand(
+            $newTaskId->value(),
             TaskNameMother::create()->value(),
-            'Pending task',
+            'New task',
             PointsMother::medium()->value(),
             FrequencyMother::daily()->value,
             null
         );
-        ($this->createHandler)($pendingCommand);
+        ($this->createHandler)($newCommand);
 
         $completedCommand = new CreateTaskCommand(
             $completedTaskId->value(),
@@ -196,12 +253,11 @@ class TaskManagementUseCasesTest extends TestCase
         ($this->createHandler)($completedCommand);
         ($this->completeHandler)(new CompleteTaskCommand($completedTaskId->value(), UuidMother::random()->value()));
 
-        // When
-        $pendingTasks = $this->repository->findPending();
+        // When - findPending returns empty (tasks are NEW, not PENDING)
+        $pendingTasks = $this->taskRepository->findPending();
 
         // Then
-        $this->assertCount(1, $pendingTasks);
-        TaskAssert::assertTaskHasId($pendingTaskId, $pendingTasks[0]);
+        $this->assertCount(0, $pendingTasks);
     }
 
     public function testRepositoryCanFindCompletedTasks(): void
@@ -220,7 +276,7 @@ class TaskManagementUseCasesTest extends TestCase
         ($this->completeHandler)(new CompleteTaskCommand($taskId->value(), UuidMother::random()->value()));
 
         // When
-        $completedTasks = $this->repository->findCompleted();
+        $completedTasks = $this->taskRepository->findCompleted();
 
         // Then
         $this->assertCount(1, $completedTasks);
@@ -265,7 +321,7 @@ class TaskManagementUseCasesTest extends TestCase
         ($this->createHandler)($command3);
 
         // When
-        $userTasks = $this->repository->findByAssignedUser($userId);
+        $userTasks = $this->taskRepository->findByAssignedUser($userId);
 
         // Then
         $this->assertCount(2, $userTasks);

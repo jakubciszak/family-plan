@@ -43,7 +43,7 @@ class TaskManagementTest extends TestCase
         TaskAssert::assertTaskHasDescription($description, $task);
         TaskAssert::assertTaskHasPoints($points, $task);
         TaskAssert::assertTaskHasFrequency($frequency, $task);
-        TaskAssert::assertTaskIsPending($task);
+        TaskAssert::assertTaskIsNew($task);
         TaskAssert::assertTaskIsNotAssigned($task);
         TaskAssert::assertTaskHasCreatedAt($task);
     }
@@ -269,12 +269,12 @@ class TaskManagementTest extends TestCase
 
     public function testTaskStateTransitionWorkflow(): void
     {
-        // Given - Create a pending task
+        // Given - Create a new task
         $task = TaskMother::pending();
         $userId = UuidMother::random();
         $adminId = UuidMother::random();
         
-        TaskAssert::assertTaskIsPending($task);
+        TaskAssert::assertTaskIsNew($task);
         
         // When - Complete the task
         $task->markAsCompleted($userId);

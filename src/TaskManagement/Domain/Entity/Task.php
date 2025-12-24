@@ -86,7 +86,7 @@ class Task
             $description,
             $points,
             $frequency,
-            TaskStatus::PENDING,
+            TaskStatus::NEW,
             $assignedUserId,
             null,
             null,

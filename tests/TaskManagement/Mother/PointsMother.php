@@ -8,9 +8,14 @@ use App\TaskManagement\Domain\ValueObject\Points;
 
 final class PointsMother
 {
-    public static function create(int $value = 10): Points
+    public static function fromInt(int $value): Points
     {
         return Points::fromInt($value);
+    }
+
+    public static function create(int $value = 10): Points
+    {
+        return self::fromInt($value);
     }
 
     public static function random(): Points

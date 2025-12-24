@@ -38,6 +38,24 @@ services:
     App\TaskManagement\Domain\Repository\TaskExecutionRepositoryInterface:
         class: App\TaskManagement\Infrastructure\Persistence\DoctrineTaskExecutionRepository
 
+    App\PointsManagement\Domain\Repository\UserWalletRepositoryInterface:
+        class: App\PointsManagement\Infrastructure\Persistence\DoctrineUserWalletRepository
+
+    # Policy implementations
+    App\TaskManagement\Domain\Policy\TaskApprovalPolicyInterface:
+        class: App\TaskManagement\Domain\Policy\AdminApprovalPolicy
+
+    # Strategy implementations
+    App\TaskManagement\Domain\Strategy\PointsAwardStrategyInterface:
+        class: App\TaskManagement\Domain\Strategy\TaskApprovalPointsAwardStrategy
+
+    App\TaskManagement\Domain\Strategy\ExecutionPointsAwardStrategyInterface:
+        class: App\TaskManagement\Domain\Strategy\ExecutionApprovalPointsAwardStrategy
+
+    # Clock implementation
+    App\Shared\Domain\Clock\ClockInterface:
+        class: App\Shared\Infrastructure\Clock\SystemClock
+
     # add more service definitions when explicit configuration is needed
     # please note that last definitions always *replace* previous ones
 
