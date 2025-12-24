@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Presentation\Api;
 
+use App\PointsManagement\Domain\Repository\UserWalletRepositoryInterface;
 use App\Shared\Domain\ValueObject\Uuid;
 use App\UserManagement\Application\Command\CreateUserCommand;
 use App\UserManagement\Application\Handler\CreateUserHandler;
@@ -22,7 +23,8 @@ class UserApiController extends AbstractController
 {
     public function __construct(
         private readonly UserRepositoryInterface $userRepository,
-        private readonly CreateUserHandler $createUserHandler
+        private readonly CreateUserHandler $createUserHandler,
+        private readonly UserWalletRepositoryInterface $userWalletRepository
     ) {
     }
 
@@ -154,6 +156,59 @@ class UserApiController extends AbstractController
         }
 
         return $this->json($this->serializeUser($user));
+    }
+
+    #[Route('/{id}/points', name: 'points', methods: ['GET'])]
+    #[OA\Get(
+        path: '/api/users/{id}/points',
+        summary: 'Get user points balance',
+        tags: ['Users']
+    )]
+    #[OA\Parameter(
+        name: 'id',
+        in: 'path',
+        required: true,
+        description: 'User UUID',
+        schema: new OA\Schema(type: 'string', format: 'uuid')
+    )]
+    #[OA\Response(
+        response: 200,
+        description: 'User points balance',
+        content: new OA\JsonContent(
+            properties: [
+                new OA\Property(property: 'userId', type: 'string', format: 'uuid'),
+                new OA\Property(property: 'balance', type: 'integer', example: 150)
+            ]
+        )
+    )]
+    #[OA\Response(
+        response: 404,
+        description: 'User not found',
+        content: new OA\JsonContent(
+            properties: [
+                new OA\Property(property: 'error', type: 'string', example: 'User not found')
+            ]
+        )
+    )]
+    public function getPoints(string $id): JsonResponse
+    {
+        $user = $this->userRepository->findById(Uuid::fromString($id));
+
+        if (!$user) {
+            return $this->json(['error' => 'User not found'], Response::HTTP_NOT_FOUND);
+        }
+
+        $wallet = $this->userWalletRepository->findByUserId(Uuid::fromString($id));
+        
+        $balance = 0;
+        if ($wallet !== null) {
+            $balance = $wallet->balance()->value();
+        }
+
+        return $this->json([
+            'userId' => $id,
+            'balance' => $balance,
+        ]);
     }
 
     private function serializeUser(User $user): array
