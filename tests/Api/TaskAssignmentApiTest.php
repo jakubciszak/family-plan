@@ -50,7 +50,6 @@ class TaskAssignmentApiTest extends ApiTestCase
     {
         $nonexistentTaskId = UuidMother::random()->value();
         $userId = UuidMother::random()->value();
-        
         $this->client->request('POST', "/api/tasks/{$nonexistentTaskId}/assign", [], [], [
             'CONTENT_TYPE' => 'application/json',
             'HTTP_ACCEPT' => 'application/json',
@@ -75,7 +74,6 @@ class TaskAssignmentApiTest extends ApiTestCase
         $taskId = $createdTask['id'];
 
         $nonexistentUserId = UuidMother::random()->value();
-        
         $this->client->request('POST', "/api/tasks/{$taskId}/assign", [], [], [
             'CONTENT_TYPE' => 'application/json',
             'HTTP_ACCEPT' => 'application/json',

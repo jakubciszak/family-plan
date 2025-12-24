@@ -354,7 +354,6 @@ class TaskApiController extends AbstractController
     {
         $assignedUserId = $task->assignedUserId();
         $assignedUserName = null;
-        
         if ($assignedUserId !== null) {
             $assignedUser = $this->userRepository->findById($assignedUserId);
             if ($assignedUser !== null) {

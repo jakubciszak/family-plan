@@ -199,7 +199,6 @@ class UserApiController extends AbstractController
         }
 
         $wallet = $this->userWalletRepository->findByUserId(Uuid::fromString($id));
-        
         $balance = 0;
         if ($wallet !== null) {
             $balance = $wallet->balance()->value();

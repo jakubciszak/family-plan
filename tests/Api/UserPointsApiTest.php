@@ -34,7 +34,6 @@ class UserPointsApiTest extends ApiTestCase
     public function testGetUserPointsReturns404ForNonexistentUser(): void
     {
         $nonexistentUserId = UuidMother::random()->value();
-        
         $this->client->request('GET', "/api/users/{$nonexistentUserId}/points", [], [], [
             'CONTENT_TYPE' => 'application/json',
             'HTTP_ACCEPT' => 'application/json',
