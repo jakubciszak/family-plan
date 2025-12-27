@@ -11,6 +11,7 @@ final readonly class RuleConfig
 {
     private function __construct(
         private RuleType $type,
+        private array $ruleDefinition,
         private ?Uuid $taskTemplateId,
         private ?int $requiredDays,
         private ?int $requiredCount
@@ -24,8 +25,17 @@ final readonly class RuleConfig
             throw new InvalidArgumentException('Required days must be at least 2');
         }
 
+        // Define rule using jakubciszak/rule-engine format
+        $ruleDefinition = [
+            'and' => [
+                ['>=' => [['var' => 'consecutiveDays'], $requiredDays]],
+                ['==' => [['var' => 'taskTemplateId'], $taskTemplateId->value()]]
+            ]
+        ];
+
         return new self(
             RuleType::CONSECUTIVE_DAYS,
+            $ruleDefinition,
             $taskTemplateId,
             $requiredDays,
             null
@@ -38,8 +48,14 @@ final readonly class RuleConfig
             throw new InvalidArgumentException('Required count must be at least 1');
         }
 
+        // Define rule using jakubciszak/rule-engine format
+        $ruleDefinition = [
+            '>=' => [['var' => 'monthlyTaskCount'], $requiredCount]
+        ];
+
         return new self(
             RuleType::MONTHLY_TASK_COUNT,
+            $ruleDefinition,
             null,
             null,
             $requiredCount
@@ -49,6 +65,11 @@ final readonly class RuleConfig
     public function type(): RuleType
     {
         return $this->type;
+    }
+
+    public function ruleDefinition(): array
+    {
+        return $this->ruleDefinition;
     }
 
     public function taskTemplateId(): ?Uuid
@@ -70,6 +91,7 @@ final readonly class RuleConfig
     {
         return [
             'type' => $this->type->value,
+            'ruleDefinition' => $this->ruleDefinition,
             'taskTemplateId' => $this->taskTemplateId?->value(),
             'requiredDays' => $this->requiredDays,
             'requiredCount' => $this->requiredCount,
@@ -82,6 +104,7 @@ final readonly class RuleConfig
 
         return new self(
             $type,
+            $data['ruleDefinition'] ?? [],
             isset($data['taskTemplateId']) ? Uuid::fromString($data['taskTemplateId']) : null,
             $data['requiredDays'] ?? null,
             $data['requiredCount'] ?? null
