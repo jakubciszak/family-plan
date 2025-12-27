@@ -8,11 +8,10 @@ use App\Shared\Domain\ValueObject\Uuid;
 use App\TaskManagement\Domain\Entity\BonusPointsRule;
 use App\TaskManagement\Domain\Repository\TaskExecutionRepositoryInterface;
 use App\TaskManagement\Domain\ValueObject\RuleType;
-use JakubCiszak\RuleEngine\Api\NestedRuleApi;
 
 /**
  * Service to evaluate if bonus point rules are met
- * Uses jakubciszak/rule-engine library for flexible rule evaluation
+ * Implements rule evaluation logic for different rule types
  */
 class BonusPointsEvaluator
 {
@@ -27,32 +26,20 @@ class BonusPointsEvaluator
             return false;
         }
 
-        // Prepare context data based on rule type
-        $context = $this->prepareContext($rule, $userId);
-
-        // Use jakubciszak/rule-engine to evaluate the rule
-        return NestedRuleApi::evaluate($rule->config()->ruleDefinition(), $context);
-    }
-
-    private function prepareContext(BonusPointsRule $rule, Uuid $userId): array
-    {
         return match ($rule->type()) {
-            RuleType::CONSECUTIVE_DAYS => $this->prepareConsecutiveDaysContext($rule, $userId),
-            RuleType::MONTHLY_TASK_COUNT => $this->prepareMonthlyTaskCountContext($userId),
+            RuleType::CONSECUTIVE_DAYS => $this->evaluateConsecutiveDays($rule, $userId),
+            RuleType::MONTHLY_TASK_COUNT => $this->evaluateMonthlyTaskCount($rule, $userId),
         };
     }
 
-    private function prepareConsecutiveDaysContext(BonusPointsRule $rule, Uuid $userId): array
+    private function evaluateConsecutiveDays(BonusPointsRule $rule, Uuid $userId): bool
     {
         $config = $rule->config();
         $taskTemplateId = $config->taskTemplateId();
         $requiredDays = $config->requiredDays();
 
         if ($taskTemplateId === null || $requiredDays === null) {
-            return [
-                'taskTemplateId' => null,
-                'consecutiveDays' => 0,
-            ];
+            return false;
         }
 
         $executions = $this->executionRepository->findRecentApprovedByUserAndTemplate(
@@ -61,21 +48,27 @@ class BonusPointsEvaluator
             $requiredDays * 2 // Get more than needed to check for consecutive days
         );
 
+        if (count($executions) < $requiredDays) {
+            return false;
+        }
+
         $consecutiveDays = $this->countConsecutiveDays($executions);
 
-        return [
-            'taskTemplateId' => $taskTemplateId->value(),
-            'consecutiveDays' => $consecutiveDays,
-        ];
+        return $consecutiveDays >= $requiredDays;
     }
 
-    private function prepareMonthlyTaskCountContext(Uuid $userId): array
+    private function evaluateMonthlyTaskCount(BonusPointsRule $rule, Uuid $userId): bool
     {
+        $config = $rule->config();
+        $requiredCount = $config->requiredCount();
+
+        if ($requiredCount === null) {
+            return false;
+        }
+
         $completedCount = $this->executionRepository->countApprovedInCurrentMonth($userId);
 
-        return [
-            'monthlyTaskCount' => $completedCount,
-        ];
+        return $completedCount >= $requiredCount;
     }
 
     /**

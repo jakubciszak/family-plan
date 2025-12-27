@@ -18,6 +18,7 @@ use App\TaskManagement\Infrastructure\Persistence\InMemoryTaskRepository;
 use App\Tests\Shared\Mother\UuidMother;
 use App\Tests\TaskManagement\Mother\FrequencyMother;
 use App\Tests\TaskManagement\Mother\TaskNameMother;
+use App\UserManagement\Domain\ValueObject\Email;
 use App\Tests\UserManagement\Mother\UserMother;
 use App\UserManagement\Infrastructure\Persistence\InMemoryUserRepository;
 use PHPUnit\Framework\TestCase;
@@ -66,14 +67,14 @@ class CrossContextIntegrationTest extends TestCase
         $admin = UserMother::aUser()
             ->withId($adminId)
             ->withName('System Admin')
-            ->withEmail('admin@familyplan.com')
+            ->withEmail(Email::fromString('admin@familyplan.com'))
             ->asAdmin()
             ->build();
         
         $user = UserMother::aUser()
             ->withId($userId)
             ->withName('John Doe')
-            ->withEmail('john@familyplan.com')
+            ->withEmail(Email::fromString('john@familyplan.com'))
             ->asRegularUser()
             ->build();
         
