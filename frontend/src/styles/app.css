@@ -20,10 +20,35 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: 2rem;
 }
 
 .app-header h1 {
     margin: 0;
+}
+
+.app-nav {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.app-nav button {
+    background-color: transparent;
+    color: white;
+    border: 2px solid transparent;
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.app-nav button:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.app-nav button.nav-active {
+    background-color: rgba(255, 255, 255, 0.2);
+    border-color: #3b82f6;
 }
 
 .user-info {
@@ -225,6 +250,178 @@ button:hover {
 .btn-success {
     background-color: #10b981;
     color: white;
+}
+
+.btn-secondary {
+    background-color: #6b7280;
+    color: white;
+}
+
+.btn-warning {
+    background-color: #f59e0b;
+    color: white;
+}
+
+/* Bonus Rules */
+.bonus-rules-container {
+    width: 100%;
+}
+
+.bonus-rules-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+}
+
+.bonus-rules-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    gap: 1.5rem;
+}
+
+.bonus-rule-card {
+    background: white;
+    border-radius: 8px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    border-left: 4px solid #d1d5db;
+}
+
+.bonus-rule-card.active {
+    border-left-color: #10b981;
+}
+
+.bonus-rule-card.inactive {
+    border-left-color: #ef4444;
+}
+
+.bonus-rule-card.editing {
+    border-left-color: #3b82f6;
+}
+
+.rule-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: start;
+    margin-bottom: 1rem;
+}
+
+.rule-header h3 {
+    margin: 0;
+    color: #1f2937;
+}
+
+.rule-status {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    align-items: flex-end;
+}
+
+.status-badge,
+.rule-type-badge {
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-align: center;
+}
+
+.status-badge.status-active {
+    background-color: #d1fae5;
+    color: #065f46;
+}
+
+.status-badge.status-inactive {
+    background-color: #fee2e2;
+    color: #991b1b;
+}
+
+.rule-type-badge {
+    background-color: #dbeafe;
+    color: #1e40af;
+}
+
+.rule-body {
+    margin-bottom: 1rem;
+}
+
+.rule-description {
+    color: #4b5563;
+    margin-bottom: 0.5rem;
+}
+
+.rule-config {
+    color: #6b7280;
+    font-size: 0.875rem;
+    font-style: italic;
+}
+
+.rule-points {
+    margin-top: 1rem;
+    padding: 0.75rem;
+    background-color: #fef3c7;
+    border-radius: 4px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.points-value {
+    color: #92400e;
+    font-size: 1.25rem;
+    font-weight: 700;
+}
+
+.rule-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 1rem;
+}
+
+.bonus-rule-form {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    margin-bottom: 2rem;
+}
+
+.bonus-rule-form h3 {
+    margin-top: 0;
+    margin-bottom: 1.5rem;
+    color: #1f2937;
+}
+
+.bonus-rule-form .form-group small {
+    display: block;
+    margin-top: 0.25rem;
+    color: #6b7280;
+    font-size: 0.875rem;
+}
+
+.form-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 1.5rem;
+}
+
+.access-denied {
+    background: white;
+    padding: 2rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    text-align: center;
+}
+
+.access-denied h2 {
+    color: #991b1b;
+    margin-top: 0;
+}
+
+.access-denied p {
+    color: #6b7280;
 }
 
 /* Error */
