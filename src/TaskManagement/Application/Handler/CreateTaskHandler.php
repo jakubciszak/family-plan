@@ -11,7 +11,9 @@ use App\TaskManagement\Domain\Repository\TaskRepositoryInterface;
 use App\TaskManagement\Domain\ValueObject\TaskName;
 use App\TaskManagement\Domain\ValueObject\Points;
 use App\TaskManagement\Domain\ValueObject\Frequency;
+use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 
+#[AsMessageHandler(bus: 'command.bus')]
 final readonly class CreateTaskHandler
 {
     public function __construct(

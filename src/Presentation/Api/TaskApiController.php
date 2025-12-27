@@ -6,18 +6,20 @@ namespace App\Presentation\Api;
 
 use App\Shared\Domain\ValueObject\Uuid;
 use App\TaskManagement\Application\Command\ApproveTaskCommand;
+use App\TaskManagement\Application\Command\AssignTaskCommand;
 use App\TaskManagement\Application\Command\CompleteTaskCommand;
 use App\TaskManagement\Application\Command\CreateTaskCommand;
-use App\TaskManagement\Application\Handler\ApproveTaskHandler;
-use App\TaskManagement\Application\Handler\CompleteTaskHandler;
-use App\TaskManagement\Application\Handler\CreateTaskHandler;
+use App\TaskManagement\Application\Query\FindTaskByIdQuery;
+use App\TaskManagement\Application\Query\GetAllTasksQuery;
 use App\TaskManagement\Domain\Entity\Task;
-use App\TaskManagement\Domain\Repository\TaskRepositoryInterface;
+use App\UserManagement\Application\Query\FindUserByIdQuery;
 use OpenApi\Attributes as OA;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Messenger\MessageBusInterface;
+use Symfony\Component\Messenger\Stamp\HandledStamp;
 use Symfony\Component\Routing\Attribute\Route;
 
 #[Route('/api/tasks', name: 'api_task_')]
@@ -25,10 +27,8 @@ use Symfony\Component\Routing\Attribute\Route;
 class TaskApiController extends AbstractController
 {
     public function __construct(
-        private readonly TaskRepositoryInterface $taskRepository,
-        private readonly CreateTaskHandler $createTaskHandler,
-        private readonly CompleteTaskHandler $completeTaskHandler,
-        private readonly ApproveTaskHandler $approveTaskHandler
+        private readonly MessageBusInterface $commandBus,
+        private readonly MessageBusInterface $queryBus
     ) {
     }
 
@@ -54,6 +54,8 @@ class TaskApiController extends AbstractController
                             new OA\Property(property: 'points', type: 'integer'),
                             new OA\Property(property: 'frequency', type: 'string', enum: ['once', 'daily', 'weekly', 'monthly']),
                             new OA\Property(property: 'status', type: 'string', enum: ['pending', 'completed', 'approved']),
+                            new OA\Property(property: 'assignedUserId', type: 'string', format: 'uuid', nullable: true),
+                            new OA\Property(property: 'assignedUserName', type: 'string', nullable: true),
                             new OA\Property(property: 'createdAt', type: 'string', format: 'date-time')
                         ]
                     )
@@ -63,7 +65,7 @@ class TaskApiController extends AbstractController
     )]
     public function list(): JsonResponse
     {
-        $tasks = $this->taskRepository->findAll();
+        $tasks = $this->queryBus->dispatch(new GetAllTasksQuery())->last(HandledStamp::class)->getResult();
 
         return $this->json([
             'tasks' => array_map(fn(Task $task) => $this->serializeTask($task), $tasks),
@@ -116,9 +118,9 @@ class TaskApiController extends AbstractController
             $data['frequency'] ?? 'once'
         );
 
-        ($this->createTaskHandler)($command);
+        $this->commandBus->dispatch($command);
 
-        $task = $this->taskRepository->findById(Uuid::fromString($id));
+        $task = $this->queryBus->dispatch(new FindTaskByIdQuery($id))->last(HandledStamp::class)->getResult();
 
         return $this->json($this->serializeTask($task), Response::HTTP_CREATED);
     }
@@ -162,7 +164,7 @@ class TaskApiController extends AbstractController
     )]
     public function get(string $id): JsonResponse
     {
-        $task = $this->taskRepository->findById(Uuid::fromString($id));
+        $task = $this->queryBus->dispatch(new FindTaskByIdQuery($id))->last(HandledStamp::class)->getResult();
 
         if (!$task) {
             return $this->json(['error' => 'Task not found'], Response::HTTP_NOT_FOUND);
@@ -214,9 +216,9 @@ class TaskApiController extends AbstractController
         $userId = $data['userId'] ?? Uuid::generate()->value();
 
         $command = new CompleteTaskCommand($id, $userId);
-        ($this->completeTaskHandler)($command);
+        $this->commandBus->dispatch($command);
 
-        $task = $this->taskRepository->findById(Uuid::fromString($id));
+        $task = $this->queryBus->dispatch(new FindTaskByIdQuery($id))->last(HandledStamp::class)->getResult();
 
         return $this->json($this->serializeTask($task));
     }
@@ -264,15 +266,102 @@ class TaskApiController extends AbstractController
         $adminId = $data['adminId'] ?? Uuid::generate()->value();
 
         $command = new ApproveTaskCommand($id, $adminId);
-        ($this->approveTaskHandler)($command);
+        $this->commandBus->dispatch($command);
 
-        $task = $this->taskRepository->findById(Uuid::fromString($id));
+        $task = $this->queryBus->dispatch(new FindTaskByIdQuery($id))->last(HandledStamp::class)->getResult();
+
+        return $this->json($this->serializeTask($task));
+    }
+
+    #[Route('/{id}/assign', name: 'assign', methods: ['POST'])]
+    #[OA\Post(
+        path: '/api/tasks/{id}/assign',
+        summary: 'Assign a task to a user',
+        tags: ['Tasks']
+    )]
+    #[OA\Parameter(
+        name: 'id',
+        in: 'path',
+        required: true,
+        description: 'Task UUID',
+        schema: new OA\Schema(type: 'string', format: 'uuid')
+    )]
+    #[OA\RequestBody(
+        required: true,
+        content: new OA\JsonContent(
+            required: ['userId'],
+            properties: [
+                new OA\Property(property: 'userId', type: 'string', format: 'uuid', example: '550e8400-e29b-41d4-a716-446655440002')
+            ]
+        )
+    )]
+    #[OA\Response(
+        response: 200,
+        description: 'Task assigned successfully',
+        content: new OA\JsonContent(
+            properties: [
+                new OA\Property(property: 'id', type: 'string', format: 'uuid'),
+                new OA\Property(property: 'name', type: 'string'),
+                new OA\Property(property: 'description', type: 'string'),
+                new OA\Property(property: 'points', type: 'integer'),
+                new OA\Property(property: 'frequency', type: 'string'),
+                new OA\Property(property: 'status', type: 'string'),
+                new OA\Property(property: 'assignedUserId', type: 'string', format: 'uuid'),
+                new OA\Property(property: 'assignedUserName', type: 'string'),
+                new OA\Property(property: 'createdAt', type: 'string', format: 'date-time')
+            ]
+        )
+    )]
+    #[OA\Response(
+        response: 404,
+        description: 'Task or user not found',
+        content: new OA\JsonContent(
+            properties: [
+                new OA\Property(property: 'error', type: 'string', example: 'Task not found')
+            ]
+        )
+    )]
+    public function assign(string $id, Request $request): JsonResponse
+    {
+        $data = json_decode($request->getContent(), true);
+        $userId = $data['userId'] ?? null;
+
+        if (!$userId) {
+            return $this->json(['error' => 'userId is required'], Response::HTTP_BAD_REQUEST);
+        }
+
+        // Validate task exists
+        $task = $this->queryBus->dispatch(new FindTaskByIdQuery($id))->last(HandledStamp::class)->getResult();
+        if (!$task) {
+            return $this->json(['error' => 'Task not found'], Response::HTTP_NOT_FOUND);
+        }
+
+        // Validate user exists
+        $user = $this->queryBus->dispatch(new FindUserByIdQuery($userId))->last(HandledStamp::class)->getResult();
+        if (!$user) {
+            return $this->json(['error' => 'User not found'], Response::HTTP_NOT_FOUND);
+        }
+
+        // Execute command
+        $this->commandBus->dispatch(new AssignTaskCommand($id, $userId));
+
+        // Fetch updated task
+        $task = $this->queryBus->dispatch(new FindTaskByIdQuery($id))->last(HandledStamp::class)->getResult();
 
         return $this->json($this->serializeTask($task));
     }
 
     private function serializeTask(Task $task): array
     {
+        $assignedUserId = $task->assignedUserId();
+        $assignedUserName = null;
+        if ($assignedUserId !== null) {
+            $assignedUser = $this->queryBus->dispatch(new FindUserByIdQuery($assignedUserId->value()))->last(HandledStamp::class)->getResult();
+            if ($assignedUser !== null) {
+                $assignedUserName = $assignedUser->name();
+            }
+        }
+
         return [
             'id' => $task->id()->value(),
             'name' => $task->name()->value(),
@@ -280,6 +369,8 @@ class TaskApiController extends AbstractController
             'points' => $task->points()->value(),
             'frequency' => $task->frequency()->value,
             'status' => $task->status()->value,
+            'assignedUserId' => $assignedUserId?->value(),
+            'assignedUserName' => $assignedUserName,
             'createdAt' => $task->createdAt()->format('c'),
         ];
     }

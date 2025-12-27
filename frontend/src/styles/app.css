@@ -32,6 +32,15 @@ body {
     gap: 1rem;
 }
 
+.user-points {
+    background-color: #fbbf24;
+    color: #78350f;
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    font-weight: 600;
+    font-size: 0.875rem;
+}
+
 .app-main {
     flex: 1;
     padding: 2rem;
@@ -126,6 +135,27 @@ body {
     margin-top: 0.5rem;
     color: #6b7280;
     font-size: 0.875rem;
+}
+
+.task-assignment {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+    padding: 0.5rem;
+    background-color: #f3f4f6;
+    border-radius: 4px;
+    font-size: 0.875rem;
+}
+
+.assignment-label {
+    color: #6b7280;
+    font-weight: 500;
+}
+
+.assignment-user {
+    color: #3b82f6;
+    font-weight: 600;
 }
 
 .task-actions {

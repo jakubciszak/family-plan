@@ -7,6 +7,7 @@ import './styles/app.css';
 function App() {
     const [isAuthenticated, setIsAuthenticated] = React.useState(false);
     const [user, setUser] = React.useState(null);
+    const [userPoints, setUserPoints] = React.useState(0);
 
     React.useEffect(() => {
         // Check if user is authenticated
@@ -14,6 +15,11 @@ function App() {
             .then(data => {
                 setUser(data);
                 setIsAuthenticated(true);
+                // Fetch user points
+                return apiClient.get(`/api/users/${data.id}/points`);
+            })
+            .then(pointsData => {
+                setUserPoints(pointsData.balance);
             })
             .catch(() => {
                 setIsAuthenticated(false);
@@ -23,17 +29,27 @@ function App() {
     const handleLogin = (userData) => {
         setUser(userData);
         setIsAuthenticated(true);
+        // Fetch points after login
+        apiClient.get(`/api/users/${userData.id}/points`)
+            .then(pointsData => {
+                setUserPoints(pointsData.balance);
+            })
+            .catch(() => {
+                setUserPoints(0);
+            });
     };
 
     const handleLogout = () => {
         apiClient.post('/api/auth/logout', {})
             .then(() => {
                 setUser(null);
+                setUserPoints(0);
                 setIsAuthenticated(false);
             })
             .catch(() => {
                 // Even if request fails, clear local state
                 setUser(null);
+                setUserPoints(0);
                 setIsAuthenticated(false);
             });
     };
@@ -48,6 +64,7 @@ function App() {
                 <h1>Family Plan</h1>
                 <div className="user-info">
                     <span>Welcome, {user?.name}</span>
+                    <span className="user-points">{userPoints} points</span>
                     <button onClick={handleLogout}>Logout</button>
                 </div>
             </header>

@@ -9,7 +9,9 @@ use App\TaskManagement\Application\Command\ApproveTaskCommand;
 use App\TaskManagement\Domain\Repository\TaskRepositoryInterface;
 use App\TaskManagement\Domain\Policy\TaskApprovalPolicyInterface;
 use App\TaskManagement\Domain\Strategy\PointsAwardStrategyInterface;
+use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 
+#[AsMessageHandler(bus: 'command.bus')]
 final readonly class ApproveTaskHandler
 {
     public function __construct(

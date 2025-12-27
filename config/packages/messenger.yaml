@@ -1,0 +1,13 @@
+framework:
+    messenger:
+        # Default bus (required when multiple buses are defined)
+        default_bus: command.bus
+        
+        # Separate buses for commands and queries
+        buses:
+            command.bus:
+                middleware:
+                    - validation
+            query.bus:
+                middleware:
+                    - validation
