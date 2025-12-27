@@ -34,7 +34,7 @@ class BonusPointsRule
         #[ORM\Column(type: 'points')]
         private Points $bonusPoints,
         
-        #[ORM\Column(type: 'string', length: 50, enumType: RuleType::class)]
+        #[ORM\Column(type: 'rule_type')]
         private RuleType $type,
         
         #[ORM\Column(type: 'json')]
