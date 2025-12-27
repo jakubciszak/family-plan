@@ -143,6 +143,35 @@ class BonusPointsRuleApiController extends AbstractController
     {
         $data = json_decode($request->getContent(), true);
 
+        // Validate required fields
+        $requiredFields = ['name', 'description', 'bonusPoints', 'ruleType', 'ruleConfig'];
+        foreach ($requiredFields as $field) {
+            if (!isset($data[$field])) {
+                return $this->json(['error' => "Missing required field: {$field}"], Response::HTTP_BAD_REQUEST);
+            }
+        }
+
+        // Validate data types
+        if (!is_string($data['name']) || empty(trim($data['name']))) {
+            return $this->json(['error' => 'Name must be a non-empty string'], Response::HTTP_BAD_REQUEST);
+        }
+        
+        if (!is_string($data['description']) || empty(trim($data['description']))) {
+            return $this->json(['error' => 'Description must be a non-empty string'], Response::HTTP_BAD_REQUEST);
+        }
+        
+        if (!is_int($data['bonusPoints']) || $data['bonusPoints'] < 1 || $data['bonusPoints'] > 1000) {
+            return $this->json(['error' => 'Bonus points must be an integer between 1 and 1000'], Response::HTTP_BAD_REQUEST);
+        }
+        
+        if (!in_array($data['ruleType'], ['consecutive_days', 'monthly_task_count'])) {
+            return $this->json(['error' => 'Invalid rule type'], Response::HTTP_BAD_REQUEST);
+        }
+        
+        if (!is_array($data['ruleConfig'])) {
+            return $this->json(['error' => 'Rule config must be an object'], Response::HTTP_BAD_REQUEST);
+        }
+
         $command = new CreateBonusPointsRuleCommand(
             Uuid::generate()->value(),
             $data['name'],
@@ -152,9 +181,12 @@ class BonusPointsRuleApiController extends AbstractController
             $data['ruleConfig']
         );
 
-        $this->commandBus->dispatch($command);
-
-        return $this->json(['message' => 'Rule created successfully'], Response::HTTP_CREATED);
+        try {
+            $this->commandBus->dispatch($command);
+            return $this->json(['message' => 'Rule created successfully'], Response::HTTP_CREATED);
+        } catch (\InvalidArgumentException $e) {
+            return $this->json(['error' => $e->getMessage()], Response::HTTP_BAD_REQUEST);
+        }
     }
 
     #[Route('/{id}', name: 'update', methods: ['PUT'])]
@@ -188,6 +220,27 @@ class BonusPointsRuleApiController extends AbstractController
     {
         $data = json_decode($request->getContent(), true);
 
+        // Validate required fields
+        $requiredFields = ['name', 'description', 'bonusPoints'];
+        foreach ($requiredFields as $field) {
+            if (!isset($data[$field])) {
+                return $this->json(['error' => "Missing required field: {$field}"], Response::HTTP_BAD_REQUEST);
+            }
+        }
+
+        // Validate data types
+        if (!is_string($data['name']) || empty(trim($data['name']))) {
+            return $this->json(['error' => 'Name must be a non-empty string'], Response::HTTP_BAD_REQUEST);
+        }
+        
+        if (!is_string($data['description']) || empty(trim($data['description']))) {
+            return $this->json(['error' => 'Description must be a non-empty string'], Response::HTTP_BAD_REQUEST);
+        }
+        
+        if (!is_int($data['bonusPoints']) || $data['bonusPoints'] < 1 || $data['bonusPoints'] > 1000) {
+            return $this->json(['error' => 'Bonus points must be an integer between 1 and 1000'], Response::HTTP_BAD_REQUEST);
+        }
+
         $command = new UpdateBonusPointsRuleCommand(
             $id,
             $data['name'],
@@ -195,9 +248,12 @@ class BonusPointsRuleApiController extends AbstractController
             $data['bonusPoints']
         );
 
-        $this->commandBus->dispatch($command);
-
-        return $this->json(['message' => 'Rule updated successfully']);
+        try {
+            $this->commandBus->dispatch($command);
+            return $this->json(['message' => 'Rule updated successfully']);
+        } catch (\InvalidArgumentException $e) {
+            return $this->json(['error' => $e->getMessage()], Response::HTTP_BAD_REQUEST);
+        }
     }
 
     #[Route('/{id}/activate', name: 'activate', methods: ['POST'])]
