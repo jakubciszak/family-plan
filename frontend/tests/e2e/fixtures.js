@@ -178,6 +178,15 @@ async function setupAuthenticatedSession(page, role = 'user') {
     });
   });
   
+  // Mock the user points endpoint
+  await page.route('**/api/users/*/points', async route => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ balance: 100 })
+    });
+  });
+  
   // Mock the /api/tasks endpoint
   await page.route('**/api/tasks', async route => {
     if (route.request().method() === 'GET') {
