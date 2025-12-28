@@ -84,6 +84,68 @@ const mockApiResponses = {
     points: 20,
     frequency: 'once',
     status: 'pending'
+  },
+  
+  // Bonus rules responses
+  emptyBonusRules: {
+    rules: []
+  },
+  
+  sampleBonusRules: {
+    rules: [
+      {
+        id: '550e8400-e29b-41d4-a716-446655440001',
+        name: 'Dishwasher Streak',
+        description: 'Earn 20 bonus points for emptying dishwasher 5 consecutive days',
+        bonusPoints: 20,
+        type: 'consecutive_days',
+        config: {
+          taskTemplateId: '550e8400-e29b-41d4-a716-446655440010',
+          requiredDays: 5
+        },
+        isActive: true,
+        createdAt: '2024-01-01T00:00:00Z'
+      },
+      {
+        id: '550e8400-e29b-41d4-a716-446655440002',
+        name: 'Monthly Champion',
+        description: 'Complete 20 tasks in a month to earn 30 bonus points',
+        bonusPoints: 30,
+        type: 'monthly_task_count',
+        config: {
+          requiredCount: 20
+        },
+        isActive: false,
+        createdAt: '2024-01-02T00:00:00Z'
+      },
+      {
+        id: '550e8400-e29b-41d4-a716-446655440003',
+        name: 'Weekly Warrior',
+        description: 'Complete a task every day for 7 days',
+        bonusPoints: 15,
+        type: 'consecutive_days',
+        config: {
+          taskTemplateId: '550e8400-e29b-41d4-a716-446655440011',
+          requiredDays: 7
+        },
+        isActive: true,
+        createdAt: '2024-01-03T00:00:00Z'
+      }
+    ]
+  },
+  
+  newBonusRule: {
+    id: '550e8400-e29b-41d4-a716-446655440004',
+    name: 'Test Bonus Rule',
+    description: 'A test bonus rule',
+    bonusPoints: 25,
+    type: 'consecutive_days',
+    config: {
+      taskTemplateId: 'default-template-id',
+      requiredDays: 3
+    },
+    isActive: false,
+    createdAt: '2024-01-04T00:00:00Z'
   }
 };
 
