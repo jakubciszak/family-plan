@@ -91,8 +91,8 @@ test.describe('Task List', () => {
     await page.goto('/');
     await page.waitForSelector('.task-card');
     
-    // Find a pending task
-    const pendingTask = page.locator('.task-card').filter({ hasText: 'Clean the kitchen' });
+    // Find a pending task assigned to the current user
+    const pendingTask = page.locator('.task-card').filter({ hasText: 'Take out trash' });
     
     // Check for complete button
     await expect(pendingTask.locator('.btn-success')).toContainText('Complete');

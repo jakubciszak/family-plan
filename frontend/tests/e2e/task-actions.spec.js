@@ -16,6 +16,15 @@ test.describe('Task Actions - Complete', () => {
       });
     });
     
+    // Mock the user points endpoint
+    await page.route('**/api/users/*/points', async route => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ balance: 100 })
+      });
+    });
+    
     // Mock the tasks API to return sample tasks
     await page.route('**/api/tasks', async route => {
       if (route.request().method() === 'GET') {
@@ -69,8 +78,8 @@ test.describe('Task Actions - Complete', () => {
       }
     });
     
-    // Find and click complete button on first pending task
-    const pendingTask = page.locator('.task-card').filter({ hasText: 'Clean the kitchen' });
+    // Find and click complete button on assigned pending task
+    const pendingTask = page.locator('.task-card').filter({ hasText: 'Take out trash' });
     await pendingTask.locator('.btn-success:has-text("Complete")').click();
     
     // Wait for the request to complete by checking for network idle
@@ -81,7 +90,7 @@ test.describe('Task Actions - Complete', () => {
     let requestData = null;
     
     // Mock and capture request data
-    await page.route('**/api/tasks/1/complete', async route => {
+    await page.route('**/api/tasks/2/complete', async route => {
       requestData = await route.request().postDataJSON();
       await route.fulfill({
         status: 200,
@@ -91,7 +100,7 @@ test.describe('Task Actions - Complete', () => {
     });
     
     // Complete task
-    const pendingTask = page.locator('.task-card').filter({ hasText: 'Clean the kitchen' });
+    const pendingTask = page.locator('.task-card').filter({ hasText: 'Take out trash' });
     await pendingTask.locator('.btn-success:has-text("Complete")').click();
     
     // Wait for request to complete
@@ -129,7 +138,7 @@ test.describe('Task Actions - Complete', () => {
         if (completeRequestMade) {
           const updatedTasks = {
             tasks: mockApiResponses.sampleTasks.tasks.map(task => 
-              task.id === 1 ? { ...task, status: 'completed' } : task
+              task.id === 2 ? { ...task, status: 'completed' } : task
             )
           };
           await route.fulfill({
@@ -149,7 +158,7 @@ test.describe('Task Actions - Complete', () => {
     });
     
     // Complete the task and wait for the complete request
-    const pendingTask = page.locator('.task-card').filter({ hasText: 'Clean the kitchen' });
+    const pendingTask = page.locator('.task-card').filter({ hasText: 'Take out trash' });
     const completeButton = pendingTask.locator('.btn-success:has-text("Complete")');
     
     // Wait for completion request to be made
@@ -172,7 +181,7 @@ test.describe('Task Actions - Complete', () => {
     await page.waitForLoadState('networkidle');
     
     // Now verify the complete button is not present (task should be completed)
-    const taskCard = page.locator('.task-card').filter({ hasText: 'Clean the kitchen' });
+    const taskCard = page.locator('.task-card').filter({ hasText: 'Take out trash' });
     await expect(completeButton).not.toBeVisible();
   });
 });
@@ -185,6 +194,15 @@ test.describe('Task Actions - Approve (Admin)', () => {
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify(mockApiResponses.currentAdmin)
+      });
+    });
+    
+    // Mock the user points endpoint
+    await page.route('**/api/users/*/points', async route => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ balance: 100 })
       });
     });
     
@@ -311,8 +329,8 @@ test.describe('Task Actions - Regular User Limitations', () => {
   });
 
   test('should show complete button for pending tasks', async ({ page }) => {
-    // Find a pending task
-    const pendingTask = page.locator('.task-card').filter({ hasText: 'Clean the kitchen' });
+    // Find a pending task assigned to current user
+    const pendingTask = page.locator('.task-card').filter({ hasText: 'Take out trash' });
     
     // Check that complete button is visible
     const completeButton = pendingTask.locator('.btn-success:has-text("Complete")');

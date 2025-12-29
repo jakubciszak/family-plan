@@ -3,33 +3,44 @@ const { setupAuthenticatedSession } = require('./fixtures');
 
 test.describe('User Points on Login', () => {
   test('should fetch and display points after login', async ({ page }) => {
+    let isLoggedIn = false;
+    
+    // Mock the me endpoint - return 401 before login, success after
+    await page.route('**/api/auth/me', async route => {
+      if (!isLoggedIn) {
+        await route.fulfill({
+          status: 401,
+          contentType: 'application/json',
+          body: JSON.stringify({ error: 'Unauthorized' })
+        });
+      } else {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            id: 1,
+            name: 'Test User',
+            email: 'test@example.com',
+            role: 'ROLE_USER'
+          })
+        });
+      }
+    });
+    
     // Mock the login response
     await page.route('**/api/auth/login', async route => {
+      isLoggedIn = true;
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify({
           message: 'Login successful',
           user: {
-            id: '550e8400-e29b-41d4-a716-446655440000',
+            id: 1,
             name: 'Test User',
             email: 'test@example.com',
             role: 'ROLE_USER'
           }
-        })
-      });
-    });
-
-    // Mock the me endpoint
-    await page.route('**/api/auth/me', async route => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          id: '550e8400-e29b-41d4-a716-446655440000',
-          name: 'Test User',
-          email: 'test@example.com',
-          role: 'ROLE_USER'
         })
       });
     });
@@ -40,7 +51,7 @@ test.describe('User Points on Login', () => {
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify({
-          userId: '550e8400-e29b-41d4-a716-446655440000',
+          userId: 1,
           balance: 250
         })
       });
@@ -56,6 +67,9 @@ test.describe('User Points on Login', () => {
     });
 
     await page.goto('/');
+    
+    // Wait for login form to be visible
+    await page.waitForSelector('input[name="email"]', { timeout: 10000 });
     
     // Fill in login form
     await page.fill('input[name="email"]', 'test@example.com');

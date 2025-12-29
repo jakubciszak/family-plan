@@ -55,7 +55,9 @@ const mockApiResponses = {
         description: 'Wash dishes and clean counters',
         points: 10,
         frequency: 'daily',
-        status: 'pending'
+        status: 'pending',
+        assignedUserId: null,
+        assignedUserName: null
       },
       {
         id: 2,
@@ -63,7 +65,9 @@ const mockApiResponses = {
         description: 'Empty all trash bins',
         points: 5,
         frequency: 'weekly',
-        status: 'pending'
+        status: 'pending',
+        assignedUserId: 1,
+        assignedUserName: 'Test User'
       },
       {
         id: 3,
@@ -71,7 +75,9 @@ const mockApiResponses = {
         description: 'Vacuum the entire living room',
         points: 15,
         frequency: 'weekly',
-        status: 'completed'
+        status: 'completed',
+        assignedUserId: 1,
+        assignedUserName: 'Test User'
       }
     ]
   },
@@ -83,7 +89,9 @@ const mockApiResponses = {
     description: 'A new task description',
     points: 20,
     frequency: 'once',
-    status: 'pending'
+    status: 'pending',
+    assignedUserId: null,
+    assignedUserName: null
   },
   
   // Bonus rules responses

@@ -209,7 +209,7 @@ test.describe('Task Actions - Permission Based', () => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify({ userId: '550e8400-e29b-41d4-a716-446655440000', balance: 100 })
+        body: JSON.stringify({ userId: 1, balance: 100 })
       });
     });
 
@@ -221,24 +221,24 @@ test.describe('Task Actions - Permission Based', () => {
         body: JSON.stringify({
           tasks: [
             {
-              id: '550e8400-e29b-41d4-a716-446655440001',
+              id: 1,
               name: 'My Task',
               description: 'Assigned to me',
               points: 50,
               frequency: 'daily',
               status: 'pending',
-              assignedUserId: '550e8400-e29b-41d4-a716-446655440000',
+              assignedUserId: 1,
               assignedUserName: 'Test User',
               createdAt: '2024-01-15T10:30:00+00:00'
             },
             {
-              id: '550e8400-e29b-41d4-a716-446655440002',
+              id: 2,
               name: 'Other Task',
               description: 'Assigned to someone else',
               points: 30,
               frequency: 'daily',
               status: 'pending',
-              assignedUserId: '550e8400-e29b-41d4-a716-446655440999',
+              assignedUserId: 999,
               assignedUserName: 'Other User',
               createdAt: '2024-01-15T10:30:00+00:00'
             }
