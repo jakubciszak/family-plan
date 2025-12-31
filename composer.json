@@ -12,6 +12,7 @@
         "doctrine/doctrine-bundle": "*",
         "doctrine/doctrine-migrations-bundle": "*",
         "doctrine/orm": "*",
+        "jakubciszak/rule-engine": "0.1.1",
         "nelmio/api-doc-bundle": "^4.0",
         "nelmio/cors-bundle": "^2.6",
         "symfony/asset": "7.4.*",

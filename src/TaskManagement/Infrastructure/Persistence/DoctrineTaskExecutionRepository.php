@@ -99,4 +99,41 @@ final class DoctrineTaskExecutionRepository implements TaskExecutionRepositoryIn
         $this->entityManager->remove($execution);
         $this->entityManager->flush();
     }
+
+    public function findRecentApprovedByUserAndTemplate(Uuid $userId, Uuid $taskTemplateId, int $limit = 30): array
+    {
+        return $this->entityManager->getRepository(TaskExecution::class)
+            ->createQueryBuilder('te')
+            ->where('te.assignedUserId = :userId')
+            ->andWhere('te.taskTemplateId = :taskTemplateId')
+            ->andWhere('te.status = :status')
+            ->setParameter('userId', $userId->value())
+            ->setParameter('taskTemplateId', $taskTemplateId->value())
+            ->setParameter('status', ExecutionStatus::APPROVED->value)
+            ->orderBy('te.scheduledFor', 'DESC')
+            ->setMaxResults($limit)
+            ->getQuery()
+            ->getResult();
+    }
+
+    public function countApprovedInCurrentMonth(Uuid $userId): int
+    {
+        $now = new DateTimeImmutable();
+        $startOfMonth = new DateTimeImmutable($now->format('Y-m-01 00:00:00'));
+        $endOfMonth = new DateTimeImmutable($now->format('Y-m-t 23:59:59'));
+
+        return (int) $this->entityManager->getRepository(TaskExecution::class)
+            ->createQueryBuilder('te')
+            ->select('COUNT(te.id)')
+            ->where('te.assignedUserId = :userId')
+            ->andWhere('te.status = :status')
+            ->andWhere('te.approvedAt >= :start')
+            ->andWhere('te.approvedAt <= :end')
+            ->setParameter('userId', $userId->value())
+            ->setParameter('status', ExecutionStatus::APPROVED->value)
+            ->setParameter('start', $startOfMonth)
+            ->setParameter('end', $endOfMonth)
+            ->getQuery()
+            ->getSingleScalarResult();
+    }
 }

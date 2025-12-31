@@ -40,6 +40,9 @@ services:
     App\PointsManagement\Domain\Repository\UserWalletRepositoryInterface:
         class: App\PointsManagement\Infrastructure\Persistence\DoctrineUserWalletRepository
 
+    App\TaskManagement\Domain\Repository\BonusPointsRuleRepositoryInterface:
+        class: App\TaskManagement\Infrastructure\Persistence\DoctrineBonusPointsRuleRepository
+
     # Policy implementations
     App\TaskManagement\Domain\Policy\TaskApprovalPolicyInterface:
         class: App\TaskManagement\Domain\Policy\AdminApprovalPolicy
@@ -57,6 +60,11 @@ services:
 
     # Message buses - bind specific buses to controller parameters
     App\Presentation\Api\TaskApiController:
+        arguments:
+            $commandBus: '@command.bus'
+            $queryBus: '@query.bus'
+
+    App\Presentation\Api\BonusPointsRuleApiController:
         arguments:
             $commandBus: '@command.bus'
             $queryBus: '@query.bus'

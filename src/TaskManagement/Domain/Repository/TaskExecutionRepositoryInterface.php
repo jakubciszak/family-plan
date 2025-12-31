@@ -27,4 +27,20 @@ interface TaskExecutionRepositoryInterface
     public function findScheduledForDate(DateTimeImmutable $date): array;
 
     public function delete(TaskExecution $execution): void;
+
+    /**
+     * Find recent approved executions for a specific user and task template
+     * @param Uuid $userId
+     * @param Uuid $taskTemplateId
+     * @param int $limit Maximum number of executions to return
+     * @return TaskExecution[]
+     */
+    public function findRecentApprovedByUserAndTemplate(Uuid $userId, Uuid $taskTemplateId, int $limit = 30): array;
+
+    /**
+     * Count approved executions in the current month for a specific user
+     * @param Uuid $userId
+     * @return int
+     */
+    public function countApprovedInCurrentMonth(Uuid $userId): int;
 }

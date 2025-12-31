@@ -55,7 +55,9 @@ const mockApiResponses = {
         description: 'Wash dishes and clean counters',
         points: 10,
         frequency: 'daily',
-        status: 'pending'
+        status: 'pending',
+        assignedUserId: null,
+        assignedUserName: null
       },
       {
         id: 2,
@@ -63,7 +65,9 @@ const mockApiResponses = {
         description: 'Empty all trash bins',
         points: 5,
         frequency: 'weekly',
-        status: 'pending'
+        status: 'pending',
+        assignedUserId: 1,
+        assignedUserName: 'Test User'
       },
       {
         id: 3,
@@ -71,7 +75,9 @@ const mockApiResponses = {
         description: 'Vacuum the entire living room',
         points: 15,
         frequency: 'weekly',
-        status: 'completed'
+        status: 'completed',
+        assignedUserId: 1,
+        assignedUserName: 'Test User'
       }
     ]
   },
@@ -83,7 +89,71 @@ const mockApiResponses = {
     description: 'A new task description',
     points: 20,
     frequency: 'once',
-    status: 'pending'
+    status: 'pending',
+    assignedUserId: null,
+    assignedUserName: null
+  },
+  
+  // Bonus rules responses
+  emptyBonusRules: {
+    rules: []
+  },
+  
+  sampleBonusRules: {
+    rules: [
+      {
+        id: '550e8400-e29b-41d4-a716-446655440001',
+        name: 'Dishwasher Streak',
+        description: 'Earn 20 bonus points for emptying dishwasher 5 consecutive days',
+        bonusPoints: 20,
+        type: 'consecutive_days',
+        config: {
+          taskTemplateId: '550e8400-e29b-41d4-a716-446655440010',
+          requiredDays: 5
+        },
+        isActive: true,
+        createdAt: '2024-01-01T00:00:00Z'
+      },
+      {
+        id: '550e8400-e29b-41d4-a716-446655440002',
+        name: 'Monthly Champion',
+        description: 'Complete 20 tasks in a month to earn 30 bonus points',
+        bonusPoints: 30,
+        type: 'monthly_task_count',
+        config: {
+          requiredCount: 20
+        },
+        isActive: false,
+        createdAt: '2024-01-02T00:00:00Z'
+      },
+      {
+        id: '550e8400-e29b-41d4-a716-446655440003',
+        name: 'Weekly Warrior',
+        description: 'Complete a task every day for 7 days',
+        bonusPoints: 15,
+        type: 'consecutive_days',
+        config: {
+          taskTemplateId: '550e8400-e29b-41d4-a716-446655440011',
+          requiredDays: 7
+        },
+        isActive: true,
+        createdAt: '2024-01-03T00:00:00Z'
+      }
+    ]
+  },
+  
+  newBonusRule: {
+    id: '550e8400-e29b-41d4-a716-446655440004',
+    name: 'Test Bonus Rule',
+    description: 'A test bonus rule',
+    bonusPoints: 25,
+    type: 'consecutive_days',
+    config: {
+      taskTemplateId: 'default-template-id',
+      requiredDays: 3
+    },
+    isActive: false,
+    createdAt: '2024-01-04T00:00:00Z'
   }
 };
 
@@ -113,6 +183,15 @@ async function setupAuthenticatedSession(page, role = 'user') {
       status: 200,
       contentType: 'application/json',
       body: JSON.stringify(userData)
+    });
+  });
+  
+  // Mock the user points endpoint
+  await page.route('**/api/users/*/points', async route => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ balance: 100 })
     });
   });
   

@@ -29,6 +29,25 @@ This directory contains end-to-end tests for the Family Plan frontend applicatio
   - Proper API request payloads
   - UI state updates after actions
 
+- **`task-assignment.spec.js`** - Task assignment tests
+  - Assignment to users
+  - Assignment visibility and permissions
+  - Assignment workflow
+
+- **`user-points.spec.js`** - User points display tests
+  - Points balance display
+  - Points updates after actions
+
+- **`bonus-rules.spec.js`** - Bonus points rules management tests (NEW)
+  - Access control (admin-only features)
+  - Navigation between pages
+  - Displaying bonus rules with status indicators
+  - Creating new rules (consecutive days and monthly task count)
+  - Editing existing rules
+  - Activating and deactivating rules
+  - Form validation and error handling
+  - Responsive design and user experience
+
 - **`logout.spec.js`** - Logout and session management tests
   - Logout button display
   - Successful logout flow
@@ -36,7 +55,7 @@ This directory contains end-to-end tests for the Family Plan frontend applicatio
   - Session persistence and expiration
 
 - **`fixtures.js`** - Test fixtures and helper functions
-  - Mock API responses
+  - Mock API responses (including bonus rules)
   - Test credentials
   - Helper functions for session setup
 
@@ -89,6 +108,7 @@ Tests use mocked API responses to avoid dependencies on the backend:
 
 - **Authentication**: Mock login, logout, and user session endpoints
 - **Tasks**: Mock task list, creation, completion, and approval endpoints
+- **Bonus Rules**: Mock bonus rules list, creation, update, activate/deactivate endpoints
 - **State Management**: Tests track mock state changes to verify UI updates
 
 ## Best Practices
