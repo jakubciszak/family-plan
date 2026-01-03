@@ -1,0 +1,23 @@
+default:
+    suites:
+        task_management:
+            paths:
+                - '%paths.base%/features/task_management'
+            contexts:
+                - App\Tests\Acceptance\Context\TaskManagementContext
+                - App\Tests\Acceptance\Context\BonusPointsContext
+                - App\Tests\Acceptance\Context\StatusChangeRulesContext
+
+    extensions:
+        FriendsOfBehat\SymfonyExtension:
+            bootstrap: tests/bootstrap.php
+            kernel:
+                class: App\Kernel
+                environment: test
+                debug: true
+
+    formatters:
+        pretty:
+            verbose: true
+            paths: false
+            snippets: false
