@@ -83,7 +83,7 @@ const TaskListScreen: React.FC<Props> = ({ route }) => {
   if (loading) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#4CAF50" />
+        <ActivityIndicator size="large" color="#4CAF50" testID="loading-indicator" />
       </View>
     );
   }
