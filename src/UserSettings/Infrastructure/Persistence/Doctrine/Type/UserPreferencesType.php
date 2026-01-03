@@ -4,27 +4,27 @@ declare(strict_types=1);
 
 namespace App\UserSettings\Infrastructure\Persistence\Doctrine\Type;
 
-use App\UserSettings\Domain\ValueObject\NotificationPreferences;
+use App\UserSettings\Domain\ValueObject\UserPreferences;
 use Doctrine\DBAL\Platforms\AbstractPlatform;
 use Doctrine\DBAL\Types\Type;
 
-class NotificationPreferencesType extends Type
+class UserPreferencesType extends Type
 {
-    private const NAME = 'notification_preferences';
+    private const NAME = 'user_preferences';
 
     public function getSQLDeclaration(array $column, AbstractPlatform $platform): string
     {
         return $platform->getJsonTypeDeclarationSQL($column);
     }
 
-    public function convertToPHPValue($value, AbstractPlatform $platform): ?NotificationPreferences
+    public function convertToPHPValue($value, AbstractPlatform $platform): ?UserPreferences
     {
         if ($value === null) {
             return null;
         }
 
         $data = json_decode($value, true);
-        return NotificationPreferences::fromArray($data);
+        return UserPreferences::fromArray($data);
     }
 
     public function convertToDatabaseValue($value, AbstractPlatform $platform): ?string
@@ -33,8 +33,8 @@ class NotificationPreferencesType extends Type
             return null;
         }
 
-        if (!$value instanceof NotificationPreferences) {
-            throw new \InvalidArgumentException('Expected NotificationPreferences instance');
+        if (!$value instanceof UserPreferences) {
+            throw new \InvalidArgumentException('Expected UserPreferences instance');
         }
 
         return json_encode($value->toArray());

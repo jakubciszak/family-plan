@@ -20,7 +20,7 @@ final class Version20260103220000 extends AbstractMigration
         $this->addSql('CREATE TABLE user_settings (
             id SERIAL PRIMARY KEY,
             user_id UUID NOT NULL,
-            notification_preferences JSON NOT NULL,
+            preferences JSON NOT NULL,
             created_at TIMESTAMP(0) WITHOUT TIME ZONE NOT NULL,
             updated_at TIMESTAMP(0) WITHOUT TIME ZONE DEFAULT NULL,
             CONSTRAINT UNIQ_user_settings_user_id UNIQUE (user_id)
@@ -28,7 +28,7 @@ final class Version20260103220000 extends AbstractMigration
         
         $this->addSql('CREATE INDEX IDX_user_settings_user_id ON user_settings (user_id)');
         $this->addSql('COMMENT ON COLUMN user_settings.user_id IS \'(DC2Type:uuid)\'');
-        $this->addSql('COMMENT ON COLUMN user_settings.notification_preferences IS \'(DC2Type:notification_preferences)\'');
+        $this->addSql('COMMENT ON COLUMN user_settings.preferences IS \'(DC2Type:user_preferences)\'');
         $this->addSql('COMMENT ON COLUMN user_settings.created_at IS \'(DC2Type:datetime_immutable)\'');
         $this->addSql('COMMENT ON COLUMN user_settings.updated_at IS \'(DC2Type:datetime_immutable)\'');
     }

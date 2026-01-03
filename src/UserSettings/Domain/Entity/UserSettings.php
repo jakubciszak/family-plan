@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace App\UserSettings\Domain\Entity;
 
 use App\Shared\Domain\ValueObject\Uuid;
-use App\UserSettings\Domain\ValueObject\NotificationPreferences;
+use App\UserSettings\Domain\ValueObject\PreferenceType;
+use App\UserSettings\Domain\ValueObject\UserPreference;
+use App\UserSettings\Domain\ValueObject\UserPreferences;
 use DateTimeImmutable;
 use Doctrine\ORM\Mapping as ORM;
 
@@ -23,8 +25,8 @@ class UserSettings
         #[ORM\Column(type: 'uuid', unique: true)]
         private Uuid $userId,
         
-        #[ORM\Column(type: 'notification_preferences')]
-        private NotificationPreferences $notificationPreferences,
+        #[ORM\Column(type: 'user_preferences')]
+        private UserPreferences $preferences,
         
         #[ORM\Column(type: 'datetime_immutable')]
         private DateTimeImmutable $createdAt,
@@ -36,12 +38,12 @@ class UserSettings
 
     public static function create(
         Uuid $userId,
-        ?NotificationPreferences $notificationPreferences = null
+        ?UserPreferences $preferences = null
     ): self {
         return new self(
             null,
             $userId,
-            $notificationPreferences ?? NotificationPreferences::default(),
+            $preferences ?? UserPreferences::defaultNotificationPreferences(),
             new DateTimeImmutable()
         );
     }
@@ -56,51 +58,26 @@ class UserSettings
         return $this->userId;
     }
 
-    public function notificationPreferences(): NotificationPreferences
+    public function preferences(): UserPreferences
     {
-        return $this->notificationPreferences;
+        return $this->preferences;
     }
 
-    public function updateNotificationPreferences(NotificationPreferences $preferences): void
+    public function updatePreferences(UserPreferences $preferences): void
     {
-        $this->notificationPreferences = $preferences;
+        $this->preferences = $preferences;
         $this->updatedAt = new DateTimeImmutable();
     }
 
-    public function enableEmailNotifications(): void
+    public function updatePreference(UserPreference $preference): void
     {
-        $this->notificationPreferences = NotificationPreferences::create(
-            true,
-            $this->notificationPreferences->isSmsEnabled()
-        );
+        $this->preferences = $this->preferences->update($preference);
         $this->updatedAt = new DateTimeImmutable();
     }
 
-    public function disableEmailNotifications(): void
+    public function getPreferenceByType(PreferenceType $type): ?UserPreference
     {
-        $this->notificationPreferences = NotificationPreferences::create(
-            false,
-            $this->notificationPreferences->isSmsEnabled()
-        );
-        $this->updatedAt = new DateTimeImmutable();
-    }
-
-    public function enableSmsNotifications(): void
-    {
-        $this->notificationPreferences = NotificationPreferences::create(
-            $this->notificationPreferences->isEmailEnabled(),
-            true
-        );
-        $this->updatedAt = new DateTimeImmutable();
-    }
-
-    public function disableSmsNotifications(): void
-    {
-        $this->notificationPreferences = NotificationPreferences::create(
-            $this->notificationPreferences->isEmailEnabled(),
-            false
-        );
-        $this->updatedAt = new DateTimeImmutable();
+        return $this->preferences->getByType($type);
     }
 
     public function createdAt(): DateTimeImmutable

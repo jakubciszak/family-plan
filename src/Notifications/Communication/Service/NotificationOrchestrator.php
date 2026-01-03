@@ -39,23 +39,31 @@ final readonly class NotificationOrchestrator
         }
 
         $settings = $this->userSettingsRepository->findByUserId($userId);
-        $enabledChannels = $settings?->notificationPreferences()->getEnabledChannels() ?? ['email'];
+        
+        // Get notification preferences
+        $notificationPreference = $settings?->getPreferenceByType(\App\UserSettings\Domain\ValueObject\PreferenceType::notifications());
+        $enabledOptions = $notificationPreference?->getEnabledOptions() ?? [];
+        
+        // Default to email if no settings found
+        if (empty($enabledOptions) && $settings === null) {
+            $enabledOptions = [\App\UserSettings\Domain\ValueObject\PreferenceOption::create('email', true)];
+        }
 
-        if (empty($enabledChannels)) {
+        if (empty($enabledOptions)) {
             $this->logger?->info('No notification channels enabled for user', ['user_id' => $userId->value()]);
             return;
         }
 
-        foreach ($enabledChannels as $channel) {
+        foreach ($enabledOptions as $option) {
             try {
-                if ($channel === 'email') {
+                if ($option->name() === 'email' && $option->isEnabled()) {
                     $this->notificationFacade->sendEmail(
                         $user->email()->value(),
                         $message,
                         $subject,
                         $additionalParameters
                     );
-                } elseif ($channel === 'sms') {
+                } elseif ($option->name() === 'sms' && $option->isEnabled()) {
                     // For SMS, we would need a phone number field on the user
                     // For now, we'll log this as not implemented
                     $this->logger?->info('SMS notifications not fully implemented', [
@@ -65,7 +73,7 @@ final readonly class NotificationOrchestrator
             } catch (\Exception $e) {
                 $this->logger?->error('Failed to send notification', [
                     'user_id' => $userId->value(),
-                    'channel' => $channel,
+                    'channel' => $option->name(),
                     'error' => $e->getMessage()
                 ]);
             }

@@ -18,7 +18,7 @@ doctrine:
             schedule_config: App\TaskManagement\Infrastructure\Persistence\Doctrine\Type\ScheduleConfigType
             execution_status: App\TaskManagement\Infrastructure\Persistence\Doctrine\Type\ExecutionStatusType
             rule_type: App\TaskManagement\Infrastructure\Persistence\Doctrine\Type\RuleTypeType
-            notification_preferences: App\UserSettings\Infrastructure\Persistence\Doctrine\Type\NotificationPreferencesType
+            user_preferences: App\UserSettings\Infrastructure\Persistence\Doctrine\Type\UserPreferencesType
     orm:
         validate_xml_mapping: true
         naming_strategy: doctrine.orm.naming_strategy.underscore_number_aware

@@ -7,7 +7,10 @@ namespace App\Tests\UserSettings\Domain;
 use App\Shared\Domain\ValueObject\Uuid;
 use App\Tests\Shared\Mother\UuidMother;
 use App\UserSettings\Domain\Entity\UserSettings;
-use App\UserSettings\Domain\ValueObject\NotificationPreferences;
+use App\UserSettings\Domain\ValueObject\PreferenceOption;
+use App\UserSettings\Domain\ValueObject\PreferenceType;
+use App\UserSettings\Domain\ValueObject\UserPreference;
+use App\UserSettings\Domain\ValueObject\UserPreferences;
 use PHPUnit\Framework\TestCase;
 
 class UserSettingsTest extends TestCase
@@ -15,70 +18,53 @@ class UserSettingsTest extends TestCase
     public function testCanCreateUserSettings(): void
     {
         $userId = UuidMother::random();
-        $preferences = NotificationPreferences::create(
-            emailEnabled: true,
-            smsEnabled: false
-        );
+        $preferences = UserPreferences::defaultNotificationPreferences();
 
         $settings = UserSettings::create($userId, $preferences);
 
         $this->assertEquals($userId, $settings->userId());
-        $this->assertEquals($preferences, $settings->notificationPreferences());
+        $this->assertEquals($preferences, $settings->preferences());
     }
 
-    public function testCanUpdateNotificationPreferences(): void
+    public function testCanCreateWithDefaultPreferences(): void
     {
         $userId = UuidMother::random();
-        $initialPreferences = NotificationPreferences::create(true, false);
-        $settings = UserSettings::create($userId, $initialPreferences);
 
-        $newPreferences = NotificationPreferences::create(false, true);
-        $settings->updateNotificationPreferences($newPreferences);
+        $settings = UserSettings::create($userId);
+        $notificationPreference = $settings->getPreferenceByType(PreferenceType::notifications());
 
-        $this->assertEquals($newPreferences, $settings->notificationPreferences());
+        $this->assertNotNull($notificationPreference);
+        $this->assertTrue($notificationPreference->isOptionEnabled('email'));
     }
 
-    public function testCanEnableEmailNotifications(): void
+    public function testCanUpdatePreferences(): void
     {
         $userId = UuidMother::random();
-        $preferences = NotificationPreferences::create(false, false);
-        $settings = UserSettings::create($userId, $preferences);
+        $settings = UserSettings::create($userId);
 
-        $settings->enableEmailNotifications();
+        $newPreference = UserPreference::create(
+            PreferenceType::notifications(),
+            [
+                PreferenceOption::create('email', false),
+                PreferenceOption::create('sms', true),
+            ]
+        );
+        
+        $settings->updatePreference($newPreference);
+        $updatedPreference = $settings->getPreferenceByType(PreferenceType::notifications());
 
-        $this->assertTrue($settings->notificationPreferences()->isEmailEnabled());
+        $this->assertFalse($updatedPreference->isOptionEnabled('email'));
+        $this->assertTrue($updatedPreference->isOptionEnabled('sms'));
     }
 
-    public function testCanDisableEmailNotifications(): void
+    public function testCanGetPreferenceByType(): void
     {
         $userId = UuidMother::random();
-        $preferences = NotificationPreferences::create(true, false);
-        $settings = UserSettings::create($userId, $preferences);
+        $settings = UserSettings::create($userId);
 
-        $settings->disableEmailNotifications();
+        $preference = $settings->getPreferenceByType(PreferenceType::notifications());
 
-        $this->assertFalse($settings->notificationPreferences()->isEmailEnabled());
-    }
-
-    public function testCanEnableSmsNotifications(): void
-    {
-        $userId = UuidMother::random();
-        $preferences = NotificationPreferences::create(false, false);
-        $settings = UserSettings::create($userId, $preferences);
-
-        $settings->enableSmsNotifications();
-
-        $this->assertTrue($settings->notificationPreferences()->isSmsEnabled());
-    }
-
-    public function testCanDisableSmsNotifications(): void
-    {
-        $userId = UuidMother::random();
-        $preferences = NotificationPreferences::create(false, true);
-        $settings = UserSettings::create($userId, $preferences);
-
-        $settings->disableSmsNotifications();
-
-        $this->assertFalse($settings->notificationPreferences()->isSmsEnabled());
+        $this->assertNotNull($preference);
+        $this->assertTrue($preference->type()->equals(PreferenceType::notifications()));
     }
 }
