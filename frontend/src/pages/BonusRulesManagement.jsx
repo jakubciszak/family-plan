@@ -1,7 +1,9 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import apiClient from '../services/apiClient';
 
 function BonusRulesManagement({ user }) {
+    const { t } = useTranslation();
     const [rules, setRules] = React.useState([]);
     const [loading, setLoading] = React.useState(true);
     const [showCreateForm, setShowCreateForm] = React.useState(false);
@@ -80,18 +82,18 @@ function BonusRulesManagement({ user }) {
     }
 
     if (loading) {
-        return <div className="loading">Loading bonus rules...</div>;
+        return <div className="loading">{t('common.loading')}</div>;
     }
 
     return (
         <div className="bonus-rules-container">
             <div className="bonus-rules-header">
-                <h2>Bonus Points Rules</h2>
+                <h2>{t('bonusRules.title')}</h2>
                 <button 
                     onClick={() => setShowCreateForm(!showCreateForm)}
                     className="btn-primary"
                 >
-                    {showCreateForm ? 'Cancel' : 'Create New Rule'}
+                    {showCreateForm ? t('common.cancel') : t('bonusRules.create')}
                 </button>
             </div>
 
@@ -107,7 +109,7 @@ function BonusRulesManagement({ user }) {
 
             <div className="bonus-rules-list">
                 {rules.length === 0 ? (
-                    <p>No bonus rules yet. Create your first rule!</p>
+                    <p>{t('bonusRules.noRules')}</p>
                 ) : (
                     rules.map(rule => (
                         <BonusRuleCard
@@ -125,6 +127,7 @@ function BonusRulesManagement({ user }) {
 }
 
 function BonusRuleCard({ rule, onUpdate, onActivate, onDeactivate }) {
+    const { t } = useTranslation();
     const [isEditing, setIsEditing] = React.useState(false);
 
     const getRuleTypeLabel = (type) => {
@@ -189,7 +192,7 @@ function BonusRuleCard({ rule, onUpdate, onActivate, onDeactivate }) {
                     onClick={() => setIsEditing(true)}
                     className="btn-secondary"
                 >
-                    Edit
+                    {t('common.edit')}
                 </button>
                 {rule.isActive ? (
                     <button
@@ -212,6 +215,7 @@ function BonusRuleCard({ rule, onUpdate, onActivate, onDeactivate }) {
 }
 
 function BonusRuleForm({ rule, onSubmit, onCancel }) {
+    const { t } = useTranslation();
     const isEditing = !!rule;
     
     const [formData, setFormData] = React.useState({
@@ -263,10 +267,10 @@ function BonusRuleForm({ rule, onSubmit, onCancel }) {
 
     return (
         <form className="bonus-rule-form" onSubmit={handleSubmit}>
-            <h3>{isEditing ? 'Edit Rule' : 'Create New Bonus Rule'}</h3>
+            <h3>{isEditing ? t('bonusRules.edit') : t('bonusRules.create')}</h3>
             
             <div className="form-group">
-                <label htmlFor="name">Rule Name</label>
+                <label htmlFor="name">{t('bonusRules.name')}</label>
                 <input
                     type="text"
                     id="name"
@@ -279,7 +283,7 @@ function BonusRuleForm({ rule, onSubmit, onCancel }) {
             </div>
 
             <div className="form-group">
-                <label htmlFor="description">Description</label>
+                <label htmlFor="description">{t('tasks.description')}</label>
                 <textarea
                     id="description"
                     name="description"
@@ -292,7 +296,7 @@ function BonusRuleForm({ rule, onSubmit, onCancel }) {
             </div>
 
             <div className="form-group">
-                <label htmlFor="bonusPoints">Bonus Points</label>
+                <label htmlFor="bonusPoints">{t('tasks.points')}</label>
                 <input
                     type="number"
                     id="bonusPoints"
@@ -359,11 +363,11 @@ function BonusRuleForm({ rule, onSubmit, onCancel }) {
 
             <div className="form-actions">
                 <button type="submit" className="btn-primary">
-                    {isEditing ? 'Update Rule' : 'Create Rule'}
+                    {isEditing ? t('common.save') : t('common.create')}
                 </button>
                 {onCancel && (
                     <button type="button" onClick={onCancel} className="btn-secondary">
-                        Cancel
+                        {t('common.cancel')}
                     </button>
                 )}
             </div>

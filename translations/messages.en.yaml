@@ -1,0 +1,71 @@
+app:
+  welcome: 'Welcome to Family Plan'
+  family_plan: 'Family Plan'
+
+tasks:
+  title: 'Tasks'
+  create: 'Create Task'
+  edit: 'Edit Task'
+  delete: 'Delete Task'
+  created: 'Task created successfully'
+  updated: 'Task updated successfully'
+  deleted: 'Task deleted successfully'
+  completed: 'Task completed successfully'
+  approved: 'Task approved successfully'
+  assigned: 'Task assigned successfully'
+  no_tasks: 'No tasks available'
+  assign_to: 'Assign to'
+  complete: 'Complete'
+  approve: 'Approve'
+  pending: 'Pending'
+  in_progress: 'In Progress'
+  status: 'Status'
+  points: 'Points'
+  frequency: 'Frequency'
+  description: 'Description'
+
+auth:
+  login: 'Login'
+  logout: 'Logout'
+  email: 'Email'
+  password: 'Password'
+  login_successful: 'Login successful'
+  logout_successful: 'Logout successful'
+  invalid_credentials: 'Invalid credentials'
+  welcome_user: 'Welcome, %name%'
+
+validation:
+  required: 'This field is required'
+  email: 'Invalid email format'
+  min_length: 'Minimum length is %min% characters'
+  max_length: 'Maximum length is %max% characters'
+  invalid_value: 'Invalid value'
+
+bonus_rules:
+  title: 'Bonus Rules'
+  create: 'Create Bonus Rule'
+  edit: 'Edit Bonus Rule'
+  delete: 'Delete Bonus Rule'
+  created: 'Bonus rule created successfully'
+  updated: 'Bonus rule updated successfully'
+  deleted: 'Bonus rule deleted successfully'
+  no_rules: 'No bonus rules available'
+
+user:
+  points_balance: '%points% points'
+  role: 'Role'
+  name: 'Name'
+
+common:
+  save: 'Save'
+  cancel: 'Cancel'
+  delete: 'Delete'
+  edit: 'Edit'
+  create: 'Create'
+  back: 'Back'
+  confirm: 'Confirm'
+  yes: 'Yes'
+  no: 'No'
+  loading: 'Loading...'
+  error: 'An error occurred'
+  success: 'Operation successful'

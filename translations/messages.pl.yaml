@@ -1,0 +1,71 @@
+app:
+  welcome: 'Witamy w Family Plan'
+  family_plan: 'Family Plan'
+
+tasks:
+  title: 'Zadania'
+  create: 'Utwórz zadanie'
+  edit: 'Edytuj zadanie'
+  delete: 'Usuń zadanie'
+  created: 'Zadanie utworzone pomyślnie'
+  updated: 'Zadanie zaktualizowane pomyślnie'
+  deleted: 'Zadanie usunięte pomyślnie'
+  completed: 'Zadanie ukończone pomyślnie'
+  approved: 'Zadanie zatwierdzone pomyślnie'
+  assigned: 'Zadanie przypisane pomyślnie'
+  no_tasks: 'Brak dostępnych zadań'
+  assign_to: 'Przypisz do'
+  complete: 'Ukończ'
+  approve: 'Zatwierdź'
+  pending: 'Oczekujące'
+  in_progress: 'W trakcie'
+  status: 'Status'
+  points: 'Punkty'
+  frequency: 'Częstotliwość'
+  description: 'Opis'
+
+auth:
+  login: 'Zaloguj'
+  logout: 'Wyloguj'
+  email: 'Email'
+  password: 'Hasło'
+  login_successful: 'Logowanie zakończone sukcesem'
+  logout_successful: 'Wylogowano pomyślnie'
+  invalid_credentials: 'Nieprawidłowe dane logowania'
+  welcome_user: 'Witaj, %name%'
+
+validation:
+  required: 'To pole jest wymagane'
+  email: 'Nieprawidłowy format email'
+  min_length: 'Minimalna długość to %min% znaków'
+  max_length: 'Maksymalna długość to %max% znaków'
+  invalid_value: 'Nieprawidłowa wartość'
+
+bonus_rules:
+  title: 'Zasady bonusowe'
+  create: 'Utwórz zasadę bonusową'
+  edit: 'Edytuj zasadę bonusową'
+  delete: 'Usuń zasadę bonusową'
+  created: 'Zasada bonusowa utworzona pomyślnie'
+  updated: 'Zasada bonusowa zaktualizowana pomyślnie'
+  deleted: 'Zasada bonusowa usunięta pomyślnie'
+  no_rules: 'Brak dostępnych zasad bonusowych'
+
+user:
+  points_balance: '%points% punktów'
+  role: 'Rola'
+  name: 'Imię'
+
+common:
+  save: 'Zapisz'
+  cancel: 'Anuluj'
+  delete: 'Usuń'
+  edit: 'Edytuj'
+  create: 'Utwórz'
+  back: 'Wróć'
+  confirm: 'Potwierdź'
+  yes: 'Tak'
+  no: 'Nie'
+  loading: 'Ładowanie...'
+  error: 'Wystąpił błąd'
+  success: 'Operacja zakończona sukcesem'

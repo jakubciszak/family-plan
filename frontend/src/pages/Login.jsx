@@ -1,7 +1,9 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import apiClient from '../services/apiClient';
 
 function Login({ onLogin }) {
+    const { t } = useTranslation();
     const [email, setEmail] = React.useState('');
     const [password, setPassword] = React.useState('');
     const [error, setError] = React.useState('');
@@ -14,18 +16,18 @@ function Login({ onLogin }) {
             const data = await apiClient.post('/api/auth/login', { email, password });
             onLogin(data.user);
         } catch (err) {
-            setError('Invalid email or password');
+            setError(t('auth.loginError'));
         }
     };
 
     return (
         <div className="login-container">
             <div className="login-form">
-                <h2>Login</h2>
+                <h2>{t('auth.login')}</h2>
                 {error && <div className="error-message">{error}</div>}
                 <form onSubmit={handleSubmit}>
                     <div className="form-group">
-                        <label htmlFor="email">Email</label>
+                        <label htmlFor="email">{t('auth.email')}</label>
                         <input
                             type="email"
                             id="email"
@@ -35,7 +37,7 @@ function Login({ onLogin }) {
                         />
                     </div>
                     <div className="form-group">
-                        <label htmlFor="password">Password</label>
+                        <label htmlFor="password">{t('auth.password')}</label>
                         <input
                             type="password"
                             id="password"
@@ -44,7 +46,7 @@ function Login({ onLogin }) {
                             required
                         />
                     </div>
-                    <button type="submit" className="btn-primary">Login</button>
+                    <button type="submit" className="btn-primary">{t('auth.login')}</button>
                 </form>
             </div>
         </div>

@@ -224,6 +224,65 @@ docker run -p 80:80 family-plan-frontend:latest
 - Real-time task updates
 - Responsive design
 - Error handling and loading states
+- **Multi-language support** (English and Polish)
+  - Language switcher in header
+  - Automatic browser language detection
+  - Persistent language selection (localStorage)
+  - Easy to add new languages
+
+## Internationalization (i18n)
+
+The frontend uses **react-i18next** for multi-language support.
+
+### Supported Languages
+
+- Polish (pl) - Default
+- English (en)
+
+### Language Switching
+
+Users can switch languages using the language switcher in the application header. The selected language is stored in the browser's localStorage for persistence across sessions.
+
+### Translation Files
+
+Translation files are located in `src/i18n/locales/`:
+- `en.json` - English translations
+- `pl.json` - Polish translations
+
+### Using Translations in Components
+
+```javascript
+import { useTranslation } from 'react-i18next';
+
+function MyComponent() {
+  const { t } = useTranslation();
+  
+  return (
+    <div>
+      <h1>{t('app.title')}</h1>
+      <p>{t('app.welcome', { name: userName })}</p>
+    </div>
+  );
+}
+```
+
+### Adding New Languages
+
+1. Create a new translation file in `src/i18n/locales/` (e.g., `de.json`)
+2. Copy the structure from `en.json` and translate the values
+3. Import the translations in `src/i18n/config.js`:
+   ```javascript
+   import deTranslations from './locales/de.json';
+   ```
+4. Add the language to the i18n configuration:
+   ```javascript
+   resources: {
+     en: { translation: enTranslations },
+     pl: { translation: plTranslations },
+     de: { translation: deTranslations }
+   }
+   ```
+5. Update `src/components/LanguageSwitcher.jsx` to include the new language button
 
 ## API Integration
 
@@ -248,6 +307,13 @@ frontend/
 ├── src/             # Source code
 │   ├── App.jsx      # Main application component
 │   ├── index.jsx    # Application entry point
+│   ├── components/  # Reusable components
+│   │   └── LanguageSwitcher.jsx  # Language switcher component
+│   ├── i18n/        # Internationalization
+│   │   ├── config.js             # i18n configuration
+│   │   └── locales/              # Translation files
+│   │       ├── en.json           # English translations
+│   │       └── pl.json           # Polish translations
 │   ├── pages/       # Page components
 │   ├── services/    # API client and services
 │   └── styles/      # CSS styles

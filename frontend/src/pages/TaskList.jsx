@@ -1,7 +1,9 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import apiClient from '../services/apiClient';
 
 function TaskList({ user }) {
+    const { t } = useTranslation();
     const [tasks, setTasks] = React.useState([]);
     const [loading, setLoading] = React.useState(true);
     const [showCreateForm, setShowCreateForm] = React.useState(false);
@@ -65,18 +67,18 @@ function TaskList({ user }) {
     };
 
     if (loading) {
-        return <div className="loading">Loading tasks...</div>;
+        return <div className="loading">{t('common.loading')}</div>;
     }
 
     return (
         <div className="task-list-container">
             <div className="task-list-header">
-                <h2>Tasks</h2>
+                <h2>{t('tasks.title')}</h2>
                 <button 
                     onClick={() => setShowCreateForm(!showCreateForm)}
                     className="btn-primary"
                 >
-                    {showCreateForm ? 'Cancel' : 'Create Task'}
+                    {showCreateForm ? t('common.cancel') : t('tasks.create')}
                 </button>
             </div>
 
@@ -86,7 +88,7 @@ function TaskList({ user }) {
 
             <div className="tasks">
                 {tasks.length === 0 ? (
-                    <p>No tasks yet. Create your first task!</p>
+                    <p>{t('tasks.noTasks')}</p>
                 ) : (
                     tasks.map(task => (
                         <TaskCard
@@ -105,12 +107,23 @@ function TaskList({ user }) {
 }
 
 function TaskCard({ task, user, onComplete, onApprove, onAssign }) {
+    const { t } = useTranslation();
     const isAdmin = user.role === 'ROLE_ADMIN';
     const isAssigned = task.assignedUserId !== null;
     const isAssignedToCurrentUser = task.assignedUserId === user.id;
     const canComplete = task.status === 'pending' && isAssignedToCurrentUser;
     const canApprove = task.status === 'completed' && isAdmin;
     const canAssign = task.status === 'pending' && !isAssigned;
+
+    const getFrequencyTranslation = (frequency) => {
+        const frequencyMap = {
+            'once': 'tasks.frequencyOnce',
+            'daily': 'tasks.frequencyDaily',
+            'weekly': 'tasks.frequencyWeekly',
+            'monthly': 'tasks.frequencyMonthly'
+        };
+        return t(frequencyMap[frequency] || 'tasks.frequencyOnce');
+    };
 
     return (
         <div className="task-card">
@@ -123,12 +136,12 @@ function TaskCard({ task, user, onComplete, onApprove, onAssign }) {
             <div className="task-body">
                 <p>{task.description}</p>
                 <div className="task-meta">
-                    <span className="task-points">{task.points} points</span>
-                    <span className="task-frequency">{task.frequency}</span>
+                    <span className="task-points">{t('user.points', { points: task.points })}</span>
+                    <span className="task-frequency">{getFrequencyTranslation(task.frequency)}</span>
                 </div>
                 {isAssigned && (
                     <div className="task-assignment">
-                        <span className="assignment-label">Assigned to:</span>
+                        <span className="assignment-label">{t('tasks.assignedTo')}:</span>
                         <span className="assignment-user">{task.assignedUserName}</span>
                     </div>
                 )}
@@ -139,7 +152,7 @@ function TaskCard({ task, user, onComplete, onApprove, onAssign }) {
                         onClick={() => onAssign(task.id, user.id)}
                         className="btn-primary"
                     >
-                        Assign to Me
+                        {t('tasks.assign')}
                     </button>
                 )}
                 {canComplete && (
@@ -147,7 +160,7 @@ function TaskCard({ task, user, onComplete, onApprove, onAssign }) {
                         onClick={() => onComplete(task.id)}
                         className="btn-success"
                     >
-                        Complete
+                        {t('tasks.complete')}
                     </button>
                 )}
                 {canApprove && (
@@ -155,7 +168,7 @@ function TaskCard({ task, user, onComplete, onApprove, onAssign }) {
                         onClick={() => onApprove(task.id)}
                         className="btn-primary"
                     >
-                        Approve
+                        {t('tasks.approve')}
                     </button>
                 )}
             </div>
@@ -164,6 +177,7 @@ function TaskCard({ task, user, onComplete, onApprove, onAssign }) {
 }
 
 function TaskCreateForm({ onSubmit }) {
+    const { t } = useTranslation();
     const [formData, setFormData] = React.useState({
         name: '',
         description: '',
@@ -187,7 +201,7 @@ function TaskCreateForm({ onSubmit }) {
     return (
         <form className="task-create-form" onSubmit={handleSubmit}>
             <div className="form-group">
-                <label htmlFor="name">Task Name</label>
+                <label htmlFor="name">{t('tasks.name')}</label>
                 <input
                     type="text"
                     id="name"
@@ -198,7 +212,7 @@ function TaskCreateForm({ onSubmit }) {
                 />
             </div>
             <div className="form-group">
-                <label htmlFor="description">Description</label>
+                <label htmlFor="description">{t('tasks.description')}</label>
                 <textarea
                     id="description"
                     name="description"
@@ -209,7 +223,7 @@ function TaskCreateForm({ onSubmit }) {
             </div>
             <div className="form-row">
                 <div className="form-group">
-                    <label htmlFor="points">Points</label>
+                    <label htmlFor="points">{t('tasks.points')}</label>
                     <input
                         type="number"
                         id="points"
@@ -222,7 +236,7 @@ function TaskCreateForm({ onSubmit }) {
                     />
                 </div>
                 <div className="form-group">
-                    <label htmlFor="frequency">Frequency</label>
+                    <label htmlFor="frequency">{t('tasks.frequency')}</label>
                     <select
                         id="frequency"
                         name="frequency"
@@ -230,14 +244,14 @@ function TaskCreateForm({ onSubmit }) {
                         onChange={handleChange}
                         required
                     >
-                        <option value="once">Once</option>
-                        <option value="daily">Daily</option>
-                        <option value="weekly">Weekly</option>
-                        <option value="monthly">Monthly</option>
+                        <option value="once">{t('tasks.frequencyOnce')}</option>
+                        <option value="daily">{t('tasks.frequencyDaily')}</option>
+                        <option value="weekly">{t('tasks.frequencyWeekly')}</option>
+                        <option value="monthly">{t('tasks.frequencyMonthly')}</option>
                     </select>
                 </div>
             </div>
-            <button type="submit" className="btn-primary">Create Task</button>
+            <button type="submit" className="btn-primary">{t('tasks.create')}</button>
         </form>
     );
 }
