@@ -223,16 +223,16 @@ test.describe('Bonus Rules Management', () => {
     
     test('should show create form when button clicked', async ({ page }) => {
       // Click create button
-      await page.click('.bonus-rules-header button:has-text("Create New Rule")');
+      await page.click('.bonus-rules-header button:has-text("Create Bonus Rule")');
       
-      // Check that form is visible
+      // Check that form is visible (translated text)
       await expect(page.locator('.bonus-rule-form')).toBeVisible();
-      await expect(page.locator('.bonus-rule-form h3')).toContainText('Create New Bonus Rule');
+      await expect(page.locator('.bonus-rule-form h3')).toContainText('Create Bonus Rule');
     });
     
     test('should hide create form when cancel clicked', async ({ page }) => {
       // Show form
-      await page.click('.bonus-rules-header button:has-text("Create New Rule")');
+      await page.click('.bonus-rules-header button:has-text("Create Bonus Rule")');
       await expect(page.locator('.bonus-rule-form')).toBeVisible();
       
       // Click cancel
@@ -243,7 +243,7 @@ test.describe('Bonus Rules Management', () => {
     });
     
     test('should have all required form fields', async ({ page }) => {
-      await page.click('.bonus-rules-header button:has-text("Create New Rule")');
+      await page.click('.bonus-rules-header button:has-text("Create Bonus Rule")');
       
       // Check all fields exist
       await expect(page.locator('input#name')).toBeVisible();
@@ -253,7 +253,7 @@ test.describe('Bonus Rules Management', () => {
     });
     
     test('should show consecutive days fields when consecutive days rule type selected', async ({ page }) => {
-      await page.click('.bonus-rules-header button:has-text("Create New Rule")');
+      await page.click('.bonus-rules-header button:has-text("Create Bonus Rule")');
       
       // Select consecutive days
       await page.selectOption('select#ruleType', 'consecutive_days');
@@ -264,7 +264,7 @@ test.describe('Bonus Rules Management', () => {
     });
     
     test('should show monthly task count fields when monthly task count rule type selected', async ({ page }) => {
-      await page.click('.bonus-rules-header button:has-text("Create New Rule")');
+      await page.click('.bonus-rules-header button:has-text("Create Bonus Rule")');
       
       // Select monthly task count
       await page.selectOption('select#ruleType', 'monthly_task_count');
@@ -297,7 +297,7 @@ test.describe('Bonus Rules Management', () => {
       });
       
       // Open form
-      await page.click('.bonus-rules-header button:has-text("Create New Rule")');
+      await page.click('.bonus-rules-header button:has-text("Create Bonus Rule")');
       
       // Fill form
       await page.fill('input#name', 'Test Bonus Rule');
@@ -341,7 +341,7 @@ test.describe('Bonus Rules Management', () => {
       });
       
       // Open form
-      await page.click('.bonus-rules-header button:has-text("Create New Rule")');
+      await page.click('.bonus-rules-header button:has-text("Create Bonus Rule")');
       
       // Fill form
       await page.fill('input#name', 'Monthly Test');
@@ -358,7 +358,7 @@ test.describe('Bonus Rules Management', () => {
     });
     
     test('should validate required fields', async ({ page }) => {
-      await page.click('.bonus-rules-header button:has-text("Create New Rule")');
+      await page.click('.bonus-rules-header button:has-text("Create Bonus Rule")');
       
       // Try to submit empty form
       await page.click('.bonus-rule-form button[type="submit"]');
@@ -370,7 +370,7 @@ test.describe('Bonus Rules Management', () => {
     });
     
     test('should validate bonus points constraints', async ({ page }) => {
-      await page.click('.bonus-rules-header button:has-text("Create New Rule")');
+      await page.click('.bonus-rules-header button:has-text("Create Bonus Rule")');
       
       // Check min/max constraints
       await expect(page.locator('input#bonusPoints')).toHaveAttribute('min', '1');
@@ -397,9 +397,9 @@ test.describe('Bonus Rules Management', () => {
       // Click edit on first rule
       await page.click('.bonus-rule-card:first-child button:has-text("Edit")');
       
-      // Check that card switches to edit mode
+      // Check that card switches to edit mode (translated text)
       await expect(page.locator('.bonus-rule-card.editing')).toBeVisible();
-      await expect(page.locator('.bonus-rule-form h3')).toContainText('Edit Rule');
+      await expect(page.locator('.bonus-rule-form h3')).toContainText('Edit Bonus Rule');
     });
     
     test('should pre-fill form with existing rule data', async ({ page }) => {
@@ -444,7 +444,7 @@ test.describe('Bonus Rules Management', () => {
       await page.fill('input#bonusPoints', '25');
       
       // Submit
-      await page.click('.bonus-rule-form button:has-text("Update Rule")');
+      await page.click('.bonus-rule-form button:has-text("Save")');
       
       // Card should return to display mode
       await expect(page.locator('.bonus-rule-card.editing')).not.toBeVisible();
@@ -586,7 +586,7 @@ test.describe('Bonus Rules Management', () => {
       await page.waitForSelector('.bonus-rules-container');
       
       // Try to create rule
-      await page.click('.bonus-rules-header button:has-text("Create New Rule")');
+      await page.click('.bonus-rules-header button:has-text("Create Bonus Rule")');
       await page.fill('input#name', 'Test');
       await page.fill('textarea#description', 'Test');
       await page.fill('input#bonusPoints', '10');
@@ -622,7 +622,7 @@ test.describe('Bonus Rules Management', () => {
       // Try to edit and update
       await page.click('.bonus-rule-card:first-child button:has-text("Edit")');
       await page.fill('input#name', 'Updated Name');
-      await page.click('.bonus-rule-form button:has-text("Update Rule")');
+      await page.click('.bonus-rule-form button:has-text("Save")');
       
       // Should show error
       await expect(page.locator('.error-message')).toContainText('Failed to update bonus rule');

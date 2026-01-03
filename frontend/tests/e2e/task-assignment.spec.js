@@ -188,8 +188,8 @@ test.describe('Task Assignment Display', () => {
     await page.goto('/');
     await page.waitForSelector('.task-card');
     
-    // Click assign button
-    const assignButton = page.locator('button').filter({ hasText: 'Assign to Me' }).first();
+    // Click assign button (translated text)
+    const assignButton = page.locator('button').filter({ hasText: 'Assign' }).first();
     await assignButton.click();
     
     // Wait a bit for the API call

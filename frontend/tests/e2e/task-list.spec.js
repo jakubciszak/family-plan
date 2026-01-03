@@ -71,7 +71,7 @@ test.describe('Task List', () => {
     await expect(firstTask.locator('.task-header h3')).toContainText('Clean the kitchen');
     await expect(firstTask.locator('.task-body p')).toContainText('Wash dishes and clean counters');
     await expect(firstTask.locator('.task-points')).toContainText('10 points');
-    await expect(firstTask.locator('.task-frequency')).toContainText('daily');
+    await expect(firstTask.locator('.task-frequency')).toContainText('Daily'); // Translated text
     await expect(firstTask.locator('.task-status')).toContainText('pending');
   });
 
