@@ -1,0 +1,90 @@
+### Bonus Points Rules API Tests (Admin Only)
+### Base URL
+@baseUrl = http://localhost:8080
+@contentType = application/json
+
+### Variables - Update these with real values
+@ruleId = 
+@taskTemplateId = 
+
+###
+### List All Bonus Rules
+GET {{baseUrl}}/api/bonus-rules
+Content-Type: {{contentType}}
+
+###
+### List Active Bonus Rules Only
+GET {{baseUrl}}/api/bonus-rules?active=true
+Content-Type: {{contentType}}
+
+###
+### Create Bonus Rule - Consecutive Days
+POST {{baseUrl}}/api/bonus-rules
+Content-Type: {{contentType}}
+
+{
+  "name": "Dishwasher Streak",
+  "description": "Earn 20 bonus points for washing dishes 5 consecutive days",
+  "bonusPoints": 20,
+  "ruleType": "consecutive_days",
+  "ruleConfig": {
+    "taskTemplateId": "{{taskTemplateId}}",
+    "requiredDays": 5
+  }
+}
+
+###
+### Create Bonus Rule - Monthly Task Count
+POST {{baseUrl}}/api/bonus-rules
+Content-Type: {{contentType}}
+
+{
+  "name": "Monthly Cleaning Champion",
+  "description": "Earn 50 bonus points for completing 20 cleaning tasks in a month",
+  "bonusPoints": 50,
+  "ruleType": "monthly_task_count",
+  "ruleConfig": {
+    "taskTemplateId": "{{taskTemplateId}}",
+    "requiredCount": 20
+  }
+}
+
+###
+### Get Bonus Rule by ID (replace {ruleId} with actual UUID)
+GET {{baseUrl}}/api/bonus-rules/{{ruleId}}
+Content-Type: {{contentType}}
+
+###
+### Update Bonus Rule (replace {ruleId} with actual UUID)
+PUT {{baseUrl}}/api/bonus-rules/{{ruleId}}
+Content-Type: {{contentType}}
+
+{
+  "name": "Updated Rule Name",
+  "description": "Updated rule description",
+  "bonusPoints": 30
+}
+
+###
+### Activate Bonus Rule (replace {ruleId} with actual UUID)
+POST {{baseUrl}}/api/bonus-rules/{{ruleId}}/activate
+Content-Type: {{contentType}}
+
+###
+### Deactivate Bonus Rule (replace {ruleId} with actual UUID)
+POST {{baseUrl}}/api/bonus-rules/{{ruleId}}/deactivate
+Content-Type: {{contentType}}
+
+###
+### Get Bonus Rule - Not Found (should return 404)
+GET {{baseUrl}}/api/bonus-rules/00000000-0000-0000-0000-000000000000
+Content-Type: {{contentType}}
+
+###
+### Create Bonus Rule - Invalid Data (should return 400)
+POST {{baseUrl}}/api/bonus-rules
+Content-Type: {{contentType}}
+
+{
+  "name": "Invalid Rule"
+}

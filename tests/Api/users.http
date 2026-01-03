@@ -1,0 +1,51 @@
+### User Management API Tests
+### Base URL
+@baseUrl = http://localhost:8080
+@contentType = application/json
+
+### Variables - Will be set from responses
+@userId = 
+
+###
+### List All Users
+GET {{baseUrl}}/api/users
+Content-Type: {{contentType}}
+
+###
+### Create New User
+POST {{baseUrl}}/api/users
+Content-Type: {{contentType}}
+
+{
+  "name": "John Doe",
+  "email": "john.doe@example.com",
+  "password": "securePassword123",
+  "role": "ROLE_USER"
+}
+
+###
+### Create New Admin User
+POST {{baseUrl}}/api/users
+Content-Type: {{contentType}}
+
+{
+  "name": "Admin User",
+  "email": "admin@familyplan.local",
+  "password": "admin123",
+  "role": "ROLE_ADMIN"
+}
+
+###
+### Get User by ID (replace {userId} with actual UUID)
+GET {{baseUrl}}/api/users/{{userId}}
+Content-Type: {{contentType}}
+
+###
+### Get User Points Balance (replace {userId} with actual UUID)
+GET {{baseUrl}}/api/users/{{userId}}/points
+Content-Type: {{contentType}}
+
+###
+### Get User by ID - Not Found (should return 404)
+GET {{baseUrl}}/api/users/00000000-0000-0000-0000-000000000000
+Content-Type: {{contentType}}
