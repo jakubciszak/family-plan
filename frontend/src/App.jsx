@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import TaskList from './pages/TaskList';
 import Login from './pages/Login';
 import BonusRulesManagement from './pages/BonusRulesManagement';
+import UserSettings from './pages/UserSettings';
 import LanguageSwitcher from './components/LanguageSwitcher';
 import apiClient from './services/apiClient';
 import './styles/app.css';
@@ -82,6 +83,12 @@ function App() {
                             {t('nav.bonusRules')}
                         </button>
                     )}
+                    <button 
+                        onClick={() => setCurrentPage('settings')}
+                        className={currentPage === 'settings' ? 'nav-active' : ''}
+                    >
+                        {t('nav.settings')}
+                    </button>
                 </nav>
                 <div className="user-info">
                     <span>{t('app.welcome', { name: user?.name })}</span>
@@ -93,6 +100,7 @@ function App() {
             <main className="app-main">
                 {currentPage === 'tasks' && <TaskList user={user} />}
                 {currentPage === 'bonus-rules' && <BonusRulesManagement user={user} />}
+                {currentPage === 'settings' && <UserSettings user={user} />}
             </main>
         </div>
     );

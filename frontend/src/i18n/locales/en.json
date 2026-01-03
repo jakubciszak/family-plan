@@ -5,7 +5,8 @@
   },
   "nav": {
     "tasks": "Tasks",
-    "bonusRules": "Bonus Rules"
+    "bonusRules": "Bonus Rules",
+    "settings": "Settings"
   },
   "auth": {
     "login": "Login",
@@ -67,6 +68,20 @@
     "points": "{{points}} points",
     "role": "Role",
     "name": "Name"
+  },
+  "settings": {
+    "title": "Notification Settings",
+    "loading": "Loading settings...",
+    "save": "Save Settings",
+    "saving": "Saving...",
+    "save_success": "Settings saved successfully!",
+    "save_error": "Failed to save settings",
+    "notification_channels": "Notification Channels",
+    "channels_description": "Choose how you want to receive notifications",
+    "channel_email": "Email",
+    "channel_email_desc": "Receive notifications via email",
+    "channel_sms": "SMS",
+    "channel_sms_desc": "Receive notifications via text message"
   },
   "common": {
     "save": "Save",

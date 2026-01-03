@@ -95,6 +95,13 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
         )}
 
         <TouchableOpacity
+          style={styles.menuButton}
+          onPress={() => navigation.navigate('Settings', { userId: user.id })}
+        >
+          <Text style={styles.menuButtonText}>⚙️ Settings</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
           style={[styles.menuButton, styles.logoutButton]}
           onPress={handleLogout}
         >

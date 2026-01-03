@@ -5,6 +5,25 @@ export interface User {
   role: string;
 }
 
+export interface PreferenceOption {
+  name: string;
+  enabled: boolean;
+}
+
+export interface UserPreference {
+  type: string;
+  options: PreferenceOption[];
+}
+
+export interface UserPreferences {
+  preferences: UserPreference[];
+}
+
+export interface UpdateUserSettingsRequest {
+  preference_type: string;
+  options: PreferenceOption[];
+}
+
 export interface LoginCredentials {
   email: string;
   password: string;

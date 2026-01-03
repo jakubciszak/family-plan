@@ -10,6 +10,8 @@ import {
   CreateBonusRuleData,
   UpdateBonusRuleData,
   UserPointsResponse,
+  UserPreferences,
+  UpdateUserSettingsRequest,
 } from '../types/api';
 
 const API_URL = process.env.API_URL || 'http://localhost:8080';
@@ -162,6 +164,28 @@ class ApiClient {
       {},
       { headers }
     );
+  }
+
+  async getUserSettings(userId: string): Promise<UserPreferences> {
+    const headers = await this.getAuthHeaders();
+    const response = await this.axiosInstance.get(
+      `/api/user-settings/${userId}`,
+      { headers }
+    );
+    return response.data;
+  }
+
+  async updateUserSettings(
+    userId: string,
+    data: UpdateUserSettingsRequest
+  ): Promise<{ status: string }> {
+    const headers = await this.getAuthHeaders();
+    const response = await this.axiosInstance.put(
+      `/api/user-settings/${userId}`,
+      data,
+      { headers }
+    );
+    return response.data;
   }
 }
 
