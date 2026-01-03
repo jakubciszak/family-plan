@@ -28,7 +28,7 @@ final class InMemoryStatusChangeRuleRepository implements StatusChangeRuleReposi
         $rules = array_values($this->rules);
 
         if ($activeOnly) {
-            $rules = array_filter($rules, fn(StatusChangeRule $rule) => $rule->isActive());
+            $rules = array_values(array_filter($rules, fn(StatusChangeRule $rule) => $rule->isActive()));
         }
 
         return $rules;
@@ -36,10 +36,10 @@ final class InMemoryStatusChangeRuleRepository implements StatusChangeRuleReposi
 
     public function findActiveByTaskTemplateId(Uuid $taskTemplateId): array
     {
-        return array_filter(
+        return array_values(array_filter(
             $this->rules,
             fn(StatusChangeRule $rule) => 
                 $rule->taskTemplateId()->equals($taskTemplateId) && $rule->isActive()
-        );
+        ));
     }
 }
