@@ -14,7 +14,7 @@ class LocaleListener implements EventSubscriberInterface
     
     private string $defaultLocale;
 
-    public function __construct(string $defaultLocale = 'en')
+    public function __construct(string $defaultLocale = 'pl')
     {
         $this->defaultLocale = $defaultLocale;
     }

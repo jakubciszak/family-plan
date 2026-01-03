@@ -236,8 +236,8 @@ The frontend uses **react-i18next** for multi-language support.
 
 ### Supported Languages
 
-- English (en) - Default
-- Polish (pl)
+- Polish (pl) - Default
+- English (en)
 
 ### Language Switching
 

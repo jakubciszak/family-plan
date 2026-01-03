@@ -42,8 +42,8 @@ See detailed documentation:
 Family Plan fully supports internationalization (i18n) in both frontend and backend:
 
 ### Supported Languages
-- 🇬🇧 **English** (default)
-- 🇵🇱 **Polish**
+- 🇵🇱 **Polish** (default)
+- 🇬🇧 **English**
 
 ### Frontend (React)
 - Uses **react-i18next** for translations
@@ -56,7 +56,7 @@ Family Plan fully supports internationalization (i18n) in both frontend and back
 - Uses **Symfony Translation** component
 - Automatic locale detection from `Accept-Language` HTTP header
 - Translation files located in `translations/`
-- Fallback to English for missing translations
+- Fallback to Polish for missing translations
 
 ### Adding New Languages
 To add a new language:

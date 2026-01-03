@@ -16,7 +16,7 @@ class LocaleListenerTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->listener = new LocaleListener('en');
+        $this->listener = new LocaleListener('pl');
     }
 
     public function testSetsLocaleFromAcceptLanguageHeaderToEnglish(): void
@@ -63,7 +63,7 @@ class LocaleListenerTest extends TestCase
 
         $this->listener->onKernelRequest($event);
 
-        $this->assertEquals('en', $request->getLocale());
+        $this->assertEquals('pl', $request->getLocale());
     }
 
     public function testUsesDefaultLocaleForUnsupportedLanguage(): void
@@ -79,7 +79,7 @@ class LocaleListenerTest extends TestCase
 
         $this->listener->onKernelRequest($event);
 
-        $this->assertEquals('en', $request->getLocale());
+        $this->assertEquals('pl', $request->getLocale());
     }
 
     public function testDoesNotOverrideExistingLocaleAttribute(): void
