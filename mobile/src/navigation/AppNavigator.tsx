@@ -1,0 +1,58 @@
+import React from 'react';
+import { NavigationContainer } from '@react-navigation/native';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import LoginScreen from '../screens/LoginScreen';
+import HomeScreen from '../screens/HomeScreen';
+import TaskListScreen from '../screens/TaskListScreen';
+import BonusRulesScreen from '../screens/BonusRulesScreen';
+
+export type RootStackParamList = {
+  Login: undefined;
+  Home: undefined;
+  TaskList: undefined;
+  BonusRules: undefined;
+};
+
+const Stack = createNativeStackNavigator<RootStackParamList>();
+
+const AppNavigator: React.FC = () => {
+  return (
+    <NavigationContainer>
+      <Stack.Navigator
+        initialRouteName="Login"
+        screenOptions={{
+          headerStyle: {
+            backgroundColor: '#4CAF50',
+          },
+          headerTintColor: '#fff',
+          headerTitleStyle: {
+            fontWeight: 'bold',
+          },
+        }}
+      >
+        <Stack.Screen 
+          name="Login" 
+          component={LoginScreen}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen 
+          name="Home" 
+          component={HomeScreen}
+          options={{ title: 'Family Plan' }}
+        />
+        <Stack.Screen 
+          name="TaskList" 
+          component={TaskListScreen}
+          options={{ title: 'Tasks' }}
+        />
+        <Stack.Screen 
+          name="BonusRules" 
+          component={BonusRulesScreen}
+          options={{ title: 'Bonus Rules' }}
+        />
+      </Stack.Navigator>
+    </NavigationContainer>
+  );
+};
+
+export default AppNavigator;
