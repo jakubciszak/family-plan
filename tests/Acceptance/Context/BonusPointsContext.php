@@ -33,7 +33,8 @@ final class BonusPointsContext extends AcceptanceContext
     }
 
     /**
-     * @Given there is a bonus rule :ruleName that awards :points bonus points for completing :requiredCount tasks in a month
+     * @Given /^że istnieje reguła bonusowa "([^"]*)" która przyznaje (\d+) punktów bonusowych za wykonanie (\d+) zadań w miesiącu$/
+     * @Given /^istnieje reguła bonusowa "([^"]*)" która przyznaje (\d+) punktów bonusowych za wykonanie (\d+) zadań w miesiącu$/
      */
     public function thereIsABonusRuleThatAwardsBonusPointsForCompletingTasksInAMonth(
         string $ruleName,
@@ -58,7 +59,8 @@ final class BonusPointsContext extends AcceptanceContext
     }
 
     /**
-     * @Given there is a bonus rule :ruleName that awards :points bonus points for :consecutiveDays consecutive days of task completion
+     * @Given /^że istnieje reguła bonusowa "([^"]*)" która przyznaje (\d+) punktów bonusowych za (\d+) kolejnych dni wykonywania zadań$/
+     * @Given /^istnieje reguła bonusowa "([^"]*)" która przyznaje (\d+) punktów bonusowych za (\d+) kolejnych dni wykonywania zadań$/
      */
     public function thereIsABonusRuleThatAwardsBonusPointsForConsecutiveDaysOfTaskCompletion(
         string $ruleName,
@@ -85,7 +87,7 @@ final class BonusPointsContext extends AcceptanceContext
     }
 
     /**
-     * @When the bonus rule :ruleName is activated
+     * @When /^reguła bonusowa "([^"]*)" zostaje aktywowana$/
      */
     public function theBonusRuleIsActivated(string $ruleName): void
     {
@@ -100,7 +102,7 @@ final class BonusPointsContext extends AcceptanceContext
     }
 
     /**
-     * @When the bonus rule :ruleName is deactivated
+     * @When /^reguła bonusowa "([^"]*)" zostaje dezaktywowana$/
      */
     public function theBonusRuleIsDeactivated(string $ruleName): void
     {
@@ -115,7 +117,7 @@ final class BonusPointsContext extends AcceptanceContext
     }
 
     /**
-     * @Then there should be :count active bonus rule(s)
+     * @Then /^powinno być (\d+) aktywn(?:a|ych) reguł?(?:a|y)? bonusow(?:a|ych)$/
      */
     public function thereShouldBeActiveBonusRules(int $count): void
     {
@@ -129,7 +131,7 @@ final class BonusPointsContext extends AcceptanceContext
     }
 
     /**
-     * @Then bonus rule :ruleName should be active
+     * @Then /^reguła bonusowa "([^"]*)" powinna być aktywna$/
      */
     public function bonusRuleShouldBeActive(string $ruleName): void
     {
@@ -141,7 +143,7 @@ final class BonusPointsContext extends AcceptanceContext
     }
 
     /**
-     * @Then bonus rule :ruleName should be inactive
+     * @Then /^reguła bonusowa "([^"]*)" powinna być nieaktywna$/
      */
     public function bonusRuleShouldBeInactive(string $ruleName): void
     {
@@ -153,7 +155,7 @@ final class BonusPointsContext extends AcceptanceContext
     }
 
     /**
-     * @Then all bonus rules should be listed
+     * @Then /^wszystkie reguły bonusowe powinny być wylistowane$/
      */
     public function allBonusRulesShouldBeListed(): void
     {

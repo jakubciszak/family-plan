@@ -35,7 +35,8 @@ final class StatusChangeRulesContext extends AcceptanceContext
     }
 
     /**
-     * @Given there is a status change rule :ruleName that requires :cooldownDays day(s) cooldown after completion
+     * @Given /^że istnieje reguła zmiany statusu "([^"]*)" która wymaga (\d+) dni? karencji po zakończeniu$/
+     * @Given /^istnieje reguła zmiany statusu "([^"]*)" która wymaga (\d+) dni? karencji po zakończeniu$/
      */
     public function thereIsAStatusChangeRuleThatRequiresDaysCooldownAfterCompletion(
         string $ruleName,
@@ -60,7 +61,8 @@ final class StatusChangeRulesContext extends AcceptanceContext
     }
 
     /**
-     * @Given there is a status change rule :ruleName for task :taskName that requires another task to be completed today
+     * @Given /^że istnieje reguła zmiany statusu "([^"]*)" dla zadania "([^"]*)" która wymaga wykonania innego zadania dzisiaj$/
+     * @Given /^istnieje reguła zmiany statusu "([^"]*)" dla zadania "([^"]*)" która wymaga wykonania innego zadania dzisiaj$/
      */
     public function thereIsAStatusChangeRuleForTaskThatRequiresAnotherTaskToBeCompletedToday(
         string $ruleName,
@@ -86,7 +88,7 @@ final class StatusChangeRulesContext extends AcceptanceContext
     }
 
     /**
-     * @When the status change rule :ruleName is activated
+     * @When /^reguła zmiany statusu "([^"]*)" zostaje aktywowana$/
      */
     public function theStatusChangeRuleIsActivated(string $ruleName): void
     {
@@ -101,7 +103,7 @@ final class StatusChangeRulesContext extends AcceptanceContext
     }
 
     /**
-     * @When the status change rule :ruleName is deactivated
+     * @When /^reguła zmiany statusu "([^"]*)" zostaje dezaktywowana$/
      */
     public function theStatusChangeRuleIsDeactivated(string $ruleName): void
     {
@@ -116,7 +118,7 @@ final class StatusChangeRulesContext extends AcceptanceContext
     }
 
     /**
-     * @Then there should be :count active status change rule(s)
+     * @Then /^powinno być (\d+) aktywn(?:a|ych) reguł?(?:a|y)? zmiany statusu$/
      */
     public function thereShouldBeActiveStatusChangeRules(int $count): void
     {
@@ -132,7 +134,7 @@ final class StatusChangeRulesContext extends AcceptanceContext
     }
 
     /**
-     * @Then status change rule :ruleName should be active
+     * @Then /^reguła zmiany statusu "([^"]*)" powinna być aktywna$/
      */
     public function statusChangeRuleShouldBeActive(string $ruleName): void
     {
@@ -144,7 +146,7 @@ final class StatusChangeRulesContext extends AcceptanceContext
     }
 
     /**
-     * @Then status change rule :ruleName should be inactive
+     * @Then /^reguła zmiany statusu "([^"]*)" powinna być nieaktywna$/
      */
     public function statusChangeRuleShouldBeInactive(string $ruleName): void
     {
