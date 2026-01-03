@@ -9,10 +9,10 @@ use App\TaskManagement\Domain\Entity\StatusChangeRule;
 use App\TaskManagement\Domain\Repository\TaskExecutionRepositoryInterface;
 use App\TaskManagement\Domain\ValueObject\StatusChangeConditionType;
 use DateTimeImmutable;
+use JakubCiszak\RuleEngine\Api\NestedRuleApi;
 
 /**
- * Service to evaluate if status change rules are met
- * Implements rule evaluation logic for different condition types
+ * Service to evaluate if status change rules are met using rule-engine library
  */
 class StatusChangeRuleEvaluator
 {
@@ -31,12 +31,14 @@ class StatusChangeRuleEvaluator
             return true; // Inactive rules don't block anything
         }
 
-        return match ($rule->conditionType()) {
-            StatusChangeConditionType::OTHER_TASK_COMPLETED_TODAY => 
-                $this->evaluateOtherTaskCompletedToday($rule, $userId),
-            StatusChangeConditionType::LAST_EXECUTION_COOLDOWN => 
-                $this->evaluateLastExecutionCooldown($rule, $userId),
-        };
+        // Build context data for rule evaluation
+        $context = $this->buildRuleContext($rule, $userId);
+        
+        // Build rule definition based on condition type
+        $ruleDefinition = $this->buildRuleDefinition($rule);
+        
+        // Evaluate using rule-engine
+        return NestedRuleApi::evaluate($ruleDefinition, $context);
     }
 
     /**
@@ -61,12 +63,57 @@ class StatusChangeRuleEvaluator
         };
     }
 
-    private function evaluateOtherTaskCompletedToday(StatusChangeRule $rule, Uuid $userId): bool
+    /**
+     * Build context data for rule evaluation
+     */
+    private function buildRuleContext(StatusChangeRule $rule, Uuid $userId): array
     {
         $config = $rule->config();
-        $requiredTaskTemplateId = $config->requiredTaskTemplateId();
+        
+        return match ($rule->conditionType()) {
+            StatusChangeConditionType::OTHER_TASK_COMPLETED_TODAY => [
+                'hasCompletedRequiredTask' => $this->hasCompletedRequiredTaskToday(
+                    $userId,
+                    $config->requiredTaskTemplateId()
+                ),
+            ],
+            StatusChangeConditionType::LAST_EXECUTION_COOLDOWN => [
+                'daysSinceLastExecution' => $this->getDaysSinceLastExecution(
+                    $userId,
+                    $rule->taskTemplateId()
+                ),
+                'requiredCooldownDays' => $config->cooldownDays() ?? 0,
+            ],
+        };
+    }
 
-        if ($requiredTaskTemplateId === null) {
+    /**
+     * Build rule definition for rule-engine evaluation
+     */
+    private function buildRuleDefinition(StatusChangeRule $rule): array
+    {
+        return match ($rule->conditionType()) {
+            StatusChangeConditionType::OTHER_TASK_COMPLETED_TODAY => [
+                '==' => [
+                    ['var' => 'hasCompletedRequiredTask'],
+                    true
+                ]
+            ],
+            StatusChangeConditionType::LAST_EXECUTION_COOLDOWN => [
+                '>=' => [
+                    ['var' => 'daysSinceLastExecution'],
+                    ['var' => 'requiredCooldownDays']
+                ]
+            ],
+        };
+    }
+
+    /**
+     * Check if user has completed required task today
+     */
+    private function hasCompletedRequiredTaskToday(?Uuid $userId, ?Uuid $requiredTaskTemplateId): bool
+    {
+        if ($userId === null || $requiredTaskTemplateId === null) {
             return false;
         }
 
@@ -80,18 +127,11 @@ class StatusChangeRuleEvaluator
         return count($executions) > 0;
     }
 
-    private function evaluateLastExecutionCooldown(StatusChangeRule $rule, Uuid $userId): bool
+    /**
+     * Get number of days since last execution
+     */
+    private function getDaysSinceLastExecution(Uuid $userId, Uuid $taskTemplateId): int
     {
-        $config = $rule->config();
-        $cooldownDays = $config->cooldownDays();
-
-        if ($cooldownDays === null) {
-            return false;
-        }
-
-        $taskTemplateId = $rule->taskTemplateId();
-        
-        // Find the most recent approved execution for this task template and user
         $recentExecutions = $this->executionRepository->findRecentApprovedByUserAndTemplate(
             $userId,
             $taskTemplateId,
@@ -99,15 +139,13 @@ class StatusChangeRuleEvaluator
         );
 
         if (empty($recentExecutions)) {
-            return true; // No previous executions, cooldown doesn't apply
+            return PHP_INT_MAX; // No previous executions, cooldown doesn't apply
         }
 
         $lastExecution = $recentExecutions[0];
         $lastScheduledDate = $lastExecution->scheduledFor();
         $now = new DateTimeImmutable();
         
-        $daysSinceLastExecution = $now->diff($lastScheduledDate)->days;
-        
-        return $daysSinceLastExecution >= $cooldownDays;
+        return (int) $now->diff($lastScheduledDate)->days;
     }
 }
