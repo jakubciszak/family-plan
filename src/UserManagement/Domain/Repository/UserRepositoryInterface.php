@@ -18,5 +18,7 @@ interface UserRepositoryInterface
 
     public function findAll(): array;
 
+    public function findAdmins(): array;
+
     public function delete(User $user): void;
 }

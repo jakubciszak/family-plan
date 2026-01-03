@@ -43,6 +43,9 @@ services:
     App\TaskManagement\Domain\Repository\BonusPointsRuleRepositoryInterface:
         class: App\TaskManagement\Infrastructure\Persistence\DoctrineBonusPointsRuleRepository
 
+    App\UserSettings\Domain\Repository\UserSettingsRepositoryInterface:
+        class: App\UserSettings\Infrastructure\Persistence\DoctrineUserSettingsRepository
+
     # Policy implementations
     App\TaskManagement\Domain\Policy\TaskApprovalPolicyInterface:
         class: App\TaskManagement\Domain\Policy\AdminApprovalPolicy
