@@ -76,6 +76,17 @@ services:
         tags:
             - { name: kernel.event_subscriber }
 
+    # Notification adapters
+    App\Notifications\Infrastructure\Adapter\EmailNotificationAdapter:
+        tags: ['notification.adapter']
+
+    App\Notifications\Infrastructure\Adapter\SmsNotificationAdapter:
+        tags: ['notification.adapter']
+
+    App\Notifications\Application\Handler\SendNotificationHandler:
+        arguments:
+            $adapters: !tagged_iterator notification.adapter
+
     # add more service definitions when explicit configuration is needed
     # please note that last definitions always *replace* previous ones
 
