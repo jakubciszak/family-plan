@@ -110,8 +110,8 @@ test.describe('Login Page', () => {
     // Submit form
     await page.click('button[type="submit"]');
     
-    // Check for error message
-    await expect(page.locator('.error-message')).toContainText('Invalid email or password');
+    // Check for error message (translated text from auth.loginError)
+    await expect(page.locator('.error-message')).toContainText('Login failed. Please check your credentials.');
     
     // Verify we're still on login page
     await expect(page.locator('h2')).toContainText('Login');

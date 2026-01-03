@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Shared\Infrastructure;
 
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
-use Symfony\Component\Translation\TranslatorInterface;
+use Symfony\Contracts\Translation\TranslatorInterface;
 
 class TranslationTest extends KernelTestCase
 {

@@ -54,6 +54,7 @@ class LocaleListenerTest extends TestCase
     public function testUsesDefaultLocaleWhenNoAcceptLanguageHeader(): void
     {
         $request = Request::create('/', 'GET');
+        $request->headers->remove('Accept-Language');
         
         $event = new RequestEvent(
             $this->createMock(HttpKernelInterface::class),
