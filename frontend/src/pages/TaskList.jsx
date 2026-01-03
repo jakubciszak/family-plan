@@ -115,6 +115,16 @@ function TaskCard({ task, user, onComplete, onApprove, onAssign }) {
     const canApprove = task.status === 'completed' && isAdmin;
     const canAssign = task.status === 'pending' && !isAssigned;
 
+    const getFrequencyTranslation = (frequency) => {
+        const frequencyMap = {
+            'once': 'tasks.frequencyOnce',
+            'daily': 'tasks.frequencyDaily',
+            'weekly': 'tasks.frequencyWeekly',
+            'monthly': 'tasks.frequencyMonthly'
+        };
+        return t(frequencyMap[frequency] || 'tasks.frequencyOnce');
+    };
+
     return (
         <div className="task-card">
             <div className="task-header">
@@ -127,7 +137,7 @@ function TaskCard({ task, user, onComplete, onApprove, onAssign }) {
                 <p>{task.description}</p>
                 <div className="task-meta">
                     <span className="task-points">{t('user.points', { points: task.points })}</span>
-                    <span className="task-frequency">{t(`tasks.frequency${task.frequency.charAt(0).toUpperCase() + task.frequency.slice(1)}`)}</span>
+                    <span className="task-frequency">{getFrequencyTranslation(task.frequency)}</span>
                 </div>
                 {isAssigned && (
                     <div className="task-assignment">
