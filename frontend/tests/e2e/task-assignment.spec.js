@@ -125,8 +125,8 @@ test.describe('Task Assignment Display', () => {
     // Find an unassigned task
     const unassignedTask = page.locator('.task-card').filter({ hasText: 'Clean the kitchen' });
     
-    // Check for assign button
-    const assignButton = unassignedTask.locator('button').filter({ hasText: 'Assign to Me' });
+    // Check for assign button (translated text)
+    const assignButton = unassignedTask.locator('button').filter({ hasText: 'Assign' });
     await expect(assignButton).toBeVisible();
   });
 
@@ -157,8 +157,8 @@ test.describe('Task Assignment Display', () => {
     await page.goto('/');
     await page.waitForSelector('.task-card');
     
-    // Assign button should not be visible
-    const assignButton = page.locator('button').filter({ hasText: 'Assign to Me' });
+    // Assign button should not be visible (translated text)
+    const assignButton = page.locator('button').filter({ hasText: 'Assign' });
     await expect(assignButton).not.toBeVisible();
   });
 
