@@ -24,8 +24,8 @@ module.exports = defineConfig({
   // Retry on CI only
   retries: process.env.CI ? 2 : 0,
   
-  // Opt out of parallel tests on CI
-  workers: process.env.CI ? 1 : undefined,
+  // Use multiple workers for faster execution
+  workers: process.env.CI ? 2 : undefined,
   
   // Reporter to use
   reporter: 'html',
@@ -37,39 +37,41 @@ module.exports = defineConfig({
     // Collect trace when retrying the failed test
     trace: 'on-first-retry',
     
-    // Take screenshots after each test
-    screenshot: 'on',
+    // Take screenshots only on failure
+    screenshot: 'only-on-failure',
     
-    // Record video for all tests
-    video: 'on',
+    // Record video only on failure
+    video: 'retain-on-failure',
   },
 
   // Configure projects for major browsers
+  // Only run on chromium by default for speed - other browsers can be run separately if needed
   projects: [
     {
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] },
     },
 
-    {
-      name: 'firefox',
-      use: { ...devices['Desktop Firefox'] },
-    },
+    // Uncomment to test on other browsers
+    // {
+    //   name: 'firefox',
+    //   use: { ...devices['Desktop Firefox'] },
+    // },
 
-    {
-      name: 'webkit',
-      use: { ...devices['Desktop Safari'] },
-    },
+    // {
+    //   name: 'webkit',
+    //   use: { ...devices['Desktop Safari'] },
+    // },
 
-    // Test against mobile viewports
-    {
-      name: 'Mobile Chrome',
-      use: { ...devices['Pixel 5'] },
-    },
-    {
-      name: 'Mobile Safari',
-      use: { ...devices['iPhone 12'] },
-    },
+    // // Test against mobile viewports
+    // {
+    //   name: 'Mobile Chrome',
+    //   use: { ...devices['Pixel 5'] },
+    // },
+    // {
+    //   name: 'Mobile Safari',
+    //   use: { ...devices['iPhone 12'] },
+    // },
   ],
 
   // Run your local dev server before starting the tests

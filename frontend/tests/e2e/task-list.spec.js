@@ -35,10 +35,10 @@ test.describe('Task List', () => {
     
     await page.goto('/');
     
-    // Check for loading state
+    // Check for loading state (translated text)
     const loading = page.locator('.loading');
     await expect(loading).toBeVisible();
-    await expect(loading).toContainText('Loading tasks...');
+    await expect(loading).toContainText('Loading...');
   });
 
   test('should display empty state when no tasks', async ({ page }) => {
@@ -54,8 +54,8 @@ test.describe('Task List', () => {
     await page.goto('/');
     await page.waitForSelector('.tasks');
     
-    // Check for empty message
-    await expect(page.locator('.tasks p')).toContainText('No tasks yet. Create your first task!');
+    // Check for empty message (translated text)
+    await expect(page.locator('.tasks')).toContainText('No tasks available');
   });
 
   test('should display list of tasks', async ({ page }) => {
@@ -116,7 +116,8 @@ test.describe('Task List', () => {
     
     // Check user info
     await expect(page.locator('.user-info')).toContainText('Welcome, Test User');
-    await expect(page.locator('.user-info button')).toContainText('Logout');
+    // Check specifically for logout button (not language buttons)
+    await expect(page.getByRole('button', { name: 'Logout' })).toBeVisible();
   });
 
   test('should show all task metadata', async ({ page }) => {

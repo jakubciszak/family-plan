@@ -87,8 +87,8 @@ test.describe('Bonus Rules Management', () => {
       // Wait for bonus rules container to appear
       await page.waitForSelector('.bonus-rules-container', { timeout: 5000 });
       
-      // Check that we're on the bonus rules page
-      await expect(page.locator('h2')).toContainText('Bonus Points Rules');
+      // Check that we're on the bonus rules page (translated text)
+      await expect(page.locator('h2')).toContainText('Bonus Rules');
       await expect(page.locator('.bonus-rules-container')).toBeVisible();
     });
     
