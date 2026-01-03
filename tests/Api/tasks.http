@@ -1,0 +1,108 @@
+### Task Management API Tests
+### Base URL
+@baseUrl = http://localhost:8080
+@contentType = application/json
+
+### Variables - Update these with real values
+@taskId = 
+@userId = 
+@adminId = 
+
+###
+### List All Tasks
+GET {{baseUrl}}/api/tasks
+Content-Type: {{contentType}}
+
+###
+### Create a New Task - Daily
+POST {{baseUrl}}/api/tasks
+Content-Type: {{contentType}}
+
+{
+  "name": "Clean the kitchen",
+  "description": "Wash dishes and mop floor",
+  "points": 50,
+  "frequency": "daily"
+}
+
+###
+### Create a New Task - Weekly
+POST {{baseUrl}}/api/tasks
+Content-Type: {{contentType}}
+
+{
+  "name": "Vacuum the house",
+  "description": "Vacuum all rooms including stairs",
+  "points": 100,
+  "frequency": "weekly"
+}
+
+###
+### Create a New Task - Once
+POST {{baseUrl}}/api/tasks
+Content-Type: {{contentType}}
+
+{
+  "name": "Organize garage",
+  "description": "Sort and organize items in the garage",
+  "points": 200,
+  "frequency": "once"
+}
+
+###
+### Create a New Task - Monthly
+POST {{baseUrl}}/api/tasks
+Content-Type: {{contentType}}
+
+{
+  "name": "Deep clean bathroom",
+  "description": "Clean tiles, grout, and all surfaces",
+  "points": 150,
+  "frequency": "monthly"
+}
+
+###
+### Get Task by ID (replace {taskId} with actual UUID)
+GET {{baseUrl}}/api/tasks/{{taskId}}
+Content-Type: {{contentType}}
+
+###
+### Assign Task to User (replace {taskId} and {userId} with actual UUIDs)
+POST {{baseUrl}}/api/tasks/{{taskId}}/assign
+Content-Type: {{contentType}}
+
+{
+  "userId": "{{userId}}"
+}
+
+###
+### Complete Task (replace {taskId} and {userId} with actual UUIDs)
+POST {{baseUrl}}/api/tasks/{{taskId}}/complete
+Content-Type: {{contentType}}
+
+{
+  "userId": "{{userId}}"
+}
+
+###
+### Approve Task (replace {taskId} and {adminId} with actual UUIDs)
+POST {{baseUrl}}/api/tasks/{{taskId}}/approve
+Content-Type: {{contentType}}
+
+{
+  "adminId": "{{adminId}}"
+}
+
+###
+### Get Task by ID - Not Found (should return 404)
+GET {{baseUrl}}/api/tasks/00000000-0000-0000-0000-000000000000
+Content-Type: {{contentType}}
+
+###
+### Assign Task - Invalid User ID (should return 404)
+POST {{baseUrl}}/api/tasks/{{taskId}}/assign
+Content-Type: {{contentType}}
+
+{
+  "userId": "00000000-0000-0000-0000-000000000000"
+}

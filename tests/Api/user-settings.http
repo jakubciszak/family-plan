@@ -1,0 +1,84 @@
+### User Settings API Tests
+### Base URL
+@baseUrl = http://localhost:8080
+@contentType = application/json
+
+### Variables - Update with actual user ID
+@userId = 
+
+###
+### Get User Settings (replace {userId} with actual UUID)
+GET {{baseUrl}}/api/user-settings/{{userId}}
+Content-Type: {{contentType}}
+
+###
+### Update User Settings - Notification Preferences (PUT)
+PUT {{baseUrl}}/api/user-settings/{{userId}}
+Content-Type: {{contentType}}
+
+{
+  "preference_type": "notifications",
+  "options": {
+    "email_enabled": true,
+    "push_enabled": false,
+    "task_reminders": true,
+    "points_updates": true
+  }
+}
+
+###
+### Update User Settings - Theme Preferences (PUT)
+PUT {{baseUrl}}/api/user-settings/{{userId}}
+Content-Type: {{contentType}}
+
+{
+  "preference_type": "theme",
+  "options": {
+    "mode": "dark",
+    "color_scheme": "blue"
+  }
+}
+
+###
+### Update User Settings - Language Preferences (PATCH)
+PATCH {{baseUrl}}/api/user-settings/{{userId}}
+Content-Type: {{contentType}}
+
+{
+  "preference_type": "language",
+  "options": {
+    "locale": "pl",
+    "timezone": "Europe/Warsaw"
+  }
+}
+
+###
+### Update User Settings - Privacy Preferences (PATCH)
+PATCH {{baseUrl}}/api/user-settings/{{userId}}
+Content-Type: {{contentType}}
+
+{
+  "preference_type": "privacy",
+  "options": {
+    "profile_visible": true,
+    "show_points": false
+  }
+}
+
+###
+### Update User Settings - Missing Fields (should return 400)
+PUT {{baseUrl}}/api/user-settings/{{userId}}
+Content-Type: {{contentType}}
+
+{
+  "preference_type": "notifications"
+}
+
+###
+### Update User Settings - Invalid Format (should return 400)
+PUT {{baseUrl}}/api/user-settings/{{userId}}
+Content-Type: {{contentType}}
+
+{
+  "invalid_field": "value"
+}

@@ -1,0 +1,38 @@
+### Authentication API Tests
+### Base URL
+@baseUrl = http://localhost:8080
+@contentType = application/json
+
+### Variables - Update these with real values after creating users
+@userEmail = admin@familyplan.local
+@userPassword = admin123
+
+###
+### Login
+POST {{baseUrl}}/api/auth/login
+Content-Type: {{contentType}}
+
+{
+  "email": "{{userEmail}}",
+  "password": "{{userPassword}}"
+}
+
+###
+### Get Current User (requires authentication)
+GET {{baseUrl}}/api/auth/me
+Content-Type: {{contentType}}
+
+###
+### Logout
+POST {{baseUrl}}/api/auth/logout
+Content-Type: {{contentType}}
+
+###
+### Login - Invalid Credentials (should return 401)
+POST {{baseUrl}}/api/auth/login
+Content-Type: {{contentType}}
+
+{
+  "email": "invalid@example.com",
+  "password": "wrongpassword"
+}
