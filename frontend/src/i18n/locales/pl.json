@@ -1,0 +1,94 @@
+{
+  "app": {
+    "title": "Family Plan",
+    "welcome": "Witaj, {{name}}"
+  },
+  "nav": {
+    "tasks": "Zadania",
+    "bonusRules": "Zasady bonusowe"
+  },
+  "auth": {
+    "login": "Zaloguj",
+    "logout": "Wyloguj",
+    "email": "Email",
+    "password": "Hasło",
+    "loginSuccess": "Logowanie zakończone sukcesem",
+    "loginError": "Logowanie nie powiodło się. Sprawdź dane logowania."
+  },
+  "tasks": {
+    "title": "Zadania",
+    "create": "Utwórz zadanie",
+    "createNew": "Utwórz nowe zadanie",
+    "edit": "Edytuj zadanie",
+    "delete": "Usuń zadanie",
+    "complete": "Ukończ",
+    "approve": "Zatwierdź",
+    "reject": "Odrzuć",
+    "assign": "Przypisz",
+    "assignTo": "Przypisz do",
+    "unassign": "Usuń przypisanie",
+    "noTasks": "Brak dostępnych zadań",
+    "name": "Nazwa zadania",
+    "description": "Opis",
+    "points": "Punkty",
+    "frequency": "Częstotliwość",
+    "status": "Status",
+    "assignedTo": "Przypisane do",
+    "createdSuccess": "Zadanie utworzone pomyślnie",
+    "updatedSuccess": "Zadanie zaktualizowane pomyślnie",
+    "deletedSuccess": "Zadanie usunięte pomyślnie",
+    "completedSuccess": "Zadanie ukończone pomyślnie",
+    "approvedSuccess": "Zadanie zatwierdzone pomyślnie",
+    "rejectedSuccess": "Zadanie odrzucone pomyślnie",
+    "assignedSuccess": "Zadanie przypisane pomyślnie",
+    "statusPending": "Oczekujące",
+    "statusInProgress": "W trakcie",
+    "statusCompleted": "Ukończone",
+    "statusApproved": "Zatwierdzone",
+    "frequencyOnce": "Jednorazowo",
+    "frequencyDaily": "Codziennie",
+    "frequencyWeekly": "Co tydzień",
+    "frequencyMonthly": "Co miesiąc"
+  },
+  "bonusRules": {
+    "title": "Zasady bonusowe",
+    "create": "Utwórz zasadę bonusową",
+    "edit": "Edytuj zasadę bonusową",
+    "delete": "Usuń zasadę bonusową",
+    "noRules": "Brak dostępnych zasad bonusowych",
+    "name": "Nazwa zasady",
+    "type": "Typ zasady",
+    "value": "Wartość",
+    "createdSuccess": "Zasada bonusowa utworzona pomyślnie",
+    "updatedSuccess": "Zasada bonusowa zaktualizowana pomyślnie",
+    "deletedSuccess": "Zasada bonusowa usunięta pomyślnie"
+  },
+  "user": {
+    "points": "{{points}} punktów",
+    "role": "Rola",
+    "name": "Imię"
+  },
+  "common": {
+    "save": "Zapisz",
+    "cancel": "Anuluj",
+    "delete": "Usuń",
+    "edit": "Edytuj",
+    "create": "Utwórz",
+    "back": "Wróć",
+    "confirm": "Potwierdź",
+    "yes": "Tak",
+    "no": "Nie",
+    "loading": "Ładowanie...",
+    "error": "Wystąpił błąd",
+    "success": "Operacja zakończona sukcesem",
+    "submit": "Wyślij",
+    "close": "Zamknij"
+  },
+  "errors": {
+    "required": "To pole jest wymagane",
+    "invalidEmail": "Nieprawidłowy format email",
+    "minLength": "Minimalna długość to {{min}} znaków",
+    "maxLength": "Maksymalna długość to {{max}} znaków",
+    "generic": "Coś poszło nie tak. Spróbuj ponownie."
+  }
+}

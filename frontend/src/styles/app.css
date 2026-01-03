@@ -439,3 +439,32 @@ button:hover {
     padding: 2rem;
     color: #6b7280;
 }
+
+/* Language Switcher */
+.language-switcher {
+    display: flex;
+    gap: 0.25rem;
+    margin: 0 0.5rem;
+}
+
+.language-switcher button {
+    background-color: transparent;
+    color: white;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    padding: 0.4rem 0.8rem;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 0.875rem;
+    font-weight: 600;
+}
+
+.language-switcher button:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.5);
+}
+
+.language-switcher button.active {
+    background-color: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.7);
+}

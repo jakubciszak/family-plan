@@ -1,11 +1,14 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import TaskList from './pages/TaskList';
 import Login from './pages/Login';
 import BonusRulesManagement from './pages/BonusRulesManagement';
+import LanguageSwitcher from './components/LanguageSwitcher';
 import apiClient from './services/apiClient';
 import './styles/app.css';
 
 function App() {
+    const { t } = useTranslation();
     const [isAuthenticated, setIsAuthenticated] = React.useState(false);
     const [user, setUser] = React.useState(null);
     const [userPoints, setUserPoints] = React.useState(0);
@@ -63,27 +66,28 @@ function App() {
     return (
         <div className="app">
             <header className="app-header">
-                <h1>Family Plan</h1>
+                <h1>{t('app.title')}</h1>
                 <nav className="app-nav">
                     <button 
                         onClick={() => setCurrentPage('tasks')}
                         className={currentPage === 'tasks' ? 'nav-active' : ''}
                     >
-                        Tasks
+                        {t('nav.tasks')}
                     </button>
                     {user?.role === 'ROLE_ADMIN' && (
                         <button 
                             onClick={() => setCurrentPage('bonus-rules')}
                             className={currentPage === 'bonus-rules' ? 'nav-active' : ''}
                         >
-                            Bonus Rules
+                            {t('nav.bonusRules')}
                         </button>
                     )}
                 </nav>
                 <div className="user-info">
-                    <span>Welcome, {user?.name}</span>
-                    <span className="user-points">{userPoints} points</span>
-                    <button onClick={handleLogout}>Logout</button>
+                    <span>{t('app.welcome', { name: user?.name })}</span>
+                    <span className="user-points">{t('user.points', { points: userPoints })}</span>
+                    <LanguageSwitcher />
+                    <button onClick={handleLogout}>{t('auth.logout')}</button>
                 </div>
             </header>
             <main className="app-main">

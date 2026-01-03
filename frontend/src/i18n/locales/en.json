@@ -1,0 +1,94 @@
+{
+  "app": {
+    "title": "Family Plan",
+    "welcome": "Welcome, {{name}}"
+  },
+  "nav": {
+    "tasks": "Tasks",
+    "bonusRules": "Bonus Rules"
+  },
+  "auth": {
+    "login": "Login",
+    "logout": "Logout",
+    "email": "Email",
+    "password": "Password",
+    "loginSuccess": "Login successful",
+    "loginError": "Login failed. Please check your credentials."
+  },
+  "tasks": {
+    "title": "Tasks",
+    "create": "Create Task",
+    "createNew": "Create New Task",
+    "edit": "Edit Task",
+    "delete": "Delete Task",
+    "complete": "Complete",
+    "approve": "Approve",
+    "reject": "Reject",
+    "assign": "Assign",
+    "assignTo": "Assign to",
+    "unassign": "Unassign",
+    "noTasks": "No tasks available",
+    "name": "Task Name",
+    "description": "Description",
+    "points": "Points",
+    "frequency": "Frequency",
+    "status": "Status",
+    "assignedTo": "Assigned to",
+    "createdSuccess": "Task created successfully",
+    "updatedSuccess": "Task updated successfully",
+    "deletedSuccess": "Task deleted successfully",
+    "completedSuccess": "Task completed successfully",
+    "approvedSuccess": "Task approved successfully",
+    "rejectedSuccess": "Task rejected successfully",
+    "assignedSuccess": "Task assigned successfully",
+    "statusPending": "Pending",
+    "statusInProgress": "In Progress",
+    "statusCompleted": "Completed",
+    "statusApproved": "Approved",
+    "frequencyOnce": "Once",
+    "frequencyDaily": "Daily",
+    "frequencyWeekly": "Weekly",
+    "frequencyMonthly": "Monthly"
+  },
+  "bonusRules": {
+    "title": "Bonus Rules",
+    "create": "Create Bonus Rule",
+    "edit": "Edit Bonus Rule",
+    "delete": "Delete Bonus Rule",
+    "noRules": "No bonus rules available",
+    "name": "Rule Name",
+    "type": "Rule Type",
+    "value": "Value",
+    "createdSuccess": "Bonus rule created successfully",
+    "updatedSuccess": "Bonus rule updated successfully",
+    "deletedSuccess": "Bonus rule deleted successfully"
+  },
+  "user": {
+    "points": "{{points}} points",
+    "role": "Role",
+    "name": "Name"
+  },
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "create": "Create",
+    "back": "Back",
+    "confirm": "Confirm",
+    "yes": "Yes",
+    "no": "No",
+    "loading": "Loading...",
+    "error": "An error occurred",
+    "success": "Operation successful",
+    "submit": "Submit",
+    "close": "Close"
+  },
+  "errors": {
+    "required": "This field is required",
+    "invalidEmail": "Invalid email format",
+    "minLength": "Minimum length is {{min}} characters",
+    "maxLength": "Maximum length is {{max}} characters",
+    "generic": "Something went wrong. Please try again."
+  }
+}
