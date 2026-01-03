@@ -43,4 +43,13 @@ interface TaskExecutionRepositoryInterface
      * @return int
      */
     public function countApprovedInCurrentMonth(Uuid $userId): int;
+
+    /**
+     * Find approved executions for a specific user, task template and date
+     * @param Uuid $userId
+     * @param Uuid $taskTemplateId
+     * @param DateTimeImmutable $date
+     * @return TaskExecution[]
+     */
+    public function findApprovedByUserTemplateAndDate(Uuid $userId, Uuid $taskTemplateId, DateTimeImmutable $date): array;
 }

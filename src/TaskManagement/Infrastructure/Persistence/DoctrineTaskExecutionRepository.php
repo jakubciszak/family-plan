@@ -136,4 +136,26 @@ final class DoctrineTaskExecutionRepository implements TaskExecutionRepositoryIn
             ->getQuery()
             ->getSingleScalarResult();
     }
+
+    public function findApprovedByUserTemplateAndDate(Uuid $userId, Uuid $taskTemplateId, DateTimeImmutable $date): array
+    {
+        $startOfDay = $date->setTime(0, 0, 0);
+        $endOfDay = $date->setTime(23, 59, 59);
+
+        return $this->entityManager->getRepository(TaskExecution::class)
+            ->createQueryBuilder('te')
+            ->where('te.assignedUserId = :userId')
+            ->andWhere('te.taskTemplateId = :taskTemplateId')
+            ->andWhere('te.status = :status')
+            ->andWhere('te.scheduledFor >= :start')
+            ->andWhere('te.scheduledFor <= :end')
+            ->setParameter('userId', $userId->value())
+            ->setParameter('taskTemplateId', $taskTemplateId->value())
+            ->setParameter('status', ExecutionStatus::APPROVED->value)
+            ->setParameter('start', $startOfDay)
+            ->setParameter('end', $endOfDay)
+            ->orderBy('te.scheduledFor', 'DESC')
+            ->getQuery()
+            ->getResult();
+    }
 }

@@ -43,6 +43,9 @@ services:
     App\TaskManagement\Domain\Repository\BonusPointsRuleRepositoryInterface:
         class: App\TaskManagement\Infrastructure\Persistence\DoctrineBonusPointsRuleRepository
 
+    App\TaskManagement\Domain\Repository\StatusChangeRuleRepositoryInterface:
+        class: App\TaskManagement\Infrastructure\Persistence\DoctrineStatusChangeRuleRepository
+
     App\UserSettings\Domain\Repository\UserSettingsRepositoryInterface:
         class: App\UserSettings\Infrastructure\Persistence\DoctrineUserSettingsRepository
 
@@ -68,6 +71,11 @@ services:
             $queryBus: '@query.bus'
 
     App\Presentation\Api\BonusPointsRuleApiController:
+        arguments:
+            $commandBus: '@command.bus'
+            $queryBus: '@query.bus'
+
+    App\Presentation\Api\StatusChangeRuleApiController:
         arguments:
             $commandBus: '@command.bus'
             $queryBus: '@query.bus'

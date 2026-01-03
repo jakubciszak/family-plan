@@ -5,9 +5,7 @@
   },
   "nav": {
     "tasks": "Zadania",
-    "bonusRules": "Zasady bonusowe",
-    "statusChangeRules": "Reguły Zmian Statusów",
-    "settings": "Ustawienia"
+    "bonusRules": "Zasady bonusowe"
   },
   "auth": {
     "login": "Zaloguj",
@@ -70,20 +68,6 @@
     "role": "Rola",
     "name": "Imię"
   },
-  "settings": {
-    "title": "Ustawienia powiadomień",
-    "loading": "Ładowanie ustawień...",
-    "save": "Zapisz ustawienia",
-    "saving": "Zapisywanie...",
-    "save_success": "Ustawienia zapisane pomyślnie!",
-    "save_error": "Nie udało się zapisać ustawień",
-    "notification_channels": "Kanały powiadomień",
-    "channels_description": "Wybierz, jak chcesz otrzymywać powiadomienia",
-    "channel_email": "Email",
-    "channel_email_desc": "Otrzymuj powiadomienia przez email",
-    "channel_sms": "SMS",
-    "channel_sms_desc": "Otrzymuj powiadomienia przez wiadomości tekstowe"
-  },
   "common": {
     "save": "Zapisz",
     "cancel": "Anuluj",
@@ -106,32 +90,5 @@
     "minLength": "Minimalna długość to {{min}} znaków",
     "maxLength": "Maksymalna długość to {{max}} znaków",
     "generic": "Coś poszło nie tak. Spróbuj ponownie."
-  },
-  "statusChangeRules": {
-    "title": "Reguły Zmian Statusów",
-    "create": "Utwórz Regułę",
-    "edit": "Edytuj Regułę",
-    "noRules": "Brak zdefiniowanych reguł zmian statusów",
-    "name": "Nazwa Reguły",
-    "namePlaceholder": "np., Przerwa Po Wykonaniu",
-    "description": "Opis",
-    "descriptionPlaceholder": "Opisz kiedy ta reguła powinna zapobiegać przypisaniu zadania",
-    "conditionType": "Typ Warunku",
-    "taskTemplate": "Szablon Zadania",
-    "selectTaskTemplate": "Wybierz szablon zadania...",
-    "appliesTo": "Dotyczy",
-    "requiredTask": "Wymagane Zadanie",
-    "selectRequiredTask": "Wybierz wymagane zadanie...",
-    "requiredTaskHint": "To zadanie musi być wykonane dzisiaj zanim przypisanie będzie możliwe",
-    "cooldownDays": "Dni Przerwy",
-    "cooldownDaysHint": "Minimalna liczba dni jaka musi upłynąć od ostatniego wykonania",
-    "conditionTypes": {
-      "otherTaskCompletedToday": "Inne Zadanie Wykonane Dzisiaj",
-      "lastExecutionCooldown": "Przerwa Od Ostatniego Wykonania"
-    },
-    "descriptions": {
-      "otherTaskCompletedToday": "Wymaga wykonania zadania {{taskName}} dzisiaj",
-      "lastExecutionCooldown": "Minimum {{days}} dni musi upłynąć od ostatniego wykonania"
-    }
   }
 }
