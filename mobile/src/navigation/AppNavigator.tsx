@@ -5,12 +5,14 @@ import LoginScreen from '../screens/LoginScreen';
 import HomeScreen from '../screens/HomeScreen';
 import TaskListScreen from '../screens/TaskListScreen';
 import BonusRulesScreen from '../screens/BonusRulesScreen';
+import SettingsScreen from '../screens/SettingsScreen';
 
 export type RootStackParamList = {
   Login: undefined;
   Home: undefined;
   TaskList: undefined;
   BonusRules: undefined;
+  Settings: { userId: string };
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -49,6 +51,11 @@ const AppNavigator: React.FC = () => {
           name="BonusRules" 
           component={BonusRulesScreen}
           options={{ title: 'Bonus Rules' }}
+        />
+        <Stack.Screen 
+          name="Settings" 
+          component={SettingsScreen}
+          options={{ title: 'Settings' }}
         />
       </Stack.Navigator>
     </NavigationContainer>

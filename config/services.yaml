@@ -43,6 +43,9 @@ services:
     App\TaskManagement\Domain\Repository\BonusPointsRuleRepositoryInterface:
         class: App\TaskManagement\Infrastructure\Persistence\DoctrineBonusPointsRuleRepository
 
+    App\UserSettings\Domain\Repository\UserSettingsRepositoryInterface:
+        class: App\UserSettings\Infrastructure\Persistence\DoctrineUserSettingsRepository
+
     # Policy implementations
     App\TaskManagement\Domain\Policy\TaskApprovalPolicyInterface:
         class: App\TaskManagement\Domain\Policy\AdminApprovalPolicy
@@ -75,6 +78,21 @@ services:
             $defaultLocale: '%kernel.default_locale%'
         tags:
             - { name: kernel.event_subscriber }
+
+    # Notification adapters
+    App\Notifications\Infrastructure\Adapter\EmailNotificationAdapter:
+        tags: ['notification.adapter']
+
+    App\Notifications\Infrastructure\Adapter\SmsNotificationAdapter:
+        tags: ['notification.adapter']
+
+    App\Notifications\Application\Handler\SendNotificationHandler:
+        arguments:
+            $adapters: !tagged_iterator notification.adapter
+
+    App\Notifications\Application\Service\NotificationFacade:
+        arguments:
+            $adapters: !tagged_iterator notification.adapter
 
     # add more service definitions when explicit configuration is needed
     # please note that last definitions always *replace* previous ones

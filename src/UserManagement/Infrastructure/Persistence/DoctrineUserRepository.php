@@ -43,6 +43,16 @@ final class DoctrineUserRepository implements UserRepositoryInterface
         return $this->entityManager->getRepository(User::class)->findAll();
     }
 
+    public function findAdmins(): array
+    {
+        return $this->entityManager->getRepository(User::class)
+            ->createQueryBuilder('u')
+            ->where('u.role = :role')
+            ->setParameter('role', 'admin')
+            ->getQuery()
+            ->getResult();
+    }
+
     public function delete(User $user): void
     {
         $this->entityManager->remove($user);
