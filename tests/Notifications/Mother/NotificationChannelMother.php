@@ -20,9 +20,8 @@ final class NotificationChannelMother
 
     public static function random(): NotificationChannel
     {
-        $channels = ['email', 'sms'];
-        $randomChannel = $channels[array_rand($channels)];
-        
-        return NotificationChannel::fromString($randomChannel);
+        return random_int(0, 1) === 0 
+            ? self::email() 
+            : self::sms();
     }
 }

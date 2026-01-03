@@ -20,7 +20,7 @@ final class RecipientMother
 
     public static function random(): Recipient
     {
-        return rand(0, 1) === 0 
+        return random_int(0, 1) === 0 
             ? self::email() 
             : self::phoneNumber();
     }
@@ -28,7 +28,7 @@ final class RecipientMother
     private static function randomEmail(): string
     {
         $domains = ['example.com', 'test.com', 'demo.com'];
-        $name = 'user' . rand(1000, 9999);
+        $name = 'user' . random_int(1000, 9999);
         $domain = $domains[array_rand($domains)];
         
         return "{$name}@{$domain}";
@@ -36,6 +36,6 @@ final class RecipientMother
 
     private static function randomPhoneNumber(): string
     {
-        return '+48' . rand(100000000, 999999999);
+        return '+48' . random_int(100000000, 999999999);
     }
 }
