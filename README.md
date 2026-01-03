@@ -1,10 +1,10 @@
 # 👨‍👩‍👧‍👦 Family Plan
 
-A modern web application for organizing family house works with children, built with **separated frontend and backend architecture**.
+A modern application for organizing family house works with children, built with **separated frontend, mobile, and backend architecture**.
 
 ## 🏗️ Architecture Overview
 
-Family Plan now consists of two completely independent applications:
+Family Plan consists of three independent applications:
 
 ### 🎨 Frontend (React SPA)
 - **Location**: `/frontend` directory
@@ -12,6 +12,13 @@ Family Plan now consists of two completely independent applications:
 - **Deployment**: Standalone container with Nginx
 - **Communication**: REST API calls to backend
 - **Port**: 3000 (development), 80 (production container)
+
+### 📱 Mobile (React Native)
+- **Location**: `/mobile` directory
+- **Technology**: React Native 0.76, TypeScript
+- **Authentication**: JWT-based authentication
+- **Platforms**: iOS and Android
+- **Communication**: REST API calls to backend
 
 ### ⚙️ Backend (Symfony API)
 - **Location**: Root directory (main repository)
@@ -22,19 +29,21 @@ Family Plan now consists of two completely independent applications:
 
 See detailed documentation:
 - [Frontend README](frontend/README.md) - React application setup and development
+- [Mobile README](mobile/README.md) - React Native mobile app setup and development
 - [Backend Documentation](BACKEND.md) - Symfony API architecture and structure
 
 ## 🚀 Features
 
 - **Separated Architecture**: Independent frontend and backend applications
 - **Multi-Language Support**: Full internationalization (i18n) with English and Polish translations
+- **Multi-Platform**: Web (React SPA) and Mobile (React Native for iOS/Android)
 - **Task Management**: Create tasks with points, frequency, and descriptions
 - **User Management**: Create user and admin accounts with role-based permissions
-- **Security & Authentication**: JWT/Session-based authentication via REST API
+- **Security & Authentication**: JWT authentication for mobile, session-based for web
 - **Approval Workflow**: Admins can review and approve completed tasks
 - **Points System**: Reward system with configurable points (0-1000) per task
 - **Frequency-Based Tasks**: Support for Once, Daily, Weekly, and Monthly recurring tasks
-- **Modern React SPA**: Single Page Application with responsive design
+- **Bonus Rules**: Configurable bonus points for consecutive days or monthly task counts
 - **RESTful API**: Complete REST API for all operations
 
 ## 🌍 Multi-Language Support
