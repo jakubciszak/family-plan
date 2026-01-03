@@ -40,6 +40,14 @@ final class InMemoryUserRepository implements UserRepositoryInterface
         return array_values($this->users);
     }
 
+    public function findAdmins(): array
+    {
+        return array_values(array_filter(
+            $this->users,
+            fn(User $user) => $user->role()->value === 'admin'
+        ));
+    }
+
     public function delete(User $user): void
     {
         unset($this->users[$user->id()->value()]);
