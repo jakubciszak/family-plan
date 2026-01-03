@@ -27,6 +27,7 @@ See detailed documentation:
 ## 🚀 Features
 
 - **Separated Architecture**: Independent frontend and backend applications
+- **Multi-Language Support**: Full internationalization (i18n) with English and Polish translations
 - **Task Management**: Create tasks with points, frequency, and descriptions
 - **User Management**: Create user and admin accounts with role-based permissions
 - **Security & Authentication**: JWT/Session-based authentication via REST API
@@ -35,6 +36,39 @@ See detailed documentation:
 - **Frequency-Based Tasks**: Support for Once, Daily, Weekly, and Monthly recurring tasks
 - **Modern React SPA**: Single Page Application with responsive design
 - **RESTful API**: Complete REST API for all operations
+
+## 🌍 Multi-Language Support
+
+Family Plan fully supports internationalization (i18n) in both frontend and backend:
+
+### Supported Languages
+- 🇬🇧 **English** (default)
+- 🇵🇱 **Polish**
+
+### Frontend (React)
+- Uses **react-i18next** for translations
+- Language detection from browser settings
+- Language switcher in the header for easy switching between languages
+- Persistent language selection (stored in localStorage)
+- Translation files located in `frontend/src/i18n/locales/`
+
+### Backend (Symfony)
+- Uses **Symfony Translation** component
+- Automatic locale detection from `Accept-Language` HTTP header
+- Translation files located in `translations/`
+- Fallback to English for missing translations
+
+### Adding New Languages
+To add a new language:
+
+**Frontend:**
+1. Create a new translation file in `frontend/src/i18n/locales/` (e.g., `de.json`)
+2. Add the language to the i18n config in `frontend/src/i18n/config.js`
+3. Update the LanguageSwitcher component to include the new language button
+
+**Backend:**
+1. Create a new translation file in `translations/` (e.g., `messages.de.yaml`)
+2. Update the LocaleListener to support the new locale in `src/Shared/Infrastructure/EventListener/LocaleListener.php`
 
 ## 🏗️ Architecture
 
