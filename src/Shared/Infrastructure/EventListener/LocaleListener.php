@@ -10,6 +10,8 @@ use Symfony\Component\HttpKernel\KernelEvents;
 
 class LocaleListener implements EventSubscriberInterface
 {
+    private const SUPPORTED_LOCALES = ['en', 'pl'];
+    
     private string $defaultLocale;
 
     public function __construct(string $defaultLocale = 'en')
@@ -23,7 +25,7 @@ class LocaleListener implements EventSubscriberInterface
 
         // Try to get locale from Accept-Language header
         if (!$request->attributes->get('_locale')) {
-            $preferredLanguage = $request->getPreferredLanguage(['en', 'pl']);
+            $preferredLanguage = $request->getPreferredLanguage(self::SUPPORTED_LOCALES);
             $locale = $preferredLanguage ?: $this->defaultLocale;
             $request->setLocale($locale);
         }
