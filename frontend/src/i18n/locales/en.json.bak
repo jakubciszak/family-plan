@@ -5,8 +5,7 @@
   },
   "nav": {
     "tasks": "Tasks",
-    "bonusRules": "Bonus Rules",
-    "statusChangeRules": "Status Change Rules"
+    "bonusRules": "Bonus Rules"
   },
   "auth": {
     "login": "Login",
@@ -91,32 +90,5 @@
     "minLength": "Minimum length is {{min}} characters",
     "maxLength": "Maximum length is {{max}} characters",
     "generic": "Something went wrong. Please try again."
-  },
-  "statusChangeRules": {
-    "title": "Status Change Rules",
-    "create": "Create Rule",
-    "edit": "Edit Rule",
-    "noRules": "No status change rules defined",
-    "name": "Rule Name",
-    "namePlaceholder": "e.g., Cooldown After Completion",
-    "description": "Description",
-    "descriptionPlaceholder": "Describe when this rule should prevent task assignment",
-    "conditionType": "Condition Type",
-    "taskTemplate": "Task Template",
-    "selectTaskTemplate": "Select task template...",
-    "appliesTo": "Applies to",
-    "requiredTask": "Required Task",
-    "selectRequiredTask": "Select required task...",
-    "requiredTaskHint": "This task must be completed today before assignment is allowed",
-    "cooldownDays": "Cooldown Days",
-    "cooldownDaysHint": "Minimum days that must pass since last execution",
-    "conditionTypes": {
-      "otherTaskCompletedToday": "Other Task Completed Today",
-      "lastExecutionCooldown": "Last Execution Cooldown"
-    },
-    "descriptions": {
-      "otherTaskCompletedToday": "Requires {{taskName}} to be completed today",
-      "lastExecutionCooldown": "Minimum {{days}} days must pass since last execution"
-    }
   }
 }

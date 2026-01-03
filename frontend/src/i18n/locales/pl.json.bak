@@ -5,8 +5,7 @@
   },
   "nav": {
     "tasks": "Zadania",
-    "bonusRules": "Zasady bonusowe",
-    "statusChangeRules": "Reguły Zmian Statusów"
+    "bonusRules": "Zasady bonusowe"
   },
   "auth": {
     "login": "Zaloguj",
@@ -91,32 +90,5 @@
     "minLength": "Minimalna długość to {{min}} znaków",
     "maxLength": "Maksymalna długość to {{max}} znaków",
     "generic": "Coś poszło nie tak. Spróbuj ponownie."
-  },
-  "statusChangeRules": {
-    "title": "Reguły Zmian Statusów",
-    "create": "Utwórz Regułę",
-    "edit": "Edytuj Regułę",
-    "noRules": "Brak zdefiniowanych reguł zmian statusów",
-    "name": "Nazwa Reguły",
-    "namePlaceholder": "np., Przerwa Po Wykonaniu",
-    "description": "Opis",
-    "descriptionPlaceholder": "Opisz kiedy ta reguła powinna zapobiegać przypisaniu zadania",
-    "conditionType": "Typ Warunku",
-    "taskTemplate": "Szablon Zadania",
-    "selectTaskTemplate": "Wybierz szablon zadania...",
-    "appliesTo": "Dotyczy",
-    "requiredTask": "Wymagane Zadanie",
-    "selectRequiredTask": "Wybierz wymagane zadanie...",
-    "requiredTaskHint": "To zadanie musi być wykonane dzisiaj zanim przypisanie będzie możliwe",
-    "cooldownDays": "Dni Przerwy",
-    "cooldownDaysHint": "Minimalna liczba dni jaka musi upłynąć od ostatniego wykonania",
-    "conditionTypes": {
-      "otherTaskCompletedToday": "Inne Zadanie Wykonane Dzisiaj",
-      "lastExecutionCooldown": "Przerwa Od Ostatniego Wykonania"
-    },
-    "descriptions": {
-      "otherTaskCompletedToday": "Wymaga wykonania zadania {{taskName}} dzisiaj",
-      "lastExecutionCooldown": "Minimum {{days}} dni musi upłynąć od ostatniego wykonania"
-    }
   }
 }

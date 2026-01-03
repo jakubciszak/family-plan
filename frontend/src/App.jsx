@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import TaskList from './pages/TaskList';
 import Login from './pages/Login';
 import BonusRulesManagement from './pages/BonusRulesManagement';
+import StatusChangeRulesManagement from './pages/StatusChangeRulesManagement';
 import LanguageSwitcher from './components/LanguageSwitcher';
 import apiClient from './services/apiClient';
 import './styles/app.css';
@@ -75,12 +76,20 @@ function App() {
                         {t('nav.tasks')}
                     </button>
                     {user?.role === 'ROLE_ADMIN' && (
-                        <button 
-                            onClick={() => setCurrentPage('bonus-rules')}
-                            className={currentPage === 'bonus-rules' ? 'nav-active' : ''}
-                        >
-                            {t('nav.bonusRules')}
-                        </button>
+                        <>
+                            <button 
+                                onClick={() => setCurrentPage('bonus-rules')}
+                                className={currentPage === 'bonus-rules' ? 'nav-active' : ''}
+                            >
+                                {t('nav.bonusRules')}
+                            </button>
+                            <button 
+                                onClick={() => setCurrentPage('status-change-rules')}
+                                className={currentPage === 'status-change-rules' ? 'nav-active' : ''}
+                            >
+                                {t('nav.statusChangeRules')}
+                            </button>
+                        </>
                     )}
                 </nav>
                 <div className="user-info">
@@ -93,6 +102,7 @@ function App() {
             <main className="app-main">
                 {currentPage === 'tasks' && <TaskList user={user} />}
                 {currentPage === 'bonus-rules' && <BonusRulesManagement user={user} />}
+                {currentPage === 'status-change-rules' && <StatusChangeRulesManagement user={user} />}
             </main>
         </div>
     );
