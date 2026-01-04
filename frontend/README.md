@@ -207,7 +207,7 @@ npm start
 
 The application will be available at http://localhost:3000 with hot reload.
 
-**Note:** You need the backend API running (either via Docker or standalone) for the frontend to work.
+**Note:** You need the backend API running (either via Docker or standalone) for authentication, data loading, and all API-dependent features to work. The frontend will start and display the UI without the backend, but you won't be able to log in or fetch any data.
 
 ## Configuration
 

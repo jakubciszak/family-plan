@@ -192,7 +192,7 @@ docker compose exec frontend npm install
 - Frontend (React SPA): http://localhost:3000 (with hot reload)
 - Backend API: http://localhost:8080/api
 - API Documentation: http://localhost:8080/api-docs.html
-- Database: localhost:5432 (PostgreSQL)
+- Database: localhost:5432 (PostgreSQL, exposed via compose.override.yaml)
 - Mailpit (email testing): http://localhost:8025
 
 **Default Credentials:**
@@ -417,7 +417,7 @@ The project uses different Docker Compose files for different environments:
 - **Ports:**
   - Frontend: 3000
   - Backend API: 8080
-  - Database: 5432 (exposed)
+  - Database: 5432 (exposed via compose.override.yaml for host access)
   - Mailpit Web: 8025
 
 ### `compose.override.yaml` - Development Overrides
