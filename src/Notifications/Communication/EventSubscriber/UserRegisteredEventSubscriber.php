@@ -14,7 +14,8 @@ use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 final readonly class UserRegisteredEventSubscriber implements EventSubscriberInterface
 {
     public function __construct(
-        private NotificationOrchestrator $notificationOrchestrator
+        private NotificationOrchestrator $notificationOrchestrator,
+        private string $appUrl
     ) {
     }
 
@@ -29,7 +30,7 @@ final readonly class UserRegisteredEventSubscriber implements EventSubscriberInt
     {
         $activationUrl = sprintf(
             '%s/api/auth/activate/%s',
-            $_ENV['APP_URL'] ?? 'http://localhost:8080',
+            $this->appUrl,
             $event->activationToken()
         );
 

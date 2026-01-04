@@ -87,6 +87,11 @@ services:
         tags:
             - { name: kernel.event_subscriber }
 
+    # User Registration Event Subscriber
+    App\Notifications\Communication\EventSubscriber\UserRegisteredEventSubscriber:
+        arguments:
+            $appUrl: '%env(APP_URL)%'
+
     # Notification adapters
     App\Notifications\Infrastructure\Adapter\EmailNotificationAdapter:
         arguments:

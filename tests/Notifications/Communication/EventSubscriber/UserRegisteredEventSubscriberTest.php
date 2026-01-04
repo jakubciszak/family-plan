@@ -41,6 +41,7 @@ class UserRegisteredEventSubscriberTest extends TestCase
     public function testOnUserRegisteredSendsActivationEmail(): void
     {
         // Given
+        $appUrl = 'http://localhost:8080';
         $userRepo = new InMemoryUserRepository();
         $settingsRepo = $this->createStub(\App\UserSettings\Domain\Repository\UserSettingsRepositoryInterface::class);
         $orchestrator = new NotificationOrchestrator($this->facade, $userRepo, $settingsRepo);
@@ -53,7 +54,7 @@ class UserRegisteredEventSubscriberTest extends TestCase
             new \DateTimeImmutable()
         );
 
-        $subscriber = new UserRegisteredEventSubscriber($orchestrator);
+        $subscriber = new UserRegisteredEventSubscriber($orchestrator, $appUrl);
 
         // When
         $subscriber->onUserRegistered($event);
@@ -69,7 +70,7 @@ class UserRegisteredEventSubscriberTest extends TestCase
     public function testActivationEmailContainsActivationLink(): void
     {
         // Given
-        $_ENV['APP_URL'] = 'http://localhost:8080';
+        $appUrl = 'http://localhost:8080';
         
         $userRepo = new InMemoryUserRepository();
         $settingsRepo = $this->createStub(\App\UserSettings\Domain\Repository\UserSettingsRepositoryInterface::class);
@@ -84,7 +85,7 @@ class UserRegisteredEventSubscriberTest extends TestCase
             new \DateTimeImmutable()
         );
 
-        $subscriber = new UserRegisteredEventSubscriber($orchestrator);
+        $subscriber = new UserRegisteredEventSubscriber($orchestrator, $appUrl);
 
         // When
         $subscriber->onUserRegistered($event);
@@ -102,6 +103,7 @@ class UserRegisteredEventSubscriberTest extends TestCase
     public function testActivationEmailUsesCorrectRecipient(): void
     {
         // Given
+        $appUrl = 'http://localhost:8080';
         $userRepo = new InMemoryUserRepository();
         $settingsRepo = $this->createStub(\App\UserSettings\Domain\Repository\UserSettingsRepositoryInterface::class);
         $orchestrator = new NotificationOrchestrator($this->facade, $userRepo, $settingsRepo);
@@ -115,7 +117,7 @@ class UserRegisteredEventSubscriberTest extends TestCase
             new \DateTimeImmutable()
         );
 
-        $subscriber = new UserRegisteredEventSubscriber($orchestrator);
+        $subscriber = new UserRegisteredEventSubscriber($orchestrator, $appUrl);
 
         // When
         $subscriber->onUserRegistered($event);
