@@ -4,9 +4,9 @@
 @contentType = application/json
 
 ### Variables - Update these with real values
-@teamId = 
-@userId = 
-@invitationToken = 
+@teamId = 00000000-0000-0000-0000-000000000000
+@userId = 00000000-0000-0000-0000-000000000000
+@invitationToken = example-token-here
 
 ###
 ### List All Teams for Current User
@@ -155,7 +155,7 @@ Content-Type: {{contentType}}
 
 ### 2. Save the teamId from the response above and use it below
 ### 3. Invite a member
-# POST {{baseUrl}}/api/teams/{teamId-from-step-1}/invite
+# POST {{baseUrl}}/api/teams/{{teamId}}/invite
 # {
 #   "email": "testmember@example.com",
 #   "role": "member"
@@ -165,7 +165,7 @@ Content-Type: {{contentType}}
 # GET {{baseUrl}}/api/teams/invitations
 
 ### 5. Accept invitation (use token from step 4)
-# POST {{baseUrl}}/api/teams/invitations/{token-from-step-4}/accept
+# POST {{baseUrl}}/api/teams/invitations/{{invitationToken}}/accept
 
 ### 6. Verify team members
-# GET {{baseUrl}}/api/teams/{teamId-from-step-1}/members
+# GET {{baseUrl}}/api/teams/{{teamId}}/members
