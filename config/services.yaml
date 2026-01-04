@@ -84,7 +84,12 @@ services:
             $commandBus: '@command.bus'
             $queryBus: '@query.bus'
 
-    App\Presentation\Api\StatusChangeRuleApiController:
+    App\StatusChangeRuleApiController:
+        arguments:
+            $commandBus: '@command.bus'
+            $queryBus: '@query.bus'
+
+    App\Presentation\Api\TeamApiController:
         arguments:
             $commandBus: '@command.bus'
             $queryBus: '@query.bus'

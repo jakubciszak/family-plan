@@ -5,6 +5,7 @@
   },
   "nav": {
     "tasks": "Zadania",
+    "teams": "Zespoły",
     "bonusRules": "Zasady bonusowe",
     "statusChangeRules": "Reguły Zmian Statusów",
     "settings": "Ustawienia"
@@ -133,5 +134,32 @@
       "otherTaskCompletedToday": "Wymaga wykonania zadania {{taskName}} dzisiaj",
       "lastExecutionCooldown": "Minimum {{days}} dni musi upłynąć od ostatniego wykonania"
     }
+  },
+  "teams": {
+    "title": "Zarządzanie Zespołami",
+    "myTeams": "Moje Zespoły",
+    "createTeam": "Utwórz Zespół",
+    "create": "Utwórz",
+    "teamName": "Nazwa Zespołu",
+    "teamDescription": "Opis",
+    "members": "Członkowie",
+    "inviteMember": "Zaproś Członka",
+    "sendInvitation": "Wyślij Zaproszenie",
+    "email": "Email",
+    "role": "Rola",
+    "roleAdmin": "Administrator",
+    "roleMember": "Członek",
+    "remove": "Usuń",
+    "pendingInvitations": "Oczekujące Zaproszenia",
+    "acceptInvitation": "Akceptuj",
+    "invitationText": "Zostałeś zaproszony jako {{role}}",
+    "invitationSent": "Zaproszenie wysłane pomyślnie",
+    "invitationAccepted": "Zaproszenie zaakceptowane pomyślnie",
+    "confirmRemoveMember": "Czy na pewno chcesz usunąć tego członka?",
+    "errorLoadingTeams": "Błąd podczas ładowania zespołów",
+    "errorCreatingTeam": "Błąd podczas tworzenia zespołu",
+    "errorSendingInvitation": "Błąd podczas wysyłania zaproszenia",
+    "errorAcceptingInvitation": "Błąd podczas akceptowania zaproszenia",
+    "errorRemovingMember": "Błąd podczas usuwania członka"
   }
 }

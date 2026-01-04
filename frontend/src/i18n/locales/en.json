@@ -5,6 +5,7 @@
   },
   "nav": {
     "tasks": "Tasks",
+    "teams": "Teams",
     "bonusRules": "Bonus Rules",
     "statusChangeRules": "Status Change Rules",
     "settings": "Settings"
@@ -133,5 +134,32 @@
       "otherTaskCompletedToday": "Requires {{taskName}} to be completed today",
       "lastExecutionCooldown": "Minimum {{days}} days must pass since last execution"
     }
+  },
+  "teams": {
+    "title": "Team Management",
+    "myTeams": "My Teams",
+    "createTeam": "Create Team",
+    "create": "Create",
+    "teamName": "Team Name",
+    "teamDescription": "Description",
+    "members": "Members",
+    "inviteMember": "Invite Member",
+    "sendInvitation": "Send Invitation",
+    "email": "Email",
+    "role": "Role",
+    "roleAdmin": "Admin",
+    "roleMember": "Member",
+    "remove": "Remove",
+    "pendingInvitations": "Pending Invitations",
+    "acceptInvitation": "Accept",
+    "invitationText": "You've been invited as {{role}}",
+    "invitationSent": "Invitation sent successfully",
+    "invitationAccepted": "Invitation accepted successfully",
+    "confirmRemoveMember": "Are you sure you want to remove this member?",
+    "errorLoadingTeams": "Error loading teams",
+    "errorCreatingTeam": "Error creating team",
+    "errorSendingInvitation": "Error sending invitation",
+    "errorAcceptingInvitation": "Error accepting invitation",
+    "errorRemovingMember": "Error removing member"
   }
 }
