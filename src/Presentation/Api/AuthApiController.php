@@ -4,11 +4,18 @@ declare(strict_types=1);
 
 namespace App\Presentation\Api;
 
+use App\Presentation\Api\Dto\Auth\RegisterUserRequest;
+use App\Shared\Domain\ValueObject\Uuid;
+use App\UserManagement\Application\Command\RegisterUserCommand;
+use App\UserManagement\Application\Handler\RegisterUserHandler;
 use App\UserManagement\Domain\Entity\User;
+use App\UserManagement\Domain\Repository\UserRepositoryInterface;
+use App\UserManagement\Domain\ValueObject\Email;
 use OpenApi\Attributes as OA;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
 
@@ -16,6 +23,11 @@ use Symfony\Component\Security\Http\Attribute\CurrentUser;
 #[OA\Tag(name: 'Authentication')]
 class AuthApiController extends AbstractController
 {
+    public function __construct(
+        private readonly RegisterUserHandler $registerUserHandler,
+        private readonly UserRepositoryInterface $userRepository
+    ) {
+    }
     #[Route('/login', name: 'login', methods: ['POST'])]
     #[OA\Post(
         path: '/api/auth/login',
@@ -146,5 +158,137 @@ class AuthApiController extends AbstractController
         return $this->json([
             'message' => 'Logout successful'
         ]);
+    }
+
+    #[Route('/register', name: 'register', methods: ['POST'])]
+    #[OA\Post(
+        path: '/api/auth/register',
+        summary: 'Register new user',
+        tags: ['Authentication']
+    )]
+    #[OA\RequestBody(
+        required: true,
+        content: new OA\JsonContent(
+            required: ['name', 'email', 'password'],
+            properties: [
+                new OA\Property(property: 'name', type: 'string', example: 'John Doe'),
+                new OA\Property(property: 'email', type: 'string', format: 'email', example: 'john@example.com'),
+                new OA\Property(property: 'password', type: 'string', format: 'password', minLength: 8, example: 'securePassword123'),
+                new OA\Property(property: 'phoneNumber', type: 'string', nullable: true, example: '+48123456789')
+            ]
+        )
+    )]
+    #[OA\Response(
+        response: 201,
+        description: 'User registered successfully. Check your email for activation link.',
+        content: new OA\JsonContent(
+            properties: [
+                new OA\Property(property: 'message', type: 'string', example: 'User registered successfully. Check your email for activation link.'),
+                new OA\Property(property: 'id', type: 'string', format: 'uuid')
+            ]
+        )
+    )]
+    #[OA\Response(
+        response: 400,
+        description: 'Validation error or user already exists',
+        content: new OA\JsonContent(
+            properties: [
+                new OA\Property(property: 'error', type: 'string', example: 'User with this email already exists')
+            ]
+        )
+    )]
+    public function register(#[MapRequestPayload] RegisterUserRequest $request): JsonResponse
+    {
+        try {
+            $id = Uuid::generate()->value();
+            $command = new RegisterUserCommand(
+                $id,
+                $request->name,
+                $request->email,
+                $request->password,
+                $request->phoneNumber
+            );
+
+            ($this->registerUserHandler)($command);
+
+            return $this->json([
+                'message' => 'User registered successfully. Check your email for activation link.',
+                'id' => $id
+            ], Response::HTTP_CREATED);
+        } catch (\DomainException $e) {
+            return $this->json([
+                'error' => $e->getMessage()
+            ], Response::HTTP_BAD_REQUEST);
+        } catch (\Exception $e) {
+            return $this->json([
+                'error' => 'Registration failed: ' . $e->getMessage()
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    #[Route('/activate/{token}', name: 'activate', methods: ['GET', 'POST'])]
+    #[OA\Get(
+        path: '/api/auth/activate/{token}',
+        summary: 'Activate user account',
+        tags: ['Authentication']
+    )]
+    #[OA\Parameter(
+        name: 'token',
+        in: 'path',
+        required: true,
+        description: 'Activation token',
+        schema: new OA\Schema(type: 'string')
+    )]
+    #[OA\Response(
+        response: 200,
+        description: 'Account activated successfully',
+        content: new OA\JsonContent(
+            properties: [
+                new OA\Property(property: 'message', type: 'string', example: 'Account activated successfully')
+            ]
+        )
+    )]
+    #[OA\Response(
+        response: 400,
+        description: 'Invalid or expired activation token',
+        content: new OA\JsonContent(
+            properties: [
+                new OA\Property(property: 'error', type: 'string', example: 'Invalid activation token')
+            ]
+        )
+    )]
+    public function activate(string $token): JsonResponse
+    {
+        try {
+            // Find user by activation token
+            $user = $this->userRepository->findByActivationToken($token);
+
+            if ($user === null) {
+                return $this->json([
+                    'error' => 'Invalid activation token'
+                ], Response::HTTP_BAD_REQUEST);
+            }
+
+            if ($user->isActive()) {
+                return $this->json([
+                    'message' => 'Account is already active'
+                ], Response::HTTP_OK);
+            }
+
+            $user->activate($token);
+            $this->userRepository->save($user);
+
+            return $this->json([
+                'message' => 'Account activated successfully'
+            ], Response::HTTP_OK);
+        } catch (\DomainException $e) {
+            return $this->json([
+                'error' => $e->getMessage()
+            ], Response::HTTP_BAD_REQUEST);
+        } catch (\Exception $e) {
+            return $this->json([
+                'error' => 'Activation failed: ' . $e->getMessage()
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
     }
 }

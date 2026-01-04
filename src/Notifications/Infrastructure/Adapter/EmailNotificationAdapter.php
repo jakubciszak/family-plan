@@ -9,11 +9,16 @@ use App\Notifications\Domain\ValueObject\NotificationChannel;
 use App\Notifications\Domain\ValueObject\NotificationMessage;
 use App\Notifications\Domain\ValueObject\Recipient;
 use Psr\Log\LoggerInterface;
+use Symfony\Component\Mailer\MailerInterface;
+use Symfony\Component\Mime\Email;
 
 final readonly class EmailNotificationAdapter implements NotificationPortInterface
 {
     public function __construct(
-        private ?LoggerInterface $logger = null
+        private ?MailerInterface $mailer = null,
+        private ?LoggerInterface $logger = null,
+        private ?string $fromEmail = null,
+        private ?string $fromName = null
     ) {
     }
 
@@ -30,8 +35,7 @@ final readonly class EmailNotificationAdapter implements NotificationPortInterfa
             throw new \InvalidArgumentException('Recipient must be an email address for email channel');
         }
 
-        // In a real implementation, this would send an email using a mail service
-        // For now, we just log it
+        // Log the notification
         $this->logger?->info('Sending email notification', [
             'recipient' => $recipient->value(),
             'subject' => $message->subject(),
@@ -39,7 +43,23 @@ final readonly class EmailNotificationAdapter implements NotificationPortInterfa
             'parameters' => $message->additionalParameters(),
         ]);
 
-        // TODO: Implement actual email sending using Symfony Mailer or similar
+        // Send actual email if mailer is available
+        if ($this->mailer !== null) {
+            $email = (new Email())
+                ->to($recipient->value())
+                ->subject($message->subject() ?? 'Notification')
+                ->html($message->content());
+
+            // Add from address if available
+            if ($this->fromEmail !== null) {
+                $email->from($this->fromName 
+                    ? sprintf('%s <%s>', $this->fromName, $this->fromEmail)
+                    : $this->fromEmail
+                );
+            }
+
+            $this->mailer->send($email);
+        }
     }
 
     public function supports(NotificationChannel $channel): bool

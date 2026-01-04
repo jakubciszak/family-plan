@@ -38,6 +38,16 @@ final class DoctrineUserRepository implements UserRepositoryInterface
             ->getOneOrNullResult();
     }
 
+    public function findByActivationToken(string $token): ?User
+    {
+        return $this->entityManager->getRepository(User::class)
+            ->createQueryBuilder('u')
+            ->where('u.activationToken = :token')
+            ->setParameter('token', $token)
+            ->getQuery()
+            ->getOneOrNullResult();
+    }
+
     public function findAll(): array
     {
         return $this->entityManager->getRepository(User::class)->findAll();

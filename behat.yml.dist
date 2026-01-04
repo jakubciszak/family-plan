@@ -7,6 +7,12 @@ default:
                 - App\Tests\Acceptance\Context\TaskManagementContext
                 - App\Tests\Acceptance\Context\BonusPointsContext
                 - App\Tests\Acceptance\Context\StatusChangeRulesContext
+        
+        user_management:
+            paths:
+                - '%paths.base%/features/user_management'
+            contexts:
+                - App\Tests\Acceptance\Context\UserRegistrationContext
 
     extensions:
         FriendsOfBehat\SymfonyExtension:

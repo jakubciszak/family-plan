@@ -16,6 +16,8 @@ interface UserRepositoryInterface
 
     public function findByEmail(Email $email): ?User;
 
+    public function findByActivationToken(string $token): ?User;
+
     public function findAll(): array;
 
     public function findAdmins(): array;
