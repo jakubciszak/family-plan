@@ -274,15 +274,7 @@ class AuthApiController extends AbstractController
     {
         try {
             // Find user by activation token
-            $users = $this->userRepository->findAll();
-            $user = null;
-            
-            foreach ($users as $u) {
-                if ($u->activationToken() === $token) {
-                    $user = $u;
-                    break;
-                }
-            }
+            $user = $this->userRepository->findByActivationToken($token);
 
             if ($user === null) {
                 return $this->json([

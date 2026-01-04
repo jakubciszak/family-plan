@@ -16,7 +16,9 @@ final readonly class EmailNotificationAdapter implements NotificationPortInterfa
 {
     public function __construct(
         private ?MailerInterface $mailer = null,
-        private ?LoggerInterface $logger = null
+        private ?LoggerInterface $logger = null,
+        private ?string $fromEmail = null,
+        private ?string $fromName = null
     ) {
     }
 
@@ -47,6 +49,14 @@ final readonly class EmailNotificationAdapter implements NotificationPortInterfa
                 ->to($recipient->value())
                 ->subject($message->subject() ?? 'Notification')
                 ->html($message->content());
+
+            // Add from address if available
+            if ($this->fromEmail !== null) {
+                $email->from($this->fromName 
+                    ? sprintf('%s <%s>', $this->fromName, $this->fromEmail)
+                    : $this->fromEmail
+                );
+            }
 
             $this->mailer->send($email);
         }

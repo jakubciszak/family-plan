@@ -89,6 +89,9 @@ services:
 
     # Notification adapters
     App\Notifications\Infrastructure\Adapter\EmailNotificationAdapter:
+        arguments:
+            $fromEmail: '%env(MAILER_FROM_EMAIL)%'
+            $fromName: '%env(MAILER_FROM_NAME)%'
         tags: ['notification.adapter']
 
     App\Notifications\Infrastructure\Adapter\SmsNotificationAdapter:
