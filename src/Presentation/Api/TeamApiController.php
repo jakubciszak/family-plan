@@ -18,11 +18,15 @@ use App\TeamManagement\Domain\Entity\Team;
 use App\TeamManagement\Domain\Entity\TeamInvitation;
 use App\TeamManagement\Domain\Entity\TeamMember;
 use App\UserManagement\Domain\Repository\UserRepositoryInterface;
+use App\Presentation\Api\Dto\Team\CreateTeamRequest;
+use App\Presentation\Api\Dto\Team\UpdateTeamRequest;
+use App\Presentation\Api\Dto\Team\InviteToTeamRequest;
 use OpenApi\Attributes as OA;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
 use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Component\Messenger\Stamp\HandledStamp;
 use Symfony\Component\Routing\Attribute\Route;
@@ -110,10 +114,9 @@ class TeamApiController extends AbstractController
             ]
         )
     )]
-    public function create(Request $request): JsonResponse
-    {
-        $data = json_decode($request->getContent(), true);
-        
+    public function create(
+        #[MapRequestPayload] CreateTeamRequest $request
+    ): JsonResponse {
         $user = $this->getUser();
         $userId = $user->getUserIdentifier();
         $userEntity = $this->userRepository->findByEmail(\App\UserManagement\Domain\ValueObject\Email::fromString($userId));
@@ -122,15 +125,15 @@ class TeamApiController extends AbstractController
 
         $this->commandBus->dispatch(new CreateTeamCommand(
             $teamId,
-            $data['name'],
-            $data['description'] ?? null,
+            $request->name,
+            $request->description,
             $userEntity->id()->value()
         ));
 
         return $this->json([
             'id' => $teamId,
-            'name' => $data['name'],
-            'description' => $data['description'] ?? null
+            'name' => $request->name,
+            'description' => $request->description
         ], Response::HTTP_CREATED);
     }
 
@@ -158,18 +161,18 @@ class TeamApiController extends AbstractController
         )
     )]
     #[OA\Response(response: 200, description: 'Team updated successfully')]
-    public function update(string $id, Request $request): JsonResponse
-    {
-        $data = json_decode($request->getContent(), true);
-        
+    public function update(
+        string $id,
+        #[MapRequestPayload] UpdateTeamRequest $request
+    ): JsonResponse {
         $user = $this->getUser();
         $userId = $user->getUserIdentifier();
         $userEntity = $this->userRepository->findByEmail(\App\UserManagement\Domain\ValueObject\Email::fromString($userId));
 
         $this->commandBus->dispatch(new UpdateTeamCommand(
             $id,
-            $data['name'],
-            $data['description'] ?? null,
+            $request->name,
+            $request->description,
             $userEntity->id()->value()
         ));
 
@@ -245,10 +248,10 @@ class TeamApiController extends AbstractController
         )
     )]
     #[OA\Response(response: 201, description: 'Invitation sent successfully')]
-    public function invite(string $id, Request $request): JsonResponse
-    {
-        $data = json_decode($request->getContent(), true);
-        
+    public function invite(
+        string $id,
+        #[MapRequestPayload] InviteToTeamRequest $request
+    ): JsonResponse {
         $user = $this->getUser();
         $userId = $user->getUserIdentifier();
         $userEntity = $this->userRepository->findByEmail(\App\UserManagement\Domain\ValueObject\Email::fromString($userId));
@@ -258,8 +261,8 @@ class TeamApiController extends AbstractController
         $this->commandBus->dispatch(new InviteToTeamCommand(
             $invitationId,
             $id,
-            $data['email'],
-            $data['role'],
+            $request->email,
+            $request->role,
             $userEntity->id()->value()
         ));
 
