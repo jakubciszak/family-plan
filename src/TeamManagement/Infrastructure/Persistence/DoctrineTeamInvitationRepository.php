@@ -67,7 +67,7 @@ final class DoctrineTeamInvitationRepository implements TeamInvitationRepository
             ->where('ti.email = :email')
             ->andWhere('ti.status = :status')
             ->setParameter('email', $email->value())
-            ->setParameter('status', 'pending')
+            ->setParameter('status', \App\TeamManagement\Domain\ValueObject\InvitationStatus::pending()->value())
             ->orderBy('ti.createdAt', 'DESC')
             ->getQuery()
             ->getResult();

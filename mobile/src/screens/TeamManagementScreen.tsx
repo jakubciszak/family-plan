@@ -193,7 +193,10 @@ export default function TeamManagementScreen() {
       <View style={styles.memberInfo}>
         <Text style={styles.memberName}>{item.userName}</Text>
         <Text style={styles.memberEmail}>{item.userEmail}</Text>
-        <Text style={[styles.memberRole, styles[`role${item.role}`]]}>
+        <Text style={[
+          styles.memberRole, 
+          item.role === 'admin' ? styles.roleadmin : styles.rolemember
+        ]}>
           {item.role.toUpperCase()}
         </Text>
       </View>

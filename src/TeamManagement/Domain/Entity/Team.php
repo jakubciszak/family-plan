@@ -6,11 +6,7 @@ namespace App\TeamManagement\Domain\Entity;
 
 use App\Shared\Domain\ValueObject\Uuid;
 use App\TeamManagement\Domain\Event\TeamCreated;
-use App\TeamManagement\Domain\Event\MemberInvited;
-use App\TeamManagement\Domain\Event\MemberAdded;
-use App\TeamManagement\Domain\Event\MemberRemoved;
 use App\TeamManagement\Domain\ValueObject\TeamName;
-use App\TeamManagement\Domain\ValueObject\TeamRole;
 use DateTimeImmutable;
 use Doctrine\ORM\Mapping as ORM;
 
