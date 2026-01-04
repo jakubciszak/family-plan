@@ -42,6 +42,11 @@ final class TeamRole
         return $this->value === self::MEMBER;
     }
 
+    public function value(): string
+    {
+        return $this->value;
+    }
+
     private function validate(): void
     {
         if (!in_array($this->value, [self::ADMIN, self::MEMBER], true)) {

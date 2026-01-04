@@ -33,7 +33,7 @@ final class InvitationStatusType extends Type
         }
 
         if ($value instanceof InvitationStatus) {
-            return $value->value;
+            return $value->value();
         }
 
         return $value;

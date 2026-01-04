@@ -395,7 +395,7 @@ class TeamApiController extends AbstractController
             'userId' => $member->userId()->value(),
             'userName' => $user?->name() ?? 'Unknown',
             'userEmail' => $user?->email()->value() ?? 'Unknown',
-            'role' => $member->role()->value,
+            'role' => $member->role()->value(),
             'joinedAt' => $member->joinedAt()->format('c')
         ];
     }
@@ -405,9 +405,9 @@ class TeamApiController extends AbstractController
         return [
             'id' => $invitation->id()->value(),
             'teamId' => $invitation->teamId()->value(),
-            'role' => $invitation->role()->value,
+            'role' => $invitation->role()->value(),
             'token' => $invitation->token(),
-            'status' => $invitation->status()->value,
+            'status' => $invitation->status()->value(),
             'createdAt' => $invitation->createdAt()->format('c'),
             'expiresAt' => $invitation->expiresAt()?->format('c')
         ];

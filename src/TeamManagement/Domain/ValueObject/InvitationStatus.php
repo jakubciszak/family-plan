@@ -64,6 +64,11 @@ final class InvitationStatus
         return $this->value === self::EXPIRED;
     }
 
+    public function value(): string
+    {
+        return $this->value;
+    }
+
     private function validate(): void
     {
         if (!in_array($this->value, [self::PENDING, self::ACCEPTED, self::REJECTED, self::EXPIRED], true)) {

@@ -33,7 +33,7 @@ final class TeamRoleType extends Type
         }
 
         if ($value instanceof TeamRole) {
-            return $value->value;
+            return $value->value();
         }
 
         return $value;

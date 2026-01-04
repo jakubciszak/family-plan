@@ -6,7 +6,6 @@ namespace App\TeamManagement\Domain\Entity;
 
 use App\Shared\Domain\ValueObject\Uuid;
 use App\TeamManagement\Domain\ValueObject\TeamRole;
-use App\UserManagement\Domain\ValueObject\Email;
 use DateTimeImmutable;
 use Doctrine\ORM\Mapping as ORM;
 
