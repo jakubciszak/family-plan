@@ -52,7 +52,10 @@ class TaskTemplate
         private DateTimeImmutable $createdAt,
         
         #[ORM\Column(type: 'datetime_immutable', nullable: true)]
-        private ?DateTimeImmutable $updatedAt = null
+        private ?DateTimeImmutable $updatedAt = null,
+        
+        #[ORM\Column(type: 'uuid', nullable: true)]
+        private ?Uuid $teamId = null
     ) {
     }
 
@@ -127,6 +130,17 @@ class TaskTemplate
     public function assignedUserId(): ?Uuid
     {
         return $this->assignedUserId;
+    }
+
+    public function teamId(): ?Uuid
+    {
+        return $this->teamId;
+    }
+
+    public function assignToTeam(?Uuid $teamId): void
+    {
+        $this->teamId = $teamId;
+        $this->updatedAt = new DateTimeImmutable();
     }
 
     public function createdAt(): DateTimeImmutable
