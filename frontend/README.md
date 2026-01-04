@@ -157,7 +157,27 @@ The GitHub Actions workflow runs E2E tests on every push and pull request:
 
 ## Docker Development
 
-Build and run with Docker:
+### Using Docker Compose (Recommended)
+
+The easiest way to run the frontend in development mode with hot reload:
+
+```bash
+# From the repository root
+docker compose up -d
+
+# The frontend will be available at http://localhost:3000
+# with hot reload enabled
+```
+
+The Docker Compose setup includes:
+- Automatic dependency installation
+- Hot Module Replacement (HMR)
+- File watching with polling (works on all platforms)
+- API proxy to backend service
+
+### Manual Docker Build
+
+Build and run the development container manually:
 
 ```bash
 # Development
@@ -169,17 +189,25 @@ docker build -t family-plan-frontend:prod -f Dockerfile.prod .
 docker run -p 8080:80 family-plan-frontend:prod
 ```
 
-## Docker Compose
+## Standalone Development
 
-Use with the main docker-compose setup:
+Run the frontend without Docker:
 
 ```bash
-# Development
-docker compose up frontend
+# Install dependencies
+npm install
 
-# Production
-docker compose -f compose.yaml -f compose.prod.yaml up frontend
+# Configure API URL
+cp .env.example .env
+# Edit .env and set REACT_APP_API_URL=http://localhost:8080
+
+# Start development server
+npm start
 ```
+
+The application will be available at http://localhost:3000 with hot reload.
+
+**Note:** You need the backend API running (either via Docker or standalone) for the frontend to work.
 
 ## Configuration
 

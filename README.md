@@ -124,35 +124,100 @@ To add a new language:
   - Node.js 20+ & npm
   - PostgreSQL 16+
 
-## 🚀 Quick Start with Docker
+## ⚙️ Environment Configuration
 
-The easiest way to run the complete application:
+### Docker Development (Default)
+
+When using Docker Compose, no manual environment configuration is needed. The default values in `compose.yaml` work out of the box:
+
+- Frontend automatically connects to backend at `http://nginx:80` (internal Docker network)
+- Backend connects to database at `database:5432` (internal Docker network)
+- All services communicate via Docker's internal network
+
+### Standalone Development
+
+If running services outside Docker, you need to configure environment files:
+
+**Frontend Environment** (`frontend/.env`):
+```bash
+# Copy example file
+cd frontend
+cp .env.example .env
+
+# Edit .env
+REACT_APP_API_URL=http://localhost:8080
+```
+
+**Backend Environment** (`.env.local` or `.env.dev`):
+```bash
+# Copy and customize
+cp .env .env.local
+
+# Key settings:
+DATABASE_URL=postgresql://app:!ChangeMe!@localhost:5432/app
+SUPER_ADMIN_EMAIL=admin@familyplan.local
+SUPER_ADMIN_PASSWORD=admin123
+APP_ENV=dev
+```
+
+**Note:** The `.env.dev`, `.env.prod`, and `.env.test` files are used by Docker containers, not for local development.
+
+## 🚀 Quick Start with Docker (Development Mode)
+
+The easiest way to run the complete application in development mode with hot reload:
 
 ```bash
 # Clone the repository
 git clone https://github.com/jakubciszak/family-plan.git
 cd family-plan
 
-# Start all services (backend + frontend)
+# Start all services (backend + frontend + database)
 docker compose up -d
+
+# Wait for services to start (about 30 seconds)
+# Check logs if needed: docker compose logs -f
 
 # Initialize the database (first time only)
 docker compose exec php php bin/console doctrine:migrations:migrate --no-interaction
 docker compose exec php php bin/console app:create-super-admin
+
+# Install backend dependencies (first time only)
+docker compose exec php composer install
+
+# Install frontend dependencies (first time only, if not already done)
+docker compose exec frontend npm install
 ```
 
 **Access the application:**
-- Frontend (React SPA): http://localhost:3000
+- Frontend (React SPA): http://localhost:3000 (with hot reload)
 - Backend API: http://localhost:8080/api
 - API Documentation: http://localhost:8080/api-docs.html
+- Database: localhost:5432 (PostgreSQL)
+- Mailpit (email testing): http://localhost:8025
 
 **Default Credentials:**
 - Email: `admin@familyplan.local`
 - Password: `admin123`
 
-## 🚀 Installation
+**Development Features:**
+- Frontend hot reload enabled (changes in `frontend/` directory auto-refresh)
+- Backend auto-reload via volume mounts (changes in `src/` directory are immediately available)
+- Database data persisted in Docker volume
 
-### Frontend Development
+**Stopping the application:**
+```bash
+# Stop all services
+docker compose down
+
+# Stop and remove volumes (WARNING: deletes database data)
+docker compose down -v
+```
+
+## 🚀 Alternative Development Setup (Without Docker)
+
+### Frontend Development (Standalone)
+
+If you prefer to run the frontend outside of Docker:
 
 ```bash
 cd frontend
@@ -168,9 +233,13 @@ cp .env.example .env
 npm start
 ```
 
-Frontend will be available at http://localhost:3000
+Frontend will be available at http://localhost:3000 with hot reload.
 
-### Backend Development
+**Note:** You still need to run the backend (either with Docker or standalone) for the frontend to work properly.
+
+### Backend Development (Standalone)
+
+If you prefer to run the backend outside of Docker:
 
 ```bash
 # Install PHP dependencies
@@ -194,14 +263,24 @@ php -S localhost:8080 -t public
 
 Backend API will be available at http://localhost:8080
 
-### Building Frontend Assets (Legacy)
+**Note:** You need PostgreSQL 16+ running locally for standalone backend development.
+
+### Building Frontend Assets for Legacy Symfony Integration
+
+**Note:** This is only needed if you're using the legacy Symfony Twig templates, not for the standalone React SPA.
 
 The main repository still contains Webpack Encore for legacy Symfony frontend support:
 
 ```bash
+# In the root directory (not frontend/)
 npm install
 npm run build
+
+# For development
+npm run watch
 ```
+
+**For the modern React SPA**, use the commands in the `frontend/` directory instead.
 
 ## 📁 Project Structure
 
@@ -236,53 +315,134 @@ family-plan/
 │       └── Controller/              # Traditional Controllers (legacy)
 │
 ├── docker/                          # Docker configurations
-│   ├── php/                         # PHP-FPM container
-│   ├── nginx/                       # Nginx container
-│   └── react/                       # Legacy React container (deprecated)
+│   ├── php/                         # PHP-FPM container config
+│   │   └── Dockerfile               # Backend PHP container
+│   ├── nginx/                       # Nginx container config
+│   │   └── default.conf             # Backend API nginx config
+│   └── react/                       # Legacy (deprecated)
 │
-├── compose.yaml                     # Development compose file
-├── compose.prod.yaml                # Production compose file
-├── docker-compose.hostinger.yml     # Hostinger deployment compose
+├── compose.yaml                     # Development docker compose
+├── compose.override.yaml            # Development overrides (auto-merged)
+├── compose.prod.yaml                # Production configuration
+├── docker-compose.hostinger.yml     # Hostinger deployment config
 └── README.md                        # This file
 ```
 
-## 🔧 Development
+## 🔧 Development Workflow
 
-### Frontend Development
+### Docker Development (Recommended)
+
+The recommended way to develop is using Docker Compose, which provides all services with hot reload:
+
 ```bash
-cd frontend
-npm start                    # Start dev server with hot reload
-npm run build               # Production build
-npm run watch               # Watch mode
-```
-
-### Backend Development
-```bash
-# Run tests
-php bin/phpunit
-
-# Database migrations
-php bin/console doctrine:migrations:migrate
-
-# Clear cache
-php bin/console cache:clear
-```
-
-### Docker Development
-```bash
-# Start all services
+# Start all services in development mode
 docker compose up -d
 
-# View logs
+# View logs from all services
+docker compose logs -f
+
+# View logs from specific service
 docker compose logs -f frontend
 docker compose logs -f php
 
-# Rebuild containers
+# Execute commands in containers
+docker compose exec php php bin/console cache:clear
+docker compose exec php composer install
+docker compose exec frontend npm install
+
+# Rebuild containers after Dockerfile changes
 docker compose up -d --build
 
 # Stop all services
 docker compose down
 ```
+
+### Frontend Development (Docker)
+
+When using Docker, the frontend container:
+- Runs webpack dev server on port 3000
+- Automatically reloads when you edit files in `frontend/src/`
+- Hot module replacement (HMR) is enabled
+- Proxies API requests to the backend container
+
+```bash
+# Restart frontend after package.json changes
+docker compose restart frontend
+
+# Install new npm package
+docker compose exec frontend npm install <package-name>
+
+# Run frontend tests
+docker compose exec frontend npm test
+```
+
+### Backend Development (Docker)
+
+When using Docker, the PHP container:
+- Runs PHP-FPM with auto-reload on file changes
+- Mounts your local `src/` directory
+- Connects to PostgreSQL in the database container
+
+```bash
+# Run database migrations
+docker compose exec php php bin/console doctrine:migrations:migrate
+
+# Clear Symfony cache
+docker compose exec php php bin/console cache:clear
+
+# Install new composer package
+docker compose exec php composer require <package-name>
+
+# Run backend tests
+docker compose exec php php bin/phpunit
+```
+
+### Standalone Development
+
+If you prefer to run services outside Docker, see the "Alternative Development Setup" section above.
+
+## 🐳 Docker Compose Files
+
+The project uses different Docker Compose files for different environments:
+
+### `compose.yaml` - Development Environment
+- **Purpose:** Local development with hot reload
+- **Usage:** `docker compose up -d`
+- **Features:**
+  - Frontend with webpack dev server and hot reload
+  - Backend with source code volume mounts for live updates
+  - PostgreSQL database with persistent volume
+  - Mailpit for email testing (http://localhost:8025)
+  - Optional legacy node containers (can be ignored)
+- **Ports:**
+  - Frontend: 3000
+  - Backend API: 8080
+  - Database: 5432 (exposed)
+  - Mailpit Web: 8025
+
+### `compose.override.yaml` - Development Overrides
+- **Purpose:** Additional development configuration
+- **Usage:** Automatically merged with `compose.yaml`
+- **Features:**
+  - Exposes additional ports for debugging
+  - Mailpit email service configuration
+
+### `compose.prod.yaml` - Production Configuration
+- **Purpose:** Production deployment (not commonly used directly)
+- **Usage:** `docker compose -f compose.yaml -f compose.prod.yaml up -d`
+- **Features:**
+  - Optimized production builds
+  - No volume mounts for source code
+  - Environment-specific configurations
+
+### `docker-compose.hostinger.yml` - Hostinger Deployment
+- **Purpose:** Specific configuration for Hostinger VPS deployment
+- **Usage:** `docker compose -f docker-compose.hostinger.yml up -d --build`
+- **Features:**
+  - Production-ready setup for Hostinger
+  - See [HOSTINGER_DEPLOYMENT.md](HOSTINGER_DEPLOYMENT.md) for details
+
+**Recommendation:** For local development, always use the default `docker compose up -d` command, which automatically uses `compose.yaml` and `compose.override.yaml`.
 
 ## 🚀 Production Deployment
 
@@ -382,6 +542,154 @@ This command will:
 - **Password Hashing**: Automatic hashing using Symfony's password hasher (bcrypt)
 - **CSRF Protection**: Enabled on login form
 - **User Entity**: Implements Symfony's `UserInterface` and `PasswordAuthenticatedUserInterface`
+
+## 🔧 Troubleshooting
+
+### Docker Development Issues
+
+**Services won't start:**
+```bash
+# Check if ports are already in use
+lsof -i :3000  # Frontend port
+lsof -i :8080  # Backend port
+lsof -i :5432  # Database port
+
+# Stop conflicting services or change ports in compose.yaml
+```
+
+**Frontend shows "Cannot connect to API":**
+```bash
+# Check if backend is running
+docker compose ps
+
+# Check backend logs
+docker compose logs nginx
+docker compose logs php
+
+# Verify backend is accessible
+curl http://localhost:8080/api
+```
+
+**Database connection errors:**
+```bash
+# Check if database is healthy
+docker compose ps database
+
+# View database logs
+docker compose logs database
+
+# Restart database service
+docker compose restart database
+
+# If needed, recreate database
+docker compose down -v
+docker compose up -d
+```
+
+**Frontend changes not reflecting:**
+```bash
+# Restart frontend service
+docker compose restart frontend
+
+# Check if hot reload is working
+docker compose logs -f frontend
+
+# Rebuild frontend container
+docker compose up -d --build frontend
+```
+
+**Backend changes not reflecting:**
+```bash
+# Clear Symfony cache
+docker compose exec php php bin/console cache:clear
+
+# Restart PHP service
+docker compose restart php
+
+# Check if files are mounted correctly
+docker compose exec php ls -la /app/src
+```
+
+**"Permission denied" errors:**
+```bash
+# Fix file permissions (Linux/Mac)
+sudo chown -R $USER:$USER .
+
+# Or run Docker commands with sudo
+sudo docker compose up -d
+```
+
+**Containers keep restarting:**
+```bash
+# Check container logs for errors
+docker compose logs frontend
+docker compose logs php
+
+# Common issues:
+# - Missing dependencies: docker compose exec frontend npm install
+# - Syntax errors in code: check logs for details
+# - Port conflicts: change ports in compose.yaml
+```
+
+**Cannot access database from host:**
+```bash
+# Database port is not exposed by default in development
+# To access from host, ensure compose.override.yaml has:
+# database:
+#   ports:
+#     - "5432:5432"
+
+# Then connect with:
+# Host: localhost
+# Port: 5432
+# User: app
+# Password: !ChangeMe!
+# Database: app
+```
+
+### General Issues
+
+**"Composer dependencies not installed":**
+```bash
+# Docker
+docker compose exec php composer install
+
+# Standalone
+composer install
+```
+
+**"NPM dependencies not installed":**
+```bash
+# Frontend (Docker)
+docker compose exec frontend npm install
+
+# Frontend (Standalone)
+cd frontend && npm install
+
+# Backend legacy assets (Docker)
+docker compose exec node npm install
+
+# Backend legacy assets (Standalone)
+npm install
+```
+
+**Database migrations not applied:**
+```bash
+# Docker
+docker compose exec php php bin/console doctrine:migrations:migrate
+
+# Standalone
+php bin/console doctrine:migrations:migrate
+```
+
+**Super admin user not created:**
+```bash
+# Docker
+docker compose exec php php bin/console app:create-super-admin
+
+# Standalone
+php bin/console app:create-super-admin
+```
 
 ## 🚧 Known Issues & TODO
 
