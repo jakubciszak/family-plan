@@ -1,0 +1,173 @@
+### Team Management API Tests
+### Base URL
+@baseUrl = http://localhost:8080
+@contentType = application/json
+
+### Variables - Update these with real values
+@teamId = 
+@userId = 
+@invitationToken = 
+@invalidToken = 
+@notFoundTeamId = 
+
+###
+### List All Teams for Current User
+GET {{baseUrl}}/api/teams
+Content-Type: {{contentType}}
+
+###
+### Create a New Team
+POST {{baseUrl}}/api/teams
+Content-Type: {{contentType}}
+
+{
+  "name": "Family Team",
+  "description": "Our family household team for managing tasks"
+}
+
+###
+### Create a Team - Minimal (description optional)
+POST {{baseUrl}}/api/teams
+Content-Type: {{contentType}}
+
+{
+  "name": "Kitchen Crew"
+}
+
+###
+### Create a Team - Validation Error (name too short)
+POST {{baseUrl}}/api/teams
+Content-Type: {{contentType}}
+
+{
+  "name": "",
+  "description": "This should fail validation"
+}
+
+###
+### Update Team (replace {{teamId}} with actual UUID)
+PUT {{baseUrl}}/api/teams/{{teamId}}
+Content-Type: {{contentType}}
+
+{
+  "name": "Updated Family Team",
+  "description": "Updated description for our family team"
+}
+
+###
+### Update Team - Name Only
+PUT {{baseUrl}}/api/teams/{{teamId}}
+Content-Type: {{contentType}}
+
+{
+  "name": "New Team Name"
+}
+
+###
+### Get Team Members (replace {{teamId}} with actual UUID)
+GET {{baseUrl}}/api/teams/{{teamId}}/members
+Content-Type: {{contentType}}
+
+###
+### Invite User to Team as Member (replace {{teamId}} with actual UUID)
+POST {{baseUrl}}/api/teams/{{teamId}}/invite
+Content-Type: {{contentType}}
+
+{
+  "email": "member@example.com",
+  "role": "member"
+}
+
+###
+### Invite User to Team as Admin (replace {{teamId}} with actual UUID)
+POST {{baseUrl}}/api/teams/{{teamId}}/invite
+Content-Type: {{contentType}}
+
+{
+  "email": "admin@example.com",
+  "role": "admin"
+}
+
+###
+### Invite User - Validation Error (invalid email)
+POST {{baseUrl}}/api/teams/{{teamId}}/invite
+Content-Type: {{contentType}}
+
+{
+  "email": "invalid-email",
+  "role": "member"
+}
+
+###
+### Invite User - Validation Error (invalid role)
+POST {{baseUrl}}/api/teams/{{teamId}}/invite
+Content-Type: {{contentType}}
+
+{
+  "email": "user@example.com",
+  "role": "invalid-role"
+}
+
+###
+### Remove Member from Team (replace {{teamId}} and {{userId}} with actual UUIDs)
+DELETE {{baseUrl}}/api/teams/{{teamId}}/members/{{userId}}
+Content-Type: {{contentType}}
+
+###
+### Get My Pending Invitations
+GET {{baseUrl}}/api/teams/invitations
+Content-Type: {{contentType}}
+
+###
+### Accept Team Invitation (replace {{invitationToken}} with actual token)
+POST {{baseUrl}}/api/teams/invitations/{{invitationToken}}/accept
+Content-Type: {{contentType}}
+
+###
+### Accept Team Invitation - Invalid Token (should return error)
+POST {{baseUrl}}/api/teams/invitations/{{invalidToken}}/accept
+Content-Type: {{contentType}}
+
+###
+### Team Not Found (should return 404)
+GET {{baseUrl}}/api/teams/{{notFoundTeamId}}/members
+Content-Type: {{contentType}}
+
+###
+### Unauthorized Action - Non-admin trying to invite (should return 403/401)
+# First login as a non-admin user, then try to invite
+POST {{baseUrl}}/api/teams/{{teamId}}/invite
+Content-Type: {{contentType}}
+
+{
+  "email": "newuser@example.com",
+  "role": "member"
+}
+
+###
+### Complete Team Creation and Invitation Flow Example
+### 1. Create a team
+POST {{baseUrl}}/api/teams
+Content-Type: {{contentType}}
+
+{
+  "name": "Test Team",
+  "description": "Team created for testing the complete flow"
+}
+
+### 2. Save the teamId from the response above and use it below
+### 3. Invite a member
+# POST {{baseUrl}}/api/teams/{{teamId}}/invite
+# {
+#   "email": "testmember@example.com",
+#   "role": "member"
+# }
+
+### 4. Check invitations (login as the invited user)
+# GET {{baseUrl}}/api/teams/invitations
+
+### 5. Accept invitation (use token from step 4)
+# POST {{baseUrl}}/api/teams/invitations/{{invitationToken}}/accept
+
+### 6. Verify team members
+# GET {{baseUrl}}/api/teams/{{teamId}}/members

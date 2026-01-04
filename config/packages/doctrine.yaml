@@ -19,6 +19,9 @@ doctrine:
             execution_status: App\TaskManagement\Infrastructure\Persistence\Doctrine\Type\ExecutionStatusType
             rule_type: App\TaskManagement\Infrastructure\Persistence\Doctrine\Type\RuleTypeType
             user_preferences: App\UserSettings\Infrastructure\Persistence\Doctrine\Type\UserPreferencesType
+            team_name: App\TeamManagement\Infrastructure\Persistence\Doctrine\Type\TeamNameType
+            team_role: App\TeamManagement\Infrastructure\Persistence\Doctrine\Type\TeamRoleType
+            invitation_status: App\TeamManagement\Infrastructure\Persistence\Doctrine\Type\InvitationStatusType
     orm:
         validate_xml_mapping: true
         naming_strategy: doctrine.orm.naming_strategy.underscore_number_aware
@@ -50,6 +53,12 @@ doctrine:
                 dir: '%kernel.project_dir%/src/UserSettings/Domain/Entity'
                 prefix: 'App\UserSettings\Domain\Entity'
                 alias: UserSettings
+            TeamManagement:
+                type: attribute
+                is_bundle: false
+                dir: '%kernel.project_dir%/src/TeamManagement/Domain/Entity'
+                prefix: 'App\TeamManagement\Domain\Entity'
+                alias: TeamManagement
         controller_resolver:
             auto_mapping: false
 

@@ -97,3 +97,59 @@ export interface UpdateBonusRuleData {
 export interface UserPointsResponse {
   balance: number;
 }
+
+// Team Management Types
+export interface Team {
+  id: string;
+  name: string;
+  description: string | null;
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string | null;
+}
+
+export interface TeamMember {
+  id: string;
+  userId: string;
+  userName: string;
+  userEmail: string;
+  role: 'admin' | 'member';
+  joinedAt: string;
+}
+
+export interface TeamInvitation {
+  id: string;
+  teamId: string;
+  role: 'admin' | 'member';
+  token: string;
+  status: 'pending' | 'accepted' | 'rejected' | 'expired';
+  createdAt: string;
+  expiresAt: string | null;
+}
+
+export interface TeamsResponse {
+  teams: Team[];
+}
+
+export interface TeamMembersResponse {
+  members: TeamMember[];
+}
+
+export interface TeamInvitationsResponse {
+  invitations: TeamInvitation[];
+}
+
+export interface CreateTeamData {
+  name: string;
+  description?: string;
+}
+
+export interface UpdateTeamData {
+  name: string;
+  description?: string;
+}
+
+export interface InviteToTeamData {
+  email: string;
+  role: 'admin' | 'member';
+}

@@ -49,6 +49,15 @@ services:
     App\UserSettings\Domain\Repository\UserSettingsRepositoryInterface:
         class: App\UserSettings\Infrastructure\Persistence\DoctrineUserSettingsRepository
 
+    App\TeamManagement\Domain\Repository\TeamRepositoryInterface:
+        class: App\TeamManagement\Infrastructure\Persistence\DoctrineTeamRepository
+
+    App\TeamManagement\Domain\Repository\TeamMemberRepositoryInterface:
+        class: App\TeamManagement\Infrastructure\Persistence\DoctrineTeamMemberRepository
+
+    App\TeamManagement\Domain\Repository\TeamInvitationRepositoryInterface:
+        class: App\TeamManagement\Infrastructure\Persistence\DoctrineTeamInvitationRepository
+
     # Policy implementations
     App\TaskManagement\Domain\Policy\TaskApprovalPolicyInterface:
         class: App\TaskManagement\Domain\Policy\AdminApprovalPolicy
@@ -76,6 +85,11 @@ services:
             $queryBus: '@query.bus'
 
     App\Presentation\Api\StatusChangeRuleApiController:
+        arguments:
+            $commandBus: '@command.bus'
+            $queryBus: '@query.bus'
+
+    App\Presentation\Api\TeamApiController:
         arguments:
             $commandBus: '@command.bus'
             $queryBus: '@query.bus'

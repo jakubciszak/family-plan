@@ -12,6 +12,13 @@ import {
   UserPointsResponse,
   UserPreferences,
   UpdateUserSettingsRequest,
+  TeamsResponse,
+  Team,
+  CreateTeamData,
+  UpdateTeamData,
+  TeamMembersResponse,
+  InviteToTeamData,
+  TeamInvitationsResponse,
 } from '../types/api';
 
 const API_URL = process.env.API_URL || 'http://localhost:8080';
@@ -185,6 +192,55 @@ class ApiClient {
       data,
       { headers }
     );
+    return response.data;
+  }
+
+  // Team Management Methods
+  async getTeams(): Promise<TeamsResponse> {
+    const headers = await this.getAuthHeaders();
+    const response = await this.axiosInstance.get('/api/teams', { headers });
+    return response.data;
+  }
+
+  async createTeam(data: CreateTeamData): Promise<Team> {
+    const headers = await this.getAuthHeaders();
+    const response = await this.axiosInstance.post('/api/teams', data, { headers });
+    return response.data;
+  }
+
+  async updateTeam(teamId: string, data: UpdateTeamData): Promise<{ message: string }> {
+    const headers = await this.getAuthHeaders();
+    const response = await this.axiosInstance.put(`/api/teams/${teamId}`, data, { headers });
+    return response.data;
+  }
+
+  async getTeamMembers(teamId: string): Promise<TeamMembersResponse> {
+    const headers = await this.getAuthHeaders();
+    const response = await this.axiosInstance.get(`/api/teams/${teamId}/members`, { headers });
+    return response.data;
+  }
+
+  async inviteToTeam(teamId: string, data: InviteToTeamData): Promise<{ message: string; invitationId: string }> {
+    const headers = await this.getAuthHeaders();
+    const response = await this.axiosInstance.post(`/api/teams/${teamId}/invite`, data, { headers });
+    return response.data;
+  }
+
+  async removeMember(teamId: string, userId: string): Promise<{ message: string }> {
+    const headers = await this.getAuthHeaders();
+    const response = await this.axiosInstance.delete(`/api/teams/${teamId}/members/${userId}`, { headers });
+    return response.data;
+  }
+
+  async getMyInvitations(): Promise<TeamInvitationsResponse> {
+    const headers = await this.getAuthHeaders();
+    const response = await this.axiosInstance.get('/api/teams/invitations', { headers });
+    return response.data;
+  }
+
+  async acceptInvitation(token: string): Promise<{ message: string }> {
+    const headers = await this.getAuthHeaders();
+    const response = await this.axiosInstance.post(`/api/teams/invitations/${token}/accept`, {}, { headers });
     return response.data;
   }
 }

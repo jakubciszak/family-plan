@@ -5,6 +5,7 @@ import Login from './pages/Login';
 import BonusRulesManagement from './pages/BonusRulesManagement';
 import StatusChangeRulesManagement from './pages/StatusChangeRulesManagement';
 import UserSettings from './pages/UserSettings';
+import TeamManagement from './pages/TeamManagement';
 import LanguageSwitcher from './components/LanguageSwitcher';
 import apiClient from './services/apiClient';
 import './styles/app.css';
@@ -76,6 +77,12 @@ function App() {
                     >
                         {t('nav.tasks')}
                     </button>
+                    <button 
+                        onClick={() => setCurrentPage('teams')}
+                        className={currentPage === 'teams' ? 'nav-active' : ''}
+                    >
+                        {t('nav.teams')}
+                    </button>
                     {user?.role === 'ROLE_ADMIN' && (
                         <>
                             <button 
@@ -108,6 +115,7 @@ function App() {
             </header>
             <main className="app-main">
                 {currentPage === 'tasks' && <TaskList user={user} />}
+                {currentPage === 'teams' && <TeamManagement user={user} />}
                 {currentPage === 'bonus-rules' && <BonusRulesManagement user={user} />}
                 {currentPage === 'status-change-rules' && <StatusChangeRulesManagement user={user} />}
                 {currentPage === 'settings' && <UserSettings user={user} />}
