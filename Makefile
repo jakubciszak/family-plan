@@ -90,7 +90,7 @@ shell-db: ## Access database container shell
 shell-frontend: ## Access frontend container shell
 	docker compose exec frontend sh
 
-install: ## Install all dependencies (Composer + NPM)
+install: ## Install all dependencies (Composer + NPM for backend and frontend)
 	docker compose exec php composer install
 	docker compose exec node npm install
 	docker compose exec frontend npm install
@@ -164,11 +164,11 @@ frontend-test-headed: ## Run frontend tests in headed mode
 ## 🔍 Code Quality Commands
 ##
 
-lint: ## Run code linting (if configured)
-	docker compose exec php vendor/bin/php-cs-fixer fix --dry-run --diff || true
+lint: ## Run code linting (if php-cs-fixer is installed)
+	@docker compose exec php vendor/bin/php-cs-fixer fix --dry-run --diff 2>/dev/null || echo "⚠️  php-cs-fixer not installed. Run 'composer require --dev friendsofphp/php-cs-fixer' to enable linting."
 
-lint-fix: ## Fix code style issues
-	docker compose exec php vendor/bin/php-cs-fixer fix || true
+lint-fix: ## Fix code style issues (if php-cs-fixer is installed)
+	@docker compose exec php vendor/bin/php-cs-fixer fix 2>/dev/null || echo "⚠️  php-cs-fixer not installed. Run 'composer require --dev friendsofphp/php-cs-fixer' to enable linting."
 
 cache-clear: ## Clear Symfony cache
 	docker compose exec php bin/console cache:clear
