@@ -91,7 +91,10 @@ services:
     App\Notifications\Infrastructure\Adapter\EmailNotificationAdapter:
         tags: ['notification.adapter']
 
-    App\Notifications\Infrastructure\Adapter\SmsNotificationAdapter:
+    App\Notifications\Infrastructure\Adapter\SmsApiAdapter:
+        arguments:
+            $apiUrl: '%env(SMS_API_URL)%'
+            $apiToken: '%env(SMS_API_TOKEN)%'
         tags: ['notification.adapter']
 
     App\Notifications\Application\Handler\SendNotificationHandler:
