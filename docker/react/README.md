@@ -1,8 +1,20 @@
 # Docker Configuration for React Frontend
 
-This directory contains Docker configurations for running the React frontend application.
+**⚠️ DEPRECATED - This directory is for legacy Webpack Encore React integration.**
 
-## Files
+**For the modern standalone React SPA, see [`/frontend`](../../frontend/README.md) directory instead.**
+
+---
+
+This directory contains Docker configurations for the legacy React frontend that was integrated with Symfony via Webpack Encore.
+
+**Modern Architecture:**
+- The frontend is now a standalone React SPA in the `/frontend` directory
+- It has its own Dockerfile and runs independently
+- It communicates with the backend via REST API
+- See the main [README.md](../../README.md) for current setup instructions
+
+## Legacy Files
 
 - `Dockerfile` - Development Dockerfile for React app with hot reload
 - `Dockerfile.prod` - Production-optimized Dockerfile with Nginx
