@@ -200,6 +200,11 @@ inspect-db: ## Show database info
 
 init: install db-migrate build-assets ## Initialize project (install deps, migrate, build)
 
+setup: up install db-migrate create-admin ## Complete setup: start services, install deps, migrate DB, create admin
+
+create-admin: ## Create super admin account
+	docker compose exec php bin/console app:create-super-admin
+
 rebuild: clean up-build init ## Full rebuild of the project
 
 restart-service: ## Restart specific service (usage: make restart-service SERVICE=php)
