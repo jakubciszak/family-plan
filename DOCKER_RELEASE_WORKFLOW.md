@@ -2,7 +2,7 @@
 
 ## Overview
 
-This repository includes a GitHub Actions workflow that automatically builds and pushes production-ready Docker images to a Docker registry whenever a new release is published.
+This repository includes a GitHub Actions workflow that automatically builds and pushes production-ready Docker images to GitHub Container Registry (ghcr.io) whenever a new release is published.
 
 ## Workflow Details
 
@@ -16,31 +16,12 @@ This repository includes a GitHub Actions workflow that automatically builds and
 
 ## Required Repository Configuration
 
-Before the workflow can run successfully, you need to configure the following repository variables and secrets:
+**No manual configuration required!** The workflow uses GitHub's built-in `GITHUB_TOKEN` with automatic authentication to GitHub Container Registry.
 
-### Repository Variables
-
-Navigate to your repository's **Settings → Secrets and variables → Actions → Variables** and add:
-
-1. **`DOCKER_REGISTRY_HOST`**
-   - Description: The hostname of your Docker registry
-   - Example: `docker.io` (for Docker Hub)
-   - Example: `ghcr.io` (for GitHub Container Registry)
-   - Example: `registry.example.com` (for private registry)
-
-2. **`DOCKER_REGISTRY_USER`**
-   - Description: Your Docker registry username
-   - Example: `myusername` (for Docker Hub)
-   - Example: `myorg` (for GitHub Container Registry)
-
-### Repository Secrets
-
-Navigate to your repository's **Settings → Secrets and variables → Actions → Secrets** and add:
-
-1. **`DOCKER_REGISTRY_PASS`**
-   - Description: Your Docker registry password or access token
-   - For Docker Hub: Use your Docker Hub password or access token
-   - For GitHub Container Registry: Use a GitHub Personal Access Token with `write:packages` scope
+The workflow automatically uses:
+- **Registry**: `ghcr.io` (GitHub Container Registry)
+- **Authentication**: `GITHUB_TOKEN` (automatically provided by GitHub Actions)
+- **Namespace**: Repository owner's username/organization
 
 ## How It Works
 
@@ -51,27 +32,27 @@ Navigate to your repository's **Settings → Secrets and variables → Actions �
 
 2. The workflow automatically:
    - Checks out the code
-   - Logs into the Docker registry using configured credentials
+   - Logs into GitHub Container Registry using `GITHUB_TOKEN`
    - Builds the backend Docker image with production optimizations
    - Builds the frontend Docker image with production optimizations
    - Tags images with both `latest` and the version number
-   - Pushes both images to the registry
+   - Pushes both images to ghcr.io
 
 ## Image Tags
 
 Each image is tagged with two tags:
 
 ### Backend Image
-- `{REGISTRY_HOST}/{REGISTRY_USER}/family-plan-backend:latest`
-- `{REGISTRY_HOST}/{REGISTRY_USER}/family-plan-backend:{version}`
+- `ghcr.io/{repository_owner}/family-plan-backend:latest`
+- `ghcr.io/{repository_owner}/family-plan-backend:{version}`
 
 ### Frontend Image
-- `{REGISTRY_HOST}/{REGISTRY_USER}/family-plan-frontend:latest`
-- `{REGISTRY_HOST}/{REGISTRY_USER}/family-plan-frontend:{version}`
+- `ghcr.io/{repository_owner}/family-plan-frontend:latest`
+- `ghcr.io/{repository_owner}/family-plan-frontend:{version}`
 
-**Example** (for Docker Hub user `johndoe` and release `v1.2.3`):
-- Backend: `docker.io/johndoe/family-plan-backend:latest` and `docker.io/johndoe/family-plan-backend:1.2.3`
-- Frontend: `docker.io/johndoe/family-plan-frontend:latest` and `docker.io/johndoe/family-plan-frontend:1.2.3`
+**Example** (for repository owner `jakubciszak` and release `v1.2.3`):
+- Backend: `ghcr.io/jakubciszak/family-plan-backend:latest` and `ghcr.io/jakubciszak/family-plan-backend:1.2.3`
+- Frontend: `ghcr.io/jakubciszak/family-plan-frontend:latest` and `ghcr.io/jakubciszak/family-plan-frontend:1.2.3`
 
 ## Production Docker Images
 
@@ -124,7 +105,7 @@ services:
       - postgres_data:/var/lib/postgresql/data
 
   backend:
-    image: ${DOCKER_REGISTRY_HOST}/${DOCKER_REGISTRY_USER}/family-plan-backend:latest
+    image: ghcr.io/jakubciszak/family-plan-backend:latest
     environment:
       APP_ENV: prod
       APP_SECRET: ${APP_SECRET}
@@ -144,7 +125,7 @@ services:
       - backend
 
   frontend:
-    image: ${DOCKER_REGISTRY_HOST}/${DOCKER_REGISTRY_USER}/family-plan-frontend:latest
+    image: ghcr.io/jakubciszak/family-plan-frontend:latest
     ports:
       - "3000:80"
 
@@ -157,19 +138,27 @@ Then deploy with:
 docker-compose -f docker-compose.prod.yml up -d
 ```
 
+### Pulling Images
+
+To pull the images manually:
+
+```bash
+# Pull backend
+docker pull ghcr.io/jakubciszak/family-plan-backend:latest
+
+# Pull frontend
+docker pull ghcr.io/jakubciszak/family-plan-frontend:latest
+```
+
+**Note**: Images published to ghcr.io are public by default. To make them private, go to the package settings on GitHub.
+
 ### Kubernetes
 
 Pull and deploy the images to your Kubernetes cluster using the tags.
 
 ## Troubleshooting
 
-### Workflow Fails to Login
-
-**Error**: `Error: Cannot perform an interactive login from a non TTY device`
-
-**Solution**: Verify that `DOCKER_REGISTRY_PASS` secret is set correctly in repository settings.
-
-### Build Fails
+### Workflow Fails to Build
 
 1. Check the GitHub Actions logs in the repository's Actions tab
 2. Verify that all required files exist:
@@ -178,19 +167,26 @@ Pull and deploy the images to your Kubernetes cluster using the tags.
    - `frontend/Dockerfile.prod`
    - `frontend/nginx.conf`
 
-### Images Not Appearing in Registry
+### Images Not Appearing in GitHub Packages
 
-1. Verify registry credentials are correct
-2. Check that the registry user has permission to push images
-3. For private registries, ensure the registry URL is correct
+1. Check the Actions workflow run for errors
+2. Verify the workflow has `packages: write` permission
+3. Check your repository's Packages section on GitHub
+
+### Permission Issues When Pulling Images
+
+If images are private, you need to authenticate:
+
+```bash
+echo $GITHUB_TOKEN | docker login ghcr.io -u USERNAME --password-stdin
+```
 
 ## Security Notes
 
-- Never commit registry passwords to the repository
-- Use secrets for sensitive data (`DOCKER_REGISTRY_PASS`)
-- Use variables for non-sensitive configuration (`DOCKER_REGISTRY_HOST`, `DOCKER_REGISTRY_USER`)
-- Regularly rotate access tokens and passwords
-- Use least-privilege access tokens when possible
+- `GITHUB_TOKEN` is automatically provided by GitHub Actions - no manual configuration needed
+- Images are published to your repository's package registry
+- You can configure package visibility (public/private) in GitHub package settings
+- The workflow uses minimal permissions: `contents: read` and `packages: write`
 
 ## Monitoring
 
