@@ -35,6 +35,17 @@ final class InMemoryUserRepository implements UserRepositoryInterface
         return null;
     }
 
+    public function findByActivationToken(string $token): ?User
+    {
+        foreach ($this->users as $user) {
+            if ($user->activationToken() === $token) {
+                return $user;
+            }
+        }
+
+        return null;
+    }
+
     public function findAll(): array
     {
         return array_values($this->users);

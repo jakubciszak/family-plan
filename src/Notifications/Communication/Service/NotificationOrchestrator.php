@@ -79,4 +79,28 @@ final readonly class NotificationOrchestrator
             }
         }
     }
+
+    /**
+     * Send email notification directly to an email address
+     */
+    public function notifyEmail(
+        string $email,
+        string $message,
+        ?string $subject = null,
+        array $additionalParameters = []
+    ): void {
+        try {
+            $this->notificationFacade->sendEmail(
+                $email,
+                $message,
+                $subject,
+                $additionalParameters
+            );
+        } catch (\Exception $e) {
+            $this->logger?->error('Failed to send email notification', [
+                'email' => $email,
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
 }

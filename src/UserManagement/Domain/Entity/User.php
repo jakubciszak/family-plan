@@ -42,7 +42,16 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         private DateTimeImmutable $createdAt,
         
         #[ORM\Column(type: 'datetime_immutable', nullable: true)]
-        private ?DateTimeImmutable $updatedAt = null
+        private ?DateTimeImmutable $updatedAt = null,
+        
+        #[ORM\Column(type: 'string', length: 20, nullable: true)]
+        private ?string $phoneNumber = null,
+        
+        #[ORM\Column(type: 'boolean')]
+        private bool $isActive = true,
+        
+        #[ORM\Column(type: 'string', length: 255, nullable: true)]
+        private ?string $activationToken = null
     ) {
     }
 
@@ -59,10 +68,46 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
             $email,
             $hashedPassword,
             $role,
-            new DateTimeImmutable()
+            new DateTimeImmutable(),
+            null,
+            null,
+            true
         );
 
         $user->record(new UserCreated($id, $email, $role, new DateTimeImmutable()));
+
+        return $user;
+    }
+
+    public static function register(
+        Uuid $id,
+        string $name,
+        Email $email,
+        string $hashedPassword,
+        ?string $phoneNumber = null
+    ): self {
+        $activationToken = bin2hex(random_bytes(32));
+        
+        $user = new self(
+            $id,
+            $name,
+            $email,
+            $hashedPassword,
+            Role::USER,
+            new DateTimeImmutable(),
+            null,
+            $phoneNumber,
+            false,
+            $activationToken
+        );
+
+        $user->record(new \App\UserManagement\Domain\Event\UserRegistered(
+            $id, 
+            $email, 
+            $name,
+            $activationToken, 
+            new DateTimeImmutable()
+        ));
 
         return $user;
     }
@@ -129,6 +174,32 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function updatedAt(): ?DateTimeImmutable
     {
         return $this->updatedAt;
+    }
+
+    public function phoneNumber(): ?string
+    {
+        return $this->phoneNumber;
+    }
+
+    public function isActive(): bool
+    {
+        return $this->isActive;
+    }
+
+    public function activationToken(): ?string
+    {
+        return $this->activationToken;
+    }
+
+    public function activate(string $token): void
+    {
+        if ($this->activationToken !== $token) {
+            throw new \DomainException('Invalid activation token');
+        }
+
+        $this->isActive = true;
+        $this->activationToken = null;
+        $this->updatedAt = new DateTimeImmutable();
     }
 
     public function pullDomainEvents(): array
