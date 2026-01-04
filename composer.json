@@ -36,6 +36,8 @@
         "twig/twig": "*"
     },
     "require-dev": {
+        "behat/behat": "^3.29",
+        "friends-of-behat/symfony-extension": "^2.6",
         "phpunit/phpunit": "*",
         "symfony/browser-kit": "7.4.*",
         "symfony/css-selector": "7.4.*",
