@@ -135,7 +135,7 @@ db-schema-update: ## Update database schema (dev only)
 ## 🧪 Testing Commands
 ##
 
-test: backend-test ## Run all tests
+test: backend-test frontend-test ## Run all tests (backend + frontend)
 
 backend-test: phpunit behat ## Run all backend tests (PHPUnit + Behat)
 
