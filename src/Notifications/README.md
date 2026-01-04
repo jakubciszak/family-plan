@@ -32,7 +32,7 @@ This context follows Hexagonal Architecture (Ports and Adapters pattern):
 ### Infrastructure Layer
 - **Adapters:**
   - `EmailNotificationAdapter` - Email notification implementation (logs for now, ready for Symfony Mailer)
-  - `SmsNotificationAdapter` - SMS notification implementation (logs for now, ready for Twilio/Vonage)
+  - `SmsApiAdapter` - SMS notification implementation using SMSAPI.pl REST API
   - `InMemoryNotificationAdapter` - In-memory adapter for testing
 
 ## Usage
@@ -229,7 +229,7 @@ $this->notificationService->sendEmail(
 ## Future Enhancements
 
 - [ ] Implement actual email sending using Symfony Mailer
-- [ ] Implement actual SMS sending using Twilio/Vonage
+- [x] Implement actual SMS sending using SMSAPI.pl
 - [ ] Add Push Notification support
 - [ ] Add Slack/Discord webhook support
 - [ ] Add notification templates system
@@ -240,6 +240,21 @@ $this->notificationService->sendEmail(
 
 ## Configuration
 
+### Environment Variables
+
+The SMS adapter requires the following environment variables to be configured in your `.env` file:
+
+```bash
+###> app/sms-api ###
+SMS_API_URL=https://api.smsapi.pl
+SMS_API_TOKEN=your-api-token-here
+###< app/sms-api ###
+```
+
+Get your API token from [SMSAPI.pl](https://ssl.smsapi.pl/).
+
+### Service Configuration
+
 The notification adapters are configured in `config/services.yaml`:
 
 ```yaml
@@ -247,7 +262,10 @@ The notification adapters are configured in `config/services.yaml`:
 App\Notifications\Infrastructure\Adapter\EmailNotificationAdapter:
     tags: ['notification.adapter']
 
-App\Notifications\Infrastructure\Adapter\SmsNotificationAdapter:
+App\Notifications\Infrastructure\Adapter\SmsApiAdapter:
+    arguments:
+        $apiUrl: '%env(SMS_API_URL)%'
+        $apiToken: '%env(SMS_API_TOKEN)%'
     tags: ['notification.adapter']
 
 App\Notifications\Application\Handler\SendNotificationHandler:
