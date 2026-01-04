@@ -73,6 +73,10 @@ final readonly class SmsApiAdapter implements NotificationPortInterface
 
         $ch = curl_init();
         
+        if ($ch === false) {
+            throw new \RuntimeException('Failed to initialize cURL');
+        }
+        
         curl_setopt_array($ch, [
             CURLOPT_URL => $url,
             CURLOPT_POST => true,
@@ -107,10 +111,20 @@ final readonly class SmsApiAdapter implements NotificationPortInterface
             throw new \RuntimeException($errorMessage);
         }
 
-        // Verify response is valid JSON and contains success indicator
+        // Verify response is valid JSON
         $decoded = json_decode($response, true);
         if (json_last_error() !== JSON_ERROR_NONE) {
             throw new \RuntimeException('Invalid JSON response from SMS API');
+        }
+
+        // Check for API-level errors in the response
+        // SMSAPI.pl may return 200 OK but with error details in the response body
+        if (isset($decoded['error'])) {
+            $errorMessage = 'SMS API error';
+            if (isset($decoded['message'])) {
+                $errorMessage .= ': ' . $decoded['message'];
+            }
+            throw new \RuntimeException($errorMessage);
         }
     }
 }
