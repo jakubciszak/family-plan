@@ -35,8 +35,10 @@ final class StatusChangeRulesContext extends AcceptanceContext
     }
 
     /**
-     * @Given /^że istnieje reguła zmiany statusu "([^"]*)" która wymaga (\d+) dni? karencji po zakończeniu$/
-     * @Given /^istnieje reguła zmiany statusu "([^"]*)" która wymaga (\d+) dni? karencji po zakończeniu$/
+     * @Given /^że istnieje reguła zmiany statusu "([^"]*)" która wymaga (\d+) dzień karencji po zakończeniu$/
+     * @Given /^że istnieje reguła zmiany statusu "([^"]*)" która wymaga (\d+) dni karencji po zakończeniu$/
+     * @Given /^istnieje reguła zmiany statusu "([^"]*)" która wymaga (\d+) dzień karencji po zakończeniu$/
+     * @Given /^istnieje reguła zmiany statusu "([^"]*)" która wymaga (\d+) dni karencji po zakończeniu$/
      */
     public function thereIsAStatusChangeRuleThatRequiresDaysCooldownAfterCompletion(
         string $ruleName,
@@ -118,7 +120,9 @@ final class StatusChangeRulesContext extends AcceptanceContext
     }
 
     /**
-     * @Then /^powinno być (\d+) aktywn(?:a|ych) reguł?(?:a|y)? zmiany statusu$/
+     * @Then /^powinno być (\d+) aktywna reguła zmiany statusu$/
+     * @Then /^powinno być (\d+) aktywne reguły zmiany statusu$/
+     * @Then /^powinno być (\d+) aktywnych reguł zmiany statusu$/
      */
     public function thereShouldBeActiveStatusChangeRules(int $count): void
     {

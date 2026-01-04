@@ -117,7 +117,9 @@ final class BonusPointsContext extends AcceptanceContext
     }
 
     /**
-     * @Then /^powinno być (\d+) aktywn(?:a|ych) reguł?(?:a|y)? bonusow(?:a|ych)$/
+     * @Then /^powinno być (\d+) aktywna reguła bonusowa$/
+     * @Then /^powinno być (\d+) aktywne reguły bonusowe$/
+     * @Then /^powinno być (\d+) aktywnych reguł bonusowych$/
      */
     public function thereShouldBeActiveBonusRules(int $count): void
     {

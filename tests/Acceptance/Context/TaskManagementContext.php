@@ -213,6 +213,7 @@ final class TaskManagementContext extends AcceptanceContext
 
     /**
      * @When /^mija (\d+) dzień$/
+     * @When /^mija (\d+) dni$/
      * @When /^mijają (\d+) dni$/
      */
     public function daysPass(int $days): void
