@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Presentation\Api;
 
+use App\Presentation\Api\Dto\Auth\RegisterUserRequest;
 use App\Shared\Domain\ValueObject\Uuid;
 use App\UserManagement\Application\Command\RegisterUserCommand;
 use App\UserManagement\Application\Handler\RegisterUserHandler;
@@ -13,8 +14,8 @@ use App\UserManagement\Domain\ValueObject\Email;
 use OpenApi\Attributes as OA;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
-use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
 
@@ -196,30 +197,16 @@ class AuthApiController extends AbstractController
             ]
         )
     )]
-    public function register(Request $request): JsonResponse
+    public function register(#[MapRequestPayload] RegisterUserRequest $request): JsonResponse
     {
         try {
-            $data = json_decode($request->getContent(), true);
-
-            if (!isset($data['name']) || !isset($data['email']) || !isset($data['password'])) {
-                return $this->json([
-                    'error' => 'Missing required fields: name, email, password'
-                ], Response::HTTP_BAD_REQUEST);
-            }
-
-            if (strlen($data['password']) < 8) {
-                return $this->json([
-                    'error' => 'Password must be at least 8 characters long'
-                ], Response::HTTP_BAD_REQUEST);
-            }
-
             $id = Uuid::generate()->value();
             $command = new RegisterUserCommand(
                 $id,
-                $data['name'],
-                $data['email'],
-                $data['password'],
-                $data['phoneNumber'] ?? null
+                $request->name,
+                $request->email,
+                $request->password,
+                $request->phoneNumber
             );
 
             ($this->registerUserHandler)($command);
