@@ -1,50 +1,46 @@
-# language: pl
-Funkcja: Zarządzanie regułami punktów bonusowych
-  Jako administrator rodziny
-  Chcę móc tworzyć reguły punktów bonusowych
-  Aby zachęcić członków rodziny do regularnego wykonywania zadań
+Feature: Managing bonus points rules
+  As a family administrator
+  I want to create bonus points rules
+  So that I can encourage family members to complete tasks regularly
 
-  Scenariusz: Tworzenie i aktywowanie reguły miesięcznej liczby zadań
-    Zakładając że istnieje reguła bonusowa "Mistrz miesiąca" która przyznaje 100 punktów bonusowych za wykonanie 20 zadań w miesiącu
-    Wtedy reguła bonusowa "Mistrz miesiąca" powinna być aktywna
-    I powinno być 1 aktywna reguła bonusowa
+  Scenario: Creating and activating a monthly task count rule
+    Given there is a bonus rule "Month Champion" that awards 100 bonus points for completing 20 tasks in a month
+    Then bonus rule "Month Champion" should be active
+    And there should be 1 active bonus rule
 
-  Scenariusz: Tworzenie reguły kolejnych dni wykonywania zadań
-    Zakładając że istnieje reguła bonusowa "Seria 5 dni" która przyznaje 50 punktów bonusowych za 5 kolejnych dni wykonywania zadań
-    Wtedy reguła bonusowa "Seria 5 dni" powinna być aktywna
-    I powinno być 1 aktywna reguła bonusowa
+  Scenario: Creating a consecutive days task completion rule
+    Given there is a bonus rule "5 Day Streak" that awards 50 bonus points for 5 consecutive days of task completion
+    Then bonus rule "5 Day Streak" should be active
+    And there should be 1 active bonus rule
 
-  Scenariusz: Dezaktywacja reguły bonusowej
-    Zakładając że istnieje reguła bonusowa "Stara reguła" która przyznaje 30 punktów bonusowych za wykonanie 10 zadań w miesiącu
-    Kiedy reguła bonusowa "Stara reguła" zostaje dezaktywowana
-    Wtedy reguła bonusowa "Stara reguła" powinna być nieaktywna
-    I powinno być 0 aktywnych reguł bonusowych
+  Scenario: Deactivating a bonus rule
+    Given there is a bonus rule "Old Rule" that awards 30 bonus points for completing 10 tasks in a month
+    When bonus rule "Old Rule" is deactivated
+    Then bonus rule "Old Rule" should be inactive
+    And there should be 0 active bonus rules
 
-  Scenariusz: Reaktywacja reguły bonusowej
-    Zakładając że istnieje reguła bonusowa "Czasowa reguła" która przyznaje 40 punktów bonusowych za wykonanie 15 zadań w miesiącu
-    I reguła bonusowa "Czasowa reguła" zostaje dezaktywowana
-    Kiedy reguła bonusowa "Czasowa reguła" zostaje aktywowana
-    Wtedy reguła bonusowa "Czasowa reguła" powinna być aktywna
-    I powinno być 1 aktywna reguła bonusowa
+  Scenario: Reactivating a bonus rule
+    Given there is a bonus rule "Temporary Rule" that awards 40 bonus points for completing 15 tasks in a month
+    And bonus rule "Temporary Rule" is deactivated
+    When bonus rule "Temporary Rule" is activated
+    Then bonus rule "Temporary Rule" should be active
+    And there should be 1 active bonus rule
 
-  Scenariusz: Zarządzanie wieloma regułami bonusowymi jednocześnie
-    Zakładając że istnieje reguła bonusowa "Reguła 1" która przyznaje 50 punktów bonusowych za wykonanie 10 zadań w miesiącu
-    I istnieje reguła bonusowa "Reguła 2" która przyznaje 75 punktów bonusowych za wykonanie 15 zadań w miesiącu
-    I istnieje reguła bonusowa "Reguła 3" która przyznaje 100 punktów bonusowych za 7 kolejnych dni wykonywania zadań
-    Wtedy powinno być 3 aktywne reguły bonusowe
+  Scenario: Managing multiple bonus rules simultaneously
+    Given there is a bonus rule "Rule 1" that awards 50 bonus points for completing 10 tasks in a month
+    And there is a bonus rule "Rule 2" that awards 75 bonus points for completing 15 tasks in a month
+    And there is a bonus rule "Rule 3" that awards 100 bonus points for 7 consecutive days of task completion
+    Then there should be 3 active bonus rules
+    When bonus rule "Rule 2" is deactivated
+    Then there should be 2 active bonus rules
+    And all bonus rules should be listed
 
-    Kiedy reguła bonusowa "Reguła 2" zostaje dezaktywowana
-    Wtedy powinno być 2 aktywne reguły bonusowe
-    I wszystkie reguły bonusowe powinny być wylistowane
-
-  Scenariusz: Reguły bonusowe z manipulacją czasem
-    Zakładając że jest "2025-01-01 08:00:00"
-    I istnieje reguła bonusowa "Noworoczny bonus" która przyznaje 200 punktów bonusowych za wykonanie 25 zadań w miesiącu
-    Wtedy reguła bonusowa "Noworoczny bonus" powinna być aktywna
-
-    Kiedy mija 15 dni
-    Wtedy reguła bonusowa "Noworoczny bonus" powinna być aktywna
-
-    Kiedy mija 20 dni
-    I reguła bonusowa "Noworoczny bonus" zostaje dezaktywowana
-    Wtedy reguła bonusowa "Noworoczny bonus" powinna być nieaktywna
+  Scenario: Bonus rules with time manipulation
+    Given it is "2025-01-01 08:00:00"
+    And there is a bonus rule "New Year Bonus" that awards 200 bonus points for completing 25 tasks in a month
+    Then bonus rule "New Year Bonus" should be active
+    When 15 days pass
+    Then bonus rule "New Year Bonus" should be active
+    When 20 days pass
+    And bonus rule "New Year Bonus" is deactivated
+    Then bonus rule "New Year Bonus" should be inactive

@@ -13,6 +13,10 @@ use App\Tests\UserManagement\Mother\UserMother;
 use App\UserManagement\Domain\ValueObject\Email;
 use Behat\Behat\Hook\Scope\BeforeScenarioScope;
 use Behat\Gherkin\Node\TableNode;
+use Behat\Hook\BeforeScenario;
+use Behat\Step\Given;
+use Behat\Step\Then;
+use Behat\Step\When;
 use PHPUnit\Framework\Assert;
 
 /**
@@ -25,9 +29,7 @@ final class TaskManagementContext extends AcceptanceContext
     private array $tasks = [];
     private ?\Throwable $lastException = null;
 
-    /**
-     * @BeforeScenario
-     */
+    #[BeforeScenario]
     public function resetState(BeforeScenarioScope $scope): void
     {
         $this->reset();
@@ -36,10 +38,7 @@ final class TaskManagementContext extends AcceptanceContext
         $this->lastException = null;
     }
 
-    /**
-     * @Given /^że istnieje administrator "([^"]*)"$/
-     * @Given /^istnieje administrator "([^"]*)"$/
-     */
+    #[Given('there is an administrator :name')]
     public function thereIsAnAdministrator(string $name): void
     {
         $userId = Uuid::generate();
@@ -56,10 +55,7 @@ final class TaskManagementContext extends AcceptanceContext
         $this->users[$name] = $userId;
     }
 
-    /**
-     * @Given /^istnieje członek rodziny "([^"]*)"$/
-     * @Given /^istnieje członek rodziny :name$/
-     */
+    #[Given('there is a family member :name')]
     public function thereIsAFamilyMember(string $name): void
     {
         $userId = Uuid::generate();
@@ -76,10 +72,7 @@ final class TaskManagementContext extends AcceptanceContext
         $this->users[$name] = $userId;
     }
 
-    /**
-     * @Given /^"([^"]*)" tworzy zadanie "([^"]*)" warte (\d+) punktów$/
-     * @Given /^:admin tworzy zadanie :taskName warte :points punktów$/
-     */
+    #[Given(':admin creates a task :taskName worth :points points')]
     public function createsATaskWorthPoints(string $admin, string $taskName, int $points): void
     {
         $taskId = Uuid::generate();
@@ -97,10 +90,7 @@ final class TaskManagementContext extends AcceptanceContext
         $this->tasks[$taskName] = $taskId;
     }
 
-    /**
-     * @When /^"([^"]*)" przypisuje zadanie "([^"]*)" do "([^"]*)"$/
-     * @When /^:admin przypisuje zadanie :taskName do :user$/
-     */
+    #[When(':admin assigns task :taskName to :user')]
     public function assignsTaskTo(string $admin, string $taskName, string $user): void
     {
         $taskId = $this->tasks[$taskName];
@@ -114,10 +104,7 @@ final class TaskManagementContext extends AcceptanceContext
         ($this->assignTaskHandler)($command);
     }
 
-    /**
-     * @When /^"([^"]*)" kończy zadanie "([^"]*)"$/
-     * @When /^:user kończy zadanie :taskName$/
-     */
+    #[When(':user completes task :taskName')]
     public function completesTask(string $user, string $taskName): void
     {
         $taskId = $this->tasks[$taskName];
@@ -135,10 +122,7 @@ final class TaskManagementContext extends AcceptanceContext
         }
     }
 
-    /**
-     * @When /^"([^"]*)" zatwierdza zadanie "([^"]*)"$/
-     * @When /^:admin zatwierdza zadanie :taskName$/
-     */
+    #[When(':admin approves task :taskName')]
     public function approvesTask(string $admin, string $taskName): void
     {
         $taskId = $this->tasks[$taskName];
@@ -156,10 +140,7 @@ final class TaskManagementContext extends AcceptanceContext
         }
     }
 
-    /**
-     * @Then /^zadanie "([^"]*)" powinno mieć status "([^"]*)"$/
-     * @Then /^zadanie :taskName powinno mieć status :status$/
-     */
+    #[Then('task :taskName should have status :status')]
     public function taskShouldHaveStatus(string $taskName, string $status): void
     {
         $taskId = $this->tasks[$taskName];
@@ -173,10 +154,7 @@ final class TaskManagementContext extends AcceptanceContext
         );
     }
 
-    /**
-     * @Then /^"([^"]*)" powinien mieć (\d+) punktów$/
-     * @Then /^:user powinien mieć :points punktów$/
-     */
+    #[Then(':user should have :points points')]
     public function shouldHavePoints(string $user, int $points): void
     {
         $userId = $this->users[$user];
@@ -190,10 +168,7 @@ final class TaskManagementContext extends AcceptanceContext
         );
     }
 
-    /**
-     * @Then /^"([^"]*)" powinien nie mieć jeszcze portfela$/
-     * @Then /^:user powinien nie mieć jeszcze portfela$/
-     */
+    #[Then(':user should have no wallet yet')]
     public function shouldHaveNoWalletYet(string $user): void
     {
         $userId = $this->users[$user];
@@ -202,29 +177,19 @@ final class TaskManagementContext extends AcceptanceContext
         Assert::assertNull($wallet, "{$user} should not have a wallet yet");
     }
 
-    /**
-     * @Given /^że jest "([^"]*)"$/
-     * @Given /^jest "([^"]*)"$/
-     */
+    #[Given('it is :dateTime')]
     public function itIs(string $dateTime): void
     {
         $this->setCurrentTime($dateTime);
     }
 
-    /**
-     * @When /^mija (\d+) dzień$/
-     * @When /^mija (\d+) dni$/
-     * @When /^mijają (\d+) dni$/
-     */
+    #[When(':days day(s) pass(es)')]
     public function daysPass(int $days): void
     {
         $this->advanceTimeByDays($days);
     }
 
-    /**
-     * @Then /^operacja powinna się nie udać z "([^"]*)"$/
-     * @Then /^operacja powinna się nie udać z :message$/
-     */
+    #[Then('the operation should fail with :message')]
     public function theOperationShouldFailWith(string $message): void
     {
         Assert::assertNotNull($this->lastException, 'Expected an exception but none was thrown');
@@ -235,10 +200,7 @@ final class TaskManagementContext extends AcceptanceContext
         );
     }
 
-    /**
-     * @Given /^istnieją następujący członkowie rodziny:$/
-     * @Given the following family members exist:
-     */
+    #[Given('there are the following family members:')]
     public function theFollowingFamilyMembersExist(TableNode $table): void
     {
         foreach ($table->getHash() as $row) {
@@ -246,10 +208,7 @@ final class TaskManagementContext extends AcceptanceContext
         }
     }
 
-    /**
-     * @When /^zostały utworzone następujące zadania:$/
-     * @When the following tasks are created:
-     */
+    #[When('the following tasks have been created:')]
     public function theFollowingTasksAreCreated(TableNode $table): void
     {
         foreach ($table->getHash() as $row) {

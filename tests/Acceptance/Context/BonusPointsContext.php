@@ -11,6 +11,10 @@ use App\TaskManagement\Application\BonusRule\Command\DeactivateBonusPointsRuleCo
 use App\TaskManagement\Application\BonusRule\Query\GetAllBonusPointsRulesQuery;
 use App\TaskManagement\Domain\ValueObject\RuleType;
 use Behat\Behat\Hook\Scope\BeforeScenarioScope;
+use Behat\Hook\BeforeScenario;
+use Behat\Step\Given;
+use Behat\Step\Then;
+use Behat\Step\When;
 use PHPUnit\Framework\Assert;
 
 /**
@@ -22,9 +26,7 @@ final class BonusPointsContext extends AcceptanceContext
     private array $bonusRules = [];
     private ?\Throwable $lastException = null;
 
-    /**
-     * @BeforeScenario
-     */
+    #[BeforeScenario]
     public function resetState(BeforeScenarioScope $scope): void
     {
         $this->reset();
@@ -32,10 +34,7 @@ final class BonusPointsContext extends AcceptanceContext
         $this->lastException = null;
     }
 
-    /**
-     * @Given /^że istnieje reguła bonusowa "([^"]*)" która przyznaje (\d+) punktów bonusowych za wykonanie (\d+) zadań w miesiącu$/
-     * @Given /^istnieje reguła bonusowa "([^"]*)" która przyznaje (\d+) punktów bonusowych za wykonanie (\d+) zadań w miesiącu$/
-     */
+    #[Given('there is a bonus rule :ruleName that awards :points bonus points for completing :requiredCount tasks in a month')]
     public function thereIsABonusRuleThatAwardsBonusPointsForCompletingTasksInAMonth(
         string $ruleName,
         int $points,
@@ -58,10 +57,7 @@ final class BonusPointsContext extends AcceptanceContext
         $this->bonusRules[$ruleName] = $ruleId;
     }
 
-    /**
-     * @Given /^że istnieje reguła bonusowa "([^"]*)" która przyznaje (\d+) punktów bonusowych za (\d+) kolejnych dni wykonywania zadań$/
-     * @Given /^istnieje reguła bonusowa "([^"]*)" która przyznaje (\d+) punktów bonusowych za (\d+) kolejnych dni wykonywania zadań$/
-     */
+    #[Given('there is a bonus rule :ruleName that awards :points bonus points for :consecutiveDays consecutive days of task completion')]
     public function thereIsABonusRuleThatAwardsBonusPointsForConsecutiveDaysOfTaskCompletion(
         string $ruleName,
         int $points,
@@ -86,9 +82,7 @@ final class BonusPointsContext extends AcceptanceContext
         $this->bonusRules[$ruleName] = $ruleId;
     }
 
-    /**
-     * @When /^reguła bonusowa "([^"]*)" zostaje aktywowana$/
-     */
+    #[When('bonus rule :ruleName is activated')]
     public function theBonusRuleIsActivated(string $ruleName): void
     {
         $ruleId = $this->bonusRules[$ruleName];
@@ -101,9 +95,7 @@ final class BonusPointsContext extends AcceptanceContext
         }
     }
 
-    /**
-     * @When /^reguła bonusowa "([^"]*)" zostaje dezaktywowana$/
-     */
+    #[When('bonus rule :ruleName is deactivated')]
     public function theBonusRuleIsDeactivated(string $ruleName): void
     {
         $ruleId = $this->bonusRules[$ruleName];
@@ -116,11 +108,8 @@ final class BonusPointsContext extends AcceptanceContext
         }
     }
 
-    /**
-     * @Then /^powinno być (\d+) aktywna reguła bonusowa$/
-     * @Then /^powinno być (\d+) aktywne reguły bonusowe$/
-     * @Then /^powinno być (\d+) aktywnych reguł bonusowych$/
-     */
+    #[Then('there should be :count active bonus rule')]
+    #[Then('there should be :count active bonus rules')]
     public function thereShouldBeActiveBonusRules(int $count): void
     {
         $rules = ($this->getAllBonusPointsRulesQueryHandler)(new GetAllBonusPointsRulesQuery(activeOnly: true));
@@ -132,9 +121,7 @@ final class BonusPointsContext extends AcceptanceContext
         );
     }
 
-    /**
-     * @Then /^reguła bonusowa "([^"]*)" powinna być aktywna$/
-     */
+    #[Then('bonus rule :ruleName should be active')]
     public function bonusRuleShouldBeActive(string $ruleName): void
     {
         $ruleId = $this->bonusRules[$ruleName];
@@ -144,9 +131,7 @@ final class BonusPointsContext extends AcceptanceContext
         Assert::assertTrue($rule->isActive(), "Bonus rule {$ruleName} should be active");
     }
 
-    /**
-     * @Then /^reguła bonusowa "([^"]*)" powinna być nieaktywna$/
-     */
+    #[Then('bonus rule :ruleName should be inactive')]
     public function bonusRuleShouldBeInactive(string $ruleName): void
     {
         $ruleId = $this->bonusRules[$ruleName];
@@ -156,9 +141,7 @@ final class BonusPointsContext extends AcceptanceContext
         Assert::assertFalse($rule->isActive(), "Bonus rule {$ruleName} should be inactive");
     }
 
-    /**
-     * @Then /^wszystkie reguły bonusowe powinny być wylistowane$/
-     */
+    #[Then('all bonus rules should be listed')]
     public function allBonusRulesShouldBeListed(): void
     {
         $rules = ($this->getAllBonusPointsRulesQueryHandler)(new GetAllBonusPointsRulesQuery(activeOnly: false));

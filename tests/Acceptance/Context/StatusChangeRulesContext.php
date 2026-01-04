@@ -11,6 +11,10 @@ use App\TaskManagement\Application\StatusChangeRule\Command\DeactivateStatusChan
 use App\TaskManagement\Application\StatusChangeRule\Query\GetAllStatusChangeRulesQuery;
 use App\TaskManagement\Domain\ValueObject\StatusChangeConditionType;
 use Behat\Behat\Hook\Scope\BeforeScenarioScope;
+use Behat\Hook\BeforeScenario;
+use Behat\Step\Given;
+use Behat\Step\Then;
+use Behat\Step\When;
 use PHPUnit\Framework\Assert;
 
 /**
@@ -23,9 +27,7 @@ final class StatusChangeRulesContext extends AcceptanceContext
     private array $taskTemplates = [];
     private ?\Throwable $lastException = null;
 
-    /**
-     * @BeforeScenario
-     */
+    #[BeforeScenario]
     public function resetState(BeforeScenarioScope $scope): void
     {
         $this->reset();
@@ -34,12 +36,8 @@ final class StatusChangeRulesContext extends AcceptanceContext
         $this->lastException = null;
     }
 
-    /**
-     * @Given /^że istnieje reguła zmiany statusu "([^"]*)" która wymaga (\d+) dzień karencji po zakończeniu$/
-     * @Given /^że istnieje reguła zmiany statusu "([^"]*)" która wymaga (\d+) dni karencji po zakończeniu$/
-     * @Given /^istnieje reguła zmiany statusu "([^"]*)" która wymaga (\d+) dzień karencji po zakończeniu$/
-     * @Given /^istnieje reguła zmiany statusu "([^"]*)" która wymaga (\d+) dni karencji po zakończeniu$/
-     */
+    #[Given('there is a status change rule :ruleName that requires :cooldownDays day cooldown after completion')]
+    #[Given('there is a status change rule :ruleName that requires :cooldownDays days cooldown after completion')]
     public function thereIsAStatusChangeRuleThatRequiresDaysCooldownAfterCompletion(
         string $ruleName,
         int $cooldownDays
@@ -51,7 +49,7 @@ final class StatusChangeRulesContext extends AcceptanceContext
             $ruleId->value(),
             $taskTemplateId->value(),
             $ruleName,
-            "Task cannot be assigned within {$cooldownDays} days of last execution",
+            "Task requires {$cooldownDays} day(s) cooldown after completion",
             StatusChangeConditionType::LAST_EXECUTION_COOLDOWN->value,
             [
                 'cooldownDays' => $cooldownDays
@@ -62,23 +60,20 @@ final class StatusChangeRulesContext extends AcceptanceContext
         $this->statusChangeRules[$ruleName] = $ruleId;
     }
 
-    /**
-     * @Given /^że istnieje reguła zmiany statusu "([^"]*)" dla zadania "([^"]*)" która wymaga wykonania innego zadania dzisiaj$/
-     * @Given /^istnieje reguła zmiany statusu "([^"]*)" dla zadania "([^"]*)" która wymaga wykonania innego zadania dzisiaj$/
-     */
+    #[Given('there is a status change rule :ruleName for task :taskName that requires another task to be completed today')]
     public function thereIsAStatusChangeRuleForTaskThatRequiresAnotherTaskToBeCompletedToday(
         string $ruleName,
         string $taskName
     ): void {
         $ruleId = Uuid::generate();
         $taskTemplateId = $this->getOrCreateTaskTemplate($taskName);
-        $requiredTaskTemplateId = $this->getOrCreateTaskTemplate('Required Task');
+        $requiredTaskTemplateId = Uuid::generate();
 
         $command = new CreateStatusChangeRuleCommand(
             $ruleId->value(),
             $taskTemplateId->value(),
             $ruleName,
-            "Task cannot be assigned unless required task was completed today",
+            "Requires another task to be completed today",
             StatusChangeConditionType::OTHER_TASK_COMPLETED_TODAY->value,
             [
                 'requiredTaskTemplateId' => $requiredTaskTemplateId->value()
@@ -89,9 +84,7 @@ final class StatusChangeRulesContext extends AcceptanceContext
         $this->statusChangeRules[$ruleName] = $ruleId;
     }
 
-    /**
-     * @When /^reguła zmiany statusu "([^"]*)" zostaje aktywowana$/
-     */
+    #[When('status change rule :ruleName is activated')]
     public function theStatusChangeRuleIsActivated(string $ruleName): void
     {
         $ruleId = $this->statusChangeRules[$ruleName];
@@ -104,9 +97,7 @@ final class StatusChangeRulesContext extends AcceptanceContext
         }
     }
 
-    /**
-     * @When /^reguła zmiany statusu "([^"]*)" zostaje dezaktywowana$/
-     */
+    #[When('status change rule :ruleName is deactivated')]
     public function theStatusChangeRuleIsDeactivated(string $ruleName): void
     {
         $ruleId = $this->statusChangeRules[$ruleName];
@@ -119,11 +110,8 @@ final class StatusChangeRulesContext extends AcceptanceContext
         }
     }
 
-    /**
-     * @Then /^powinno być (\d+) aktywna reguła zmiany statusu$/
-     * @Then /^powinno być (\d+) aktywne reguły zmiany statusu$/
-     * @Then /^powinno być (\d+) aktywnych reguł zmiany statusu$/
-     */
+    #[Then('there should be :count active status change rule')]
+    #[Then('there should be :count active status change rules')]
     public function thereShouldBeActiveStatusChangeRules(int $count): void
     {
         $rules = ($this->getAllStatusChangeRulesQueryHandler)(
@@ -137,9 +125,7 @@ final class StatusChangeRulesContext extends AcceptanceContext
         );
     }
 
-    /**
-     * @Then /^reguła zmiany statusu "([^"]*)" powinna być aktywna$/
-     */
+    #[Then('status change rule :ruleName should be active')]
     public function statusChangeRuleShouldBeActive(string $ruleName): void
     {
         $ruleId = $this->statusChangeRules[$ruleName];
@@ -149,9 +135,7 @@ final class StatusChangeRulesContext extends AcceptanceContext
         Assert::assertTrue($rule->isActive(), "Status change rule {$ruleName} should be active");
     }
 
-    /**
-     * @Then /^reguła zmiany statusu "([^"]*)" powinna być nieaktywna$/
-     */
+    #[Then('status change rule :ruleName should be inactive')]
     public function statusChangeRuleShouldBeInactive(string $ruleName): void
     {
         $ruleId = $this->statusChangeRules[$ruleName];
