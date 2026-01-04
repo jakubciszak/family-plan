@@ -213,6 +213,37 @@ docker compose down
 docker compose down -v
 ```
 
+### 🛠️ Using the Makefile (Recommended)
+
+For easier project management, a comprehensive Makefile is available with all essential commands:
+
+```bash
+# Display all available commands
+make help
+
+# Quick start - complete setup in one command:
+make setup           # Start services + install deps + migrate + create admin
+
+# Common commands:
+make up              # Start all services
+make down            # Stop all services
+make restart         # Restart all services
+make logs            # Show logs from all services
+make shell           # Access PHP container shell
+make install         # Install all dependencies
+make db-migrate      # Run database migrations
+make create-admin    # Create super admin account
+make test            # Run all tests
+make init            # Initialize project (install + migrate + build)
+
+# Production deployment:
+make prod-up         # Start production stack
+make prod-down       # Stop production stack
+make prod-logs       # Show production logs
+```
+
+Run `make help` to see the complete list of available commands with descriptions.
+
 ## 🚀 Alternative Development Setup (Without Docker)
 
 ### Frontend Development (Standalone)
