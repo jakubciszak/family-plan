@@ -4,11 +4,11 @@
 @contentType = application/json
 
 ### Variables - Update these with real values
-@teamId = 00000000-0000-0000-0000-000000000000
-@userId = 00000000-0000-0000-0000-000000000000
-@invitationToken = example-token-here
-@invalidToken = invalid-token-12345
-@notFoundTeamId = 99999999-9999-9999-9999-999999999999
+@teamId = 
+@userId = 
+@invitationToken = 
+@invalidToken = 
+@notFoundTeamId = 
 
 ###
 ### List All Teams for Current User
@@ -129,7 +129,7 @@ POST {{baseUrl}}/api/teams/invitations/{{invalidToken}}/accept
 Content-Type: {{contentType}}
 
 ###
-### Team Not Found (should return 404 or error)
+### Team Not Found (should return 404)
 GET {{baseUrl}}/api/teams/{{notFoundTeamId}}/members
 Content-Type: {{contentType}}
 
