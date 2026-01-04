@@ -7,6 +7,8 @@
 @teamId = 00000000-0000-0000-0000-000000000000
 @userId = 00000000-0000-0000-0000-000000000000
 @invitationToken = example-token-here
+@invalidToken = invalid-token-12345
+@notFoundTeamId = 99999999-9999-9999-9999-999999999999
 
 ###
 ### List All Teams for Current User
@@ -123,12 +125,12 @@ Content-Type: {{contentType}}
 
 ###
 ### Accept Team Invitation - Invalid Token (should return error)
-POST {{baseUrl}}/api/teams/invitations/invalid-token-12345/accept
+POST {{baseUrl}}/api/teams/invitations/{{invalidToken}}/accept
 Content-Type: {{contentType}}
 
 ###
 ### Team Not Found (should return 404 or error)
-GET {{baseUrl}}/api/teams/00000000-0000-0000-0000-000000000000/members
+GET {{baseUrl}}/api/teams/{{notFoundTeamId}}/members
 Content-Type: {{contentType}}
 
 ###
