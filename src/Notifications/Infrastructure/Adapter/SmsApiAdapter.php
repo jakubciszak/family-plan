@@ -74,7 +74,7 @@ final readonly class SmsApiAdapter implements NotificationPortInterface
         $ch = curl_init();
         
         if ($ch === false) {
-            throw new \RuntimeException('Failed to initialize cURL');
+            throw new \RuntimeException('Failed to initialize cURL. Please ensure the cURL extension is installed and enabled.');
         }
         
         curl_setopt_array($ch, [
@@ -104,7 +104,7 @@ final readonly class SmsApiAdapter implements NotificationPortInterface
             $errorMessage = 'HTTP error ' . $httpCode;
             if ($response) {
                 $decoded = json_decode($response, true);
-                if (isset($decoded['message'])) {
+                if (json_last_error() === JSON_ERROR_NONE && isset($decoded['message'])) {
                     $errorMessage .= ': ' . $decoded['message'];
                 }
             }
