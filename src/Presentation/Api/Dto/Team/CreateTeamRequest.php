@@ -13,7 +13,7 @@ final readonly class CreateTeamRequest
         #[Assert\Length(
             min: 1,
             max: 255,
-            minMessage: 'Team name must be at least {{ limit }} character long',
+            minMessage: 'Team name must be at least {{ limit }} characters long',
             maxMessage: 'Team name cannot be longer than {{ limit }} characters'
         )]
         public string $name,
