@@ -12,14 +12,15 @@ test.describe('Task List', () => {
 
   test('should display task list header', async ({ page }) => {
     await page.goto('/');
-    
+
     // Wait for app to load
     await page.waitForSelector('.task-list-container');
-    
+
     // Check for main elements
     await expect(page.locator('h1')).toContainText('Family Plan');
     await expect(page.locator('h2')).toContainText('Tasks');
-    await expect(page.locator('.task-list-header button')).toContainText('Create Task');
+    // Note: Regular users (non-admins) should NOT see "Create Task" button
+    // This is tested in task-creation.spec.js
   });
 
   test('should display loading state initially', async ({ page }) => {
@@ -139,13 +140,21 @@ test.describe('Task List - Admin View', () => {
     await setupAuthenticatedSession(page, 'admin');
   });
 
+  test('should show create task button for admin users', async ({ page }) => {
+    await page.goto('/');
+    await page.waitForSelector('.task-list-container');
+
+    // Check that admin can see the "Create Task" button
+    await expect(page.locator('.task-list-header button:has-text("Create Task")')).toBeVisible();
+  });
+
   test('should show approve button for completed tasks when admin', async ({ page }) => {
     await page.goto('/');
     await page.waitForSelector('.task-card');
-    
+
     // Find a completed task
     const completedTask = page.locator('.task-card').filter({ hasText: 'Vacuum living room' });
-    
+
     // Check for approve button
     await expect(completedTask.locator('.btn-primary')).toContainText('Approve');
   });
@@ -153,7 +162,7 @@ test.describe('Task List - Admin View', () => {
   test('should display admin user info', async ({ page }) => {
     await page.goto('/');
     await page.waitForSelector('.app-header');
-    
+
     // Check admin user info
     await expect(page.locator('.user-info')).toContainText('Welcome, Admin User');
   });
