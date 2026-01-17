@@ -8,6 +8,7 @@ final readonly class CreateStatusChangeRuleCommand
 {
     public function __construct(
         public string $id,
+        public string $teamId,
         public string $taskTemplateId,
         public string $name,
         public string $description,

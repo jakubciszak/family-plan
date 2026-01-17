@@ -51,6 +51,7 @@ class StatusChangeRuleManagementTest extends TestCase
         
         $command = new CreateStatusChangeRuleCommand(
             $ruleId,
+            Uuid::generate()->value(),
             $taskTemplateId,
             'Morning Exercise Prerequisite',
             'Task cannot be assigned unless morning exercise was completed today',
@@ -79,6 +80,7 @@ class StatusChangeRuleManagementTest extends TestCase
         
         $command = new CreateStatusChangeRuleCommand(
             $ruleId,
+            Uuid::generate()->value(),
             $taskTemplateId,
             'Cooldown After Completion',
             'Task cannot be assigned within 2 days of last execution',
@@ -107,6 +109,7 @@ class StatusChangeRuleManagementTest extends TestCase
         
         $createCommand = new CreateStatusChangeRuleCommand(
             $ruleId,
+            Uuid::generate()->value(),
             $taskTemplateId,
             'Original Name',
             'Original Description',
@@ -137,6 +140,7 @@ class StatusChangeRuleManagementTest extends TestCase
         
         $createCommand = new CreateStatusChangeRuleCommand(
             $ruleId,
+            Uuid::generate()->value(),
             $taskTemplateId,
             'Test Rule',
             'Test Description',
@@ -162,6 +166,7 @@ class StatusChangeRuleManagementTest extends TestCase
         
         $createCommand = new CreateStatusChangeRuleCommand(
             $ruleId,
+            Uuid::generate()->value(),
             $taskTemplateId,
             'Test Rule',
             'Test Description',
@@ -188,6 +193,7 @@ class StatusChangeRuleManagementTest extends TestCase
         $createCommands = [
             new CreateStatusChangeRuleCommand(
                 Uuid::generate()->value(),
+                Uuid::generate()->value(),
                 $taskTemplateId,
                 'Rule 1',
                 'Description 1',
@@ -195,6 +201,7 @@ class StatusChangeRuleManagementTest extends TestCase
                 ['cooldownDays' => 1]
             ),
             new CreateStatusChangeRuleCommand(
+                Uuid::generate()->value(),
                 Uuid::generate()->value(),
                 $taskTemplateId,
                 'Rule 2',
@@ -224,6 +231,7 @@ class StatusChangeRuleManagementTest extends TestCase
         
         ($this->createHandler)(new CreateStatusChangeRuleCommand(
             $ruleId1,
+            Uuid::generate()->value(),
             $taskTemplateId,
             'Active Rule',
             'Description',
@@ -233,6 +241,7 @@ class StatusChangeRuleManagementTest extends TestCase
         
         ($this->createHandler)(new CreateStatusChangeRuleCommand(
             $ruleId2,
+            Uuid::generate()->value(),
             $taskTemplateId,
             'Inactive Rule',
             'Description',
@@ -258,14 +267,16 @@ class StatusChangeRuleManagementTest extends TestCase
         
         ($this->createHandler)(new CreateStatusChangeRuleCommand(
             Uuid::generate()->value(),
+            Uuid::generate()->value(),
             $taskTemplateId1,
             'Template 1 Rule',
             'Description',
             StatusChangeConditionType::LAST_EXECUTION_COOLDOWN->value,
             ['cooldownDays' => 1]
         ));
-        
+
         ($this->createHandler)(new CreateStatusChangeRuleCommand(
+            Uuid::generate()->value(),
             Uuid::generate()->value(),
             $taskTemplateId2,
             'Template 2 Rule',
