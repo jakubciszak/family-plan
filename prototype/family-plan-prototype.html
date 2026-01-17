@@ -1,0 +1,1656 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Family Plan - Prototype</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary-color: #4a90e2;
+            --primary-dark: #357abd;
+            --success-color: #5cb85c;
+            --warning-color: #f0ad4e;
+            --danger-color: #d9534f;
+            --info-color: #5bc0de;
+            --background: #f5f7fa;
+            --card-background: #ffffff;
+            --text-primary: #333333;
+            --text-secondary: #666666;
+            --border-color: #e1e4e8;
+            --shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            --shadow-hover: 0 4px 16px rgba(0, 0, 0, 0.15);
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+            background: var(--background);
+            color: var(--text-primary);
+            line-height: 1.6;
+        }
+
+        .app {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Header Styles */
+        .app-header {
+            background: var(--card-background);
+            border-bottom: 2px solid var(--border-color);
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: var(--shadow);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            flex-wrap: wrap;
+        }
+
+        .header-left h1 {
+            font-size: 1.5rem;
+            color: var(--primary-color);
+            font-weight: 700;
+        }
+
+        .hamburger-menu {
+            display: none;
+            flex-direction: column;
+            gap: 4px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 8px;
+        }
+
+        .hamburger-menu span {
+            width: 25px;
+            height: 3px;
+            background: var(--text-primary);
+            transition: all 0.3s;
+        }
+
+        .app-nav {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .app-nav button {
+            background: none;
+            border: none;
+            padding: 0.5rem 1rem;
+            cursor: pointer;
+            font-size: 1rem;
+            color: var(--text-secondary);
+            transition: all 0.3s;
+            border-radius: 4px;
+        }
+
+        .app-nav button:hover {
+            background: var(--background);
+            color: var(--primary-color);
+        }
+
+        .app-nav button.nav-active {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .user-info {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .user-welcome {
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        .user-points {
+            background: var(--success-color);
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .language-switcher {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .language-switcher button {
+            background: var(--card-background);
+            border: 1px solid var(--border-color);
+            padding: 0.25rem 0.5rem;
+            cursor: pointer;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            transition: all 0.3s;
+        }
+
+        .language-switcher button.active {
+            background: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+        }
+
+        /* Main Content */
+        .app-main {
+            flex: 1;
+            padding: 2rem;
+            max-width: 1400px;
+            width: 100%;
+            margin: 0 auto;
+        }
+
+        /* Login/Register Page */
+        .auth-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+        }
+
+        .auth-card {
+            background: var(--card-background);
+            padding: 2.5rem;
+            border-radius: 12px;
+            box-shadow: var(--shadow-hover);
+            max-width: 400px;
+            width: 90%;
+        }
+
+        .auth-card h2 {
+            margin-bottom: 1.5rem;
+            color: var(--primary-color);
+            text-align: center;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 1rem;
+            transition: all 0.3s;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.1);
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 6px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: inline-block;
+        }
+
+        .btn-primary {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-dark);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-hover);
+        }
+
+        .btn-success {
+            background: var(--success-color);
+            color: white;
+        }
+
+        .btn-danger {
+            background: var(--danger-color);
+            color: white;
+        }
+
+        .btn-warning {
+            background: var(--warning-color);
+            color: white;
+        }
+
+        .btn-info {
+            background: var(--info-color);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: var(--text-secondary);
+            color: white;
+        }
+
+        .btn-full {
+            width: 100%;
+        }
+
+        .auth-switch {
+            text-align: center;
+            margin-top: 1rem;
+            color: var(--text-secondary);
+        }
+
+        .auth-switch a {
+            color: var(--primary-color);
+            cursor: pointer;
+            text-decoration: none;
+        }
+
+        .auth-switch a:hover {
+            text-decoration: underline;
+        }
+
+        /* Cards */
+        .card {
+            background: var(--card-background);
+            border-radius: 8px;
+            padding: 1.5rem;
+            box-shadow: var(--shadow);
+            margin-bottom: 1.5rem;
+        }
+
+        .card h3 {
+            margin-bottom: 1rem;
+            color: var(--primary-color);
+        }
+
+        /* Task List */
+        .task-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .task-filters {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .task-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .task-card {
+            background: var(--card-background);
+            border-radius: 8px;
+            padding: 1.5rem;
+            box-shadow: var(--shadow);
+            transition: all 0.3s;
+            border-left: 4px solid var(--primary-color);
+        }
+
+        .task-card:hover {
+            box-shadow: var(--shadow-hover);
+            transform: translateY(-4px);
+        }
+
+        .task-card.status-pending {
+            border-left-color: var(--warning-color);
+        }
+
+        .task-card.status-completed {
+            border-left-color: var(--info-color);
+        }
+
+        .task-card.status-approved {
+            border-left-color: var(--success-color);
+        }
+
+        .task-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: var(--text-primary);
+        }
+
+        .task-description {
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+            font-size: 0.9rem;
+        }
+
+        .task-meta {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin-bottom: 1rem;
+            font-size: 0.9rem;
+        }
+
+        .task-meta span {
+            background: var(--background);
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            color: var(--text-secondary);
+        }
+
+        .task-points {
+            background: var(--success-color) !important;
+            color: white !important;
+            font-weight: 600;
+        }
+
+        .task-actions {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .task-actions button {
+            flex: 1;
+            min-width: 100px;
+        }
+
+        /* Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            padding: 1rem;
+        }
+
+        .modal {
+            background: var(--card-background);
+            border-radius: 12px;
+            padding: 2rem;
+            max-width: 600px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: var(--shadow-hover);
+        }
+
+        .modal h2 {
+            margin-bottom: 1.5rem;
+            color: var(--primary-color);
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 1rem;
+            justify-content: flex-end;
+            margin-top: 1.5rem;
+        }
+
+        /* Table */
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+
+        .table th,
+        .table td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .table th {
+            background: var(--background);
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .table tr:hover {
+            background: var(--background);
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .badge-admin {
+            background: var(--danger-color);
+            color: white;
+        }
+
+        .badge-user {
+            background: var(--info-color);
+            color: white;
+        }
+
+        .badge-active {
+            background: var(--success-color);
+            color: white;
+        }
+
+        .badge-inactive {
+            background: var(--text-secondary);
+            color: white;
+        }
+
+        /* Alerts */
+        .alert {
+            padding: 1rem;
+            border-radius: 6px;
+            margin-bottom: 1rem;
+        }
+
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .alert-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .alert-info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+
+        /* Team Cards */
+        .team-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .team-card {
+            background: var(--card-background);
+            border-radius: 8px;
+            padding: 1.5rem;
+            box-shadow: var(--shadow);
+            border-top: 4px solid var(--primary-color);
+        }
+
+        .team-card h3 {
+            color: var(--primary-color);
+            margin-bottom: 1rem;
+        }
+
+        .team-members {
+            margin-top: 1rem;
+        }
+
+        .team-member {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .team-member:last-child {
+            border-bottom: none;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .app-header {
+                padding: 1rem;
+            }
+
+            .hamburger-menu {
+                display: flex;
+                order: 2;
+            }
+
+            .header-left {
+                order: 1;
+            }
+
+            .app-nav {
+                order: 4;
+                width: 100%;
+                flex-direction: column;
+                display: none;
+                margin-top: 1rem;
+                padding-top: 1rem;
+                border-top: 1px solid var(--border-color);
+            }
+
+            .app-nav.mobile-open {
+                display: flex;
+            }
+
+            .app-nav button {
+                width: 100%;
+                text-align: left;
+            }
+
+            .user-info {
+                order: 3;
+                font-size: 0.9rem;
+            }
+
+            .app-main {
+                padding: 1rem;
+            }
+
+            .task-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .team-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .task-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .modal {
+                padding: 1.5rem;
+            }
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        /* Loading Spinner */
+        .spinner {
+            border: 3px solid var(--background);
+            border-top: 3px solid var(--primary-color);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 2rem auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div id="app"></div>
+
+    <script>
+        // ==================== MOCK DATA ====================
+        const MOCK_DATA = {
+            users: [
+                { id: 1, email: 'admin@family.com', password: 'admin', name: 'Admin User', role: 'ROLE_ADMIN', points: 450, teamId: 1 },
+                { id: 2, email: 'parent@family.com', password: 'parent', name: 'Parent User', role: 'ROLE_ADMIN', points: 320, teamId: 1 },
+                { id: 3, email: 'child1@family.com', password: 'child1', name: 'Alex Child', role: 'ROLE_USER', points: 180, teamId: 1 },
+                { id: 4, email: 'child2@family.com', password: 'child2', name: 'Emma Child', role: 'ROLE_USER', points: 220, teamId: 1 },
+                { id: 5, email: 'user@family.com', password: 'user', name: 'Test User', role: 'ROLE_USER', points: 150, teamId: 2 }
+            ],
+            tasks: [
+                { id: 1, name: 'Wash dishes', description: 'Clean all dishes from dinner', points: 20, frequency: 'daily', status: 'pending', assignedUserId: 3, createdBy: 1, teamId: 1 },
+                { id: 2, name: 'Take out trash', description: 'Take trash bins to the curb', points: 15, frequency: 'weekly', status: 'pending', assignedUserId: 4, createdBy: 1, teamId: 1 },
+                { id: 3, name: 'Vacuum living room', description: 'Vacuum the entire living room', points: 30, frequency: 'weekly', status: 'completed', assignedUserId: 3, createdBy: 1, teamId: 1 },
+                { id: 4, name: 'Clean bathroom', description: 'Deep clean the bathroom', points: 40, frequency: 'weekly', status: 'approved', assignedUserId: 4, createdBy: 2, teamId: 1 },
+                { id: 5, name: 'Mow lawn', description: 'Mow the front and back lawn', points: 50, frequency: 'monthly', status: 'pending', assignedUserId: null, createdBy: 1, teamId: 1 },
+                { id: 6, name: 'Water plants', description: 'Water all indoor and outdoor plants', points: 10, frequency: 'daily', status: 'pending', assignedUserId: 3, createdBy: 2, teamId: 1 },
+                { id: 7, name: 'Organize garage', description: 'Sort and organize garage items', points: 60, frequency: 'once', status: 'pending', assignedUserId: null, createdBy: 1, teamId: 1 }
+            ],
+            teams: [
+                { id: 1, name: 'Smith Family', description: 'Main family team', adminId: 1 },
+                { id: 2, name: 'Johnson Family', description: 'Extended family team', adminId: 2 }
+            ],
+            bonusRules: [
+                { id: 1, name: '7 Day Streak', description: 'Complete tasks for 7 consecutive days', bonusPoints: 50, type: 'consecutive_days', requiredDays: 7, teamId: 1 },
+                { id: 2, name: 'Monthly Champion', description: 'Complete 30 tasks in a month', bonusPoints: 100, type: 'monthly_task_count', requiredCount: 30, teamId: 1 },
+                { id: 3, name: '3 Day Streak', description: 'Complete tasks for 3 consecutive days', bonusPoints: 20, type: 'consecutive_days', requiredDays: 3, teamId: 1 }
+            ],
+            statusChangeRules: [
+                { id: 1, from: 'pending', to: 'completed', requiredRole: 'ROLE_USER', teamId: 1 },
+                { id: 2, from: 'completed', to: 'approved', requiredRole: 'ROLE_ADMIN', teamId: 1 },
+                { id: 3, from: 'completed', to: 'pending', requiredRole: 'ROLE_ADMIN', teamId: 1 }
+            ]
+        };
+
+        // ==================== TRANSLATIONS ====================
+        const translations = {
+            pl: {
+                'app.title': 'Family Plan',
+                'nav.tasks': 'Zadania',
+                'nav.teams': 'Zespoły',
+                'nav.bonusRules': 'Zasady Bonusów',
+                'nav.statusChangeRules': 'Zasady Statusów',
+                'nav.settings': 'Ustawienia',
+                'app.welcome': 'Witaj, {{name}}!',
+                'user.points': '{{points}} pkt',
+                'auth.logout': 'Wyloguj',
+                'auth.login': 'Zaloguj się',
+                'auth.register': 'Zarejestruj się',
+                'auth.email': 'Email',
+                'auth.password': 'Hasło',
+                'auth.name': 'Imię',
+                'auth.noAccount': 'Nie masz konta?',
+                'auth.hasAccount': 'Masz już konto?',
+                'auth.registerLink': 'Zarejestruj się',
+                'auth.loginLink': 'Zaloguj się',
+                'tasks.title': 'Lista Zadań',
+                'tasks.createTask': 'Utwórz Zadanie',
+                'tasks.filterAll': 'Wszystkie',
+                'tasks.filterPending': 'Oczekujące',
+                'tasks.filterCompleted': 'Ukończone',
+                'tasks.filterApproved': 'Zatwierdzone',
+                'tasks.points': '{{points}} pkt',
+                'tasks.frequency': 'Częstotliwość: {{frequency}}',
+                'tasks.status': 'Status: {{status}}',
+                'tasks.assignedTo': 'Przypisano: {{name}}',
+                'tasks.unassigned': 'Nieprzypisane',
+                'tasks.complete': 'Ukończ',
+                'tasks.approve': 'Zatwierdź',
+                'tasks.reject': 'Odrzuć',
+                'tasks.assign': 'Przypisz',
+                'tasks.delete': 'Usuń',
+                'tasks.taskName': 'Nazwa zadania',
+                'tasks.description': 'Opis',
+                'tasks.selectFrequency': 'Wybierz częstotliwość',
+                'tasks.selectUser': 'Wybierz użytkownika',
+                'tasks.save': 'Zapisz',
+                'tasks.cancel': 'Anuluj',
+                'teams.title': 'Zarządzanie Zespołami',
+                'teams.createTeam': 'Utwórz Zespół',
+                'teams.members': 'Członkowie',
+                'teams.admin': 'Administrator',
+                'teams.teamName': 'Nazwa zespołu',
+                'teams.addMember': 'Dodaj Członka',
+                'teams.removeMember': 'Usuń',
+                'bonus.title': 'Zasady Bonusów',
+                'bonus.create': 'Utwórz Zasadę',
+                'bonus.name': 'Nazwa',
+                'bonus.description': 'Opis',
+                'bonus.points': 'Punkty Bonusowe',
+                'bonus.type': 'Typ',
+                'bonus.consecutiveDays': 'Kolejne Dni',
+                'bonus.monthlyTaskCount': 'Liczba Zadań Miesięcznie',
+                'bonus.requiredDays': 'Wymagane Dni',
+                'bonus.requiredCount': 'Wymagana Liczba',
+                'settings.title': 'Ustawienia Użytkownika',
+                'settings.profile': 'Profil',
+                'settings.changeName': 'Zmień Imię',
+                'settings.changePassword': 'Zmień Hasło',
+                'settings.currentPassword': 'Obecne Hasło',
+                'settings.newPassword': 'Nowe Hasło',
+                'settings.confirmPassword': 'Potwierdź Hasło',
+                'common.edit': 'Edytuj',
+                'common.delete': 'Usuń',
+                'common.close': 'Zamknij',
+                'frequency.once': 'Jednorazowo',
+                'frequency.daily': 'Codziennie',
+                'frequency.weekly': 'Tygodniowo',
+                'frequency.monthly': 'Miesięcznie',
+                'status.pending': 'Oczekujące',
+                'status.completed': 'Ukończone',
+                'status.approved': 'Zatwierdzone'
+            },
+            en: {
+                'app.title': 'Family Plan',
+                'nav.tasks': 'Tasks',
+                'nav.teams': 'Teams',
+                'nav.bonusRules': 'Bonus Rules',
+                'nav.statusChangeRules': 'Status Rules',
+                'nav.settings': 'Settings',
+                'app.welcome': 'Welcome, {{name}}!',
+                'user.points': '{{points}} pts',
+                'auth.logout': 'Logout',
+                'auth.login': 'Login',
+                'auth.register': 'Register',
+                'auth.email': 'Email',
+                'auth.password': 'Password',
+                'auth.name': 'Name',
+                'auth.noAccount': 'Don\'t have an account?',
+                'auth.hasAccount': 'Already have an account?',
+                'auth.registerLink': 'Register',
+                'auth.loginLink': 'Login',
+                'tasks.title': 'Task List',
+                'tasks.createTask': 'Create Task',
+                'tasks.filterAll': 'All',
+                'tasks.filterPending': 'Pending',
+                'tasks.filterCompleted': 'Completed',
+                'tasks.filterApproved': 'Approved',
+                'tasks.points': '{{points}} pts',
+                'tasks.frequency': 'Frequency: {{frequency}}',
+                'tasks.status': 'Status: {{status}}',
+                'tasks.assignedTo': 'Assigned to: {{name}}',
+                'tasks.unassigned': 'Unassigned',
+                'tasks.complete': 'Complete',
+                'tasks.approve': 'Approve',
+                'tasks.reject': 'Reject',
+                'tasks.assign': 'Assign',
+                'tasks.delete': 'Delete',
+                'tasks.taskName': 'Task Name',
+                'tasks.description': 'Description',
+                'tasks.selectFrequency': 'Select Frequency',
+                'tasks.selectUser': 'Select User',
+                'tasks.save': 'Save',
+                'tasks.cancel': 'Cancel',
+                'teams.title': 'Team Management',
+                'teams.createTeam': 'Create Team',
+                'teams.members': 'Members',
+                'teams.admin': 'Administrator',
+                'teams.teamName': 'Team Name',
+                'teams.addMember': 'Add Member',
+                'teams.removeMember': 'Remove',
+                'bonus.title': 'Bonus Rules',
+                'bonus.create': 'Create Rule',
+                'bonus.name': 'Name',
+                'bonus.description': 'Description',
+                'bonus.points': 'Bonus Points',
+                'bonus.type': 'Type',
+                'bonus.consecutiveDays': 'Consecutive Days',
+                'bonus.monthlyTaskCount': 'Monthly Task Count',
+                'bonus.requiredDays': 'Required Days',
+                'bonus.requiredCount': 'Required Count',
+                'settings.title': 'User Settings',
+                'settings.profile': 'Profile',
+                'settings.changeName': 'Change Name',
+                'settings.changePassword': 'Change Password',
+                'settings.currentPassword': 'Current Password',
+                'settings.newPassword': 'New Password',
+                'settings.confirmPassword': 'Confirm Password',
+                'common.edit': 'Edit',
+                'common.delete': 'Delete',
+                'common.close': 'Close',
+                'frequency.once': 'Once',
+                'frequency.daily': 'Daily',
+                'frequency.weekly': 'Weekly',
+                'frequency.monthly': 'Monthly',
+                'status.pending': 'Pending',
+                'status.completed': 'Completed',
+                'status.approved': 'Approved'
+            }
+        };
+
+        // ==================== STATE MANAGEMENT ====================
+        class AppState {
+            constructor() {
+                this.currentUser = null;
+                this.currentPage = 'tasks';
+                this.currentLanguage = localStorage.getItem('language') || 'pl';
+                this.isMobileMenuOpen = false;
+                this.showRegister = false;
+                this.taskFilter = 'all';
+                this.data = this.loadData();
+            }
+
+            loadData() {
+                const saved = localStorage.getItem('familyPlanData');
+                return saved ? JSON.parse(saved) : JSON.parse(JSON.stringify(MOCK_DATA));
+            }
+
+            saveData() {
+                localStorage.setItem('familyPlanData', JSON.stringify(this.data));
+            }
+
+            t(key, params = {}) {
+                let text = translations[this.currentLanguage][key] || key;
+                Object.keys(params).forEach(param => {
+                    text = text.replace(`{{${param}}}`, params[param]);
+                });
+                return text;
+            }
+
+            login(email, password) {
+                const user = this.data.users.find(u => u.email === email && u.password === password);
+                if (user) {
+                    this.currentUser = user;
+                    return true;
+                }
+                return false;
+            }
+
+            register(email, password, name) {
+                const exists = this.data.users.find(u => u.email === email);
+                if (exists) return false;
+
+                const newUser = {
+                    id: this.data.users.length + 1,
+                    email,
+                    password,
+                    name,
+                    role: 'ROLE_USER',
+                    points: 0,
+                    teamId: null
+                };
+                this.data.users.push(newUser);
+                this.saveData();
+                return true;
+            }
+
+            logout() {
+                this.currentUser = null;
+                this.currentPage = 'tasks';
+            }
+
+            setLanguage(lang) {
+                this.currentLanguage = lang;
+                localStorage.setItem('language', lang);
+            }
+
+            createTask(taskData) {
+                const newTask = {
+                    id: this.data.tasks.length + 1,
+                    ...taskData,
+                    status: 'pending',
+                    createdBy: this.currentUser.id,
+                    teamId: this.currentUser.teamId
+                };
+                this.data.tasks.push(newTask);
+                this.saveData();
+            }
+
+            updateTaskStatus(taskId, newStatus) {
+                const task = this.data.tasks.find(t => t.id === taskId);
+                if (task) {
+                    const oldStatus = task.status;
+                    task.status = newStatus;
+
+                    // Award points when approved
+                    if (newStatus === 'approved' && task.assignedUserId) {
+                        const user = this.data.users.find(u => u.id === task.assignedUserId);
+                        if (user) {
+                            user.points += task.points;
+                            if (this.currentUser.id === user.id) {
+                                this.currentUser.points = user.points;
+                            }
+                        }
+                    }
+
+                    // Remove points if rejected
+                    if (oldStatus === 'approved' && newStatus !== 'approved' && task.assignedUserId) {
+                        const user = this.data.users.find(u => u.id === task.assignedUserId);
+                        if (user) {
+                            user.points -= task.points;
+                            if (this.currentUser.id === user.id) {
+                                this.currentUser.points = user.points;
+                            }
+                        }
+                    }
+
+                    this.saveData();
+                }
+            }
+
+            deleteTask(taskId) {
+                this.data.tasks = this.data.tasks.filter(t => t.id !== taskId);
+                this.saveData();
+            }
+
+            assignTask(taskId, userId) {
+                const task = this.data.tasks.find(t => t.id === taskId);
+                if (task) {
+                    task.assignedUserId = userId;
+                    this.saveData();
+                }
+            }
+
+            createTeam(teamData) {
+                const newTeam = {
+                    id: this.data.teams.length + 1,
+                    ...teamData,
+                    adminId: this.currentUser.id
+                };
+                this.data.teams.push(newTeam);
+                this.saveData();
+            }
+
+            getUserTasks() {
+                if (this.currentUser.role === 'ROLE_ADMIN') {
+                    return this.data.tasks.filter(t => t.teamId === this.currentUser.teamId);
+                }
+                return this.data.tasks.filter(t =>
+                    t.assignedUserId === this.currentUser.id ||
+                    (t.teamId === this.currentUser.teamId && !t.assignedUserId)
+                );
+            }
+
+            getFilteredTasks() {
+                let tasks = this.getUserTasks();
+                if (this.taskFilter !== 'all') {
+                    tasks = tasks.filter(t => t.status === this.taskFilter);
+                }
+                return tasks;
+            }
+
+            getUsersByTeam(teamId) {
+                return this.data.users.filter(u => u.teamId === teamId);
+            }
+
+            getTeamMembers(teamId) {
+                return this.data.users.filter(u => u.teamId === teamId);
+            }
+        }
+
+        // ==================== APP INSTANCE ====================
+        const app = new AppState();
+
+        // ==================== RENDER FUNCTIONS ====================
+        function render() {
+            const appDiv = document.getElementById('app');
+
+            if (!app.currentUser) {
+                appDiv.innerHTML = app.showRegister ? renderRegister() : renderLogin();
+            } else {
+                appDiv.innerHTML = renderApp();
+            }
+
+            attachEventListeners();
+        }
+
+        function renderLogin() {
+            return `
+                <div class="auth-container">
+                    <div class="auth-card">
+                        <h2>${app.t('auth.login')}</h2>
+                        <div class="form-group">
+                            <label>${app.t('auth.email')}</label>
+                            <input type="email" id="login-email" value="admin@family.com">
+                        </div>
+                        <div class="form-group">
+                            <label>${app.t('auth.password')}</label>
+                            <input type="password" id="login-password" value="admin">
+                        </div>
+                        <button class="btn btn-primary btn-full" onclick="handleLogin()">${app.t('auth.login')}</button>
+                        <div class="auth-switch">
+                            ${app.t('auth.noAccount')} <a onclick="switchToRegister()">${app.t('auth.registerLink')}</a>
+                        </div>
+                        <div style="margin-top: 1.5rem; padding: 1rem; background: var(--background); border-radius: 6px; font-size: 0.85rem;">
+                            <strong>Demo Accounts:</strong><br>
+                            Admin: admin@family.com / admin<br>
+                            User: child1@family.com / child1
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderRegister() {
+            return `
+                <div class="auth-container">
+                    <div class="auth-card">
+                        <h2>${app.t('auth.register')}</h2>
+                        <div class="form-group">
+                            <label>${app.t('auth.name')}</label>
+                            <input type="text" id="register-name">
+                        </div>
+                        <div class="form-group">
+                            <label>${app.t('auth.email')}</label>
+                            <input type="email" id="register-email">
+                        </div>
+                        <div class="form-group">
+                            <label>${app.t('auth.password')}</label>
+                            <input type="password" id="register-password">
+                        </div>
+                        <button class="btn btn-primary btn-full" onclick="handleRegister()">${app.t('auth.register')}</button>
+                        <div class="auth-switch">
+                            ${app.t('auth.hasAccount')} <a onclick="switchToLogin()">${app.t('auth.loginLink')}</a>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderApp() {
+            return `
+                <div class="app">
+                    ${renderHeader()}
+                    <main class="app-main">
+                        ${renderCurrentPage()}
+                    </main>
+                </div>
+            `;
+        }
+
+        function renderHeader() {
+            const isAdmin = app.currentUser.role === 'ROLE_ADMIN';
+            return `
+                <header class="app-header">
+                    <div class="header-left">
+                        <h1>${app.t('app.title')}</h1>
+                    </div>
+                    <button class="hamburger-menu" onclick="toggleMobileMenu()">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </button>
+                    <nav class="app-nav ${app.isMobileMenuOpen ? 'mobile-open' : ''}">
+                        <button onclick="changePage('tasks')" class="${app.currentPage === 'tasks' ? 'nav-active' : ''}">
+                            ${app.t('nav.tasks')}
+                        </button>
+                        <button onclick="changePage('teams')" class="${app.currentPage === 'teams' ? 'nav-active' : ''}">
+                            ${app.t('nav.teams')}
+                        </button>
+                        ${isAdmin ? `
+                            <button onclick="changePage('bonus-rules')" class="${app.currentPage === 'bonus-rules' ? 'nav-active' : ''}">
+                                ${app.t('nav.bonusRules')}
+                            </button>
+                            <button onclick="changePage('status-rules')" class="${app.currentPage === 'status-rules' ? 'nav-active' : ''}">
+                                ${app.t('nav.statusChangeRules')}
+                            </button>
+                        ` : ''}
+                        <button onclick="changePage('settings')" class="${app.currentPage === 'settings' ? 'nav-active' : ''}">
+                            ${app.t('nav.settings')}
+                        </button>
+                    </nav>
+                    <div class="user-info">
+                        <span class="user-welcome">${app.t('app.welcome', { name: app.currentUser.name })}</span>
+                        <span class="user-points">${app.t('user.points', { points: app.currentUser.points })}</span>
+                        <div class="language-switcher">
+                            <button onclick="changeLanguage('pl')" class="${app.currentLanguage === 'pl' ? 'active' : ''}">PL</button>
+                            <button onclick="changeLanguage('en')" class="${app.currentLanguage === 'en' ? 'active' : ''}">EN</button>
+                        </div>
+                        <button class="btn btn-secondary" onclick="handleLogout()">${app.t('auth.logout')}</button>
+                    </div>
+                </header>
+            `;
+        }
+
+        function renderCurrentPage() {
+            switch (app.currentPage) {
+                case 'tasks': return renderTaskList();
+                case 'teams': return renderTeams();
+                case 'bonus-rules': return renderBonusRules();
+                case 'status-rules': return renderStatusRules();
+                case 'settings': return renderSettings();
+                default: return renderTaskList();
+            }
+        }
+
+        function renderTaskList() {
+            const tasks = app.getFilteredTasks();
+            const isAdmin = app.currentUser.role === 'ROLE_ADMIN';
+
+            return `
+                <div class="task-header">
+                    <h2>${app.t('tasks.title')}</h2>
+                    <div class="task-filters">
+                        <button class="btn ${app.taskFilter === 'all' ? 'btn-primary' : 'btn-secondary'}" onclick="setTaskFilter('all')">
+                            ${app.t('tasks.filterAll')}
+                        </button>
+                        <button class="btn ${app.taskFilter === 'pending' ? 'btn-warning' : 'btn-secondary'}" onclick="setTaskFilter('pending')">
+                            ${app.t('tasks.filterPending')}
+                        </button>
+                        <button class="btn ${app.taskFilter === 'completed' ? 'btn-info' : 'btn-secondary'}" onclick="setTaskFilter('completed')">
+                            ${app.t('tasks.filterCompleted')}
+                        </button>
+                        <button class="btn ${app.taskFilter === 'approved' ? 'btn-success' : 'btn-secondary'}" onclick="setTaskFilter('approved')">
+                            ${app.t('tasks.filterApproved')}
+                        </button>
+                    </div>
+                    ${isAdmin ? `<button class="btn btn-primary" onclick="showCreateTaskModal()">${app.t('tasks.createTask')}</button>` : ''}
+                </div>
+                <div class="task-grid">
+                    ${tasks.map(task => renderTaskCard(task)).join('')}
+                </div>
+                ${tasks.length === 0 ? '<p style="text-align: center; color: var(--text-secondary); margin-top: 2rem;">No tasks found</p>' : ''}
+            `;
+        }
+
+        function renderTaskCard(task) {
+            const isAdmin = app.currentUser.role === 'ROLE_ADMIN';
+            const assignedUser = task.assignedUserId ? app.data.users.find(u => u.id === task.assignedUserId) : null;
+            const canComplete = task.status === 'pending' && task.assignedUserId === app.currentUser.id;
+            const canApprove = task.status === 'completed' && isAdmin;
+
+            return `
+                <div class="task-card status-${task.status}">
+                    <div class="task-title">${task.name}</div>
+                    <div class="task-description">${task.description}</div>
+                    <div class="task-meta">
+                        <span class="task-points">${app.t('tasks.points', { points: task.points })}</span>
+                        <span>${app.t('tasks.frequency', { frequency: app.t('frequency.' + task.frequency) })}</span>
+                        <span>${app.t('tasks.status', { status: app.t('status.' + task.status) })}</span>
+                    </div>
+                    <div class="task-meta">
+                        ${assignedUser
+                            ? `<span>${app.t('tasks.assignedTo', { name: assignedUser.name })}</span>`
+                            : `<span>${app.t('tasks.unassigned')}</span>`
+                        }
+                    </div>
+                    <div class="task-actions">
+                        ${canComplete ? `<button class="btn btn-success" onclick="completeTask(${task.id})">${app.t('tasks.complete')}</button>` : ''}
+                        ${canApprove ? `
+                            <button class="btn btn-success" onclick="approveTask(${task.id})">${app.t('tasks.approve')}</button>
+                            <button class="btn btn-danger" onclick="rejectTask(${task.id})">${app.t('tasks.reject')}</button>
+                        ` : ''}
+                        ${isAdmin && !task.assignedUserId ? `<button class="btn btn-info" onclick="showAssignModal(${task.id})">${app.t('tasks.assign')}</button>` : ''}
+                        ${isAdmin ? `<button class="btn btn-danger" onclick="deleteTask(${task.id})">${app.t('tasks.delete')}</button>` : ''}
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderTeams() {
+            const teams = app.data.teams;
+            const isAdmin = app.currentUser.role === 'ROLE_ADMIN';
+
+            return `
+                <div class="task-header">
+                    <h2>${app.t('teams.title')}</h2>
+                    ${isAdmin ? `<button class="btn btn-primary" onclick="showCreateTeamModal()">${app.t('teams.createTeam')}</button>` : ''}
+                </div>
+                <div class="team-grid">
+                    ${teams.map(team => renderTeamCard(team)).join('')}
+                </div>
+            `;
+        }
+
+        function renderTeamCard(team) {
+            const members = app.getTeamMembers(team.id);
+            const admin = app.data.users.find(u => u.id === team.adminId);
+            const isTeamAdmin = app.currentUser.id === team.adminId;
+
+            return `
+                <div class="team-card">
+                    <h3>${team.name}</h3>
+                    <p style="color: var(--text-secondary); margin-bottom: 1rem;">${team.description}</p>
+                    <div style="margin-bottom: 1rem;">
+                        <strong>${app.t('teams.admin')}:</strong> ${admin ? admin.name : 'Unknown'}
+                    </div>
+                    <div class="team-members">
+                        <strong>${app.t('teams.members')}:</strong>
+                        ${members.map(member => `
+                            <div class="team-member">
+                                <div>
+                                    ${member.name}
+                                    <span class="badge ${member.role === 'ROLE_ADMIN' ? 'badge-admin' : 'badge-user'}">
+                                        ${member.role === 'ROLE_ADMIN' ? 'Admin' : 'User'}
+                                    </span>
+                                </div>
+                                <div>${app.t('user.points', { points: member.points })}</div>
+                            </div>
+                        `).join('')}
+                        ${members.length === 0 ? '<p style="color: var(--text-secondary); padding: 1rem 0;">No members yet</p>' : ''}
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderBonusRules() {
+            const rules = app.data.bonusRules.filter(r => r.teamId === app.currentUser.teamId);
+
+            return `
+                <div class="task-header">
+                    <h2>${app.t('bonus.title')}</h2>
+                    <button class="btn btn-primary" onclick="showCreateBonusRuleModal()">${app.t('bonus.create')}</button>
+                </div>
+                <div class="card">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>${app.t('bonus.name')}</th>
+                                <th>${app.t('bonus.description')}</th>
+                                <th>${app.t('bonus.type')}</th>
+                                <th>${app.t('bonus.points')}</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${rules.map(rule => `
+                                <tr>
+                                    <td>${rule.name}</td>
+                                    <td>${rule.description}</td>
+                                    <td>${app.t('bonus.' + rule.type)}</td>
+                                    <td><span class="task-points">${rule.bonusPoints}</span></td>
+                                    <td>
+                                        <button class="btn btn-danger" onclick="deleteBonusRule(${rule.id})">${app.t('common.delete')}</button>
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                    ${rules.length === 0 ? '<p style="text-align: center; color: var(--text-secondary); padding: 2rem 0;">No bonus rules yet</p>' : ''}
+                </div>
+            `;
+        }
+
+        function renderStatusRules() {
+            const rules = app.data.statusChangeRules.filter(r => r.teamId === app.currentUser.teamId);
+
+            return `
+                <div class="task-header">
+                    <h2>${app.t('nav.statusChangeRules')}</h2>
+                </div>
+                <div class="card">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>From Status</th>
+                                <th>To Status</th>
+                                <th>Required Role</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${rules.map(rule => `
+                                <tr>
+                                    <td><span class="badge badge-${rule.from}">${app.t('status.' + rule.from)}</span></td>
+                                    <td><span class="badge badge-${rule.to}">${app.t('status.' + rule.to)}</span></td>
+                                    <td><span class="badge ${rule.requiredRole === 'ROLE_ADMIN' ? 'badge-admin' : 'badge-user'}">${rule.requiredRole}</span></td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        }
+
+        function renderSettings() {
+            return `
+                <div class="task-header">
+                    <h2>${app.t('settings.title')}</h2>
+                </div>
+                <div class="card">
+                    <h3>${app.t('settings.profile')}</h3>
+                    <div class="form-group">
+                        <label>${app.t('auth.name')}</label>
+                        <input type="text" id="settings-name" value="${app.currentUser.name}">
+                    </div>
+                    <button class="btn btn-primary" onclick="updateProfile()">${app.t('settings.changeName')}</button>
+                </div>
+                <div class="card">
+                    <h3>${app.t('settings.changePassword')}</h3>
+                    <div class="form-group">
+                        <label>${app.t('settings.currentPassword')}</label>
+                        <input type="password" id="settings-current-password">
+                    </div>
+                    <div class="form-group">
+                        <label>${app.t('settings.newPassword')}</label>
+                        <input type="password" id="settings-new-password">
+                    </div>
+                    <div class="form-group">
+                        <label>${app.t('settings.confirmPassword')}</label>
+                        <input type="password" id="settings-confirm-password">
+                    </div>
+                    <button class="btn btn-primary" onclick="updatePassword()">${app.t('settings.changePassword')}</button>
+                </div>
+            `;
+        }
+
+        // ==================== EVENT HANDLERS ====================
+        function handleLogin() {
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+
+            if (app.login(email, password)) {
+                render();
+            } else {
+                alert('Invalid credentials');
+            }
+        }
+
+        function handleRegister() {
+            const name = document.getElementById('register-name').value;
+            const email = document.getElementById('register-email').value;
+            const password = document.getElementById('register-password').value;
+
+            if (app.register(email, password, name)) {
+                app.showRegister = false;
+                render();
+            } else {
+                alert('Email already exists');
+            }
+        }
+
+        function handleLogout() {
+            app.logout();
+            render();
+        }
+
+        function switchToRegister() {
+            app.showRegister = true;
+            render();
+        }
+
+        function switchToLogin() {
+            app.showRegister = false;
+            render();
+        }
+
+        function changePage(page) {
+            app.currentPage = page;
+            app.isMobileMenuOpen = false;
+            render();
+        }
+
+        function changeLanguage(lang) {
+            app.setLanguage(lang);
+            render();
+        }
+
+        function toggleMobileMenu() {
+            app.isMobileMenuOpen = !app.isMobileMenuOpen;
+            render();
+        }
+
+        function setTaskFilter(filter) {
+            app.taskFilter = filter;
+            render();
+        }
+
+        function completeTask(taskId) {
+            app.updateTaskStatus(taskId, 'completed');
+            render();
+        }
+
+        function approveTask(taskId) {
+            app.updateTaskStatus(taskId, 'approved');
+            render();
+        }
+
+        function rejectTask(taskId) {
+            app.updateTaskStatus(taskId, 'pending');
+            render();
+        }
+
+        function deleteTask(taskId) {
+            if (confirm('Are you sure you want to delete this task?')) {
+                app.deleteTask(taskId);
+                render();
+            }
+        }
+
+        function deleteBonusRule(ruleId) {
+            if (confirm('Are you sure you want to delete this bonus rule?')) {
+                app.data.bonusRules = app.data.bonusRules.filter(r => r.id !== ruleId);
+                app.saveData();
+                render();
+            }
+        }
+
+        function updateProfile() {
+            const newName = document.getElementById('settings-name').value;
+            app.currentUser.name = newName;
+            const user = app.data.users.find(u => u.id === app.currentUser.id);
+            if (user) user.name = newName;
+            app.saveData();
+            render();
+        }
+
+        function updatePassword() {
+            const current = document.getElementById('settings-current-password').value;
+            const newPass = document.getElementById('settings-new-password').value;
+            const confirm = document.getElementById('settings-confirm-password').value;
+
+            if (current !== app.currentUser.password) {
+                alert('Current password is incorrect');
+                return;
+            }
+
+            if (newPass !== confirm) {
+                alert('Passwords do not match');
+                return;
+            }
+
+            app.currentUser.password = newPass;
+            const user = app.data.users.find(u => u.id === app.currentUser.id);
+            if (user) user.password = newPass;
+            app.saveData();
+            alert('Password updated successfully');
+            render();
+        }
+
+        function showCreateTaskModal() {
+            const modal = document.createElement('div');
+            modal.className = 'modal-overlay';
+            modal.innerHTML = `
+                <div class="modal">
+                    <h2>${app.t('tasks.createTask')}</h2>
+                    <div class="form-group">
+                        <label>${app.t('tasks.taskName')}</label>
+                        <input type="text" id="new-task-name">
+                    </div>
+                    <div class="form-group">
+                        <label>${app.t('tasks.description')}</label>
+                        <textarea id="new-task-description" rows="3"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>${app.t('tasks.points')}</label>
+                        <input type="number" id="new-task-points" value="20" min="0" max="1000">
+                    </div>
+                    <div class="form-group">
+                        <label>${app.t('tasks.frequency')}</label>
+                        <select id="new-task-frequency">
+                            <option value="once">${app.t('frequency.once')}</option>
+                            <option value="daily">${app.t('frequency.daily')}</option>
+                            <option value="weekly" selected>${app.t('frequency.weekly')}</option>
+                            <option value="monthly">${app.t('frequency.monthly')}</option>
+                        </select>
+                    </div>
+                    <div class="modal-actions">
+                        <button class="btn btn-secondary" onclick="closeModal()">${app.t('tasks.cancel')}</button>
+                        <button class="btn btn-primary" onclick="createTask()">${app.t('tasks.save')}</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+        }
+
+        function createTask() {
+            const name = document.getElementById('new-task-name').value;
+            const description = document.getElementById('new-task-description').value;
+            const points = parseInt(document.getElementById('new-task-points').value);
+            const frequency = document.getElementById('new-task-frequency').value;
+
+            if (!name) {
+                alert('Please enter a task name');
+                return;
+            }
+
+            app.createTask({
+                name,
+                description,
+                points,
+                frequency,
+                assignedUserId: null
+            });
+
+            closeModal();
+            render();
+        }
+
+        function showAssignModal(taskId) {
+            const teamUsers = app.getUsersByTeam(app.currentUser.teamId).filter(u => u.role !== 'ROLE_ADMIN');
+            const modal = document.createElement('div');
+            modal.className = 'modal-overlay';
+            modal.innerHTML = `
+                <div class="modal">
+                    <h2>${app.t('tasks.assign')}</h2>
+                    <div class="form-group">
+                        <label>${app.t('tasks.selectUser')}</label>
+                        <select id="assign-user-id">
+                            ${teamUsers.map(u => `<option value="${u.id}">${u.name}</option>`).join('')}
+                        </select>
+                    </div>
+                    <div class="modal-actions">
+                        <button class="btn btn-secondary" onclick="closeModal()">${app.t('tasks.cancel')}</button>
+                        <button class="btn btn-primary" onclick="assignTask(${taskId})">${app.t('tasks.save')}</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+        }
+
+        function assignTask(taskId) {
+            const userId = parseInt(document.getElementById('assign-user-id').value);
+            app.assignTask(taskId, userId);
+            closeModal();
+            render();
+        }
+
+        function showCreateTeamModal() {
+            const modal = document.createElement('div');
+            modal.className = 'modal-overlay';
+            modal.innerHTML = `
+                <div class="modal">
+                    <h2>${app.t('teams.createTeam')}</h2>
+                    <div class="form-group">
+                        <label>${app.t('teams.teamName')}</label>
+                        <input type="text" id="new-team-name">
+                    </div>
+                    <div class="form-group">
+                        <label>${app.t('tasks.description')}</label>
+                        <textarea id="new-team-description" rows="3"></textarea>
+                    </div>
+                    <div class="modal-actions">
+                        <button class="btn btn-secondary" onclick="closeModal()">${app.t('tasks.cancel')}</button>
+                        <button class="btn btn-primary" onclick="createTeam()">${app.t('tasks.save')}</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+        }
+
+        function createTeam() {
+            const name = document.getElementById('new-team-name').value;
+            const description = document.getElementById('new-team-description').value;
+
+            if (!name) {
+                alert('Please enter a team name');
+                return;
+            }
+
+            app.createTeam({ name, description });
+            closeModal();
+            render();
+        }
+
+        function showCreateBonusRuleModal() {
+            const modal = document.createElement('div');
+            modal.className = 'modal-overlay';
+            modal.innerHTML = `
+                <div class="modal">
+                    <h2>${app.t('bonus.create')}</h2>
+                    <div class="form-group">
+                        <label>${app.t('bonus.name')}</label>
+                        <input type="text" id="new-bonus-name">
+                    </div>
+                    <div class="form-group">
+                        <label>${app.t('bonus.description')}</label>
+                        <textarea id="new-bonus-description" rows="3"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>${app.t('bonus.points')}</label>
+                        <input type="number" id="new-bonus-points" value="50" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label>${app.t('bonus.type')}</label>
+                        <select id="new-bonus-type">
+                            <option value="consecutive_days">${app.t('bonus.consecutiveDays')}</option>
+                            <option value="monthly_task_count">${app.t('bonus.monthlyTaskCount')}</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>${app.t('bonus.requiredDays')} / ${app.t('bonus.requiredCount')}</label>
+                        <input type="number" id="new-bonus-required" value="7" min="1">
+                    </div>
+                    <div class="modal-actions">
+                        <button class="btn btn-secondary" onclick="closeModal()">${app.t('tasks.cancel')}</button>
+                        <button class="btn btn-primary" onclick="createBonusRule()">${app.t('tasks.save')}</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+        }
+
+        function createBonusRule() {
+            const name = document.getElementById('new-bonus-name').value;
+            const description = document.getElementById('new-bonus-description').value;
+            const bonusPoints = parseInt(document.getElementById('new-bonus-points').value);
+            const type = document.getElementById('new-bonus-type').value;
+            const required = parseInt(document.getElementById('new-bonus-required').value);
+
+            if (!name) {
+                alert('Please enter a rule name');
+                return;
+            }
+
+            const newRule = {
+                id: app.data.bonusRules.length + 1,
+                name,
+                description,
+                bonusPoints,
+                type,
+                teamId: app.currentUser.teamId
+            };
+
+            if (type === 'consecutive_days') {
+                newRule.requiredDays = required;
+            } else {
+                newRule.requiredCount = required;
+            }
+
+            app.data.bonusRules.push(newRule);
+            app.saveData();
+            closeModal();
+            render();
+        }
+
+        function closeModal() {
+            const modal = document.querySelector('.modal-overlay');
+            if (modal) modal.remove();
+        }
+
+        function attachEventListeners() {
+            // Close modal on overlay click
+            document.querySelectorAll('.modal-overlay').forEach(overlay => {
+                overlay.addEventListener('click', (e) => {
+                    if (e.target === overlay) closeModal();
+                });
+            });
+        }
+
+        // ==================== INITIALIZE APP ====================
+        render();
+    </script>
+</body>
+</html>
