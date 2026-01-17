@@ -41,6 +41,8 @@ class NotificationIntegrationExampleTest extends TestCase
     private InMemoryTaskRepository $taskRepository;
     private InMemoryUserRepository $userRepository;
     private InMemoryUserWalletRepository $walletRepository;
+    private \App\TeamManagement\Infrastructure\Persistence\InMemoryTeamRepository $teamRepository;
+    private \App\TeamManagement\Infrastructure\Persistence\InMemoryTeamMemberRepository $teamMemberRepository;
     private InMemoryNotificationAdapter $notificationAdapter;
     private NotificationFacade $notificationService;
     private FixedClock $clock;
@@ -53,16 +55,18 @@ class NotificationIntegrationExampleTest extends TestCase
         $this->taskRepository = new InMemoryTaskRepository();
         $this->userRepository = new InMemoryUserRepository();
         $this->walletRepository = new InMemoryUserWalletRepository();
+        $this->teamRepository = new \App\TeamManagement\Infrastructure\Persistence\InMemoryTeamRepository();
+        $this->teamMemberRepository = new \App\TeamManagement\Infrastructure\Persistence\InMemoryTeamMemberRepository();
         $this->clock = new FixedClock();
-        
+
         // Setup notification service
         $this->notificationAdapter = new InMemoryNotificationAdapter();
         $this->notificationService = new NotificationFacade([$this->notificationAdapter]);
-        
+
         // Setup task handlers
-        $this->createHandler = new CreateTaskHandler($this->taskRepository);
+        $this->createHandler = new CreateTaskHandler($this->taskRepository, $this->teamMemberRepository);
         $this->completeHandler = new CompleteTaskHandler($this->taskRepository);
-        
+
         $approvalPolicy = new AdminApprovalPolicy($this->userRepository);
         $pointsAwardStrategy = new TaskApprovalPointsAwardStrategy($this->walletRepository, $this->clock);
         $this->approveHandler = new ApproveTaskHandler(
@@ -70,6 +74,28 @@ class NotificationIntegrationExampleTest extends TestCase
             $approvalPolicy,
             $pointsAwardStrategy
         );
+    }
+
+    private function createTeamWithAdmin(\App\Shared\Domain\ValueObject\Uuid $adminId): \App\Shared\Domain\ValueObject\Uuid
+    {
+        $teamId = UuidMother::random();
+        $team = \App\TeamManagement\Domain\Entity\Team::create(
+            $teamId,
+            \App\TeamManagement\Domain\ValueObject\TeamName::fromString('Test Team'),
+            'Test description',
+            $adminId
+        );
+        $this->teamRepository->save($team);
+
+        $teamMember = \App\TeamManagement\Domain\Entity\TeamMember::create(
+            UuidMother::random(),
+            $teamId,
+            $adminId,
+            \App\TeamManagement\Domain\ValueObject\TeamRole::admin()
+        );
+        $this->teamMemberRepository->save($teamMember);
+
+        return $teamId;
     }
 
     public function testCanSendNotificationAfterTaskApproval(): void
@@ -90,6 +116,9 @@ class NotificationIntegrationExampleTest extends TestCase
             ->build();
         $this->userRepository->save($admin);
 
+        // Create team
+        $teamId = $this->createTeamWithAdmin($adminId);
+        
         // Create a task
         $taskId = UuidMother::random();
         $taskName = TaskNameMother::create('Clean kitchen');
@@ -101,6 +130,8 @@ class NotificationIntegrationExampleTest extends TestCase
             'Wash dishes and wipe counters',
             $points->value(),
             FrequencyMother::daily()->value,
+            $adminId->value(),
+            $teamId->value(),
             $userId->value()
         );
         ($this->createHandler)($createCommand);
@@ -142,9 +173,12 @@ class NotificationIntegrationExampleTest extends TestCase
     public function testCanSendSmsNotificationForTaskAssignment(): void
     {
         // Given
+        $adminId = UuidMother::random();
         $userId = UuidMother::random();
         $taskId = UuidMother::random();
         $taskName = TaskNameMother::create('Clean kitchen');
+        
+        $teamId = $this->createTeamWithAdmin($adminId);
 
         $command = new CreateTaskCommand(
             $taskId->value(),
@@ -152,6 +186,8 @@ class NotificationIntegrationExampleTest extends TestCase
             'Weekly cleaning task',
             PointsMother::medium()->value(),
             FrequencyMother::weekly()->value,
+            $adminId->value(),
+            $teamId->value(),
             $userId->value()
         );
         
