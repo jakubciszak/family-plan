@@ -8,6 +8,12 @@ use App\Notifications\Application\Service\NotificationFacade;
 use App\Notifications\Infrastructure\Adapter\EmailNotificationAdapter;
 use App\Notifications\Infrastructure\Adapter\InMemoryNotificationAdapter;
 use App\Notifications\Infrastructure\Adapter\SmsNotificationAdapter;
+use App\Party\Domain\Entity\Organization;
+use App\Party\Domain\Entity\PartyRelationship;
+use App\Party\Domain\Entity\Person;
+use App\Party\Domain\ValueObject\PartyRelationshipType;
+use App\Party\Infrastructure\Persistence\InMemory\InMemoryPartyRelationshipRepository;
+use App\Party\Infrastructure\Persistence\InMemory\InMemoryPartyRepository;
 use App\TaskManagement\Application\Command\ApproveTaskCommand;
 use App\TaskManagement\Application\Command\CompleteTaskCommand;
 use App\TaskManagement\Application\Command\CreateTaskCommand;
@@ -17,6 +23,7 @@ use App\TaskManagement\Application\Handler\CreateTaskHandler;
 use App\TaskManagement\Infrastructure\Persistence\InMemoryTaskRepository;
 use App\TaskManagement\Domain\Policy\AdminApprovalPolicy;
 use App\TaskManagement\Domain\Strategy\TaskApprovalPointsAwardStrategy;
+use App\UserManagement\Domain\ValueObject\Email;
 use App\UserManagement\Infrastructure\Persistence\InMemoryUserRepository;
 use App\PointsManagement\Infrastructure\Persistence\InMemoryUserWalletRepository;
 use App\Shared\Infrastructure\Clock\FixedClock;
@@ -32,17 +39,19 @@ use PHPUnit\Framework\TestCase;
  * Example integration test showing how TaskManagement context
  * could integrate with Notifications context to send notifications
  * when tasks are approved.
- * 
+ *
  * This is a demonstration only - actual integration would be implemented
  * through domain events or direct service calls.
+ *
+ * MIGRATED TO PARTY ARCHETYPE
  */
 class NotificationIntegrationExampleTest extends TestCase
 {
     private InMemoryTaskRepository $taskRepository;
     private InMemoryUserRepository $userRepository;
     private InMemoryUserWalletRepository $walletRepository;
-    private \App\TeamManagement\Infrastructure\Persistence\InMemoryTeamRepository $teamRepository;
-    private \App\TeamManagement\Infrastructure\Persistence\InMemoryTeamMemberRepository $teamMemberRepository;
+    private InMemoryPartyRepository $partyRepository;
+    private InMemoryPartyRelationshipRepository $relationshipRepository;
     private InMemoryNotificationAdapter $notificationAdapter;
     private NotificationFacade $notificationService;
     private FixedClock $clock;
@@ -55,8 +64,8 @@ class NotificationIntegrationExampleTest extends TestCase
         $this->taskRepository = new InMemoryTaskRepository();
         $this->userRepository = new InMemoryUserRepository();
         $this->walletRepository = new InMemoryUserWalletRepository();
-        $this->teamRepository = new \App\TeamManagement\Infrastructure\Persistence\InMemoryTeamRepository();
-        $this->teamMemberRepository = new \App\TeamManagement\Infrastructure\Persistence\InMemoryTeamMemberRepository();
+        $this->partyRepository = new InMemoryPartyRepository();
+        $this->relationshipRepository = new InMemoryPartyRelationshipRepository();
         $this->clock = new FixedClock();
 
         // Setup notification service
@@ -64,7 +73,7 @@ class NotificationIntegrationExampleTest extends TestCase
         $this->notificationService = new NotificationFacade([$this->notificationAdapter]);
 
         // Setup task handlers
-        $this->createHandler = new CreateTaskHandler($this->taskRepository, $this->teamMemberRepository);
+        $this->createHandler = new CreateTaskHandler($this->taskRepository, $this->relationshipRepository);
         $this->completeHandler = new CompleteTaskHandler($this->taskRepository);
 
         $approvalPolicy = new AdminApprovalPolicy($this->userRepository);
@@ -78,24 +87,26 @@ class NotificationIntegrationExampleTest extends TestCase
 
     private function createTeamWithAdmin(\App\Shared\Domain\ValueObject\Uuid $adminId): \App\Shared\Domain\ValueObject\Uuid
     {
-        $teamId = UuidMother::random();
-        $team = \App\TeamManagement\Domain\Entity\Team::create(
-            $teamId,
-            \App\TeamManagement\Domain\ValueObject\TeamName::fromString('Test Team'),
-            'Test description',
-            $adminId
-        );
-        $this->teamRepository->save($team);
+        $organizationId = UuidMother::random();
 
-        $teamMember = \App\TeamManagement\Domain\Entity\TeamMember::create(
+        // Create Person for admin
+        $person = Person::create($adminId, 'Admin User', Email::fromString('admin@example.com'));
+        $this->partyRepository->save($person);
+
+        // Create Organization (team)
+        $organization = Organization::create($organizationId, 'Test Team', 'Test description');
+        $this->partyRepository->save($organization);
+
+        // Create ADMIN_OF relationship
+        $relationship = PartyRelationship::create(
             UuidMother::random(),
-            $teamId,
-            $adminId,
-            \App\TeamManagement\Domain\ValueObject\TeamRole::admin()
+            $person,
+            $organization,
+            PartyRelationshipType::adminOf()
         );
-        $this->teamMemberRepository->save($teamMember);
+        $this->relationshipRepository->save($relationship);
 
-        return $teamId;
+        return $organizationId;
     }
 
     public function testCanSendNotificationAfterTaskApproval(): void

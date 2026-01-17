@@ -34,7 +34,7 @@ class UserCreatedSubscriber implements EventSubscriberInterface
     public function onUserCreated(UserCreated $event): void
     {
         // Find the user
-        $user = $this->userRepository->findById($event->userId);
+        $user = $this->userRepository->findById($event->userId());
 
         if ($user === null) {
             return;

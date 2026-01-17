@@ -4,6 +4,12 @@ declare(strict_types=1);
 
 namespace App\Tests\TaskManagement\Application;
 
+use App\Party\Domain\Entity\Organization;
+use App\Party\Domain\Entity\PartyRelationship;
+use App\Party\Domain\Entity\Person;
+use App\Party\Domain\ValueObject\PartyRelationshipType;
+use App\Party\Infrastructure\Persistence\InMemory\InMemoryPartyRelationshipRepository;
+use App\Party\Infrastructure\Persistence\InMemory\InMemoryPartyRepository;
 use App\PointsManagement\Infrastructure\Persistence\InMemoryUserWalletRepository;
 use App\Shared\Infrastructure\Clock\FixedClock;
 use App\TaskManagement\Application\Command\ApproveTaskCommand;
@@ -27,20 +33,23 @@ use App\Tests\TaskManagement\Mother\FrequencyMother;
 use App\Tests\TaskManagement\Mother\PointsMother;
 use App\Tests\TaskManagement\Mother\TaskNameMother;
 use App\Tests\UserManagement\Mother\UserMother;
+use App\UserManagement\Domain\ValueObject\Email;
 use App\UserManagement\Infrastructure\Persistence\InMemoryUserRepository;
 use PHPUnit\Framework\TestCase;
 
 /**
  * Integration test for complete task approval workflow with points awarding
  * Tests the interaction between TaskManagement and PointsManagement contexts
+ *
+ * MIGRATED TO PARTY ARCHETYPE
  */
 class TaskApprovalWithPointsIntegrationTest extends TestCase
 {
     private InMemoryTaskRepository $taskRepository;
     private InMemoryUserRepository $userRepository;
     private InMemoryUserWalletRepository $walletRepository;
-    private InMemoryTeamRepository $teamRepository;
-    private InMemoryTeamMemberRepository $teamMemberRepository;
+    private InMemoryPartyRepository $partyRepository;
+    private InMemoryPartyRelationshipRepository $relationshipRepository;
     private FixedClock $clock;
     private CreateTaskHandler $createHandler;
     private CompleteTaskHandler $completeHandler;
@@ -51,11 +60,11 @@ class TaskApprovalWithPointsIntegrationTest extends TestCase
         $this->taskRepository = new InMemoryTaskRepository();
         $this->userRepository = new InMemoryUserRepository();
         $this->walletRepository = new InMemoryUserWalletRepository();
-        $this->teamRepository = new InMemoryTeamRepository();
-        $this->teamMemberRepository = new InMemoryTeamMemberRepository();
+        $this->partyRepository = new InMemoryPartyRepository();
+        $this->relationshipRepository = new InMemoryPartyRelationshipRepository();
         $this->clock = new FixedClock();
 
-        $this->createHandler = new CreateTaskHandler($this->taskRepository, $this->teamMemberRepository);
+        $this->createHandler = new CreateTaskHandler($this->taskRepository, $this->relationshipRepository);
         $this->completeHandler = new CompleteTaskHandler($this->taskRepository);
 
         $approvalPolicy = new AdminApprovalPolicy($this->userRepository);
@@ -69,14 +78,26 @@ class TaskApprovalWithPointsIntegrationTest extends TestCase
 
     private function createTeamWithAdmin(\App\Shared\Domain\ValueObject\Uuid $adminId): \App\Shared\Domain\ValueObject\Uuid
     {
-        $teamId = UuidMother::random();
-        $team = Team::create($teamId, TeamName::fromString('Test Team'), 'Test description', $adminId);
-        $this->teamRepository->save($team);
+        $organizationId = UuidMother::random();
 
-        $teamMember = TeamMember::create(UuidMother::random(), $teamId, $adminId, TeamRole::admin());
-        $this->teamMemberRepository->save($teamMember);
+        // Create Person for admin
+        $person = Person::create($adminId, 'Admin User', Email::fromString('admin@example.com'));
+        $this->partyRepository->save($person);
 
-        return $teamId;
+        // Create Organization (team)
+        $organization = Organization::create($organizationId, 'Test Team', 'Test description');
+        $this->partyRepository->save($organization);
+
+        // Create ADMIN_OF relationship
+        $relationship = PartyRelationship::create(
+            UuidMother::random(),
+            $person,
+            $organization,
+            PartyRelationshipType::adminOf()
+        );
+        $this->relationshipRepository->save($relationship);
+
+        return $organizationId;
     }
 
     public function testCompleteTaskApprovalWorkflowWithPointsAwarding(): void

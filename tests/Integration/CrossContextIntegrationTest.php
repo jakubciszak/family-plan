@@ -4,6 +4,12 @@ declare(strict_types=1);
 
 namespace App\Tests\Integration;
 
+use App\Party\Domain\Entity\Organization;
+use App\Party\Domain\Entity\PartyRelationship;
+use App\Party\Domain\Entity\Person;
+use App\Party\Domain\ValueObject\PartyRelationshipType;
+use App\Party\Infrastructure\Persistence\InMemory\InMemoryPartyRelationshipRepository;
+use App\Party\Infrastructure\Persistence\InMemory\InMemoryPartyRepository;
 use App\PointsManagement\Infrastructure\Persistence\InMemoryUserWalletRepository;
 use App\Shared\Infrastructure\Clock\FixedClock;
 use App\TaskManagement\Application\Command\ApproveTaskCommand;
@@ -26,14 +32,16 @@ use PHPUnit\Framework\TestCase;
 /**
  * Cross-context integration test
  * Tests the complete workflow across UserManagement, TaskManagement, and PointsManagement contexts
+ *
+ * MIGRATED TO PARTY ARCHETYPE
  */
 class CrossContextIntegrationTest extends TestCase
 {
     private InMemoryUserRepository $userRepository;
     private InMemoryTaskRepository $taskRepository;
     private InMemoryUserWalletRepository $walletRepository;
-    private \App\TeamManagement\Infrastructure\Persistence\InMemoryTeamRepository $teamRepository;
-    private \App\TeamManagement\Infrastructure\Persistence\InMemoryTeamMemberRepository $teamMemberRepository;
+    private InMemoryPartyRepository $partyRepository;
+    private InMemoryPartyRelationshipRepository $relationshipRepository;
     private FixedClock $clock;
 
     private CreateTaskHandler $createTaskHandler;
@@ -45,11 +53,11 @@ class CrossContextIntegrationTest extends TestCase
         $this->userRepository = new InMemoryUserRepository();
         $this->taskRepository = new InMemoryTaskRepository();
         $this->walletRepository = new InMemoryUserWalletRepository();
-        $this->teamRepository = new \App\TeamManagement\Infrastructure\Persistence\InMemoryTeamRepository();
-        $this->teamMemberRepository = new \App\TeamManagement\Infrastructure\Persistence\InMemoryTeamMemberRepository();
+        $this->partyRepository = new InMemoryPartyRepository();
+        $this->relationshipRepository = new InMemoryPartyRelationshipRepository();
         $this->clock = new FixedClock();
 
-        $this->createTaskHandler = new CreateTaskHandler($this->taskRepository, $this->teamMemberRepository);
+        $this->createTaskHandler = new CreateTaskHandler($this->taskRepository, $this->relationshipRepository);
         $this->completeTaskHandler = new CompleteTaskHandler($this->taskRepository);
 
         $approvalPolicy = new AdminApprovalPolicy($this->userRepository);
@@ -64,24 +72,26 @@ class CrossContextIntegrationTest extends TestCase
 
     private function createTeamWithAdmin(\App\Shared\Domain\ValueObject\Uuid $adminId): \App\Shared\Domain\ValueObject\Uuid
     {
-        $teamId = UuidMother::random();
-        $team = \App\TeamManagement\Domain\Entity\Team::create(
-            $teamId,
-            \App\TeamManagement\Domain\ValueObject\TeamName::fromString('Test Team'),
-            'Test description',
-            $adminId
-        );
-        $this->teamRepository->save($team);
+        $organizationId = UuidMother::random();
 
-        $teamMember = \App\TeamManagement\Domain\Entity\TeamMember::create(
+        // Create Person for admin
+        $person = Person::create($adminId, 'Admin User', Email::fromString('admin@example.com'));
+        $this->partyRepository->save($person);
+
+        // Create Organization (team)
+        $organization = Organization::create($organizationId, 'Test Team', 'Test description');
+        $this->partyRepository->save($organization);
+
+        // Create ADMIN_OF relationship
+        $relationship = PartyRelationship::create(
             UuidMother::random(),
-            $teamId,
-            $adminId,
-            \App\TeamManagement\Domain\ValueObject\TeamRole::admin()
+            $person,
+            $organization,
+            PartyRelationshipType::adminOf()
         );
-        $this->teamMemberRepository->save($teamMember);
+        $this->relationshipRepository->save($relationship);
 
-        return $teamId;
+        return $organizationId;
     }
 
     public function testCompleteUserJourneyFromRegistrationToPointsRedemption(): void
