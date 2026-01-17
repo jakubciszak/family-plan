@@ -4,6 +4,12 @@ declare(strict_types=1);
 
 namespace App\Tests\Integration;
 
+use App\Party\Domain\Entity\Organization;
+use App\Party\Domain\Entity\PartyRelationship;
+use App\Party\Domain\Entity\Person;
+use App\Party\Domain\ValueObject\PartyRelationshipType;
+use App\Party\Infrastructure\Persistence\InMemory\InMemoryPartyRelationshipRepository;
+use App\Party\Infrastructure\Persistence\InMemory\InMemoryPartyRepository;
 use App\PointsManagement\Infrastructure\Persistence\InMemoryUserWalletRepository;
 use App\Shared\Infrastructure\Clock\FixedClock;
 use App\TaskManagement\Application\Command\ApproveTaskCommand;
@@ -26,14 +32,18 @@ use PHPUnit\Framework\TestCase;
 /**
  * Cross-context integration test
  * Tests the complete workflow across UserManagement, TaskManagement, and PointsManagement contexts
+ *
+ * MIGRATED TO PARTY ARCHETYPE
  */
 class CrossContextIntegrationTest extends TestCase
 {
     private InMemoryUserRepository $userRepository;
     private InMemoryTaskRepository $taskRepository;
     private InMemoryUserWalletRepository $walletRepository;
+    private InMemoryPartyRepository $partyRepository;
+    private InMemoryPartyRelationshipRepository $relationshipRepository;
     private FixedClock $clock;
-    
+
     private CreateTaskHandler $createTaskHandler;
     private CompleteTaskHandler $completeTaskHandler;
     private ApproveTaskHandler $approveTaskHandler;
@@ -43,19 +53,45 @@ class CrossContextIntegrationTest extends TestCase
         $this->userRepository = new InMemoryUserRepository();
         $this->taskRepository = new InMemoryTaskRepository();
         $this->walletRepository = new InMemoryUserWalletRepository();
+        $this->partyRepository = new InMemoryPartyRepository();
+        $this->relationshipRepository = new InMemoryPartyRelationshipRepository();
         $this->clock = new FixedClock();
-        
-        $this->createTaskHandler = new CreateTaskHandler($this->taskRepository);
+
+        $this->createTaskHandler = new CreateTaskHandler($this->taskRepository, $this->relationshipRepository);
         $this->completeTaskHandler = new CompleteTaskHandler($this->taskRepository);
-        
+
         $approvalPolicy = new AdminApprovalPolicy($this->userRepository);
         $pointsStrategy = new TaskApprovalPointsAwardStrategy($this->walletRepository, $this->clock);
-        
+
         $this->approveTaskHandler = new ApproveTaskHandler(
             $this->taskRepository,
             $approvalPolicy,
             $pointsStrategy
         );
+    }
+
+    private function createTeamWithAdmin(\App\Shared\Domain\ValueObject\Uuid $adminId): \App\Shared\Domain\ValueObject\Uuid
+    {
+        $organizationId = UuidMother::random();
+
+        // Create Person for admin
+        $person = Person::create($adminId, 'Admin User', Email::fromString('admin@example.com'));
+        $this->partyRepository->save($person);
+
+        // Create Organization (team)
+        $organization = Organization::create($organizationId, 'Test Team', 'Test description');
+        $this->partyRepository->save($organization);
+
+        // Create ADMIN_OF relationship
+        $relationship = PartyRelationship::create(
+            UuidMother::random(),
+            $person,
+            $organization,
+            PartyRelationshipType::adminOf()
+        );
+        $this->relationshipRepository->save($relationship);
+
+        return $organizationId;
     }
 
     public function testCompleteUserJourneyFromRegistrationToPointsRedemption(): void
@@ -86,6 +122,8 @@ class CrossContextIntegrationTest extends TestCase
         $this->assertFalse($this->userRepository->findById($userId)->isAdmin());
         
         // Phase 2: Task Management - Create tasks
+        $teamId = $this->createTeamWithAdmin($adminId);
+        
         $task1Id = UuidMother::random();
         $task2Id = UuidMother::random();
         $task3Id = UuidMother::random();
@@ -97,6 +135,8 @@ class CrossContextIntegrationTest extends TestCase
             'Wash dishes and wipe counters',
             50,
             FrequencyMother::daily()->value,
+            $adminId->value(),
+            $teamId->value(),
             $userId->value()
         ));
         
@@ -107,6 +147,8 @@ class CrossContextIntegrationTest extends TestCase
             'Vacuum all rooms',
             100,
             FrequencyMother::weekly()->value,
+            $adminId->value(),
+            $teamId->value(),
             $userId->value()
         ));
         
@@ -117,6 +159,8 @@ class CrossContextIntegrationTest extends TestCase
             'Complete bathroom cleaning',
             200,
             FrequencyMother::monthly()->value,
+            $adminId->value(),
+            $teamId->value(),
             $userId->value()
         ));
         
@@ -184,6 +228,8 @@ class CrossContextIntegrationTest extends TestCase
         $this->userRepository->save($user1);
         $this->userRepository->save($user2);
         
+        $teamId = $this->createTeamWithAdmin($adminId);
+        
         // And - Task created and completed by user1
         $taskId = UuidMother::random();
         ($this->createTaskHandler)(new CreateTaskCommand(
@@ -192,6 +238,8 @@ class CrossContextIntegrationTest extends TestCase
             'Description',
             50,
             'daily',
+            $adminId->value(),
+            $teamId->value(),
             $user1Id->value()
         ));
         ($this->completeTaskHandler)(new CompleteTaskCommand($taskId->value(), $user1Id->value()));
@@ -221,18 +269,20 @@ class CrossContextIntegrationTest extends TestCase
         $this->userRepository->save($user2);
         $this->userRepository->save($user3);
         
+        $teamId = $this->createTeamWithAdmin($adminId);
+        
         // When - Each user completes different tasks
         // Alice completes 2 tasks
-        $this->createCompleteAndApproveTask($user1Id, $adminId, 50);
-        $this->createCompleteAndApproveTask($user1Id, $adminId, 30);
+        $this->createCompleteAndApproveTask($user1Id, $adminId, $teamId, 50);
+        $this->createCompleteAndApproveTask($user1Id, $adminId, $teamId, 30);
         
         // Bob completes 1 task
-        $this->createCompleteAndApproveTask($user2Id, $adminId, 75);
+        $this->createCompleteAndApproveTask($user2Id, $adminId, $teamId, 75);
         
         // Charlie completes 3 tasks
-        $this->createCompleteAndApproveTask($user3Id, $adminId, 25);
-        $this->createCompleteAndApproveTask($user3Id, $adminId, 40);
-        $this->createCompleteAndApproveTask($user3Id, $adminId, 35);
+        $this->createCompleteAndApproveTask($user3Id, $adminId, $teamId, 25);
+        $this->createCompleteAndApproveTask($user3Id, $adminId, $teamId, 40);
+        $this->createCompleteAndApproveTask($user3Id, $adminId, $teamId, 35);
         
         // Then - Each user has their own wallet with correct balance
         $wallet1 = $this->walletRepository->findByUserId($user1Id);
@@ -244,7 +294,7 @@ class CrossContextIntegrationTest extends TestCase
         $this->assertEquals(100, $wallet3->balance()->value()); // 25 + 40 + 35
     }
 
-    private function createCompleteAndApproveTask($userId, $adminId, int $points): void
+    private function createCompleteAndApproveTask($userId, $adminId, $teamId, int $points): void
     {
         $taskId = UuidMother::random();
         
@@ -254,6 +304,8 @@ class CrossContextIntegrationTest extends TestCase
             'Task description',
             $points,
             FrequencyMother::daily()->value,
+            $adminId->value(),
+            $teamId->value(),
             $userId->value()
         ));
         

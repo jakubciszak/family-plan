@@ -1,16 +1,39 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import apiClient from '../services/apiClient';
+import teamService from '../services/teamService';
 
 function TaskList({ user }) {
     const { t } = useTranslation();
     const [tasks, setTasks] = React.useState([]);
+    const [teams, setTeams] = React.useState([]);
     const [loading, setLoading] = React.useState(true);
     const [showCreateForm, setShowCreateForm] = React.useState(false);
+    const [selectedTeam, setSelectedTeam] = React.useState(null);
 
     React.useEffect(() => {
         loadTasks();
+        loadTeams();
     }, []);
+
+    const loadTeams = async () => {
+        try {
+            const data = await teamService.getTeams();
+            setTeams(data.teams || []);
+            // Select first team by default
+            if (data.teams && data.teams.length > 0) {
+                setSelectedTeam(data.teams[0]);
+            }
+        } catch (error) {
+            console.error('Error loading teams:', error);
+        }
+    };
+
+    const isTeamAdmin = () => {
+        if (!selectedTeam) return false;
+        // Check if user is admin of selected team
+        return selectedTeam.role === 'admin';
+    };
 
     const loadTasks = async () => {
         try {
@@ -47,11 +70,18 @@ function TaskList({ user }) {
 
     const handleCreateTask = async (taskData) => {
         try {
-            await apiClient.post('/api/tasks', taskData);
+            // Add teamId and createdBy to task data
+            const taskWithTeam = {
+                ...taskData,
+                teamId: selectedTeam.id,
+                createdBy: user.id,
+            };
+            await apiClient.post('/api/tasks', taskWithTeam);
             setShowCreateForm(false);
             loadTasks();
         } catch (error) {
             console.error('Error creating task:', error);
+            alert(error.response?.data?.error || 'Failed to create task');
         }
     };
 
@@ -74,15 +104,35 @@ function TaskList({ user }) {
         <div className="task-list-container">
             <div className="task-list-header">
                 <h2>{t('tasks.title')}</h2>
-                <button 
-                    onClick={() => setShowCreateForm(!showCreateForm)}
-                    className="btn-primary"
-                >
-                    {showCreateForm ? t('common.cancel') : t('tasks.create')}
-                </button>
+                <div className="header-controls">
+                    {teams.length > 0 && (
+                        <select
+                            value={selectedTeam?.id || ''}
+                            onChange={(e) => {
+                                const team = teams.find(t => t.id === e.target.value);
+                                setSelectedTeam(team);
+                            }}
+                            className="team-selector"
+                        >
+                            {teams.map(team => (
+                                <option key={team.id} value={team.id}>
+                                    {team.name} {team.role === 'admin' ? '(Admin)' : ''}
+                                </option>
+                            ))}
+                        </select>
+                    )}
+                    {isTeamAdmin() && (
+                        <button
+                            onClick={() => setShowCreateForm(!showCreateForm)}
+                            className="btn-primary"
+                        >
+                            {showCreateForm ? t('common.cancel') : t('tasks.create')}
+                        </button>
+                    )}
+                </div>
             </div>
 
-            {showCreateForm && (
+            {showCreateForm && isTeamAdmin() && (
                 <TaskCreateForm onSubmit={handleCreateTask} />
             )}
 

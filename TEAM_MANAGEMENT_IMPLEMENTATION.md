@@ -39,11 +39,89 @@ TeamManagement/
     └── Persistence/              # Doctrine repositories and types
 ```
 
+### Party Archetype Integration
+
+The application uses the **Party archetype pattern** (from [Software Archetypes](https://www.softwarearchetypes.com/archetypes/party/)) alongside the legacy Team/User model. This provides a more flexible and extensible design for managing relationships between people and organizations.
+
+#### Party Model Structure
+
+```
+Party/
+├── Domain/
+│   ├── Entity/
+│   │   ├── Party.php                    # Abstract party (person or organization)
+│   │   ├── Person.php                   # Individual (maps to User)
+│   │   ├── Organization.php             # Group (maps to Team)
+│   │   └── PartyRelationship.php        # Relationship between parties
+│   ├── ValueObject/
+│   │   ├── PartyType.php                # PERSON or ORGANIZATION
+│   │   └── PartyRelationshipType.php    # ADMIN_OF or MEMBER_OF
+│   └── Repository/
+│       ├── PartyRepositoryInterface.php
+│       └── PartyRelationshipRepositoryInterface.php
+├── Application/
+│   └── Service/
+│       └── PartyAdapter.php             # Bridges legacy and Party models
+├── Communication/
+│   └── EventSubscriber/
+│       ├── UserCreatedSubscriber.php    # Auto-creates Person from User
+│       └── TeamCreatedSubscriber.php    # Auto-creates Organization from Team
+└── Infrastructure/
+    └── Persistence/
+        ├── Doctrine/                    # Production repositories
+        └── InMemory/                    # Test repositories
+```
+
+#### How It Works
+
+1. **Automatic Synchronization**: When a User or Team is created, domain events trigger subscribers that automatically create corresponding Person or Organization entities.
+
+2. **Relationship Management**: The `PartyRelationship` entity manages admin/member relationships:
+   - `ADMIN_OF`: Person is admin of Organization (replaces TeamMember with admin role)
+   - `MEMBER_OF`: Person is member of Organization (replaces TeamMember with member role)
+
+3. **Task Creation Authorization**: The `CreateTaskHandler` uses `PartyRelationshipRepository` to check if a Person has `ADMIN_OF` relationship with an Organization, enforcing the "only team admins can create tasks" rule.
+
+4. **Legacy Compatibility**: The legacy Team/User/TeamMember model continues to work through event-driven synchronization with the Party model.
+
+#### Benefits
+
+- **Flexibility**: Easier to model complex relationships (e.g., organizations within organizations, multiple relationship types)
+- **Extensibility**: Easy to add new party types or relationship types
+- **Consistency**: Single source of truth for relationships via PartyRelationship
+- **Testability**: Clean separation with InMemory repositories for testing
+
 ## Database Schema
 
 ### Tables
 
-#### `teams`
+#### `parties` (Party Archetype)
+- `id` (UUID) - Primary key
+- `party_type` (VARCHAR) - 'person' or 'organization' (Single Table Inheritance)
+- `name` (VARCHAR) - Party name
+- `email` (VARCHAR) - Email (for Person only)
+- `description` (TEXT) - Description (for Organization only)
+- `created_at` (TIMESTAMP)
+- `updated_at` (TIMESTAMP)
+
+**Indexes:**
+- `party_type` - For filtering by type
+- `email` - For finding Person by email
+
+#### `party_relationships`
+- `id` (UUID) - Primary key
+- `from_party_id` (UUID) - Foreign key to parties (the subject)
+- `to_party_id` (UUID) - Foreign key to parties (the object)
+- `relationship_type` (VARCHAR) - 'admin_of' or 'member_of'
+- `started_at` (TIMESTAMP) - When relationship started
+- `ended_at` (TIMESTAMP) - When relationship ended (null if active)
+
+**Indexes:**
+- `from_party_id` - For querying relationships by subject
+- `to_party_id` - For querying relationships by object
+- `relationship_type` - For filtering by type
+
+#### `teams` (Legacy)
 - `id` (UUID) - Primary key
 - `name` (VARCHAR) - Team name
 - `description` (TEXT) - Optional team description

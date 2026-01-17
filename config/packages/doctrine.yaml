@@ -22,6 +22,8 @@ doctrine:
             team_name: App\TeamManagement\Infrastructure\Persistence\Doctrine\Type\TeamNameType
             team_role: App\TeamManagement\Infrastructure\Persistence\Doctrine\Type\TeamRoleType
             invitation_status: App\TeamManagement\Infrastructure\Persistence\Doctrine\Type\InvitationStatusType
+            party_type: App\Party\Infrastructure\Persistence\Doctrine\Type\PartyTypeType
+            party_relationship_type: App\Party\Infrastructure\Persistence\Doctrine\Type\PartyRelationshipTypeType
     orm:
         validate_xml_mapping: true
         naming_strategy: doctrine.orm.naming_strategy.underscore_number_aware
@@ -59,6 +61,12 @@ doctrine:
                 dir: '%kernel.project_dir%/src/TeamManagement/Domain/Entity'
                 prefix: 'App\TeamManagement\Domain\Entity'
                 alias: TeamManagement
+            Party:
+                type: attribute
+                is_bundle: false
+                dir: '%kernel.project_dir%/src/Party/Domain/Entity'
+                prefix: 'App\Party\Domain\Entity'
+                alias: Party
         controller_resolver:
             auto_mapping: false
 

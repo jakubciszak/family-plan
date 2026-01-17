@@ -26,7 +26,7 @@ class TeamMember
         #[ORM\Column(type: 'uuid')]
         private Uuid $userId,
         
-        #[ORM\Column(type: 'string', length: 50)]
+        #[ORM\Column(type: 'team_role')]
         private TeamRole $role,
         
         #[ORM\Column(type: 'datetime_immutable')]

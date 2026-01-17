@@ -10,12 +10,16 @@ class TaskAssignmentApiTest extends ApiTestCase
 {
     public function testAssignTaskToUser(): void
     {
+        $context = $this->createTeamAndAdmin();
+
         // Create a task
         $taskData = [
             'name' => 'Assign Task Test',
             'description' => 'Test assignment',
             'points' => 50,
             'frequency' => 'once',
+            'teamId' => $context['teamId'],
+            'createdBy' => $context['adminId'],
         ];
 
         $response = $this->postJson('/api/tasks', $taskData);
@@ -61,12 +65,16 @@ class TaskAssignmentApiTest extends ApiTestCase
 
     public function testAssignTaskReturns404ForNonexistentUser(): void
     {
+        $context = $this->createTeamAndAdmin();
+
         // Create a task
         $taskData = [
             'name' => 'Test Task',
             'description' => 'Test',
             'points' => 50,
             'frequency' => 'once',
+            'teamId' => $context['teamId'],
+            'createdBy' => $context['adminId'],
         ];
 
         $response = $this->postJson('/api/tasks', $taskData);
@@ -85,12 +93,16 @@ class TaskAssignmentApiTest extends ApiTestCase
 
     public function testTaskListIncludesAssignmentInfo(): void
     {
+        $context = $this->createTeamAndAdmin();
+
         // Create a task
         $taskData = [
             'name' => 'Task with Assignment',
             'description' => 'Test',
             'points' => 50,
             'frequency' => 'once',
+            'teamId' => $context['teamId'],
+            'createdBy' => $context['adminId'],
         ];
 
         $response = $this->postJson('/api/tasks', $taskData);

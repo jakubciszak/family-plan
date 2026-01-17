@@ -8,6 +8,12 @@ use App\Notifications\Application\Service\NotificationFacade;
 use App\Notifications\Infrastructure\Adapter\EmailNotificationAdapter;
 use App\Notifications\Infrastructure\Adapter\InMemoryNotificationAdapter;
 use App\Notifications\Infrastructure\Adapter\SmsNotificationAdapter;
+use App\Party\Domain\Entity\Organization;
+use App\Party\Domain\Entity\PartyRelationship;
+use App\Party\Domain\Entity\Person;
+use App\Party\Domain\ValueObject\PartyRelationshipType;
+use App\Party\Infrastructure\Persistence\InMemory\InMemoryPartyRelationshipRepository;
+use App\Party\Infrastructure\Persistence\InMemory\InMemoryPartyRepository;
 use App\TaskManagement\Application\Command\ApproveTaskCommand;
 use App\TaskManagement\Application\Command\CompleteTaskCommand;
 use App\TaskManagement\Application\Command\CreateTaskCommand;
@@ -17,6 +23,7 @@ use App\TaskManagement\Application\Handler\CreateTaskHandler;
 use App\TaskManagement\Infrastructure\Persistence\InMemoryTaskRepository;
 use App\TaskManagement\Domain\Policy\AdminApprovalPolicy;
 use App\TaskManagement\Domain\Strategy\TaskApprovalPointsAwardStrategy;
+use App\UserManagement\Domain\ValueObject\Email;
 use App\UserManagement\Infrastructure\Persistence\InMemoryUserRepository;
 use App\PointsManagement\Infrastructure\Persistence\InMemoryUserWalletRepository;
 use App\Shared\Infrastructure\Clock\FixedClock;
@@ -32,15 +39,19 @@ use PHPUnit\Framework\TestCase;
  * Example integration test showing how TaskManagement context
  * could integrate with Notifications context to send notifications
  * when tasks are approved.
- * 
+ *
  * This is a demonstration only - actual integration would be implemented
  * through domain events or direct service calls.
+ *
+ * MIGRATED TO PARTY ARCHETYPE
  */
 class NotificationIntegrationExampleTest extends TestCase
 {
     private InMemoryTaskRepository $taskRepository;
     private InMemoryUserRepository $userRepository;
     private InMemoryUserWalletRepository $walletRepository;
+    private InMemoryPartyRepository $partyRepository;
+    private InMemoryPartyRelationshipRepository $relationshipRepository;
     private InMemoryNotificationAdapter $notificationAdapter;
     private NotificationFacade $notificationService;
     private FixedClock $clock;
@@ -53,16 +64,18 @@ class NotificationIntegrationExampleTest extends TestCase
         $this->taskRepository = new InMemoryTaskRepository();
         $this->userRepository = new InMemoryUserRepository();
         $this->walletRepository = new InMemoryUserWalletRepository();
+        $this->partyRepository = new InMemoryPartyRepository();
+        $this->relationshipRepository = new InMemoryPartyRelationshipRepository();
         $this->clock = new FixedClock();
-        
+
         // Setup notification service
         $this->notificationAdapter = new InMemoryNotificationAdapter();
         $this->notificationService = new NotificationFacade([$this->notificationAdapter]);
-        
+
         // Setup task handlers
-        $this->createHandler = new CreateTaskHandler($this->taskRepository);
+        $this->createHandler = new CreateTaskHandler($this->taskRepository, $this->relationshipRepository);
         $this->completeHandler = new CompleteTaskHandler($this->taskRepository);
-        
+
         $approvalPolicy = new AdminApprovalPolicy($this->userRepository);
         $pointsAwardStrategy = new TaskApprovalPointsAwardStrategy($this->walletRepository, $this->clock);
         $this->approveHandler = new ApproveTaskHandler(
@@ -70,6 +83,30 @@ class NotificationIntegrationExampleTest extends TestCase
             $approvalPolicy,
             $pointsAwardStrategy
         );
+    }
+
+    private function createTeamWithAdmin(\App\Shared\Domain\ValueObject\Uuid $adminId): \App\Shared\Domain\ValueObject\Uuid
+    {
+        $organizationId = UuidMother::random();
+
+        // Create Person for admin
+        $person = Person::create($adminId, 'Admin User', Email::fromString('admin@example.com'));
+        $this->partyRepository->save($person);
+
+        // Create Organization (team)
+        $organization = Organization::create($organizationId, 'Test Team', 'Test description');
+        $this->partyRepository->save($organization);
+
+        // Create ADMIN_OF relationship
+        $relationship = PartyRelationship::create(
+            UuidMother::random(),
+            $person,
+            $organization,
+            PartyRelationshipType::adminOf()
+        );
+        $this->relationshipRepository->save($relationship);
+
+        return $organizationId;
     }
 
     public function testCanSendNotificationAfterTaskApproval(): void
@@ -90,6 +127,9 @@ class NotificationIntegrationExampleTest extends TestCase
             ->build();
         $this->userRepository->save($admin);
 
+        // Create team
+        $teamId = $this->createTeamWithAdmin($adminId);
+        
         // Create a task
         $taskId = UuidMother::random();
         $taskName = TaskNameMother::create('Clean kitchen');
@@ -101,6 +141,8 @@ class NotificationIntegrationExampleTest extends TestCase
             'Wash dishes and wipe counters',
             $points->value(),
             FrequencyMother::daily()->value,
+            $adminId->value(),
+            $teamId->value(),
             $userId->value()
         );
         ($this->createHandler)($createCommand);
@@ -142,9 +184,12 @@ class NotificationIntegrationExampleTest extends TestCase
     public function testCanSendSmsNotificationForTaskAssignment(): void
     {
         // Given
+        $adminId = UuidMother::random();
         $userId = UuidMother::random();
         $taskId = UuidMother::random();
         $taskName = TaskNameMother::create('Clean kitchen');
+        
+        $teamId = $this->createTeamWithAdmin($adminId);
 
         $command = new CreateTaskCommand(
             $taskId->value(),
@@ -152,6 +197,8 @@ class NotificationIntegrationExampleTest extends TestCase
             'Weekly cleaning task',
             PointsMother::medium()->value(),
             FrequencyMother::weekly()->value,
+            $adminId->value(),
+            $teamId->value(),
             $userId->value()
         );
         

@@ -69,4 +69,39 @@ abstract class ApiTestCase extends WebTestCase
 
         return json_decode($response->getContent(), true);
     }
+
+    /**
+     * Create a team and admin user directly using command bus (bypasses HTTP layer)
+     */
+    protected function createTeamAndAdmin(): array
+    {
+        // Create admin user via HTTP (this works)
+        $adminData = [
+            'name' => 'Admin User',
+            'email' => 'admin_' . uniqid() . '@example.com',
+            'password' => 'adminpass123',
+            'role' => 'ROLE_ADMIN',
+        ];
+        $adminResponse = $this->postJson('/api/users', $adminData);
+        $admin = $this->assertJsonResponse($adminResponse, 201);
+
+        // Create team directly using command bus
+        $container = static::getContainer();
+        $commandBus = $container->get('command.bus');
+
+        $teamId = \App\Shared\Domain\ValueObject\Uuid::generate()->value();
+        $createTeamCommand = new \App\TeamManagement\Application\Command\CreateTeamCommand(
+            $teamId,
+            'Test Team',
+            'Test Description',
+            $admin['id']
+        );
+
+        $commandBus->dispatch($createTeamCommand);
+
+        return [
+            'adminId' => $admin['id'],
+            'teamId' => $teamId,
+        ];
+    }
 }

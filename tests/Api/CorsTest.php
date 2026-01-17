@@ -168,13 +168,40 @@ class CorsTest extends WebTestCase
     public function testCorsOnPutRequest(): void
     {
         $client = static::createClient();
-        
-        // First create a task to update
+
+        // Create admin user
+        $userData = [
+            'name' => 'Admin',
+            'email' => 'admin_' . uniqid() . '@example.com',
+            'password' => 'pass123',
+            'role' => 'ROLE_ADMIN',
+        ];
+        $client->request('POST', '/api/users', [], [], [
+            'CONTENT_TYPE' => 'application/json',
+        ], json_encode($userData));
+        $adminData = json_decode($client->getResponse()->getContent(), true);
+
+        // Create team directly using command bus
+        $container = static::getContainer();
+        $commandBus = $container->get('command.bus');
+
+        $teamId = \App\Shared\Domain\ValueObject\Uuid::generate()->value();
+        $createTeamCommand = new \App\TeamManagement\Application\Command\CreateTeamCommand(
+            $teamId,
+            'Test Team',
+            'Test Description',
+            $adminData['id']
+        );
+        $commandBus->dispatch($createTeamCommand);
+
+        // Create a task
         $taskData = [
             'name' => 'Task to Update',
             'description' => 'Original description',
             'points' => 50,
             'frequency' => 'daily',
+            'teamId' => $teamId,
+            'createdBy' => $adminData['id'],
         ];
 
         $client->request('POST', '/api/tasks', [], [], [

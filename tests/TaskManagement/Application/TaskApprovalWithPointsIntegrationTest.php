@@ -4,6 +4,12 @@ declare(strict_types=1);
 
 namespace App\Tests\TaskManagement\Application;
 
+use App\Party\Domain\Entity\Organization;
+use App\Party\Domain\Entity\PartyRelationship;
+use App\Party\Domain\Entity\Person;
+use App\Party\Domain\ValueObject\PartyRelationshipType;
+use App\Party\Infrastructure\Persistence\InMemory\InMemoryPartyRelationshipRepository;
+use App\Party\Infrastructure\Persistence\InMemory\InMemoryPartyRepository;
 use App\PointsManagement\Infrastructure\Persistence\InMemoryUserWalletRepository;
 use App\Shared\Infrastructure\Clock\FixedClock;
 use App\TaskManagement\Application\Command\ApproveTaskCommand;
@@ -21,18 +27,23 @@ use App\Tests\TaskManagement\Mother\FrequencyMother;
 use App\Tests\TaskManagement\Mother\PointsMother;
 use App\Tests\TaskManagement\Mother\TaskNameMother;
 use App\Tests\UserManagement\Mother\UserMother;
+use App\UserManagement\Domain\ValueObject\Email;
 use App\UserManagement\Infrastructure\Persistence\InMemoryUserRepository;
 use PHPUnit\Framework\TestCase;
 
 /**
  * Integration test for complete task approval workflow with points awarding
  * Tests the interaction between TaskManagement and PointsManagement contexts
+ *
+ * MIGRATED TO PARTY ARCHETYPE
  */
 class TaskApprovalWithPointsIntegrationTest extends TestCase
 {
     private InMemoryTaskRepository $taskRepository;
     private InMemoryUserRepository $userRepository;
     private InMemoryUserWalletRepository $walletRepository;
+    private InMemoryPartyRepository $partyRepository;
+    private InMemoryPartyRelationshipRepository $relationshipRepository;
     private FixedClock $clock;
     private CreateTaskHandler $createHandler;
     private CompleteTaskHandler $completeHandler;
@@ -43,11 +54,13 @@ class TaskApprovalWithPointsIntegrationTest extends TestCase
         $this->taskRepository = new InMemoryTaskRepository();
         $this->userRepository = new InMemoryUserRepository();
         $this->walletRepository = new InMemoryUserWalletRepository();
+        $this->partyRepository = new InMemoryPartyRepository();
+        $this->relationshipRepository = new InMemoryPartyRelationshipRepository();
         $this->clock = new FixedClock();
-        
-        $this->createHandler = new CreateTaskHandler($this->taskRepository);
+
+        $this->createHandler = new CreateTaskHandler($this->taskRepository, $this->relationshipRepository);
         $this->completeHandler = new CompleteTaskHandler($this->taskRepository);
-        
+
         $approvalPolicy = new AdminApprovalPolicy($this->userRepository);
         $pointsAwardStrategy = new TaskApprovalPointsAwardStrategy($this->walletRepository, $this->clock);
         $this->approveHandler = new ApproveTaskHandler(
@@ -55,6 +68,30 @@ class TaskApprovalWithPointsIntegrationTest extends TestCase
             $approvalPolicy,
             $pointsAwardStrategy
         );
+    }
+
+    private function createTeamWithAdmin(\App\Shared\Domain\ValueObject\Uuid $adminId): \App\Shared\Domain\ValueObject\Uuid
+    {
+        $organizationId = UuidMother::random();
+
+        // Create Person for admin
+        $person = Person::create($adminId, 'Admin User', Email::fromString('admin@example.com'));
+        $this->partyRepository->save($person);
+
+        // Create Organization (team)
+        $organization = Organization::create($organizationId, 'Test Team', 'Test description');
+        $this->partyRepository->save($organization);
+
+        // Create ADMIN_OF relationship
+        $relationship = PartyRelationship::create(
+            UuidMother::random(),
+            $person,
+            $organization,
+            PartyRelationshipType::adminOf()
+        );
+        $this->relationshipRepository->save($relationship);
+
+        return $organizationId;
     }
 
     public function testCompleteTaskApprovalWorkflowWithPointsAwarding(): void
@@ -79,12 +116,16 @@ class TaskApprovalWithPointsIntegrationTest extends TestCase
         $taskId = UuidMother::random();
         $taskPoints = 100;
         
+        $teamId = $this->createTeamWithAdmin($adminId);
+        
         $createCommand = new CreateTaskCommand(
             $taskId->value(),
             TaskNameMother::create('Complete important task')->value(),
             'Very important task',
             $taskPoints,
             FrequencyMother::daily()->value,
+            $adminId->value(),
+            $teamId->value(),
             $userId->value()
         );
         ($this->createHandler)($createCommand);
@@ -156,7 +197,9 @@ class TaskApprovalWithPointsIntegrationTest extends TestCase
         $this->userRepository->save($user1);
         $this->userRepository->save($user2);
         
-        // And - User1 creates and completes a task
+        // And - User1 creates team and task
+        $teamId = $this->createTeamWithAdmin($userId1);
+
         $taskId = UuidMother::random();
         $createCommand = new CreateTaskCommand(
             $taskId->value(),
@@ -164,15 +207,17 @@ class TaskApprovalWithPointsIntegrationTest extends TestCase
             'Description',
             50,
             FrequencyMother::daily()->value,
+            $userId1->value(),
+            $teamId->value(),
             $userId1->value()
         );
         ($this->createHandler)($createCommand);
         ($this->completeHandler)(new CompleteTaskCommand($taskId->value(), $userId1->value()));
-        
+
         // When/Then - User2 (non-admin) tries to approve
         $this->expectException(\DomainException::class);
         $this->expectExceptionMessage('Only administrators can approve tasks');
-        
+
         $approveCommand = new ApproveTaskCommand($taskId->value(), $userId2->value());
         ($this->approveHandler)($approveCommand);
     }
@@ -235,16 +280,20 @@ class TaskApprovalWithPointsIntegrationTest extends TestCase
 
     private function createAndApproveTask($taskId, $userId, $adminId, int $points): void
     {
+        $teamId = $this->createTeamWithAdmin($adminId);
+
         $createCommand = new CreateTaskCommand(
             $taskId->value(),
             TaskNameMother::create()->value(),
             'Task description',
             $points,
             FrequencyMother::daily()->value,
+            $adminId->value(),
+            $teamId->value(),
             $userId->value()
         );
         ($this->createHandler)($createCommand);
-        
+
         ($this->completeHandler)(new CompleteTaskCommand($taskId->value(), $userId->value()));
         ($this->approveHandler)(new ApproveTaskCommand($taskId->value(), $adminId->value()));
     }

@@ -58,6 +58,12 @@ services:
     App\TeamManagement\Domain\Repository\TeamInvitationRepositoryInterface:
         class: App\TeamManagement\Infrastructure\Persistence\DoctrineTeamInvitationRepository
 
+    App\Party\Domain\Repository\PartyRepositoryInterface:
+        class: App\Party\Infrastructure\Persistence\Doctrine\DoctrinePartyRepository
+
+    App\Party\Domain\Repository\PartyRelationshipRepositoryInterface:
+        class: App\Party\Infrastructure\Persistence\Doctrine\DoctrinePartyRelationshipRepository
+
     # Policy implementations
     App\TaskManagement\Domain\Policy\TaskApprovalPolicyInterface:
         class: App\TaskManagement\Domain\Policy\AdminApprovalPolicy

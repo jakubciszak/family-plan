@@ -4,10 +4,10 @@ const {
   setupAuthenticatedSession
 } = require('./fixtures');
 
-test.describe('Task Creation', () => {
+test.describe('Task Creation - Admin User', () => {
   test.beforeEach(async ({ page }) => {
-    // Setup authenticated session as regular user
-    await setupAuthenticatedSession(page, 'user');
+    // Setup authenticated session as team admin
+    await setupAuthenticatedSession(page, 'admin');
     await page.goto('/');
     await page.waitForSelector('.task-list-container');
   });
@@ -185,5 +185,40 @@ test.describe('Task Creation', () => {
     await expect(page.locator('textarea#description')).toHaveValue('');
     await expect(page.locator('input#points')).toHaveValue('0');
     await expect(page.locator('select#frequency')).toHaveValue('once');
+  });
+});
+
+test.describe('Task Creation - Regular User (Non-Admin)', () => {
+  test.beforeEach(async ({ page }) => {
+    // Setup authenticated session as regular team member (not admin)
+    await setupAuthenticatedSession(page, 'user');
+    await page.goto('/');
+    await page.waitForSelector('.task-list-container');
+  });
+
+  test('should NOT show create task button for non-admin users', async ({ page }) => {
+    // Check that create task button is not visible
+    const createButton = page.locator('.task-list-header button:has-text("Create Task")');
+    await expect(createButton).not.toBeVisible();
+  });
+
+  test('should show team selector but no create button for non-admin', async ({ page }) => {
+    // Team selector should be visible
+    const teamSelector = page.locator('.team-selector');
+    await expect(teamSelector).toBeVisible();
+
+    // But create task button should not be visible
+    const createButton = page.locator('.task-list-header button:has-text("Create Task")');
+    await expect(createButton).not.toBeVisible();
+  });
+
+  test('should display tasks list but without create functionality', async ({ page }) => {
+    // Task list should be visible
+    const taskCards = page.locator('.task-card');
+    await expect(taskCards).toHaveCount(3);
+
+    // But no create task button
+    const createButton = page.locator('.task-list-header button:has-text("Create Task")');
+    await expect(createButton).not.toBeVisible();
   });
 });

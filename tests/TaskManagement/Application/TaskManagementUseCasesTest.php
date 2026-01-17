@@ -4,6 +4,12 @@ declare(strict_types=1);
 
 namespace App\Tests\TaskManagement\Application;
 
+use App\Party\Domain\Entity\Organization;
+use App\Party\Domain\Entity\PartyRelationship;
+use App\Party\Domain\Entity\Person;
+use App\Party\Domain\ValueObject\PartyRelationshipType;
+use App\Party\Infrastructure\Persistence\InMemory\InMemoryPartyRelationshipRepository;
+use App\Party\Infrastructure\Persistence\InMemory\InMemoryPartyRepository;
 use App\TaskManagement\Application\Command\ApproveTaskCommand;
 use App\TaskManagement\Application\Command\CompleteTaskCommand;
 use App\TaskManagement\Application\Command\CreateTaskCommand;
@@ -13,6 +19,7 @@ use App\TaskManagement\Application\Handler\CreateTaskHandler;
 use App\TaskManagement\Infrastructure\Persistence\InMemoryTaskRepository;
 use App\TaskManagement\Domain\Policy\AdminApprovalPolicy;
 use App\TaskManagement\Domain\Strategy\TaskApprovalPointsAwardStrategy;
+use App\UserManagement\Domain\ValueObject\Email;
 use App\UserManagement\Infrastructure\Persistence\InMemoryUserRepository;
 use App\PointsManagement\Infrastructure\Persistence\InMemoryUserWalletRepository;
 use App\Shared\Infrastructure\Clock\FixedClock;
@@ -27,12 +34,16 @@ use PHPUnit\Framework\TestCase;
 /**
  * Detroit school test for Task Management use cases
  * Tests the complete workflow with real handlers and repository
+ *
+ * MIGRATED TO PARTY ARCHETYPE
  */
 class TaskManagementUseCasesTest extends TestCase
 {
     private InMemoryTaskRepository $taskRepository;
     private InMemoryUserRepository $userRepository;
     private InMemoryUserWalletRepository $walletRepository;
+    private InMemoryPartyRepository $partyRepository;
+    private InMemoryPartyRelationshipRepository $relationshipRepository;
     private FixedClock $clock;
     private CreateTaskHandler $createHandler;
     private CompleteTaskHandler $completeHandler;
@@ -43,10 +54,12 @@ class TaskManagementUseCasesTest extends TestCase
         $this->taskRepository = new InMemoryTaskRepository();
         $this->userRepository = new InMemoryUserRepository();
         $this->walletRepository = new InMemoryUserWalletRepository();
+        $this->partyRepository = new InMemoryPartyRepository();
+        $this->relationshipRepository = new InMemoryPartyRelationshipRepository();
         $this->clock = new FixedClock();
-        $this->createHandler = new CreateTaskHandler($this->taskRepository);
+        $this->createHandler = new CreateTaskHandler($this->taskRepository, $this->relationshipRepository);
         $this->completeHandler = new CompleteTaskHandler($this->taskRepository);
-        
+
         $approvalPolicy = new AdminApprovalPolicy($this->userRepository);
         $pointsAwardStrategy = new TaskApprovalPointsAwardStrategy($this->walletRepository, $this->clock);
         $this->approveHandler = new ApproveTaskHandler(
@@ -56,9 +69,36 @@ class TaskManagementUseCasesTest extends TestCase
         );
     }
 
+    private function createTeamWithAdmin(\App\Shared\Domain\ValueObject\Uuid $adminId): \App\Shared\Domain\ValueObject\Uuid
+    {
+        $organizationId = UuidMother::random();
+
+        // Create Person for admin
+        $person = Person::create($adminId, 'Admin User', Email::fromString('admin@example.com'));
+        $this->partyRepository->save($person);
+
+        // Create Organization (team)
+        $organization = Organization::create($organizationId, 'Test Team', 'Test description');
+        $this->partyRepository->save($organization);
+
+        // Create ADMIN_OF relationship
+        $relationship = PartyRelationship::create(
+            UuidMother::random(),
+            $person,
+            $organization,
+            PartyRelationshipType::adminOf()
+        );
+        $this->relationshipRepository->save($relationship);
+
+        return $organizationId;
+    }
+
     public function testCreateTaskUseCaseCreatesAndPersistsTask(): void
     {
         // Given
+        $adminId = UuidMother::random();
+        $teamId = $this->createTeamWithAdmin($adminId);
+
         $taskId = UuidMother::random();
         $name = TaskNameMother::create('Clean kitchen');
         $description = 'Wash dishes and wipe counters';
@@ -71,6 +111,8 @@ class TaskManagementUseCasesTest extends TestCase
             $description,
             $points->value(),
             $frequency->value,
+            $adminId->value(),
+            $teamId->value(),
             null
         );
 
@@ -91,6 +133,9 @@ class TaskManagementUseCasesTest extends TestCase
     public function testCompleteTaskUseCaseMarksTaskAsCompleted(): void
     {
         // Given - Create a task first
+        $adminId = UuidMother::random();
+        $teamId = $this->createTeamWithAdmin($adminId);
+
         $taskId = UuidMother::random();
         $userId = UuidMother::random();
 
@@ -100,6 +145,8 @@ class TaskManagementUseCasesTest extends TestCase
             'Task description',
             PointsMother::medium()->value(),
             FrequencyMother::daily()->value,
+            $adminId->value(),
+            $teamId->value(),
             null
         );
         ($this->createHandler)($createCommand);
@@ -122,14 +169,16 @@ class TaskManagementUseCasesTest extends TestCase
         $taskId = UuidMother::random();
         $userId = UuidMother::random();
         $adminId = UuidMother::random();
-        
+
+        $teamId = $this->createTeamWithAdmin($adminId);
+
         // Create an admin user
         $admin = UserMother::aUser()
             ->withId($adminId)
             ->asAdmin()
             ->build();
         $this->userRepository->save($admin);
-        
+
         // Create a regular user to assign the task to
         $user = UserMother::aUser()
             ->withId($userId)
@@ -143,6 +192,8 @@ class TaskManagementUseCasesTest extends TestCase
             'Task description',
             PointsMother::medium()->value(),
             FrequencyMother::daily()->value,
+            $adminId->value(),
+            $teamId->value(),
             $userId->value()
         );
         ($this->createHandler)($createCommand);
@@ -160,7 +211,7 @@ class TaskManagementUseCasesTest extends TestCase
         $this->assertNotNull($approvedTask);
         TaskAssert::assertTaskIsApproved($approvedTask);
         TaskAssert::assertTaskWasApprovedAt($approvedTask);
-        
+
         // Verify points were awarded to wallet
         $wallet = $this->walletRepository->findByUserId($userId);
         $this->assertNotNull($wallet);
@@ -173,14 +224,16 @@ class TaskManagementUseCasesTest extends TestCase
         $taskId = UuidMother::random();
         $userId = UuidMother::random();
         $adminId = UuidMother::random();
-        
+
+        $teamId = $this->createTeamWithAdmin($adminId);
+
         // Create an admin user
         $admin = UserMother::aUser()
             ->withId($adminId)
             ->asAdmin()
             ->build();
         $this->userRepository->save($admin);
-        
+
         // Create a regular user
         $user = UserMother::aUser()
             ->withId($userId)
@@ -195,6 +248,8 @@ class TaskManagementUseCasesTest extends TestCase
             'This needs to be done',
             PointsMother::high()->value(),
             FrequencyMother::weekly()->value,
+            $adminId->value(),
+            $teamId->value(),
             $userId->value()
         );
         ($this->createHandler)($createCommand);
@@ -219,7 +274,7 @@ class TaskManagementUseCasesTest extends TestCase
         // Then - Task is approved and points awarded
         $task = $this->taskRepository->findById($taskId);
         TaskAssert::assertTaskIsApproved($task);
-        
+
         $wallet = $this->walletRepository->findByUserId($userId);
         $this->assertEquals(PointsMother::high()->value(), $wallet->balance()->value());
     }
@@ -229,6 +284,9 @@ class TaskManagementUseCasesTest extends TestCase
         // Note: This test is kept for backward compatibility with repository method
         // Tasks are now created with NEW status, not PENDING
         // Given - Create multiple tasks with different statuses
+        $adminId = UuidMother::random();
+        $teamId = $this->createTeamWithAdmin($adminId);
+
         $newTaskId = UuidMother::random();
         $completedTaskId = UuidMother::random();
 
@@ -238,6 +296,8 @@ class TaskManagementUseCasesTest extends TestCase
             'New task',
             PointsMother::medium()->value(),
             FrequencyMother::daily()->value,
+            $adminId->value(),
+            $teamId->value(),
             null
         );
         ($this->createHandler)($newCommand);
@@ -248,6 +308,8 @@ class TaskManagementUseCasesTest extends TestCase
             'To be completed',
             PointsMother::medium()->value(),
             FrequencyMother::daily()->value,
+            $adminId->value(),
+            $teamId->value(),
             null
         );
         ($this->createHandler)($completedCommand);
@@ -263,6 +325,9 @@ class TaskManagementUseCasesTest extends TestCase
     public function testRepositoryCanFindCompletedTasks(): void
     {
         // Given
+        $adminId = UuidMother::random();
+        $teamId = $this->createTeamWithAdmin($adminId);
+
         $taskId = UuidMother::random();
         $createCommand = new CreateTaskCommand(
             $taskId->value(),
@@ -270,6 +335,8 @@ class TaskManagementUseCasesTest extends TestCase
             'Task',
             PointsMother::medium()->value(),
             FrequencyMother::daily()->value,
+            $adminId->value(),
+            $teamId->value(),
             null
         );
         ($this->createHandler)($createCommand);
@@ -286,6 +353,9 @@ class TaskManagementUseCasesTest extends TestCase
     public function testRepositoryCanFindTasksByAssignedUser(): void
     {
         // Given
+        $adminId = UuidMother::random();
+        $teamId = $this->createTeamWithAdmin($adminId);
+
         $userId = UuidMother::random();
         $taskId1 = UuidMother::random();
         $taskId2 = UuidMother::random();
@@ -296,6 +366,8 @@ class TaskManagementUseCasesTest extends TestCase
             'Task 1',
             PointsMother::medium()->value(),
             FrequencyMother::daily()->value,
+            $adminId->value(),
+            $teamId->value(),
             $userId->value()
         );
         ($this->createHandler)($command1);
@@ -306,6 +378,8 @@ class TaskManagementUseCasesTest extends TestCase
             'Task 2',
             PointsMother::medium()->value(),
             FrequencyMother::daily()->value,
+            $adminId->value(),
+            $teamId->value(),
             $userId->value()
         );
         ($this->createHandler)($command2);
@@ -316,6 +390,8 @@ class TaskManagementUseCasesTest extends TestCase
             'Task 3',
             PointsMother::medium()->value(),
             FrequencyMother::daily()->value,
+            $adminId->value(),
+            $teamId->value(),
             UuidMother::random()->value() // Different user
         );
         ($this->createHandler)($command3);
