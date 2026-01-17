@@ -81,12 +81,15 @@ class TaskApiController extends AbstractController
     #[OA\RequestBody(
         required: true,
         content: new OA\JsonContent(
-            required: ['name', 'points', 'frequency'],
+            required: ['name', 'points', 'frequency', 'teamId', 'createdBy'],
             properties: [
                 new OA\Property(property: 'name', type: 'string', minLength: 1, maxLength: 255, example: 'Clean the kitchen'),
                 new OA\Property(property: 'description', type: 'string', example: 'Wash dishes and mop floor'),
                 new OA\Property(property: 'points', type: 'integer', minimum: 0, maximum: 1000, example: 50),
-                new OA\Property(property: 'frequency', type: 'string', enum: ['once', 'daily', 'weekly', 'monthly'], example: 'daily')
+                new OA\Property(property: 'frequency', type: 'string', enum: ['once', 'daily', 'weekly', 'monthly'], example: 'daily'),
+                new OA\Property(property: 'teamId', type: 'string', format: 'uuid', example: '550e8400-e29b-41d4-a716-446655440001'),
+                new OA\Property(property: 'createdBy', type: 'string', format: 'uuid', example: '550e8400-e29b-41d4-a716-446655440002'),
+                new OA\Property(property: 'assignedUserId', type: 'string', format: 'uuid', nullable: true, example: '550e8400-e29b-41d4-a716-446655440003')
             ]
         )
     )]
@@ -109,16 +112,34 @@ class TaskApiController extends AbstractController
     {
         $data = json_decode($request->getContent(), true);
 
+        // Validate required fields
+        if (empty($data['teamId'])) {
+            return $this->json(['error' => 'teamId is required'], Response::HTTP_BAD_REQUEST);
+        }
+
+        if (empty($data['createdBy'])) {
+            return $this->json(['error' => 'createdBy is required'], Response::HTTP_BAD_REQUEST);
+        }
+
         $id = Uuid::generate()->value();
         $command = new CreateTaskCommand(
             $id,
             $data['name'],
             $data['description'] ?? '',
             $data['points'] ?? 0,
-            $data['frequency'] ?? 'once'
+            $data['frequency'] ?? 'once',
+            $data['createdBy'],
+            $data['teamId'],
+            $data['assignedUserId'] ?? null
         );
 
-        $this->commandBus->dispatch($command);
+        try {
+            $this->commandBus->dispatch($command);
+        } catch (\App\TaskManagement\Domain\Exception\TaskCreationNotAllowedException $e) {
+            return $this->json(['error' => $e->getMessage()], Response::HTTP_FORBIDDEN);
+        } catch (\InvalidArgumentException $e) {
+            return $this->json(['error' => $e->getMessage()], Response::HTTP_BAD_REQUEST);
+        }
 
         $task = $this->queryBus->dispatch(new FindTaskByIdQuery($id))->last(HandledStamp::class)->getResult();
 

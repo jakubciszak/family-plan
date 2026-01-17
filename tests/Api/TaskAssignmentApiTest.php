@@ -8,14 +8,45 @@ use App\Tests\Shared\Mother\UuidMother;
 
 class TaskAssignmentApiTest extends ApiTestCase
 {
+    private function createTeamAndAdmin(): array
+    {
+        // Create admin user
+        $adminData = [
+            'name' => 'Admin User',
+            'email' => 'admin_' . uniqid() . '@example.com',
+            'password' => 'adminpass123',
+            'role' => 'ROLE_ADMIN',
+        ];
+        $adminResponse = $this->postJson('/api/users', $adminData);
+        $admin = $this->assertJsonResponse($adminResponse, 201);
+
+        // Create team
+        $teamData = [
+            'name' => 'Test Team',
+            'description' => 'Test Description',
+            'createdBy' => $admin['id'],
+        ];
+        $teamResponse = $this->postJson('/api/teams', $teamData);
+        $team = $this->assertJsonResponse($teamResponse, 201);
+
+        return [
+            'adminId' => $admin['id'],
+            'teamId' => $team['id'],
+        ];
+    }
+
     public function testAssignTaskToUser(): void
     {
+        $context = $this->createTeamAndAdmin();
+
         // Create a task
         $taskData = [
             'name' => 'Assign Task Test',
             'description' => 'Test assignment',
             'points' => 50,
             'frequency' => 'once',
+            'teamId' => $context['teamId'],
+            'createdBy' => $context['adminId'],
         ];
 
         $response = $this->postJson('/api/tasks', $taskData);
@@ -61,12 +92,16 @@ class TaskAssignmentApiTest extends ApiTestCase
 
     public function testAssignTaskReturns404ForNonexistentUser(): void
     {
+        $context = $this->createTeamAndAdmin();
+
         // Create a task
         $taskData = [
             'name' => 'Test Task',
             'description' => 'Test',
             'points' => 50,
             'frequency' => 'once',
+            'teamId' => $context['teamId'],
+            'createdBy' => $context['adminId'],
         ];
 
         $response = $this->postJson('/api/tasks', $taskData);
@@ -85,12 +120,16 @@ class TaskAssignmentApiTest extends ApiTestCase
 
     public function testTaskListIncludesAssignmentInfo(): void
     {
+        $context = $this->createTeamAndAdmin();
+
         // Create a task
         $taskData = [
             'name' => 'Task with Assignment',
             'description' => 'Test',
             'points' => 50,
             'frequency' => 'once',
+            'teamId' => $context['teamId'],
+            'createdBy' => $context['adminId'],
         ];
 
         $response = $this->postJson('/api/tasks', $taskData);

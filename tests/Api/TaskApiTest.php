@@ -8,6 +8,33 @@ use App\Tests\Shared\Mother\UuidMother;
 
 class TaskApiTest extends ApiTestCase
 {
+    private function createTeamAndUser(): array
+    {
+        // Create admin user
+        $adminData = [
+            'name' => 'Admin User',
+            'email' => 'admin_' . uniqid() . '@example.com',
+            'password' => 'adminpass123',
+            'role' => 'ROLE_ADMIN',
+        ];
+        $adminResponse = $this->postJson('/api/users', $adminData);
+        $admin = $this->assertJsonResponse($adminResponse, 201);
+
+        // Create team
+        $teamData = [
+            'name' => 'Test Team',
+            'description' => 'Test Description',
+            'createdBy' => $admin['id'],
+        ];
+        $teamResponse = $this->postJson('/api/teams', $teamData);
+        $team = $this->assertJsonResponse($teamResponse, 201);
+
+        return [
+            'adminId' => $admin['id'],
+            'teamId' => $team['id'],
+        ];
+    }
+
     public function testListTasksReturnsEmptyArray(): void
     {
         $data = $this->getJson('/api/tasks');
@@ -18,11 +45,15 @@ class TaskApiTest extends ApiTestCase
 
     public function testCreateTask(): void
     {
+        $context = $this->createTeamAndUser();
+
         $taskData = [
             'name' => 'Test Task',
             'description' => 'Test Description',
             'points' => 100,
             'frequency' => 'daily',
+            'teamId' => $context['teamId'],
+            'createdBy' => $context['adminId'],
         ];
 
         $response = $this->postJson('/api/tasks', $taskData);
@@ -38,12 +69,16 @@ class TaskApiTest extends ApiTestCase
 
     public function testGetTaskById(): void
     {
+        $context = $this->createTeamAndUser();
+
         // Create a task first
         $taskData = [
             'name' => 'Get Task Test',
             'description' => 'Description',
             'points' => 50,
             'frequency' => 'weekly',
+            'teamId' => $context['teamId'],
+            'createdBy' => $context['adminId'],
         ];
 
         $response = $this->postJson('/api/tasks', $taskData);
@@ -59,12 +94,16 @@ class TaskApiTest extends ApiTestCase
 
     public function testCompleteTask(): void
     {
+        $context = $this->createTeamAndUser();
+
         // Create a task first
         $taskData = [
             'name' => 'Complete Task Test',
             'description' => 'Description',
             'points' => 75,
             'frequency' => 'once',
+            'teamId' => $context['teamId'],
+            'createdBy' => $context['adminId'],
         ];
 
         $response = $this->postJson('/api/tasks', $taskData);
@@ -83,21 +122,12 @@ class TaskApiTest extends ApiTestCase
 
     public function testApproveTask(): void
     {
-        // Create an admin user
-        $adminData = [
-            'name' => 'Admin User',
-            'email' => 'admin@example.com',
-            'password' => 'adminpass123',
-            'role' => 'ROLE_ADMIN',
-        ];
-        $adminResponse = $this->postJson('/api/users', $adminData);
-        $admin = $this->assertJsonResponse($adminResponse, 201);
-        $adminId = $admin['id'];
+        $context = $this->createTeamAndUser();
 
         // Create a regular user to assign the task to
         $userData = [
             'name' => 'Task User',
-            'email' => 'taskuser@example.com',
+            'email' => 'taskuser_' . uniqid() . '@example.com',
             'password' => 'userpass123',
             'role' => 'ROLE_USER',
         ];
@@ -111,6 +141,8 @@ class TaskApiTest extends ApiTestCase
             'description' => 'Description',
             'points' => 60,
             'frequency' => 'monthly',
+            'teamId' => $context['teamId'],
+            'createdBy' => $context['adminId'],
         ];
 
         $response = $this->postJson('/api/tasks', $taskData);
@@ -129,7 +161,7 @@ class TaskApiTest extends ApiTestCase
 
         // Approve the task with admin user
         $response = $this->postJson("/api/tasks/{$taskId}/approve", [
-            'adminId' => $adminId,
+            'adminId' => $context['adminId'],
         ]);
         $data = $this->assertJsonResponse($response, 200);
 

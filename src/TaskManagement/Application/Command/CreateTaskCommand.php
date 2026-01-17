@@ -12,6 +12,8 @@ final readonly class CreateTaskCommand
         public string $description,
         public int $points,
         public string $frequency,
+        public string $createdBy,
+        public ?string $teamId = null,
         public ?string $assignedUserId = null
     ) {
     }

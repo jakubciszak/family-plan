@@ -17,12 +17,26 @@ use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 final readonly class CreateTaskHandler
 {
     public function __construct(
-        private TaskRepositoryInterface $taskRepository
+        private TaskRepositoryInterface $taskRepository,
+        private \App\TeamManagement\Domain\Repository\TeamMemberRepositoryInterface $teamMemberRepository
     ) {
     }
 
     public function __invoke(CreateTaskCommand $command): void
     {
+        // Validate that teamId is provided
+        if ($command->teamId === null) {
+            throw new \InvalidArgumentException('Task must belong to a team');
+        }
+
+        // Validate that the user is a team admin
+        $userId = Uuid::fromString($command->createdBy);
+        $teamId = Uuid::fromString($command->teamId);
+
+        if (!$this->teamMemberRepository->isUserAdminOfTeam($userId, $teamId)) {
+            throw \App\TaskManagement\Domain\Exception\TaskCreationNotAllowedException::notTeamAdmin();
+        }
+
         $task = Task::create(
             Uuid::fromString($command->id),
             TaskName::fromString($command->name),
@@ -31,6 +45,9 @@ final readonly class CreateTaskHandler
             Frequency::fromString($command->frequency),
             $command->assignedUserId ? Uuid::fromString($command->assignedUserId) : null
         );
+
+        // Assign task to team
+        $task->assignToTeam($teamId);
 
         $this->taskRepository->save($task);
     }
