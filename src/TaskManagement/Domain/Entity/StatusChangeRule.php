@@ -15,6 +15,7 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Table(name: 'status_change_rules')]
 #[ORM\Index(columns: ['is_active'])]
 #[ORM\Index(columns: ['task_template_id'])]
+#[ORM\Index(columns: ['team_id'])]
 class StatusChangeRule
 {
     #[ORM\Transient]
@@ -24,28 +25,31 @@ class StatusChangeRule
         #[ORM\Id]
         #[ORM\Column(type: 'uuid')]
         private Uuid $id,
-        
+
+        #[ORM\Column(type: 'uuid')]
+        private Uuid $teamId,
+
         #[ORM\Column(type: 'uuid')]
         private Uuid $taskTemplateId,
-        
+
         #[ORM\Column(type: 'string', length: 255)]
         private string $name,
-        
+
         #[ORM\Column(type: 'text')]
         private string $description,
-        
+
         #[ORM\Column(type: 'string', length: 50)]
         private StatusChangeConditionType $conditionType,
-        
+
         #[ORM\Column(type: 'json')]
         private array $config,
-        
+
         #[ORM\Column(type: 'boolean')]
         private bool $isActive,
-        
+
         #[ORM\Column(type: 'datetime_immutable')]
         private DateTimeImmutable $createdAt,
-        
+
         #[ORM\Column(type: 'datetime_immutable', nullable: true)]
         private ?DateTimeImmutable $updatedAt = null
     ) {
@@ -53,6 +57,7 @@ class StatusChangeRule
 
     public static function create(
         Uuid $id,
+        Uuid $teamId,
         Uuid $taskTemplateId,
         string $name,
         string $description,
@@ -60,6 +65,7 @@ class StatusChangeRule
     ): self {
         $rule = new self(
             $id,
+            $teamId,
             $taskTemplateId,
             $name,
             $description,
@@ -83,6 +89,11 @@ class StatusChangeRule
     public function id(): Uuid
     {
         return $this->id;
+    }
+
+    public function teamId(): Uuid
+    {
+        return $this->teamId;
     }
 
     public function taskTemplateId(): Uuid
