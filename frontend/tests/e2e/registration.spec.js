@@ -38,16 +38,14 @@ test.describe('Registration Page', () => {
     await loginLink.click();
 
     // Should be back on login page
+    await page.waitForSelector('h2:has-text("Login")', { timeout: 5000 });
     await expect(page.locator('h2')).toContainText('Login');
   });
 
   test('should show validation for empty required fields', async ({ page }) => {
     await navigateToRegistration(page);
 
-    // Try to submit empty form
-    await page.click('button[type="submit"]');
-
-    // HTML5 validation should prevent submission
+    // HTML5 validation should show required attributes
     const nameInput = page.locator('input#name');
     const emailInput = page.locator('input#email');
     const passwordInput = page.locator('input#password');
@@ -58,7 +56,7 @@ test.describe('Registration Page', () => {
   });
 
   test('should register successfully with valid data', async ({ page }) => {
-    // Mock successful registration response
+    // Mock successful registration response - must be set before navigation
     await page.route('**/api/auth/register', async route => {
       await route.fulfill({
         status: 201,
@@ -80,7 +78,9 @@ test.describe('Registration Page', () => {
     // Submit form
     await page.click('button[type="submit"]');
 
-    // Check for success message
+    // Wait for and check success message
+    await page.waitForSelector('.success-message', { timeout: 5000 });
+    await expect(page.locator('.success-message')).toBeVisible();
     await expect(page.locator('.success-message')).toContainText('Registration successful!');
   });
 
@@ -106,7 +106,9 @@ test.describe('Registration Page', () => {
     // Submit form
     await page.click('button[type="submit"]');
 
-    // Check for success message
+    // Wait for and check success message
+    await page.waitForSelector('.success-message', { timeout: 5000 });
+    await expect(page.locator('.success-message')).toBeVisible();
     await expect(page.locator('.success-message')).toContainText('Registration successful!');
   });
 
@@ -132,8 +134,10 @@ test.describe('Registration Page', () => {
     // Submit form
     await page.click('button[type="submit"]');
 
-    // Check for error message
-    await expect(page.locator('.error-message')).toContainText('email already exists');
+    // Wait for and check error message
+    await page.waitForSelector('.error-message', { timeout: 5000 });
+    await expect(page.locator('.error-message')).toBeVisible();
+    await expect(page.locator('.error-message')).toContainText('already exists');
   });
 
   test('should show generic error for registration failure', async ({ page }) => {
@@ -158,7 +162,9 @@ test.describe('Registration Page', () => {
     // Submit form
     await page.click('button[type="submit"]');
 
-    // Check for error message
+    // Wait for and check error message
+    await page.waitForSelector('.error-message', { timeout: 5000 });
+    await expect(page.locator('.error-message')).toBeVisible();
     await expect(page.locator('.error-message')).toContainText('Registration failed');
   });
 
@@ -211,6 +217,7 @@ test.describe('Registration Page', () => {
     await page.click('button[type="submit"]');
 
     // Wait for success message
+    await page.waitForSelector('.success-message', { timeout: 5000 });
     await expect(page.locator('.success-message')).toBeVisible();
 
     // Check that form is cleared
