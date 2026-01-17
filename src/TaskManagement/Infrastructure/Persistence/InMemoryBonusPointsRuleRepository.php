@@ -36,6 +36,22 @@ final class InMemoryBonusPointsRuleRepository implements BonusPointsRuleReposito
         ));
     }
 
+    public function findByTeamId(Uuid $teamId): array
+    {
+        return array_values(array_filter(
+            $this->rules,
+            fn(BonusPointsRule $rule) => $rule->teamId()->equals($teamId)
+        ));
+    }
+
+    public function findActiveByTeamId(Uuid $teamId): array
+    {
+        return array_values(array_filter(
+            $this->rules,
+            fn(BonusPointsRule $rule) => $rule->teamId()->equals($teamId) && $rule->isActive()
+        ));
+    }
+
     public function delete(BonusPointsRule $rule): void
     {
         unset($this->rules[$rule->id()->value()]);

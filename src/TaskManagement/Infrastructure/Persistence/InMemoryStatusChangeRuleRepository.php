@@ -38,8 +38,22 @@ final class InMemoryStatusChangeRuleRepository implements StatusChangeRuleReposi
     {
         return array_values(array_filter(
             $this->rules,
-            fn(StatusChangeRule $rule) => 
+            fn(StatusChangeRule $rule) =>
                 $rule->taskTemplateId()->equals($taskTemplateId) && $rule->isActive()
         ));
+    }
+
+    public function findByTeamId(Uuid $teamId, bool $activeOnly = false): array
+    {
+        $rules = array_values(array_filter(
+            $this->rules,
+            fn(StatusChangeRule $rule) => $rule->teamId()->equals($teamId)
+        ));
+
+        if ($activeOnly) {
+            $rules = array_values(array_filter($rules, fn(StatusChangeRule $rule) => $rule->isActive()));
+        }
+
+        return $rules;
     }
 }

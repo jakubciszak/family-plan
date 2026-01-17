@@ -56,4 +56,22 @@ final readonly class DoctrineStatusChangeRuleRepository implements StatusChangeR
 
         return $qb->getQuery()->getResult();
     }
+
+    public function findByTeamId(Uuid $teamId, bool $activeOnly = false): array
+    {
+        $qb = $this->entityManager->createQueryBuilder();
+        $qb->select('r')
+            ->from(StatusChangeRule::class, 'r')
+            ->where('r.teamId = :teamId')
+            ->setParameter('teamId', $teamId->value());
+
+        if ($activeOnly) {
+            $qb->andWhere('r.isActive = :active')
+                ->setParameter('active', true);
+        }
+
+        $qb->orderBy('r.createdAt', 'DESC');
+
+        return $qb->getQuery()->getResult();
+    }
 }
