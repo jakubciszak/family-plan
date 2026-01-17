@@ -2,7 +2,7 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import apiClient from '../services/apiClient';
 
-function Login({ onLogin }) {
+function Login({ onLogin, onSwitchToRegister }) {
     const { t } = useTranslation();
     const [email, setEmail] = React.useState('');
     const [password, setPassword] = React.useState('');
@@ -48,6 +48,9 @@ function Login({ onLogin }) {
                     </div>
                     <button type="submit" className="btn-primary">{t('auth.login')}</button>
                 </form>
+                <p className="auth-switch">
+                    {t('auth.noAccount')} <a href="#" onClick={(e) => { e.preventDefault(); onSwitchToRegister(); }}>{t('auth.register')}</a>
+                </p>
             </div>
         </div>
     );

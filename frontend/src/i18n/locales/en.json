@@ -13,10 +13,20 @@
   "auth": {
     "login": "Login",
     "logout": "Logout",
+    "register": "Register",
     "email": "Email",
     "password": "Password",
+    "name": "Name",
+    "phoneNumber": "Phone Number",
+    "phoneNumberOptional": "Phone Number (optional)",
     "loginSuccess": "Login successful",
-    "loginError": "Login failed. Please check your credentials."
+    "loginError": "Login failed. Please check your credentials.",
+    "registerSuccess": "Registration successful! Please check your email to activate your account.",
+    "registerError": "Registration failed. Please try again.",
+    "alreadyHaveAccount": "Already have an account?",
+    "noAccount": "Don't have an account?",
+    "activationRequired": "Please activate your account via the link sent to your email.",
+    "duplicateEmail": "An account with this email already exists."
   },
   "tasks": {
     "title": "Tasks",

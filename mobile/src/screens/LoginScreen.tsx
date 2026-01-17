@@ -90,6 +90,16 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
             <Text style={styles.buttonText}>Login</Text>
           )}
         </TouchableOpacity>
+
+        <View style={styles.registerLinkContainer}>
+          <Text style={styles.registerLinkText}>Don't have an account? </Text>
+          <TouchableOpacity
+            onPress={() => navigation.navigate('Register')}
+            disabled={loading}
+          >
+            <Text style={styles.registerLink}>Register here</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     </KeyboardAvoidingView>
   );
@@ -149,6 +159,20 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginBottom: 15,
     textAlign: 'center',
+  },
+  registerLinkContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginTop: 20,
+  },
+  registerLinkText: {
+    color: '#666',
+    fontSize: 14,
+  },
+  registerLink: {
+    color: '#4CAF50',
+    fontSize: 14,
+    fontWeight: 'bold',
   },
 });
 

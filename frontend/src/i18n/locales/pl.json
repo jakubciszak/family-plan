@@ -13,10 +13,20 @@
   "auth": {
     "login": "Zaloguj",
     "logout": "Wyloguj",
+    "register": "Zarejestruj",
     "email": "Email",
     "password": "Hasło",
+    "name": "Imię",
+    "phoneNumber": "Numer telefonu",
+    "phoneNumberOptional": "Numer telefonu (opcjonalnie)",
     "loginSuccess": "Logowanie zakończone sukcesem",
-    "loginError": "Logowanie nie powiodło się. Sprawdź dane logowania."
+    "loginError": "Logowanie nie powiodło się. Sprawdź dane logowania.",
+    "registerSuccess": "Rejestracja zakończona sukcesem! Sprawdź swoją skrzynkę email aby aktywować konto.",
+    "registerError": "Rejestracja nie powiodła się. Spróbuj ponownie.",
+    "alreadyHaveAccount": "Masz już konto?",
+    "noAccount": "Nie masz konta?",
+    "activationRequired": "Aktywuj swoje konto poprzez link wysłany na email.",
+    "duplicateEmail": "Konto z tym adresem email już istnieje."
   },
   "tasks": {
     "title": "Zadania",
