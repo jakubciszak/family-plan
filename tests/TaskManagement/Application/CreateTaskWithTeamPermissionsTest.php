@@ -16,20 +16,11 @@ use App\TaskManagement\Application\Command\CreateTaskCommand;
 use App\TaskManagement\Application\Handler\CreateTaskHandler;
 use App\TaskManagement\Domain\Exception\TaskCreationNotAllowedException;
 use App\TaskManagement\Infrastructure\Persistence\InMemoryTaskRepository;
-use App\TeamManagement\Domain\Entity\Team;
-use App\TeamManagement\Domain\Entity\TeamMember;
-use App\TeamManagement\Domain\ValueObject\TeamName;
-use App\TeamManagement\Domain\ValueObject\TeamRole;
-use App\TeamManagement\Infrastructure\Persistence\InMemoryTeamMemberRepository;
-use App\TeamManagement\Infrastructure\Persistence\InMemoryTeamRepository;
 use App\Tests\Shared\Mother\UuidMother;
 use App\Tests\TaskManagement\Mother\FrequencyMother;
 use App\Tests\TaskManagement\Mother\PointsMother;
 use App\Tests\TaskManagement\Mother\TaskNameMother;
-use App\UserManagement\Domain\Entity\User;
 use App\UserManagement\Domain\ValueObject\Email;
-use App\UserManagement\Domain\ValueObject\Role;
-use App\UserManagement\Infrastructure\Persistence\InMemoryUserRepository;
 use PHPUnit\Framework\TestCase;
 
 /**
