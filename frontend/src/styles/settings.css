@@ -164,3 +164,48 @@
     background-color: #ccc;
     cursor: not-allowed;
 }
+
+/* Mobile Responsive Styles */
+@media screen and (max-width: 768px) {
+    .settings-container {
+        margin: 1rem auto;
+        padding: 1.5rem;
+    }
+
+    .settings-container h2 {
+        font-size: 1.5rem;
+    }
+
+    .settings-section h3 {
+        font-size: 1.1rem;
+    }
+
+    .setting-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+    }
+
+    .settings-actions {
+        flex-direction: column;
+    }
+
+    .settings-actions button {
+        width: 100%;
+    }
+}
+
+@media screen and (max-width: 480px) {
+    .settings-container {
+        padding: 1rem;
+        margin: 0.5rem auto;
+    }
+
+    .settings-container h2 {
+        font-size: 1.25rem;
+    }
+
+    .setting-item {
+        padding: 0.75rem;
+    }
+}
