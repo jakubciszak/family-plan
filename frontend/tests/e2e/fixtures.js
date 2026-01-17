@@ -41,7 +41,38 @@ const mockApiResponses = {
     email: 'admin@example.com',
     role: 'ROLE_ADMIN'
   },
-  
+
+  // Team responses
+  userTeams: {
+    teams: [
+      {
+        id: 'team-1',
+        name: 'Family Team',
+        description: 'Our family team',
+        role: 'admin',
+        createdBy: '2',
+        createdAt: '2024-01-01T00:00:00Z'
+      }
+    ]
+  },
+
+  regularUserTeams: {
+    teams: [
+      {
+        id: 'team-1',
+        name: 'Family Team',
+        description: 'Our family team',
+        role: 'member',
+        createdBy: '2',
+        createdAt: '2024-01-01T00:00:00Z'
+      }
+    ]
+  },
+
+  emptyTeams: {
+    teams: []
+  },
+
   // Task list responses
   emptyTasks: {
     tasks: []
@@ -176,7 +207,8 @@ const testCredentials = {
 // Helper to setup authenticated session
 async function setupAuthenticatedSession(page, role = 'user') {
   const userData = role === 'admin' ? mockApiResponses.currentAdmin : mockApiResponses.currentUser;
-  
+  const teamsData = role === 'admin' ? mockApiResponses.userTeams : mockApiResponses.regularUserTeams;
+
   // Mock the /api/auth/me endpoint to return authenticated user
   await page.route('**/api/auth/me', async route => {
     await route.fulfill({
@@ -185,7 +217,7 @@ async function setupAuthenticatedSession(page, role = 'user') {
       body: JSON.stringify(userData)
     });
   });
-  
+
   // Mock the user points endpoint
   await page.route('**/api/users/*/points', async route => {
     await route.fulfill({
@@ -194,7 +226,18 @@ async function setupAuthenticatedSession(page, role = 'user') {
       body: JSON.stringify({ balance: 100 })
     });
   });
-  
+
+  // Mock the /api/teams endpoint
+  await page.route('**/api/teams', async route => {
+    if (route.request().method() === 'GET') {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(teamsData)
+      });
+    }
+  });
+
   // Mock the /api/tasks endpoint
   await page.route('**/api/tasks', async route => {
     if (route.request().method() === 'GET') {
