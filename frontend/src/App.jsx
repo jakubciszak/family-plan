@@ -16,6 +16,7 @@ function App() {
     const [user, setUser] = React.useState(null);
     const [userPoints, setUserPoints] = React.useState(0);
     const [currentPage, setCurrentPage] = React.useState('tasks');
+    const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
 
     React.useEffect(() => {
         // Check if user is authenticated
@@ -66,48 +67,64 @@ function App() {
         return <Login onLogin={handleLogin} />;
     }
 
+    const handlePageChange = (page) => {
+        setCurrentPage(page);
+        setIsMobileMenuOpen(false);
+    };
+
     return (
         <div className="app">
             <header className="app-header">
-                <h1>{t('app.title')}</h1>
-                <nav className="app-nav">
-                    <button 
-                        onClick={() => setCurrentPage('tasks')}
+                <div className="header-left">
+                    <h1>{t('app.title')}</h1>
+                </div>
+                <button
+                    className="hamburger-menu"
+                    onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                    aria-label="Toggle menu"
+                >
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </button>
+                <nav className={`app-nav ${isMobileMenuOpen ? 'mobile-open' : ''}`}>
+                    <button
+                        onClick={() => handlePageChange('tasks')}
                         className={currentPage === 'tasks' ? 'nav-active' : ''}
                     >
                         {t('nav.tasks')}
                     </button>
-                    <button 
-                        onClick={() => setCurrentPage('teams')}
+                    <button
+                        onClick={() => handlePageChange('teams')}
                         className={currentPage === 'teams' ? 'nav-active' : ''}
                     >
                         {t('nav.teams')}
                     </button>
                     {user?.role === 'ROLE_ADMIN' && (
                         <>
-                            <button 
-                                onClick={() => setCurrentPage('bonus-rules')}
+                            <button
+                                onClick={() => handlePageChange('bonus-rules')}
                                 className={currentPage === 'bonus-rules' ? 'nav-active' : ''}
                             >
                                 {t('nav.bonusRules')}
                             </button>
-                            <button 
-                                onClick={() => setCurrentPage('status-change-rules')}
+                            <button
+                                onClick={() => handlePageChange('status-change-rules')}
                                 className={currentPage === 'status-change-rules' ? 'nav-active' : ''}
                             >
                                 {t('nav.statusChangeRules')}
                             </button>
                         </>
                     )}
-                    <button 
-                        onClick={() => setCurrentPage('settings')}
+                    <button
+                        onClick={() => handlePageChange('settings')}
                         className={currentPage === 'settings' ? 'nav-active' : ''}
                     >
                         {t('nav.settings')}
                     </button>
                 </nav>
                 <div className="user-info">
-                    <span>{t('app.welcome', { name: user?.name })}</span>
+                    <span className="user-welcome">{t('app.welcome', { name: user?.name })}</span>
                     <span className="user-points">{t('user.points', { points: userPoints })}</span>
                     <LanguageSwitcher />
                     <button onClick={handleLogout}>{t('auth.logout')}</button>

@@ -258,3 +258,95 @@
     font-size: 18px;
     color: #6c757d;
 }
+
+/* Mobile Responsive Styles */
+@media screen and (max-width: 768px) {
+    .team-management {
+        padding: 15px;
+    }
+
+    .team-management h1 {
+        font-size: 1.5rem;
+        margin-bottom: 20px;
+    }
+
+    .teams-header {
+        flex-direction: column;
+        gap: 10px;
+        align-items: flex-start;
+    }
+
+    .teams-header button {
+        width: 100%;
+    }
+
+    .teams-list {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+
+    .team-form, .invite-form {
+        padding: 15px;
+    }
+
+    .invitations-section {
+        padding: 15px;
+    }
+
+    .invitation-card {
+        flex-direction: column;
+        gap: 10px;
+        align-items: flex-start;
+    }
+
+    .invitation-card button {
+        width: 100%;
+    }
+
+    .team-details {
+        padding: 15px;
+    }
+
+    .team-actions {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .team-actions button {
+        width: 100%;
+    }
+
+    .member-card {
+        flex-direction: column;
+        gap: 10px;
+        align-items: flex-start;
+    }
+
+    .member-card button {
+        width: 100%;
+    }
+}
+
+@media screen and (max-width: 480px) {
+    .team-management {
+        padding: 10px;
+    }
+
+    .team-management h1 {
+        font-size: 1.25rem;
+    }
+
+    .team-card {
+        padding: 15px;
+    }
+
+    .team-details {
+        padding: 12px;
+    }
+
+    .btn-primary, .btn-success, .btn-danger {
+        padding: 8px 15px;
+        font-size: 13px;
+    }
+}
