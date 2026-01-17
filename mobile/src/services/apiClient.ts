@@ -3,6 +3,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   LoginCredentials,
   LoginResponse,
+  RegisterData,
+  RegisterResponse,
   User,
   TasksResponse,
   CreateTaskData,
@@ -65,6 +67,14 @@ class ApiClient {
     if (response.data.token) {
       await this.setToken(response.data.token);
     }
+    return response.data;
+  }
+
+  async register(data: RegisterData): Promise<RegisterResponse> {
+    const response = await this.axiosInstance.post<RegisterResponse>(
+      '/api/auth/register',
+      data
+    );
     return response.data;
   }
 
