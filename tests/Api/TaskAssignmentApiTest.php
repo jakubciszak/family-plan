@@ -8,33 +8,6 @@ use App\Tests\Shared\Mother\UuidMother;
 
 class TaskAssignmentApiTest extends ApiTestCase
 {
-    private function createTeamAndAdmin(): array
-    {
-        // Create admin user
-        $adminData = [
-            'name' => 'Admin User',
-            'email' => 'admin_' . uniqid() . '@example.com',
-            'password' => 'adminpass123',
-            'role' => 'ROLE_ADMIN',
-        ];
-        $adminResponse = $this->postJson('/api/users', $adminData);
-        $admin = $this->assertJsonResponse($adminResponse, 201);
-
-        // Create team
-        $teamData = [
-            'name' => 'Test Team',
-            'description' => 'Test Description',
-            'createdBy' => $admin['id'],
-        ];
-        $teamResponse = $this->postJson('/api/teams', $teamData);
-        $team = $this->assertJsonResponse($teamResponse, 201);
-
-        return [
-            'adminId' => $admin['id'],
-            'teamId' => $team['id'],
-        ];
-    }
-
     public function testAssignTaskToUser(): void
     {
         $context = $this->createTeamAndAdmin();

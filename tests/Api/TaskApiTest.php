@@ -8,33 +8,6 @@ use App\Tests\Shared\Mother\UuidMother;
 
 class TaskApiTest extends ApiTestCase
 {
-    private function createTeamAndUser(): array
-    {
-        // Create admin user
-        $adminData = [
-            'name' => 'Admin User',
-            'email' => 'admin_' . uniqid() . '@example.com',
-            'password' => 'adminpass123',
-            'role' => 'ROLE_ADMIN',
-        ];
-        $adminResponse = $this->postJson('/api/users', $adminData);
-        $admin = $this->assertJsonResponse($adminResponse, 201);
-
-        // Create team
-        $teamData = [
-            'name' => 'Test Team',
-            'description' => 'Test Description',
-            'createdBy' => $admin['id'],
-        ];
-        $teamResponse = $this->postJson('/api/teams', $teamData);
-        $team = $this->assertJsonResponse($teamResponse, 201);
-
-        return [
-            'adminId' => $admin['id'],
-            'teamId' => $team['id'],
-        ];
-    }
-
     public function testListTasksReturnsEmptyArray(): void
     {
         $data = $this->getJson('/api/tasks');
@@ -45,7 +18,7 @@ class TaskApiTest extends ApiTestCase
 
     public function testCreateTask(): void
     {
-        $context = $this->createTeamAndUser();
+        $context = $this->createTeamAndAdmin();
 
         $taskData = [
             'name' => 'Test Task',
@@ -69,7 +42,7 @@ class TaskApiTest extends ApiTestCase
 
     public function testGetTaskById(): void
     {
-        $context = $this->createTeamAndUser();
+        $context = $this->createTeamAndAdmin();
 
         // Create a task first
         $taskData = [
@@ -94,7 +67,7 @@ class TaskApiTest extends ApiTestCase
 
     public function testCompleteTask(): void
     {
-        $context = $this->createTeamAndUser();
+        $context = $this->createTeamAndAdmin();
 
         // Create a task first
         $taskData = [
@@ -122,7 +95,7 @@ class TaskApiTest extends ApiTestCase
 
     public function testApproveTask(): void
     {
-        $context = $this->createTeamAndUser();
+        $context = $this->createTeamAndAdmin();
 
         // Create a regular user to assign the task to
         $userData = [

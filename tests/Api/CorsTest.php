@@ -169,7 +169,7 @@ class CorsTest extends WebTestCase
     {
         $client = static::createClient();
 
-        // First create admin and team
+        // Create admin user
         $userData = [
             'name' => 'Admin',
             'email' => 'admin_' . uniqid() . '@example.com',
@@ -181,15 +181,18 @@ class CorsTest extends WebTestCase
         ], json_encode($userData));
         $adminData = json_decode($client->getResponse()->getContent(), true);
 
-        $teamData = [
-            'name' => 'Test Team',
-            'description' => 'Test',
-            'createdBy' => $adminData['id'],
-        ];
-        $client->request('POST', '/api/teams', [], [], [
-            'CONTENT_TYPE' => 'application/json',
-        ], json_encode($teamData));
-        $team = json_decode($client->getResponse()->getContent(), true);
+        // Create team directly using command bus
+        $container = static::getContainer();
+        $commandBus = $container->get('command.bus');
+
+        $teamId = \App\Shared\Domain\ValueObject\Uuid::generate()->value();
+        $createTeamCommand = new \App\TeamManagement\Application\Command\CreateTeamCommand(
+            $teamId,
+            'Test Team',
+            'Test Description',
+            $adminData['id']
+        );
+        $commandBus->dispatch($createTeamCommand);
 
         // Create a task
         $taskData = [
@@ -197,7 +200,7 @@ class CorsTest extends WebTestCase
             'description' => 'Original description',
             'points' => 50,
             'frequency' => 'daily',
-            'teamId' => $team['id'],
+            'teamId' => $teamId,
             'createdBy' => $adminData['id'],
         ];
 
