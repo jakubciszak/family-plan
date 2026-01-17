@@ -30,7 +30,15 @@ const apiClient = {
         });
 
         if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+            let errorData = null;
+            try {
+                errorData = await response.json();
+            } catch {
+                // If response is not JSON, ignore
+            }
+            const error = new Error(`HTTP error! status: ${response.status}`);
+            error.response = { status: response.status, data: errorData };
+            throw error;
         }
 
         return await response.json();

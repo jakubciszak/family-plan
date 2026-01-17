@@ -35,6 +35,17 @@ export interface LoginResponse {
   token: string;
 }
 
+export interface RegisterData {
+  name: string;
+  email: string;
+  password: string;
+  phoneNumber?: string;
+}
+
+export interface RegisterResponse {
+  message: string;
+}
+
 export interface Task {
   id: string;
   name: string;

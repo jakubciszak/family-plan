@@ -2,6 +2,7 @@ import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import LoginScreen from '../screens/LoginScreen';
+import RegisterScreen from '../screens/RegisterScreen';
 import HomeScreen from '../screens/HomeScreen';
 import TaskListScreen from '../screens/TaskListScreen';
 import BonusRulesScreen from '../screens/BonusRulesScreen';
@@ -9,6 +10,7 @@ import SettingsScreen from '../screens/SettingsScreen';
 
 export type RootStackParamList = {
   Login: undefined;
+  Register: undefined;
   Home: undefined;
   TaskList: undefined;
   BonusRules: undefined;
@@ -32,13 +34,18 @@ const AppNavigator: React.FC = () => {
           },
         }}
       >
-        <Stack.Screen 
-          name="Login" 
+        <Stack.Screen
+          name="Login"
           component={LoginScreen}
           options={{ headerShown: false }}
         />
-        <Stack.Screen 
-          name="Home" 
+        <Stack.Screen
+          name="Register"
+          component={RegisterScreen}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="Home"
           component={HomeScreen}
           options={{ title: 'Family Plan' }}
         />

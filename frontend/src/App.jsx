@@ -2,6 +2,7 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import TaskList from './pages/TaskList';
 import Login from './pages/Login';
+import Register from './pages/Register';
 import BonusRulesManagement from './pages/BonusRulesManagement';
 import StatusChangeRulesManagement from './pages/StatusChangeRulesManagement';
 import UserSettings from './pages/UserSettings';
@@ -17,6 +18,7 @@ function App() {
     const [userPoints, setUserPoints] = React.useState(0);
     const [currentPage, setCurrentPage] = React.useState('tasks');
     const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
+    const [showRegister, setShowRegister] = React.useState(false);
 
     React.useEffect(() => {
         // Check if user is authenticated
@@ -64,7 +66,10 @@ function App() {
     };
 
     if (!isAuthenticated) {
-        return <Login onLogin={handleLogin} />;
+        if (showRegister) {
+            return <Register onBackToLogin={() => setShowRegister(false)} />;
+        }
+        return <Login onLogin={handleLogin} onSwitchToRegister={() => setShowRegister(true)} />;
     }
 
     const handlePageChange = (page) => {
