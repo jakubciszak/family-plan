@@ -25,5 +25,17 @@ interface BonusPointsRuleRepositoryInterface
      */
     public function findActive(): array;
 
+    /**
+     * Find all rules for a specific team
+     * @return BonusPointsRule[]
+     */
+    public function findByTeamId(Uuid $teamId): array;
+
+    /**
+     * Find all active rules for a specific team
+     * @return BonusPointsRule[]
+     */
+    public function findActiveByTeamId(Uuid $teamId): array;
+
     public function delete(BonusPointsRule $rule): void;
 }

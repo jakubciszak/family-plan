@@ -25,5 +25,20 @@ interface TaskRepositoryInterface
 
     public function findActiveTemplates(): array;
 
+    /**
+     * Find tasks belonging to a specific team
+     *
+     * @return Task[]
+     */
+    public function findByTeamId(Uuid $teamId): array;
+
+    /**
+     * Find tasks belonging to any of the provided teams
+     *
+     * @param Uuid[] $teamIds
+     * @return Task[]
+     */
+    public function findByTeamIds(array $teamIds): array;
+
     public function delete(Task $task): void;
 }

@@ -33,6 +33,7 @@ class BonusPointsRuleTest extends TestCase
         // When
         $rule = BonusPointsRule::create(
             $ruleId,
+            Uuid::generate(),
             $name,
             $description,
             $bonusPoints,
@@ -62,6 +63,7 @@ class BonusPointsRuleTest extends TestCase
         // When
         $rule = BonusPointsRule::create(
             $ruleId,
+            Uuid::generate(),
             $name,
             $description,
             $bonusPoints,
@@ -126,6 +128,7 @@ class BonusPointsRuleTest extends TestCase
     private function createSampleRule(): BonusPointsRule
     {
         return BonusPointsRule::create(
+            Uuid::generate(),
             Uuid::generate(),
             'Sample Rule',
             'Sample Description',

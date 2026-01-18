@@ -8,6 +8,7 @@ final readonly class CreateBonusPointsRuleCommand
 {
     public function __construct(
         public string $id,
+        public string $teamId,
         public string $name,
         public string $description,
         public int $bonusPoints,

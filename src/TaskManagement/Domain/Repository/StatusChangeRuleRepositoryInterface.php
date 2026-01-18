@@ -23,4 +23,10 @@ interface StatusChangeRuleRepositoryInterface
      * @return StatusChangeRule[]
      */
     public function findActiveByTaskTemplateId(Uuid $taskTemplateId): array;
+
+    /**
+     * Find all rules for a specific team
+     * @return StatusChangeRule[]
+     */
+    public function findByTeamId(Uuid $teamId, bool $activeOnly = false): array;
 }

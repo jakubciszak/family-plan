@@ -37,6 +37,7 @@ final readonly class CreateStatusChangeRuleHandler
 
         $rule = StatusChangeRule::create(
             Uuid::fromString($command->id),
+            Uuid::fromString($command->teamId),
             Uuid::fromString($command->taskTemplateId),
             $command->name,
             $command->description,

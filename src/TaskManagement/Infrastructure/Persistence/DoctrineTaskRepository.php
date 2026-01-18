@@ -85,6 +85,32 @@ final class DoctrineTaskRepository implements TaskRepositoryInterface
             ->getResult();
     }
 
+    public function findByTeamId(Uuid $teamId): array
+    {
+        return $this->entityManager->getRepository(Task::class)
+            ->createQueryBuilder('t')
+            ->where('t.teamId = :teamId')
+            ->setParameter('teamId', $teamId->value())
+            ->getQuery()
+            ->getResult();
+    }
+
+    public function findByTeamIds(array $teamIds): array
+    {
+        if (empty($teamIds)) {
+            return [];
+        }
+
+        $teamIdValues = array_map(fn(Uuid $uuid) => $uuid->value(), $teamIds);
+
+        return $this->entityManager->getRepository(Task::class)
+            ->createQueryBuilder('t')
+            ->where('t.teamId IN (:teamIds)')
+            ->setParameter('teamIds', $teamIdValues)
+            ->getQuery()
+            ->getResult();
+    }
+
     public function delete(Task $task): void
     {
         $this->entityManager->remove($task);

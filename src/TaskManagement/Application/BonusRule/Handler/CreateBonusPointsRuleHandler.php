@@ -37,6 +37,7 @@ final readonly class CreateBonusPointsRuleHandler
 
         $rule = BonusPointsRule::create(
             Uuid::fromString($command->id),
+            Uuid::fromString($command->teamId),
             $command->name,
             $command->description,
             Points::fromInt($command->bonusPoints),

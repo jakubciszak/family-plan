@@ -50,6 +50,7 @@ class BonusPointsRuleManagementTest extends TestCase
         
         $command = new CreateBonusPointsRuleCommand(
             $ruleId,
+            Uuid::generate()->value(),
             'Dishwasher Streak',
             'Earn 20 bonus points for emptying dishwasher 5 consecutive days',
             20,
@@ -79,6 +80,7 @@ class BonusPointsRuleManagementTest extends TestCase
         
         $command = new CreateBonusPointsRuleCommand(
             $ruleId,
+            Uuid::generate()->value(),
             'Monthly Champion',
             'Earn 30 bonus points for completing 20 tasks in a month',
             30,
@@ -106,6 +108,7 @@ class BonusPointsRuleManagementTest extends TestCase
         $ruleId = Uuid::generate()->value();
         $createCommand = new CreateBonusPointsRuleCommand(
             $ruleId,
+            Uuid::generate()->value(),
             'Original Name',
             'Original Description',
             20,
@@ -136,6 +139,7 @@ class BonusPointsRuleManagementTest extends TestCase
         $ruleId = Uuid::generate()->value();
         $createCommand = new CreateBonusPointsRuleCommand(
             $ruleId,
+            Uuid::generate()->value(),
             'Test Rule',
             'Test Description',
             20,
@@ -159,6 +163,7 @@ class BonusPointsRuleManagementTest extends TestCase
         $ruleId = Uuid::generate()->value();
         $createCommand = new CreateBonusPointsRuleCommand(
             $ruleId,
+            Uuid::generate()->value(),
             'Test Rule',
             'Test Description',
             20,
@@ -183,6 +188,7 @@ class BonusPointsRuleManagementTest extends TestCase
         $createCommands = [
             new CreateBonusPointsRuleCommand(
                 Uuid::generate()->value(),
+                Uuid::generate()->value(),
                 'Rule 1',
                 'Description 1',
                 20,
@@ -190,6 +196,7 @@ class BonusPointsRuleManagementTest extends TestCase
                 ['requiredCount' => 10]
             ),
             new CreateBonusPointsRuleCommand(
+                Uuid::generate()->value(),
                 Uuid::generate()->value(),
                 'Rule 2',
                 'Description 2',
@@ -218,15 +225,17 @@ class BonusPointsRuleManagementTest extends TestCase
         
         ($this->createHandler)(new CreateBonusPointsRuleCommand(
             $ruleId1,
+            Uuid::generate()->value(),
             'Active Rule',
             'Description',
             20,
             RuleType::MONTHLY_TASK_COUNT->value,
             ['requiredCount' => 10]
         ));
-        
+
         ($this->createHandler)(new CreateBonusPointsRuleCommand(
             $ruleId2,
+            Uuid::generate()->value(),
             'Inactive Rule',
             'Description',
             30,

@@ -44,6 +44,30 @@ final class DoctrineBonusPointsRuleRepository implements BonusPointsRuleReposito
             ->getResult();
     }
 
+    public function findByTeamId(Uuid $teamId): array
+    {
+        return $this->entityManager->getRepository(BonusPointsRule::class)
+            ->createQueryBuilder('br')
+            ->where('br.teamId = :teamId')
+            ->setParameter('teamId', $teamId->value())
+            ->orderBy('br.createdAt', 'DESC')
+            ->getQuery()
+            ->getResult();
+    }
+
+    public function findActiveByTeamId(Uuid $teamId): array
+    {
+        return $this->entityManager->getRepository(BonusPointsRule::class)
+            ->createQueryBuilder('br')
+            ->where('br.teamId = :teamId')
+            ->andWhere('br.isActive = :isActive')
+            ->setParameter('teamId', $teamId->value())
+            ->setParameter('isActive', true)
+            ->orderBy('br.createdAt', 'DESC')
+            ->getQuery()
+            ->getResult();
+    }
+
     public function delete(BonusPointsRule $rule): void
     {
         $this->entityManager->remove($rule);

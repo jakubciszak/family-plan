@@ -126,6 +126,7 @@ class BonusPointsEvaluatorTest extends TestCase
     {
         return BonusPointsRule::create(
             Uuid::generate(),
+            Uuid::generate(),
             'Test Consecutive Days Rule',
             'Test Description',
             Points::fromInt(20),
@@ -136,6 +137,7 @@ class BonusPointsEvaluatorTest extends TestCase
     private function createMonthlyTaskCountRule(int $requiredCount): BonusPointsRule
     {
         return BonusPointsRule::create(
+            Uuid::generate(),
             Uuid::generate(),
             'Test Monthly Count Rule',
             'Test Description',

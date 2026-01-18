@@ -69,6 +69,28 @@ final class InMemoryTaskRepository implements TaskRepositoryInterface
         ));
     }
 
+    public function findByTeamId(Uuid $teamId): array
+    {
+        return array_values(array_filter(
+            $this->tasks,
+            fn(Task $task) => $task->teamId() !== null && $task->teamId()->equals($teamId)
+        ));
+    }
+
+    public function findByTeamIds(array $teamIds): array
+    {
+        if (empty($teamIds)) {
+            return [];
+        }
+
+        $teamIdValues = array_map(fn(Uuid $uuid) => $uuid->value(), $teamIds);
+
+        return array_values(array_filter(
+            $this->tasks,
+            fn(Task $task) => $task->teamId() !== null && in_array($task->teamId()->value(), $teamIdValues, true)
+        ));
+    }
+
     public function delete(Task $task): void
     {
         unset($this->tasks[$task->id()->value()]);
