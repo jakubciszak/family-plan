@@ -1,4 +1,10 @@
 {
-  "name": "FamilyPlanMobile",
-  "displayName": "Family Plan"
+  "expo": {
+    "name": "Family Plan",
+    "slug": "family-plan-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "platforms": ["ios", "android"],
+    "jsEngine": "hermes"
+  }
 }
