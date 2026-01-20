@@ -57,37 +57,50 @@ For local development:
 - Android Emulator: `http://10.0.2.2:8080`
 - Physical device: Use your computer's IP address
 
-### 3. iOS Setup (macOS only)
+### 3. iOS / Android native setup
+
+This project is now configured for **Expo Go** testing (no `ios/` or `android/` folders required).
+
+If you later decide to build native binaries, use Expo prebuild:
 
 ```bash
-cd ios
-pod install
-cd ..
+npx expo prebuild
 ```
 
-## 🎮 Running the App
+## 🎮 Running the App (Expo)
 
-### Start Metro Bundler
+### 1) Install dependencies
+
+```bash
+cd mobile
+npm install
+```
+
+> If you hit version mismatches, run:
+> ```bash
+> npx expo install
+> ```
+
+### 2) Start Expo dev server
+
+Domyślnie ustawione jest wystawianie dev-servera na IP hosta: `192.168.0.30`.
 
 ```bash
 npm start
 ```
 
-### Run on iOS
+### 3) Test on a physical phone (recommended)
+
+1. Install **Expo Go** from App Store / Google Play
+2. Make sure your phone and computer are on the same Wi‑Fi
+3. Scan the QR code shown by `expo start`
+
+### (Optional) Launch directly for a platform
 
 ```bash
 npm run ios
-```
-
-Or open `ios/FamilyPlanMobile.xcworkspace` in Xcode and run.
-
-### Run on Android
-
-```bash
 npm run android
 ```
-
-Or open the `android` folder in Android Studio and run.
 
 ## 🧪 Testing
 
@@ -228,46 +241,28 @@ Then update `.env` with the ngrok URL.
 
 ## 📦 Building for Production
 
-### iOS
+This repo is set up primarily for **Expo Go** testing.
+
+To generate native projects locally:
 
 ```bash
-# In Xcode:
-# 1. Select "Generic iOS Device" or your device
-# 2. Product > Archive
-# 3. Distribute to App Store or Ad Hoc
+npx expo prebuild
 ```
 
-### Android
+For store builds and CI, use **EAS Build** (recommended by Expo):
 
 ```bash
-cd android
-./gradlew assembleRelease
-# APK will be in android/app/build/outputs/apk/release/
+npx expo install eas-cli
+npx eas build -p ios
+npx eas build -p android
 ```
 
 ## 🐛 Troubleshooting
 
-### Metro Bundler Issues
+### Expo/Metro cache issues
 
 ```bash
 npm start -- --reset-cache
-```
-
-### iOS Build Fails
-
-```bash
-cd ios
-pod deintegrate
-pod install
-cd ..
-```
-
-### Android Build Fails
-
-```bash
-cd android
-./gradlew clean
-cd ..
 ```
 
 ## 📄 License
