@@ -17,65 +17,65 @@ These skills are tailored for the Family Plan application:
 | [api-design](./api-design/SKILL.md) | REST API, OpenAPI | API endpoints, documentation |
 | [ci-cd-github](./ci-cd-github/SKILL.md) | GitHub Actions CI/CD | Workflows, testing pipelines |
 
-## Recommended External Skills
+## Installed External Skills
 
-Skills from [VoltAgent/awesome-agent-skills](https://github.com/VoltAgent/awesome-agent-skills) that complement this project:
+Skills from [VoltAgent/awesome-agent-skills](https://github.com/VoltAgent/awesome-agent-skills) installed in `external/` directory:
 
-### Development & Testing
+### Anthropic Skills
 
-| Skill | Author | Repository | Description |
-|-------|--------|------------|-------------|
-| **webapp-testing** | Anthropic | [Link](https://github.com/anthropics/courses/tree/master/skills/webapp-testing) | Web application testing strategies |
-| **mcp-builder** | Anthropic | [Link](https://github.com/anthropics/courses/tree/master/skills/mcp-builder) | Build Model Context Protocol servers |
+| Skill | Location | Description |
+|-------|----------|-------------|
+| **webapp-testing** | [external/webapp-testing](./external/webapp-testing/SKILL.md) | Playwright-based web app testing toolkit |
+| **mcp-builder** | [external/mcp-builder](./external/mcp-builder/SKILL.md) | Build Model Context Protocol servers |
+| **docx** | [external/docx](./external/docx/SKILL.md) | Create and edit Word documents |
+| **pdf** | [external/pdf](./external/pdf/SKILL.md) | Create and analyze PDF files |
 
-### Mobile Development (Expo)
+### Expo Skills (Mobile Development)
 
-| Skill | Author | Repository | Description |
-|-------|--------|------------|-------------|
-| **expo-design** | Expo | [Link](https://github.com/expo/expo/tree/main/.claude/skills/design) | Mobile app design with Expo |
-| **expo-deployment** | Expo | [Link](https://github.com/expo/expo/tree/main/.claude/skills/deployment) | App deployment with EAS |
+| Skill | Location | Description |
+|-------|----------|-------------|
+| **expo-app-design** | [external/expo-app-design](./external/expo-app-design/) | Complete guide for building Expo apps |
+| ↳ building-native-ui | [skills/building-native-ui](./external/expo-app-design/skills/building-native-ui/SKILL.md) | Native UI components, routing, animations |
+| ↳ expo-api-routes | [skills/expo-api-routes](./external/expo-app-design/skills/expo-api-routes/SKILL.md) | API routes in Expo Router |
+| ↳ expo-dev-client | [skills/expo-dev-client](./external/expo-app-design/skills/expo-dev-client/SKILL.md) | Custom development client setup |
+| ↳ expo-tailwind-setup | [skills/expo-tailwind-setup](./external/expo-app-design/skills/expo-tailwind-setup/SKILL.md) | NativeWind/Tailwind configuration |
+| ↳ native-data-fetching | [skills/native-data-fetching](./external/expo-app-design/skills/native-data-fetching/SKILL.md) | Data fetching patterns |
+| ↳ use-dom | [skills/use-dom](./external/expo-app-design/skills/use-dom/SKILL.md) | DOM components in React Native |
+| **expo-deployment** | [external/expo-deployment](./external/expo-deployment/) | App deployment with EAS |
+| ↳ expo-cicd-workflows | [skills/expo-cicd-workflows](./external/expo-deployment/skills/expo-cicd-workflows/SKILL.md) | CI/CD workflows for Expo |
+| ↳ expo-deployment | [skills/expo-deployment](./external/expo-deployment/skills/expo-deployment/SKILL.md) | Deployment strategies |
 
-### Security
+### Trail of Bits Security Skills
 
-| Skill | Author | Repository | Description |
-|-------|--------|------------|-------------|
-| **security-review** | Trail of Bits | [Link](https://github.com/trailofbits/ai-skills) | General security code review |
-| **api-security** | Trail of Bits | [Link](https://github.com/trailofbits/ai-skills) | API security best practices |
-| **crypto-review** | Trail of Bits | [Link](https://github.com/trailofbits/ai-skills) | Cryptography implementation review |
+| Skill | Location | Description |
+|-------|----------|-------------|
+| **property-based-testing** | [external/property-based-testing](./external/property-based-testing/skills/property-based-testing/SKILL.md) | Property-based testing patterns |
+| **static-analysis** | [external/static-analysis](./external/static-analysis/) | Static analysis tools |
+| ↳ codeql | [skills/codeql](./external/static-analysis/skills/codeql/SKILL.md) | CodeQL query writing |
+| ↳ semgrep | [skills/semgrep](./external/static-analysis/skills/semgrep/SKILL.md) | Semgrep rule patterns |
+| ↳ sarif-parsing | [skills/sarif-parsing](./external/static-analysis/skills/sarif-parsing/SKILL.md) | SARIF output parsing |
+| **semgrep-rule-creator** | [external/semgrep-rule-creator](./external/semgrep-rule-creator/skills/semgrep-rule-creator/SKILL.md) | Create custom Semgrep rules |
+| **differential-review** | [external/differential-review](./external/differential-review/skills/differential-review/SKILL.md) | Security-focused code review |
 
-### Documentation
+## Installing Additional External Skills
 
-| Skill | Author | Repository | Description |
-|-------|--------|------------|-------------|
-| **docx** | Anthropic | [Link](https://github.com/anthropics/courses/tree/master/skills/docx) | Create/edit Word documents |
-| **pdf** | Anthropic | [Link](https://github.com/anthropics/courses/tree/master/skills/pdf) | Create/analyze PDF files |
+To install more skills from awesome-agent-skills:
 
-### Infrastructure
-
-| Skill | Author | Repository | Description |
-|-------|--------|------------|-------------|
-| **docker-best-practices** | Community | Various | Container optimization |
-| **terraform-practices** | Community | Various | Infrastructure as Code |
-
-## Installing External Skills
-
-To install an external skill:
-
-1. Clone or download the skill from its repository
-2. Copy the skill folder to `.claude/skills/`
-3. Ensure it contains a valid `SKILL.md` file
-
-Example:
 ```bash
 # Clone the skill repository
-git clone https://github.com/trailofbits/ai-skills /tmp/ai-skills
+git clone https://github.com/anthropics/skills /tmp/anthropic-skills
 
-# Copy desired skill
-cp -r /tmp/ai-skills/security-review .claude/skills/
+# Copy desired skill to external/
+cp -r /tmp/anthropic-skills/skills/skill-name .claude/skills/external/
 
 # Clean up
-rm -rf /tmp/ai-skills
+rm -rf /tmp/anthropic-skills
 ```
+
+**Skill repositories:**
+- Anthropic: `https://github.com/anthropics/skills`
+- Expo: `https://github.com/expo/skills`
+- Trail of Bits: `https://github.com/trailofbits/skills`
 
 ## Skill File Format
 
