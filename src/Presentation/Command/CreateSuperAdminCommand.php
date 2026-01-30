@@ -49,7 +49,7 @@ class CreateSuperAdminCommand extends Command
             
             if ($existingUser !== null) {
                 // Update existing user's password
-                $hashedPassword = password_hash($plainPassword, PASSWORD_BCRYPT);
+                $hashedPassword = $this->passwordHasher->hashPassword($existingUser, $plainPassword);
                 $existingUser->changePassword($hashedPassword);
                 
                 if (!$existingUser->isAdmin()) {
@@ -61,13 +61,11 @@ class CreateSuperAdminCommand extends Command
                 $io->success(sprintf('Super admin user "%s" updated successfully!', $email));
             } else {
                 // Create new super admin user
-                $hashedPassword = password_hash($plainPassword, PASSWORD_BCRYPT);
-                
                 $command = new CreateUserCommand(
                     Uuid::generate()->value(),
                     $name,
                     $email,
-                    $hashedPassword,
+                    $plainPassword,
                     Role::ADMIN->value
                 );
                 

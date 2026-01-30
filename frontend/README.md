@@ -90,6 +90,22 @@ npm run test:debug
 - `logout.spec.js` - Logout and session management tests
 - `fixtures.js` - Test fixtures and helper functions
 
+### Real API E2E Tests (no mocks)
+
+Real API tests live in `tests/e2e/real-api/` and only run when `REAL_API=1` is set. When enabled, Playwright starts a local Symfony backend against a sqlite database.
+
+```bash
+# Run real API tests (Playwright starts the backend automatically)
+REAL_API=1 API_BASE_URL=http://localhost:8080 npm test
+```
+
+Required environment variables (with defaults shown):
+- `REAL_API=1` - enable real API tests
+- `API_BASE_URL=http://localhost:8080` - backend API base URL
+- `REAL_APP_URL=http://localhost:3000` - frontend base URL (optional)
+- `E2E_EMAIL=admin@familyplan.local` - login email
+- `E2E_PASSWORD=admin123` - login password
+
 ### Writing Tests
 
 Tests use Playwright's testing framework with fixtures for mock API responses:
