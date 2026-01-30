@@ -2,7 +2,7 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import apiClient from '../services/apiClient';
 
-function Register({ onBackToLogin }) {
+function Register({ onBackToLogin, inviteToken }) {
     const { t } = useTranslation();
     const [name, setName] = React.useState('');
     const [email, setEmail] = React.useState('');
@@ -10,6 +10,9 @@ function Register({ onBackToLogin }) {
     const [phoneNumber, setPhoneNumber] = React.useState('');
     const [error, setError] = React.useState('');
     const [success, setSuccess] = React.useState('');
+
+    // Check if this is an invitation-based registration
+    const isInvitedRegistration = !!inviteToken;
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -51,6 +54,12 @@ function Register({ onBackToLogin }) {
         <div className="login-container">
             <div className="login-form">
                 <h2>{t('auth.register')}</h2>
+                {isInvitedRegistration && (
+                    <div className="invite-banner">
+                        <p>{t('auth.invitedToTeam')}</p>
+                        <small>{t('auth.registerToJoin')}</small>
+                    </div>
+                )}
                 {error && <div className="error-message">{error}</div>}
                 {success && <div className="success-message">{success}</div>}
                 <form onSubmit={handleSubmit}>
