@@ -4,8 +4,11 @@ declare(strict_types=1);
 
 namespace App\Tests\Acceptance\Context;
 
+use App\Party\Domain\Entity\Organization;
+use App\Party\Infrastructure\Persistence\InMemory\InMemoryPartyRelationshipRepository;
 use App\PointsManagement\Infrastructure\Persistence\InMemoryUserWalletRepository;
 use App\Shared\Infrastructure\Clock\FixedClock;
+use App\Shared\Domain\ValueObject\Uuid;
 use App\TaskManagement\Application\BonusRule\Handler\ActivateBonusPointsRuleHandler;
 use App\TaskManagement\Application\BonusRule\Handler\CreateBonusPointsRuleHandler;
 use App\TaskManagement\Application\BonusRule\Handler\DeactivateBonusPointsRuleHandler;
@@ -38,7 +41,10 @@ abstract class AcceptanceContext implements Context
     protected InMemoryUserWalletRepository $walletRepository;
     protected InMemoryBonusPointsRuleRepository $bonusPointsRuleRepository;
     protected InMemoryStatusChangeRuleRepository $statusChangeRuleRepository;
+    protected InMemoryPartyRelationshipRepository $partyRelationshipRepository;
     protected FixedClock $clock;
+    protected Uuid $teamId;
+    protected Organization $teamOrganization;
 
     // Task Management Handlers
     protected CreateTaskHandler $createTaskHandler;
@@ -72,6 +78,9 @@ abstract class AcceptanceContext implements Context
         $this->walletRepository = new InMemoryUserWalletRepository();
         $this->bonusPointsRuleRepository = new InMemoryBonusPointsRuleRepository();
         $this->statusChangeRuleRepository = new InMemoryStatusChangeRuleRepository();
+        $this->partyRelationshipRepository = new InMemoryPartyRelationshipRepository();
+        $this->teamId = Uuid::generate();
+        $this->teamOrganization = Organization::create($this->teamId, 'Test Family', null);
     }
 
     private function initializeClock(): void
@@ -83,7 +92,10 @@ abstract class AcceptanceContext implements Context
     private function initializeHandlers(): void
     {
         // Task Management
-        $this->createTaskHandler = new CreateTaskHandler($this->taskRepository);
+        $this->createTaskHandler = new CreateTaskHandler(
+            $this->taskRepository,
+            $this->partyRelationshipRepository
+        );
         $this->assignTaskHandler = new AssignTaskHandler($this->taskRepository);
         $this->completeTaskHandler = new CompleteTaskHandler($this->taskRepository);
 

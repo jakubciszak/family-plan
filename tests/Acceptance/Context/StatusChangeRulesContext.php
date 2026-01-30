@@ -47,6 +47,7 @@ final class StatusChangeRulesContext extends AcceptanceContext
 
         $command = new CreateStatusChangeRuleCommand(
             $ruleId->value(),
+            $this->teamId->value(),
             $taskTemplateId->value(),
             $ruleName,
             "Task requires {$cooldownDays} day(s) cooldown after completion",
@@ -71,6 +72,7 @@ final class StatusChangeRulesContext extends AcceptanceContext
 
         $command = new CreateStatusChangeRuleCommand(
             $ruleId->value(),
+            $this->teamId->value(),
             $taskTemplateId->value(),
             $ruleName,
             "Requires another task to be completed today",

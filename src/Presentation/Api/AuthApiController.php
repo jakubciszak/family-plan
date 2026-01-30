@@ -86,10 +86,10 @@ class AuthApiController extends AbstractController
         return $this->json([
             'message' => 'Login successful',
             'user' => [
-                'id' => $user->getId()->value(),
-                'name' => $user->getName(),
-                'email' => $user->getEmail()->value(),
-                'role' => $user->getRole()->value,
+                'id' => $user->id()->value(),
+                'name' => $user->name(),
+                'email' => $user->email()->value(),
+                'role' => $user->role()->value,
             ],
         ]);
     }
@@ -130,10 +130,10 @@ class AuthApiController extends AbstractController
         }
 
         return $this->json([
-            'id' => $user->getId()->value(),
-            'name' => $user->getName(),
-            'email' => $user->getEmail()->value(),
-            'role' => $user->getRole()->value,
+            'id' => $user->id()->value(),
+            'name' => $user->name(),
+            'email' => $user->email()->value(),
+            'role' => $user->role()->value,
         ]);
     }
 

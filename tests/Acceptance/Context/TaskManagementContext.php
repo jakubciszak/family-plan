@@ -9,6 +9,9 @@ use App\TaskManagement\Application\Command\ApproveTaskCommand;
 use App\TaskManagement\Application\Command\AssignTaskCommand;
 use App\TaskManagement\Application\Command\CompleteTaskCommand;
 use App\TaskManagement\Application\Command\CreateTaskCommand;
+use App\Party\Domain\Entity\PartyRelationship;
+use App\Party\Domain\Entity\Person;
+use App\Party\Domain\ValueObject\PartyRelationshipType;
 use App\Tests\UserManagement\Mother\UserMother;
 use App\UserManagement\Domain\ValueObject\Email;
 use Behat\Behat\Hook\Scope\BeforeScenarioScope;
@@ -28,6 +31,7 @@ final class TaskManagementContext extends AcceptanceContext
     private array $users = [];
     private array $tasks = [];
     private ?\Throwable $lastException = null;
+    private ?Uuid $currentAdminId = null;
 
     #[BeforeScenario]
     public function resetState(BeforeScenarioScope $scope): void
@@ -36,6 +40,7 @@ final class TaskManagementContext extends AcceptanceContext
         $this->users = [];
         $this->tasks = [];
         $this->lastException = null;
+        $this->currentAdminId = null;
     }
 
     #[Given('there is an administrator :name')]
@@ -53,6 +58,16 @@ final class TaskManagementContext extends AcceptanceContext
 
         $this->userRepository->save($admin);
         $this->users[$name] = $userId;
+        $this->currentAdminId = $userId;
+
+        $person = Person::create($userId, $name, $email);
+        $relationship = PartyRelationship::create(
+            Uuid::generate(),
+            $person,
+            $this->teamOrganization,
+            PartyRelationshipType::adminOf()
+        );
+        $this->partyRelationshipRepository->save($relationship);
     }
 
     #[Given('there is a family member :name')]
@@ -76,6 +91,7 @@ final class TaskManagementContext extends AcceptanceContext
     public function createsATaskWorthPoints(string $admin, string $taskName, int $points): void
     {
         $taskId = Uuid::generate();
+        $adminId = $this->users[$admin];
 
         $command = new CreateTaskCommand(
             $taskId->value(),
@@ -83,6 +99,8 @@ final class TaskManagementContext extends AcceptanceContext
             "Task: {$taskName}",
             $points,
             'daily',
+            $adminId->value(),
+            $this->teamId->value(),
             null
         );
 
@@ -211,6 +229,8 @@ final class TaskManagementContext extends AcceptanceContext
     #[When('the following tasks have been created:')]
     public function theFollowingTasksAreCreated(TableNode $table): void
     {
+        Assert::assertNotNull($this->currentAdminId, 'Expected an administrator to create tasks');
+
         foreach ($table->getHash() as $row) {
             $taskId = Uuid::generate();
             $command = new CreateTaskCommand(
@@ -219,6 +239,8 @@ final class TaskManagementContext extends AcceptanceContext
                 $row['description'] ?? "Task: {$row['task']}",
                 (int) $row['points'],
                 'daily',
+                $this->currentAdminId->value(),
+                $this->teamId->value(),
                 null
             );
 
