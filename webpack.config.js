@@ -55,10 +55,11 @@ Encore
     // })
 
     // enables and configure @babel/preset-env polyfills
-    .configureBabelPresetEnv((config) => {
-        config.useBuiltIns = 'usage';
-        config.corejs = '3.38';
-    })
+    // Note: Disabled because babel.config.js provides external configuration
+    // .configureBabelPresetEnv((config) => {
+    //     config.useBuiltIns = 'usage';
+    //     config.corejs = '3.38';
+    // })
 
     // enables Sass/SCSS support
     //.enableSassLoader()

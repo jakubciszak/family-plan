@@ -1,0 +1,15 @@
+# Production Dockerfile for Nginx with static files
+ARG PHP_IMAGE=ghcr.io/jakubciszak/family-plan-php:latest
+FROM ${PHP_IMAGE} AS php-source
+
+FROM nginx:1.27-alpine
+
+# Copy nginx configuration
+COPY default.conf /etc/nginx/conf.d/default.conf
+
+# Copy public files from PHP image
+COPY --from=php-source /app/public /app/public
+
+EXPOSE 80
+
+CMD ["nginx", "-g", "daemon off;"]
