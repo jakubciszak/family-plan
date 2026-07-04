@@ -267,6 +267,27 @@ make shell-php                  # Shell PHP
 make shell-db                   # Shell PostgreSQL
 ```
 
+## Quality Assurance - Swiss Cheese Model
+
+Projekt używa pluginu [swiss-cheese](https://github.com/jakubciszak/code-quality-confidence) (Claude Code) - warstwowa strategia jakości: lint, testy, hooki, multi-agent review i human review nakładają się tak, aby defekt musiał przejść przez "dziury" we wszystkich warstwach naraz.
+
+Plugin jest skonfigurowany w `.claude/settings.json`. Przy pierwszym uruchomieniu zainstaluj go:
+
+```
+/plugin install swiss-cheese@code-quality-confidence
+```
+
+Dostępne komendy:
+
+| Komenda | Opis |
+|---------|------|
+| `/swiss-cheese:init` | Analiza repo i wygenerowanie konfiguracji warstw ochronnych |
+| `/swiss-cheese:review` | Multi-agentowe code review na wspólnym diffie |
+| `/swiss-cheese:loop <task>` | Autonomiczna pętla implementacji z bramkami jakości |
+| `/swiss-cheese:layer` | Dodanie/dostosowanie warstwy ochronnej |
+| `/swiss-cheese:audit` | Audyt warstw wiedzy (docs, ADR, security) |
+| `/swiss-cheese:status` | Aktualny stos warstw ochronnych i luki |
+
 ## Important Notes
 
 - Backend API zawsze zwraca JSON
