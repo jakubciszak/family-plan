@@ -21,7 +21,7 @@ const webServers = [
 if (realApiEnabled) {
   webServers.unshift({
     command: `API_BASE_URL=${apiBaseUrl} bash "${path.join(__dirname, '../scripts/start-backend-e2e.sh')}"`,
-    url: `${apiBaseUrl}/api/doc`,
+    url: `${apiBaseUrl}/api/auth/me`,
     reuseExistingServer: false,
     timeout: 120 * 1000,
   });
