@@ -46,11 +46,15 @@ RUN composer dump-autoload --optimize --no-dev --classmap-authoritative \
     && php bin/console cache:clear --env=prod --no-warmup || true \
     && php bin/console cache:warmup --env=prod
 
-# Node builder stage for frontend assets
+# Node builder stage for frontend assets (needs vendor/ for Symfony UX)
 FROM node:20-alpine AS node_builder
 
 WORKDIR /app
 
+# Copy vendor from builder (required for Symfony UX packages)
+COPY --from=builder /app/vendor ./vendor
+
+# Copy node config and assets
 COPY package*.json webpack.config.js babel.config.js ./
 COPY assets ./assets
 

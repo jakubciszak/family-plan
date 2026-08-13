@@ -44,6 +44,7 @@ final class BonusPointsContext extends AcceptanceContext
 
         $command = new CreateBonusPointsRuleCommand(
             $ruleId->value(),
+            $this->teamId->value(),
             $ruleName,
             "Earn {$points} bonus points for completing {$requiredCount} tasks in a month",
             $points,
@@ -68,6 +69,7 @@ final class BonusPointsContext extends AcceptanceContext
 
         $command = new CreateBonusPointsRuleCommand(
             $ruleId->value(),
+            $this->teamId->value(),
             $ruleName,
             "Earn {$points} bonus points for {$consecutiveDays} consecutive days",
             $points,

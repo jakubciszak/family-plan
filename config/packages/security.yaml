@@ -19,6 +19,10 @@ security:
             lazy: true
             provider: app_user_provider
             user_checker: App\UserManagement\Infrastructure\Security\UserChecker
+            json_login:
+                check_path: /api/auth/login
+                username_path: email
+                password_path: password
             form_login:
                 login_path: app_login
                 check_path: app_login
@@ -34,6 +38,7 @@ security:
     # Note: Only the *first* access control that matches will be used
     access_control:
         - { path: ^/login, roles: PUBLIC_ACCESS }
+        - { path: ^/api/auth/login, roles: PUBLIC_ACCESS }
         - { path: ^/api/auth/register, roles: PUBLIC_ACCESS }
         - { path: ^/api/auth/activate, roles: PUBLIC_ACCESS }
         - { path: ^/task/approve, roles: ROLE_ADMIN }

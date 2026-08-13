@@ -4,9 +4,31 @@ const { defineConfig, devices } = require('@playwright/test');
  * Playwright configuration for Family Plan Frontend
  * @see https://playwright.dev/docs/test-configuration
  */
+const apiBaseUrl = process.env.API_BASE_URL || 'http://localhost:8080';
+const realApiEnabled = Boolean(process.env.REAL_API);
+const testDir = realApiEnabled ? './tests/e2e/real-api' : './tests/e2e';
+
+const webServers = [
+  {
+    command: `REACT_APP_API_URL=${apiBaseUrl} npm start`,
+    url: 'http://localhost:3000',
+    reuseExistingServer: !process.env.CI,
+    timeout: 120 * 1000,
+  },
+];
+
+if (realApiEnabled) {
+  webServers.unshift({
+    command: `API_BASE_URL=${apiBaseUrl} bash ../scripts/start-backend-e2e.sh`,
+    url: `${apiBaseUrl}/api/doc`,
+    reuseExistingServer: false,
+    timeout: 120 * 1000,
+  });
+}
+
 module.exports = defineConfig({
-  testDir: './tests/e2e',
-  testIgnore: '**/*-real.spec.js',
+  testDir,
+  testIgnore: realApiEnabled ? [] : ['**/*-real.spec.js', '**/real-api/**'],
   
   // Maximum time one test can run
   timeout: 30 * 1000,
@@ -76,10 +98,5 @@ module.exports = defineConfig({
   ],
 
   // Run your local dev server before starting the tests
-  webServer: {
-    command: 'npm start',
-    url: 'http://localhost:3000',
-    reuseExistingServer: !process.env.CI,
-    timeout: 120 * 1000,
-  },
+  webServer: webServers,
 });
