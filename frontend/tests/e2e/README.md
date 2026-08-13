@@ -150,7 +150,7 @@ Playwright automatically captures the following artifacts during test execution:
 
 ### Readable artifact bundle
 - Location: `playwright-artifacts-readable/index.html`
-- Groups screenshots, wideo and trace ZIP files by test
+- Groups screenshots, videos and trace ZIP files by test
 - Shows screenshots inline after downloading the artifact
 - Generate locally with: `npm run test:artifacts`
 

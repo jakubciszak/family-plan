@@ -147,7 +147,7 @@ After running tests, the following artifacts are generated:
 - **Videos**: `test-results/[test-name]/video.webm` - Video recording of each test
 - **HTML Report**: `playwright-report/index.html` - Interactive test report with screenshots
 - **Traces**: `test-results/[test-name]/trace.zip` - Detailed trace for debugging failures
-- **Readable artifact bundle**: `playwright-artifacts-readable/index.html` - Czytelny indeks screenshotów, wideo i trace ZIP
+- **Readable artifact bundle**: `playwright-artifacts-readable/index.html` - Human-readable index of screenshots, videos and trace ZIP files
 
 View the HTML report:
 ```bash
@@ -173,7 +173,7 @@ The GitHub Actions workflow runs E2E tests on every push and pull request:
 - Provides immediate feedback
 - 2 retries on failure
 - HTML report generation
-- Readable artifact bundle with screenshots, wideo and trace ZIP links
+- Readable artifact bundle with screenshots, videos and trace ZIP links
 - Screenshot and video artifacts uploaded for all tests
 - Test artifacts retained for 30 days
 - Trace files uploaded on failures for debugging

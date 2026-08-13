@@ -47,6 +47,10 @@ function escapeHtml(value) {
     .replace(/'/g, '&#39;');
 }
 
+function toPosixPath(filePath) {
+  return filePath.split(path.sep).join('/');
+}
+
 function formatBytes(bytes) {
   if (bytes < 1024) {
     return `${bytes} B`;
@@ -302,7 +306,7 @@ function main() {
         displayName: path.basename(sourceRelativePath),
         groupName,
         sourceRelativePath,
-        destinationRelativePath: path.relative(outputDirectory, destinationPath),
+        destinationRelativePath: toPosixPath(path.relative(outputDirectory, destinationPath)),
         sizeLabel: formatBytes(stats.size),
       };
     })
