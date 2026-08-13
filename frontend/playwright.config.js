@@ -1,3 +1,4 @@
+const path = require('path');
 const { defineConfig, devices } = require('@playwright/test');
 
 /**
@@ -19,7 +20,7 @@ const webServers = [
 
 if (realApiEnabled) {
   webServers.unshift({
-    command: `API_BASE_URL=${apiBaseUrl} bash ../scripts/start-backend-e2e.sh`,
+    command: `API_BASE_URL=${apiBaseUrl} bash "${path.join(__dirname, '../scripts/start-backend-e2e.sh')}"`,
     url: `${apiBaseUrl}/api/doc`,
     reuseExistingServer: false,
     timeout: 120 * 1000,

@@ -13,7 +13,7 @@ export APP_DEBUG=0
 export DATABASE_URL="sqlite:///${DB_PATH}"
 export SUPER_ADMIN_EMAIL="${SUPER_ADMIN_EMAIL:-admin@familyplan.local}"
 export SUPER_ADMIN_NAME="${SUPER_ADMIN_NAME:-Super Admin}"
-export SUPER_ADMIN_PASSWORD="${SUPER_ADMIN_PASSWORD:-admin123}"
+export SUPER_ADMIN_PASSWORD="${SUPER_ADMIN_PASSWORD:-FamilyPlanE2E123!}"
 
 rm -f "$DB_PATH"
 rm -rf "${ROOT_DIR}/var/cache/test"

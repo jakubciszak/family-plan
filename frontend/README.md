@@ -104,7 +104,7 @@ Required environment variables (with defaults shown):
 - `API_BASE_URL=http://localhost:8080` - backend API base URL
 - `REAL_APP_URL=http://localhost:3000` - frontend base URL (optional)
 - `E2E_EMAIL=admin@familyplan.local` - login email
-- `E2E_PASSWORD=admin123` - login password
+- `E2E_PASSWORD=FamilyPlanE2E123!` - login password (must match `SUPER_ADMIN_PASSWORD` used by the backend test bootstrap)
 
 ### Writing Tests
 
