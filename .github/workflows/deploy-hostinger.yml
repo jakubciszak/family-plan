@@ -2,12 +2,17 @@ name: Deploy to Hostinger
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
   workflow_dispatch:
 
 permissions:
   contents: read
   packages: write
+
+concurrency:
+  group: hostinger-production
+  cancel-in-progress: true
 
 env:
   REGISTRY: ghcr.io
@@ -16,69 +21,177 @@ env:
   FRONTEND_IMAGE: ghcr.io/${{ github.repository_owner }}/family-plan-frontend
 
 jobs:
-  build-and-push:
+  validate:
+    name: Validate deployment configuration
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
 
-      - name: Log in to Container Registry
-        uses: docker/login-action@v3
+      - name: Validate Docker Compose
+        env:
+          IMAGE_TAG: validation
+          APP_SCHEME: https
+          APP_DOMAIN: family-plan.example.com
+          APP_SECRET: validation-only
+          POSTGRES_PASSWORD: validation-only
+          SUPER_ADMIN_EMAIL: admin@example.com
+          SUPER_ADMIN_PASSWORD: validation-only
+        run: docker compose -f docker-compose.hostinger.yml config --quiet
+
+  build-and-push:
+    name: Build and publish images
+    needs: validate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
 
-      - name: Build and push PHP image
-        uses: docker/build-push-action@v5
+      - name: Build and publish PHP image
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
         with:
           context: .
           file: docker/php/Dockerfile.prod
           push: true
-          tags: ${{ env.PHP_IMAGE }}:latest,${{ env.PHP_IMAGE }}:${{ github.sha }}
+          tags: |
+            ${{ env.PHP_IMAGE }}:${{ github.sha }}
+            ${{ env.PHP_IMAGE }}:latest
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
           platforms: linux/amd64
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=php
+          cache-to: type=gha,mode=max,scope=php
 
-      - name: Build and push Frontend image
-        uses: docker/build-push-action@v5
+      - name: Build and publish frontend image
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
         with:
           context: ./frontend
           file: frontend/Dockerfile.prod
           push: true
-          tags: ${{ env.FRONTEND_IMAGE }}:latest,${{ env.FRONTEND_IMAGE }}:${{ github.sha }}
+          tags: |
+            ${{ env.FRONTEND_IMAGE }}:${{ github.sha }}
+            ${{ env.FRONTEND_IMAGE }}:latest
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+          build-args: |
+            REACT_APP_API_URL=
           platforms: linux/amd64
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=frontend
+          cache-to: type=gha,mode=max,scope=frontend
 
-      - name: Build and push Nginx image
-        uses: docker/build-push-action@v5
+      - name: Build and publish Nginx image
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
         with:
           context: ./docker/nginx
           file: docker/nginx/Dockerfile.prod
           push: true
-          tags: ${{ env.NGINX_IMAGE }}:latest,${{ env.NGINX_IMAGE }}:${{ github.sha }}
-          platforms: linux/amd64
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          tags: |
+            ${{ env.NGINX_IMAGE }}:${{ github.sha }}
+            ${{ env.NGINX_IMAGE }}:latest
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
           build-args: |
             PHP_IMAGE=${{ env.PHP_IMAGE }}:${{ github.sha }}
+          platforms: linux/amd64
+          cache-from: type=gha,scope=nginx
+          cache-to: type=gha,mode=max,scope=nginx
 
   deploy:
+    name: Deploy production
     needs: build-and-push
     runs-on: ubuntu-latest
-
+    environment:
+      name: production
+      url: ${{ format('{0}://{1}', vars.APP_SCHEME || 'https', vars.APP_DOMAIN) }}
+    env:
+      HOSTINGER_API_KEY: ${{ secrets.HOSTINGER_API_KEY || secrets.HOSTINGER_API_TOKEN }}
+      HOSTINGER_VM_ID: ${{ vars.HOSTINGER_VM_ID || secrets.HOSTINGER_VPS_ID }}
+      APP_DOMAIN: ${{ vars.APP_DOMAIN }}
+      APP_SCHEME: ${{ vars.APP_SCHEME || 'https' }}
+      APP_SECRET: ${{ secrets.APP_SECRET }}
+      POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+      SUPER_ADMIN_EMAIL: ${{ vars.SUPER_ADMIN_EMAIL }}
+      SUPER_ADMIN_PASSWORD: ${{ secrets.SUPER_ADMIN_PASSWORD }}
     steps:
-      - name: Deploy to Hostinger VPS
-        env:
-          HOSTINGER_API_TOKEN: ${{ secrets.HOSTINGER_API_TOKEN }}
-          VPS_ID: ${{ secrets.HOSTINGER_VPS_ID }}
+      - name: Checkout repository
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+
+      - name: Verify production configuration
+        shell: bash
         run: |
-          # Update project on Hostinger
-          curl -X POST "https://api.hostinger.com/v1/vps/${VPS_ID}/projects/family-plan-project/update" \
-            -H "Authorization: Bearer ${HOSTINGER_API_TOKEN}" \
-            -H "Content-Type: application/json"
+          missing=()
+          required_variables=(
+            HOSTINGER_API_KEY
+            HOSTINGER_VM_ID
+            APP_DOMAIN
+            APP_SECRET
+            POSTGRES_PASSWORD
+            SUPER_ADMIN_EMAIL
+            SUPER_ADMIN_PASSWORD
+          )
+
+          for variable in "${required_variables[@]}"; do
+            if [ -z "${!variable}" ]; then
+              missing+=("${variable}")
+            fi
+          done
+
+          if [ "${#missing[@]}" -gt 0 ]; then
+            printf 'Missing production configuration: %s\n' "${missing[*]}"
+            exit 1
+          fi
+
+      - name: Deploy with Hostinger Docker Manager
+        uses: hostinger/deploy-on-vps@b0868cec74bfa63af6bfa7bdb0dfee2f9bef13ea # v2
+        with:
+          api-key: ${{ env.HOSTINGER_API_KEY }}
+          virtual-machine: ${{ env.HOSTINGER_VM_ID }}
+          project-name: family-plan
+          docker-compose-path: docker-compose.hostinger.yml
+          environment-variables: |
+            IMAGE_TAG=${{ github.sha }}
+            APP_SCHEME=${{ env.APP_SCHEME }}
+            APP_DOMAIN=${{ env.APP_DOMAIN }}
+            APP_SECRET=${{ env.APP_SECRET }}
+            POSTGRES_DB=${{ vars.POSTGRES_DB || 'family_plan' }}
+            POSTGRES_USER=${{ vars.POSTGRES_USER || 'family_plan' }}
+            POSTGRES_PASSWORD=${{ env.POSTGRES_PASSWORD }}
+            SUPER_ADMIN_EMAIL=${{ env.SUPER_ADMIN_EMAIL }}
+            SUPER_ADMIN_NAME=${{ vars.SUPER_ADMIN_NAME || 'Super Admin' }}
+            SUPER_ADMIN_PASSWORD=${{ env.SUPER_ADMIN_PASSWORD }}
+            BACKUP_RETENTION_DAYS=${{ vars.BACKUP_RETENTION_DAYS || '7' }}
+            MAILER_DSN=${{ secrets.MAILER_DSN }}
+            MAILER_FROM_EMAIL=${{ vars.MAILER_FROM_EMAIL || 'noreply@familyplan.local' }}
+            MAILER_FROM_NAME=${{ vars.MAILER_FROM_NAME || 'Family Plan' }}
+            SMS_API_TOKEN=${{ secrets.SMS_API_TOKEN }}
+
+      - name: Verify public health endpoint
+        shell: bash
+        run: |
+          url="${APP_SCHEME}://${APP_DOMAIN}/api/health"
+
+          for attempt in {1..30}; do
+            if curl --silent --show-error --fail --max-time 10 "${url}"; then
+              printf '\nDeployment is healthy: %s\n' "${url}"
+              exit 0
+            fi
+
+            printf 'Waiting for deployment (%s/30)...\n' "${attempt}"
+            sleep 10
+          done
+
+          printf 'Deployment did not become healthy: %s\n' "${url}"
+          exit 1

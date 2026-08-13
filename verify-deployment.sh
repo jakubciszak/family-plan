@@ -1,79 +1,53 @@
-#!/bin/bash
-# Deployment Verification Script for Hostinger
-# This script performs basic checks before deployment
+#!/usr/bin/env bash
 
-set -e
+set -Eeuo pipefail
 
-echo "====================================="
-echo "Family Plan Deployment Verification"
-echo "====================================="
-echo ""
+environment_file="${1:-.env.prod.local}"
+compose_file="docker-compose.hostinger.yml"
 
-# Check if required files exist
-echo "[1/6] Checking required files..."
 required_files=(
-    "docker-compose.hostinger.yml"
+    ".github/workflows/deploy-hostinger.yml"
+    "${compose_file}"
+    "docker/nginx/Dockerfile.prod"
+    "docker/nginx/default.conf"
     "docker/php/Dockerfile.prod"
-    "docker/react/Dockerfile.prod"
-    ".env.prod"
     "docker/php/docker-entrypoint.sh"
+    "frontend/Dockerfile.prod"
+    "frontend/nginx.conf"
 )
 
 for file in "${required_files[@]}"; do
-    if [ ! -f "$file" ]; then
-        echo "❌ ERROR: Required file missing: $file"
+    if [[ ! -f "${file}" ]]; then
+        printf 'Missing required file: %s\n' "${file}" >&2
         exit 1
     fi
-    echo "  ✓ $file"
 done
 
-echo "[2/6] Validating Docker Compose configuration..."
-if docker compose -f docker-compose.hostinger.yml config > /dev/null 2>&1; then
-    echo "  ✓ Docker Compose configuration is valid"
-else
-    echo "❌ ERROR: Invalid Docker Compose configuration"
+if ! command -v docker >/dev/null 2>&1; then
+    printf 'Docker is required to validate the deployment.\n' >&2
     exit 1
 fi
 
-echo "[3/6] Checking Dockerfile syntax..."
-if docker build -f docker/php/Dockerfile.prod --check . > /dev/null 2>&1; then
-    echo "  ✓ PHP Dockerfile syntax is valid"
-else
-    echo "  ℹ PHP Dockerfile syntax check not supported in this Docker version"
+if ! docker compose version >/dev/null 2>&1; then
+    printf 'Docker Compose v2 is required to validate the deployment.\n' >&2
+    exit 1
 fi
 
-if docker build -f docker/react/Dockerfile.prod --check . > /dev/null 2>&1; then
-    echo "  ✓ React Dockerfile syntax is valid"
-else
-    echo "  ℹ React Dockerfile syntax check not supported in this Docker version"
+if [[ ! -f "${environment_file}" ]]; then
+    printf 'Environment file not found: %s\n' "${environment_file}" >&2
+    printf 'Create it with: cp .env.prod %s\n' "${environment_file}" >&2
+    exit 1
 fi
 
-echo "[4/6] Checking environment configuration..."
-if [ ! -f ".env.prod.local" ]; then
-    echo "  ⚠ WARNING: .env.prod.local not found. You should create this file before deployment."
-    echo "  → Copy .env.prod to .env.prod.local and update with production values"
-else
-    echo "  ✓ .env.prod.local exists"
+if grep -Eq '(^|=)CHANGE_ME' "${environment_file}"; then
+    printf 'Replace every CHANGE_ME value in %s before deployment.\n' "${environment_file}" >&2
+    exit 1
 fi
 
-echo "[5/6] Verifying entrypoint script permissions..."
-if [ -f "docker/php/docker-entrypoint.sh" ]; then
-    echo "  ✓ Entrypoint script exists"
-fi
+docker compose \
+    --env-file "${environment_file}" \
+    -f "${compose_file}" \
+    config \
+    --quiet
 
-echo "[6/6] Checking documentation..."
-if [ -f "HOSTINGER_DEPLOYMENT.md" ]; then
-    echo "  ✓ Deployment documentation exists"
-fi
-
-echo ""
-echo "====================================="
-echo "✅ Pre-deployment checks passed!"
-echo "====================================="
-echo ""
-echo "Next steps:"
-echo "1. Create .env.prod.local with your production values"
-echo "2. Review HOSTINGER_DEPLOYMENT.md for deployment instructions"
-echo "3. Build images: docker compose -f docker-compose.hostinger.yml build"
-echo "4. Deploy to Hostinger using the deployment guide"
-echo ""
+printf 'Deployment configuration is valid.\n'
