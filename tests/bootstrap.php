@@ -4,12 +4,13 @@ use Symfony\Component\Dotenv\Dotenv;
 
 require dirname(__DIR__).'/vendor/autoload.php';
 
+$projectDir = realpath(dirname(__DIR__));
+
 if (!isset($_SERVER['APP_ENV'])) {
     $_SERVER['APP_ENV'] = $_ENV['APP_ENV'] = 'test';
 }
 
 if ($_SERVER['APP_ENV'] === 'test') {
-    $projectDir = realpath(dirname(__DIR__));
     $_SERVER['DATABASE_URL'] = $_ENV['DATABASE_URL'] = sprintf('sqlite:///%s/var/test.db', $projectDir);
 }
 
