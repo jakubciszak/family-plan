@@ -16,6 +16,7 @@
     "test:firefox": "playwright test --project=firefox",
     "test:webkit": "playwright test --project=webkit",
     "test:report": "playwright show-report",
+    "test:artifacts": "node ./scripts/prepare-playwright-artifacts.js",
     "test:e2e": "playwright test --config=playwright.real.config.js",
     "test:e2e:headed": "playwright test --config=playwright.real.config.js --headed",
     "test:e2e:debug": "playwright test --config=playwright.real.config.js --debug"
