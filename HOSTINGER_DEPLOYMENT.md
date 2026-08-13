@@ -1,345 +1,155 @@
-# Hostinger Deployment Guide for Family Plan
+# Hostinger production deployment
 
-This guide provides step-by-step instructions for deploying the Family Plan application to Hostinger using Docker.
+The production deployment is fully driven by GitHub Actions. A push to `main`:
 
-## Overview
+1. validates `docker-compose.hostinger.yml`;
+2. builds the PHP, backend Nginx, and React images;
+3. publishes immutable images tagged with the commit SHA to GHCR;
+4. asks Hostinger Docker Manager to replace the `family-plan` project;
+5. waits until the public `/api/health` endpoint confirms that Symfony and
+   PostgreSQL are ready.
 
-The Family Plan application consists of three main services:
-1. **PostgreSQL Database** - Data persistence layer
-2. **PHP-FPM Backend** - Symfony application server
-3. **Nginx** - Web server and reverse proxy
-4. **React Frontend** (Optional) - Standalone frontend service
+The Hostinger step uses the official `hostinger/deploy-on-vps` action pinned to
+the commit behind its `v2` tag.
 
-## Prerequisites
+## Runtime architecture
 
-- Hostinger VPS or hosting plan with Docker support
-- Docker and Docker Compose installed on the server
-- Domain name configured to point to your server
-- SSH access to your server
+| Service | Public | Purpose |
+| --- | --- | --- |
+| `edge` | ports 80, 443/tcp, 443/udp | Caddy, automatic HTTPS and certificate renewal |
+| `frontend` | no | React SPA and same-origin `/api/*` proxy |
+| `backend` | no | Nginx FastCGI gateway |
+| `php` | no | Symfony PHP-FPM, migrations, super-admin bootstrap |
+| `database` | no | PostgreSQL 16 |
+| `database-backup` | no | Daily compressed `pg_dump`, seven-day retention by default |
 
-## Architecture
+Only Caddy is attached directly to public ports. PostgreSQL and PHP are on an
+internal Docker network.
 
-```
-┌─────────────────────────────────────────┐
-│           Hostinger Server              │
-│                                         │
-│  ┌─────────┐         ┌──────────────┐  │
-│  │  Nginx  │────────▶│   PHP-FPM    │  │
-│  │  :8080  │         │   Backend    │  │
-│  └─────────┘         └──────────────┘  │
-│       │                      │          │
-│       │                      ▼          │
-│       │              ┌──────────────┐  │
-│       │              │  PostgreSQL  │  │
-│       │              │   Database   │  │
-│       │              └──────────────┘  │
-│       │                                 │
-│  ┌─────────┐                           │
-│  │ React   │ (Optional)                │
-│  │ :3001   │                           │
-│  └─────────┘                           │
-└─────────────────────────────────────────┘
-```
+## 1. Prepare the Hostinger VPS
 
-## Deployment Steps
+- Use a Hostinger VPS with the Docker template installed.
+- Point the domain's A record to the VPS IPv4 address. Add an AAAA record only
+  if IPv6 is configured on the VPS.
+- Make sure TCP ports 80 and 443 and UDP port 443 are allowed and are not used
+  by another project.
+- Generate an API key in hPanel under account API settings.
+- Copy the VPS ID from the hPanel URL or the default hostname
+  (`srv123456.hstgr.cloud` means VM ID `123456`).
 
-### Step 1: Prepare Your Server
+For an initial deployment by IP without TLS, set `APP_SCHEME=http` and
+`APP_DOMAIN` to the VPS IP address. A real domain with HTTPS is the production
+setup.
 
-SSH into your Hostinger server:
+## 2. Give the workflow access to existing GHCR packages
+
+The three images already exist as public packages. GitHub Actions must be
+granted write access once for each package:
+
+- `family-plan-php`
+- `family-plan-nginx`
+- `family-plan-frontend`
+
+Open the package settings, go to "Manage Actions access", add
+`jakubciszak/family-plan`, and grant write access. Keep the packages public so
+Hostinger can pull them without storing a GitHub token on the VPS.
+
+This fixes `permission_denied: write_package`. The workflow already declares
+`packages: write`; changing that YAML permission alone cannot repair an
+existing package that is not connected to the repository.
+
+## 3. Configure the GitHub `production` environment
+
+Create or open:
+
+`Repository settings -> Environments -> production`
+
+Add these secrets:
+
+| Secret | Required | Value |
+| --- | --- | --- |
+| `HOSTINGER_API_KEY` | yes | API key generated in hPanel |
+| `APP_SECRET` | yes | random hex value, at least 32 bytes |
+| `POSTGRES_PASSWORD` | yes | random URL-safe value |
+| `SUPER_ADMIN_PASSWORD` | yes | long unique password |
+| `MAILER_DSN` | no | production SMTP DSN; mail is disabled when omitted |
+| `SMS_API_TOKEN` | no | SMSAPI.pl token |
+
+Generate URL-safe secrets locally:
+
 ```bash
-ssh your-username@your-server-ip
+openssl rand -hex 32
 ```
 
-Install Docker and Docker Compose if not already installed:
-```bash
-# Update package index
-sudo apt-get update
+Add these environment variables:
 
-# Install Docker
-curl -fsSL https://get.docker.com -o get-docker.sh
-sudo sh get-docker.sh
+| Variable | Required | Example/default |
+| --- | --- | --- |
+| `HOSTINGER_VM_ID` | yes | `123456` |
+| `APP_DOMAIN` | yes | `family.example.com` |
+| `APP_SCHEME` | no | `https` |
+| `SUPER_ADMIN_EMAIL` | yes | `admin@example.com` |
+| `SUPER_ADMIN_NAME` | no | `Super Admin` |
+| `POSTGRES_DB` | no | `family_plan` |
+| `POSTGRES_USER` | no | `family_plan` |
+| `BACKUP_RETENTION_DAYS` | no | `7` |
+| `MAILER_FROM_EMAIL` | no | `noreply@familyplan.local` |
+| `MAILER_FROM_NAME` | no | `Family Plan` |
 
-# Install Docker Compose
-sudo apt-get install docker-compose-plugin
+For compatibility, the workflow also accepts the old
+`HOSTINGER_API_TOKEN` and `HOSTINGER_VPS_ID` secret names.
+
+Never paste real production values into `.env.prod`. That file is only a local
+template and is committed intentionally without usable credentials.
+
+## 4. Deploy
+
+Merge to `main`, or run the "Deploy to Hostinger" workflow manually from the
+Actions tab.
+
+The first run can take longer because all images are built from scratch and
+Caddy must obtain a certificate. The workflow waits up to five minutes for:
+
+```text
+https://APP_DOMAIN/api/health
 ```
 
-### Step 2: Clone the Repository
+A successful action means the public endpoint reached Symfony and completed a
+database query, not merely that Hostinger accepted an asynchronous API request.
 
-```bash
-cd /var/www  # or your preferred directory
-git clone https://github.com/jakubciszak/family-plan.git
-cd family-plan
-```
+## Database migrations and admin bootstrap
 
-### Step 3: Configure Environment Variables
+The PHP entrypoint waits for PostgreSQL, executes Doctrine migrations with
+`--allow-no-migration`, and then runs `app:create-super-admin`. The command
+must remain idempotent because it runs whenever the PHP container is recreated.
 
-Create a production environment file:
+## Backups
+
+`database-backup` creates one compressed database dump every 24 hours in the
+`database_backups` Docker volume. Old dumps are deleted after
+`BACKUP_RETENTION_DAYS`.
+
+These backups live on the same VPS. Enable Hostinger VPS backups or export the
+volume off-server as protection against disk or VPS loss.
+
+## Rollback
+
+Every image is tagged with the full Git commit SHA. To roll back:
+
+1. find the last healthy SHA in GitHub Actions;
+2. set `IMAGE_TAG` for the Hostinger project to that SHA;
+3. redeploy the Compose project.
+
+Alternatively, revert the breaking commit on `main`; the normal pipeline will
+build and deploy a new immutable revision.
+
+## Local validation
+
 ```bash
 cp .env.prod .env.prod.local
+# Replace every CHANGE_ME value.
+./verify-deployment.sh .env.prod.local
 ```
 
-Edit the `.env.prod.local` file with your production values:
-```bash
-nano .env.prod.local
-```
-
-**Important: Update these values:**
-- `APP_SECRET` - Generate a new random secret key
-- `POSTGRES_PASSWORD` - Set a strong database password
-- `SUPER_ADMIN_PASSWORD` - Set a strong admin password
-- `SUPER_ADMIN_EMAIL` - Set your admin email
-- `APP_PORT` - Port for the main application (default: 8080)
-
-Example production configuration:
-```env
-APP_ENV=prod
-APP_SECRET=your-random-secret-key-here
-POSTGRES_DB=family_plan
-POSTGRES_USER=family_plan_user
-POSTGRES_PASSWORD=your-strong-database-password
-SUPER_ADMIN_EMAIL=admin@yourdomain.com
-SUPER_ADMIN_NAME="Admin"
-SUPER_ADMIN_PASSWORD=your-strong-admin-password
-APP_PORT=8080
-REACT_PORT=3001
-```
-
-### Step 4: Build and Start the Application
-
-Build the Docker images:
-```bash
-docker compose -f docker-compose.hostinger.yml build
-```
-
-Start all services:
-```bash
-docker compose -f docker-compose.hostinger.yml up -d
-```
-
-This will:
-1. Start the PostgreSQL database
-2. Build and start the PHP backend with migrations
-3. Create the super admin user automatically
-4. Start the Nginx web server
-5. (Optional) Build and start the React frontend
-
-### Step 5: Verify the Deployment
-
-Check that all containers are running:
-```bash
-docker compose -f docker-compose.hostinger.yml ps
-```
-
-You should see all services in "Up" state:
-```
-NAME                    STATUS
-family-plan-db          Up (healthy)
-family-plan-php         Up
-family-plan-nginx       Up
-family-plan-frontend    Up
-```
-
-Check the logs:
-```bash
-# View all logs
-docker compose -f docker-compose.hostinger.yml logs
-
-# View specific service logs
-docker compose -f docker-compose.hostinger.yml logs php
-docker compose -f docker-compose.hostinger.yml logs nginx
-```
-
-### Step 6: Access Your Application
-
-The application should now be accessible at:
-- **Main Application**: `http://your-server-ip:8080`
-- **React Frontend** (optional): `http://your-server-ip:3001`
-
-Login with your super admin credentials:
-- Email: The email you set in `SUPER_ADMIN_EMAIL`
-- Password: The password you set in `SUPER_ADMIN_PASSWORD`
-
-### Step 7: Configure Domain (Optional)
-
-If you have a domain name, configure it to point to your application:
-
-1. Update your DNS records to point to your server IP
-2. Configure Nginx to use your domain:
-
-Create a custom Nginx configuration:
-```bash
-nano docker/nginx/production.conf
-```
-
-Add your domain configuration:
-```nginx
-server {
-    listen 80;
-    server_name yourdomain.com www.yourdomain.com;
-    
-    root /app/public;
-    index index.php;
-    
-    location / {
-        try_files $uri /index.php$is_args$args;
-    }
-    
-    location ~ \.php$ {
-        include fastcgi_params;
-        fastcgi_pass php:9000;
-        fastcgi_index index.php;
-        fastcgi_split_path_info ^(.+\.php)(/.+)$;
-        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
-        fastcgi_param DOCUMENT_ROOT $document_root;
-    }
-    
-    location ~ /\. {
-        deny all;
-    }
-}
-```
-
-Update the docker-compose file to use the new configuration and restart.
-
-### Step 8: Enable SSL/HTTPS (Recommended)
-
-For production, enable HTTPS using Let's Encrypt:
-
-```bash
-# Install certbot
-sudo apt-get install certbot python3-certbot-nginx
-
-# Obtain SSL certificate
-sudo certbot --nginx -d yourdomain.com -d www.yourdomain.com
-```
-
-## Maintenance Commands
-
-### View Logs
-```bash
-docker compose -f docker-compose.hostinger.yml logs -f
-```
-
-### Restart Services
-```bash
-docker compose -f docker-compose.hostinger.yml restart
-```
-
-### Stop Services
-```bash
-docker compose -f docker-compose.hostinger.yml down
-```
-
-### Update Application
-```bash
-# Pull latest changes
-git pull origin main
-
-# Rebuild and restart
-docker compose -f docker-compose.hostinger.yml up -d --build
-```
-
-### Run Database Migrations Manually
-```bash
-docker compose -f docker-compose.hostinger.yml exec php php bin/console doctrine:migrations:migrate
-```
-
-### Create/Update Super Admin
-```bash
-docker compose -f docker-compose.hostinger.yml exec php php bin/console app:create-super-admin
-```
-
-### Access Database
-```bash
-docker compose -f docker-compose.hostinger.yml exec database psql -U family_plan_user -d family_plan
-```
-
-### Backup Database
-```bash
-docker compose -f docker-compose.hostinger.yml exec database pg_dump -U family_plan_user family_plan > backup.sql
-```
-
-### Restore Database
-```bash
-docker compose -f docker-compose.hostinger.yml exec -T database psql -U family_plan_user family_plan < backup.sql
-```
-
-## Troubleshooting
-
-### Container won't start
-```bash
-# Check container logs
-docker compose -f docker-compose.hostinger.yml logs <service-name>
-
-# Check container status
-docker compose -f docker-compose.hostinger.yml ps
-```
-
-### Database connection errors
-1. Ensure the database container is healthy
-2. Verify environment variables are correct
-3. Check the DATABASE_URL in .env.prod.local
-
-### Permission errors
-```bash
-# Fix permissions on var directory
-docker compose -f docker-compose.hostinger.yml exec php chown -R www-data:www-data /app/var
-```
-
-### Application not accessible
-1. Check if the port is open on your firewall
-2. Verify Nginx is running: `docker compose -f docker-compose.hostinger.yml logs nginx`
-3. Check if the correct port is mapped in docker-compose.hostinger.yml
-
-## Security Considerations
-
-1. **Change default passwords**: Always use strong, unique passwords for production
-2. **Use HTTPS**: Enable SSL/TLS certificates for encrypted communication
-3. **Firewall**: Configure firewall to only allow necessary ports
-4. **Regular updates**: Keep Docker images and application dependencies up to date
-5. **Database backups**: Set up automated database backups
-6. **Environment files**: Ensure .env.prod.local is not committed to git
-
-## Performance Optimization
-
-### Enable OPcache
-OPcache is already enabled in the production PHP Dockerfile with optimized settings.
-
-### Use CDN for Static Assets
-Consider using a CDN for serving static assets (CSS, JS, images) to improve performance.
-
-### Database Optimization
-```bash
-# Tune PostgreSQL for production
-docker compose -f docker-compose.hostinger.yml exec database \
-    psql -U family_plan_user -d family_plan -c "VACUUM ANALYZE;"
-```
-
-## Monitoring
-
-### Check Container Health
-```bash
-docker compose -f docker-compose.hostinger.yml ps
-```
-
-### Monitor Resource Usage
-```bash
-docker stats
-```
-
-### Check Application Logs
-```bash
-docker compose -f docker-compose.hostinger.yml logs -f php
-```
-
-## Additional Resources
-
-- [Docker Documentation](https://docs.docker.com/)
-- [Docker Compose Documentation](https://docs.docker.com/compose/)
-- [Symfony Production Best Practices](https://symfony.com/doc/current/deployment.html)
-- [PostgreSQL Documentation](https://www.postgresql.org/docs/)
-- [Nginx Documentation](https://nginx.org/en/docs/)
-
-## Support
-
-For issues specific to the Family Plan application, please refer to the main README.md or open an issue on the GitHub repository.
+This validates the resolved Compose model. Building the images still requires
+network access to Composer, npm, Docker Hub, and GHCR.

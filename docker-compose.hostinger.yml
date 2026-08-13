@@ -1,74 +1,170 @@
-# Docker Compose configuration for Hostinger deployment
-# Uses pre-built images from GitHub Container Registry (ghcr.io)
+name: family-plan
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "5"
 
 services:
-  # PostgreSQL Database
   database:
-    image: postgres:16-alpine
-    container_name: family-plan-db
+    image: postgres:16.14-alpine3.24
     restart: unless-stopped
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-app}
-      POSTGRES_USER: ${POSTGRES_USER:-app}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-!ChangeMe!}
+      POSTGRES_DB: ${POSTGRES_DB:-family_plan}
+      POSTGRES_USER: ${POSTGRES_USER:-family_plan}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      POSTGRES_INITDB_ARGS: --data-checksums
     volumes:
       - database_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD", "pg_isready", "-d", "${POSTGRES_DB:-app}", "-U", "${POSTGRES_USER:-app}"]
+      test:
+        - CMD-SHELL
+        - pg_isready -d "$${POSTGRES_DB}" -U "$${POSTGRES_USER}"
       interval: 10s
       timeout: 5s
-      retries: 5
-      start_period: 60s
+      retries: 10
+      start_period: 30s
     networks:
-      - family-plan-network
+      - backend
+    logging: *default-logging
+    security_opt:
+      - no-new-privileges:true
 
-  # PHP-FPM Backend (pre-built image from ghcr.io)
-  php:
-    image: ghcr.io/jakubciszak/family-plan-php:latest
-    container_name: family-plan-php
+  database-backup:
+    image: postgres:16.14-alpine3.24
     restart: unless-stopped
-    working_dir: /app
     environment:
-      APP_ENV: ${APP_ENV:-prod}
-      APP_SECRET: ${APP_SECRET:-CHANGE_ME_GENERATE_RANDOM_SECRET_KEY_FOR_PRODUCTION}
-      DATABASE_URL: "postgresql://${POSTGRES_USER:-app}:${POSTGRES_PASSWORD:-!ChangeMe!}@database:5432/${POSTGRES_DB:-app}?serverVersion=16&charset=utf8"
-      SUPER_ADMIN_EMAIL: ${SUPER_ADMIN_EMAIL:-admin@familyplan.local}
-      SUPER_ADMIN_NAME: ${SUPER_ADMIN_NAME:-Super Admin}
-      SUPER_ADMIN_PASSWORD: ${SUPER_ADMIN_PASSWORD:-CHANGE_ME_TO_STRONG_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-family_plan}
+      POSTGRES_USER: ${POSTGRES_USER:-family_plan}
+      PGPASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-7}
+    command:
+      - /bin/sh
+      - -ec
+      - |
+        while true; do
+          filename="/backups/$$(date -u +%Y%m%dT%H%M%SZ).sql.gz"
+          pg_dump --host=database --dbname="$${POSTGRES_DB}" --username="$${POSTGRES_USER}" | gzip > "$${filename}"
+          find /backups -type f -name '*.sql.gz' -mtime "+$${BACKUP_RETENTION_DAYS}" -delete
+          sleep 86400
+        done
+    volumes:
+      - database_backups:/backups
     depends_on:
       database:
         condition: service_healthy
     networks:
-      - family-plan-network
+      - backend
+    logging: *default-logging
+    security_opt:
+      - no-new-privileges:true
 
-  # Nginx Web Server (pre-built image with static files from ghcr.io)
-  nginx:
-    image: ghcr.io/jakubciszak/family-plan-nginx:latest
-    container_name: family-plan-nginx
+  php:
+    image: ghcr.io/jakubciszak/family-plan-php:${IMAGE_TAG:?IMAGE_TAG is required}
     restart: unless-stopped
-    ports:
-      - "${APP_PORT:-8080}:80"
+    environment:
+      APP_ENV: prod
+      APP_DEBUG: "0"
+      APP_SECRET: ${APP_SECRET:?APP_SECRET is required}
+      APP_URL: ${APP_SCHEME:-https}://${APP_DOMAIN:?APP_DOMAIN is required}
+      DEFAULT_URI: ${APP_SCHEME:-https}://${APP_DOMAIN:?APP_DOMAIN is required}
+      TRUSTED_PROXIES: 127.0.0.1,REMOTE_ADDR
+      DATABASE_URL: postgresql://${POSTGRES_USER:-family_plan}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@database:5432/${POSTGRES_DB:-family_plan}?serverVersion=16&charset=utf8
+      POSTGRES_USER: ${POSTGRES_USER:-family_plan}
+      SUPER_ADMIN_EMAIL: ${SUPER_ADMIN_EMAIL:?SUPER_ADMIN_EMAIL is required}
+      SUPER_ADMIN_NAME: ${SUPER_ADMIN_NAME:-Super Admin}
+      SUPER_ADMIN_PASSWORD: ${SUPER_ADMIN_PASSWORD:?SUPER_ADMIN_PASSWORD is required}
+      CORS_ALLOWED_ORIGIN: ${APP_SCHEME:-https}://${APP_DOMAIN:?APP_DOMAIN is required}
+      MAILER_DSN: ${MAILER_DSN:-null://null}
+      MAILER_FROM_EMAIL: ${MAILER_FROM_EMAIL:-noreply@familyplan.local}
+      MAILER_FROM_NAME: ${MAILER_FROM_NAME:-Family Plan}
+      SMS_API_URL: ${SMS_API_URL:-https://api.smsapi.pl}
+      SMS_API_TOKEN: ${SMS_API_TOKEN:-}
     depends_on:
-      - php
+      database:
+        condition: service_healthy
     networks:
-      - family-plan-network
+      - backend
+    logging: *default-logging
+    security_opt:
+      - no-new-privileges:true
+    stop_grace_period: 30s
 
-  # React Frontend (pre-built image from ghcr.io)
+  backend:
+    image: ghcr.io/jakubciszak/family-plan-nginx:${IMAGE_TAG:?IMAGE_TAG is required}
+    restart: unless-stopped
+    depends_on:
+      php:
+        condition: service_started
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - wget --quiet --spider http://127.0.0.1/health || exit 1
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+    networks:
+      - backend
+    logging: *default-logging
+    security_opt:
+      - no-new-privileges:true
+
   frontend:
-    image: ghcr.io/jakubciszak/family-plan-frontend:latest
-    container_name: family-plan-frontend
+    image: ghcr.io/jakubciszak/family-plan-frontend:${IMAGE_TAG:?IMAGE_TAG is required}
     restart: unless-stopped
-    ports:
-      - "${FRONTEND_PORT:-3000}:80"
-    networks:
-      - family-plan-network
     depends_on:
-      - nginx
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - wget --quiet --spider http://127.0.0.1/health || exit 1
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+    networks:
+      - edge
+      - backend
+    logging: *default-logging
+    security_opt:
+      - no-new-privileges:true
+
+  edge:
+    image: caddy:2.10.2-alpine
+    restart: unless-stopped
+    command:
+      - caddy
+      - reverse-proxy
+      - --from
+      - ${APP_SCHEME:-https}://${APP_DOMAIN:?APP_DOMAIN is required}
+      - --to
+      - frontend:80
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      frontend:
+        condition: service_healthy
+    networks:
+      - edge
+    logging: *default-logging
+    security_opt:
+      - no-new-privileges:true
 
 volumes:
+  caddy_config:
+  caddy_data:
+  database_backups:
   database_data:
-    driver: local
 
 networks:
-  family-plan-network:
-    driver: bridge
+  backend:
+    internal: true
+  edge:

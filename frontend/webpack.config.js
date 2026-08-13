@@ -4,6 +4,7 @@ const webpack = require('webpack');
 
 module.exports = (env, argv) => {
   const isProduction = argv.mode === 'production';
+  const apiUrl = process.env.REACT_APP_API_URL ?? (isProduction ? '' : 'http://localhost:8080');
   
   return {
     entry: './src/index.jsx',
@@ -40,9 +41,7 @@ module.exports = (env, argv) => {
         filename: 'index.html',
       }),
       new webpack.DefinePlugin({
-        'process.env.REACT_APP_API_URL': JSON.stringify(
-          process.env.REACT_APP_API_URL || 'http://localhost:8080'
-        ),
+        'process.env.REACT_APP_API_URL': JSON.stringify(apiUrl),
       }),
     ],
     devServer: {
