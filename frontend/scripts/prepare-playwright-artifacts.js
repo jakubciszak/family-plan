@@ -71,23 +71,23 @@ function buildReadme(entries) {
   const lines = [
     '# Playwright Artifacts',
     '',
-    `Wygenerowano ${new Date().toISOString()}.`,
+    `Generated at ${new Date().toISOString()}.`,
     '',
   ];
 
   if (entries.length === 0) {
-    lines.push('Brak screenshotów, wideo i trace ZIP do pokazania.');
+    lines.push('No screenshots, videos, or trace ZIP files were found.');
     lines.push('');
     return `${lines.join('\n')}\n`;
   }
 
-  lines.push('## Jak korzystać');
+  lines.push('## How to use');
   lines.push('');
-  lines.push('- Otwórz `index.html`, aby przejrzeć artefakty w przeglądarce.');
-  lines.push('- Screenshoty są osadzone bezpośrednio w `index.html`.');
-  lines.push('- Pliki `trace.zip` można otworzyć poleceniem `npx playwright show-trace <ścieżka-do-pliku.zip>`.');
+  lines.push('- Open `index.html` in a browser to review the artifacts.');
+  lines.push('- Screenshots are embedded directly in `index.html`.');
+  lines.push('- Open any `trace.zip` file with `npx playwright show-trace <path-to-file.zip>`.');
   lines.push('');
-  lines.push('## Zawartość');
+  lines.push('## Contents');
   lines.push('');
 
   const groupedEntries = entries.reduce((groups, entry) => {
@@ -104,7 +104,7 @@ function buildReadme(entries) {
       lines.push('');
 
       groupEntries.forEach(entry => {
-        lines.push(`- **${entry.typeLabel}**: \`${entry.destinationRelativePath}\` _(źródło: \`${entry.sourceRelativePath}\`, ${entry.sizeLabel})_`);
+        lines.push(`- **${entry.typeLabel}**: \`${entry.destinationRelativePath}\` _(source: \`${entry.sourceRelativePath}\`, ${entry.sizeLabel})_`);
       });
 
       lines.push('');
@@ -130,17 +130,17 @@ function buildHtml(entries) {
             ? `<a href="${encodeURI(entry.destinationRelativePath)}" target="_blank" rel="noopener noreferrer"><img src="${encodeURI(entry.destinationRelativePath)}" alt="${escapeHtml(entry.displayName)}"></a>`
             : '';
           const traceHint = entry.type === 'trace'
-            ? '<p class="hint">Otwórz lokalnie poleceniem <code>npx playwright show-trace &lt;plik.zip&gt;</code>.</p>'
+            ? '<p class="hint">Open locally with <code>npx playwright show-trace &lt;file.zip&gt;</code>.</p>'
             : '';
 
           return `
             <article class="artifact-card artifact-card--${entry.type}">
               <div class="artifact-card__content">
                 <h3>${escapeHtml(entry.displayName)}</h3>
-                <p><strong>Typ:</strong> ${escapeHtml(entry.typeLabel)}</p>
-                <p><strong>Rozmiar:</strong> ${escapeHtml(entry.sizeLabel)}</p>
-                <p><strong>Źródło:</strong> <code>${escapeHtml(entry.sourceRelativePath)}</code></p>
-                <p><a href="${encodeURI(entry.destinationRelativePath)}" target="_blank" rel="noopener noreferrer">Otwórz / pobierz plik</a></p>
+                <p><strong>Type:</strong> ${escapeHtml(entry.typeLabel)}</p>
+                <p><strong>Size:</strong> ${escapeHtml(entry.sizeLabel)}</p>
+                <p><strong>Source:</strong> <code>${escapeHtml(entry.sourceRelativePath)}</code></p>
+                <p><a href="${encodeURI(entry.destinationRelativePath)}" target="_blank" rel="noopener noreferrer">Open / download file</a></p>
                 ${traceHint}
               </div>
               ${preview}
@@ -161,11 +161,11 @@ function buildHtml(entries) {
     .join('\n');
 
   const emptyState = entries.length === 0
-    ? '<p class="empty-state">Brak screenshotów, wideo i trace ZIP do pokazania.</p>'
+    ? '<p class="empty-state">No screenshots, videos, or trace ZIP files were found.</p>'
     : sections;
 
   return `<!DOCTYPE html>
-<html lang="pl">
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -257,8 +257,8 @@ function buildHtml(entries) {
   <main>
     <section class="summary">
       <h1>Playwright Artifacts</h1>
-      <p>Ten pakiet grupuje screenshoty, wideo i trace ZIP według testu, żeby łatwiej było je przeglądać po pobraniu artefaktu.</p>
-      <p>Otwórz lokalnie plik <code>index.html</code>. Trace ZIP możesz uruchomić poleceniem <code>npx playwright show-trace &lt;plik.zip&gt;</code>.</p>
+      <p>This bundle groups screenshots, videos, and trace ZIP files by test so they are easier to browse after downloading the artifact.</p>
+      <p>Open <code>index.html</code> locally. You can inspect a trace ZIP with <code>npx playwright show-trace &lt;file.zip&gt;</code>.</p>
     </section>
     ${emptyState}
   </main>
@@ -280,6 +280,7 @@ function main() {
     return;
   }
 
+  const createdDirectories = new Set();
   const entries = walkFiles(inputDirectory)
     .filter(filePath => SUPPORTED_EXTENSIONS.has(path.extname(filePath).toLowerCase()))
     .map(filePath => {
@@ -297,12 +298,16 @@ function main() {
           ? 'video'
           : 'trace';
 
-      ensureDirectory(destinationDirectory);
+      if (!createdDirectories.has(destinationDirectory)) {
+        ensureDirectory(destinationDirectory);
+        createdDirectories.add(destinationDirectory);
+      }
+
       fs.copyFileSync(filePath, destinationPath);
 
       return {
         type,
-        typeLabel: type === 'screenshot' ? 'Screenshot' : type === 'video' ? 'Wideo' : 'Trace ZIP',
+        typeLabel: type === 'screenshot' ? 'Screenshot' : type === 'video' ? 'Video' : 'Trace ZIP',
         displayName: path.basename(sourceRelativePath),
         groupName,
         sourceRelativePath,
