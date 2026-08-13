@@ -104,7 +104,7 @@ Required environment variables (with defaults shown):
 - `API_BASE_URL=http://localhost:8080` - backend API base URL
 - `REAL_APP_URL=http://localhost:3000` - frontend base URL (optional)
 - `E2E_EMAIL=admin@familyplan.local` - login email
-- `E2E_PASSWORD=admin123` - login password
+- `E2E_PASSWORD=FamilyPlanE2E123!` - login password (must match `SUPER_ADMIN_PASSWORD` used by the backend test bootstrap)
 
 ### Writing Tests
 
@@ -147,6 +147,7 @@ After running tests, the following artifacts are generated:
 - **Videos**: `test-results/[test-name]/video.webm` - Video recording of each test
 - **HTML Report**: `playwright-report/index.html` - Interactive test report with screenshots
 - **Traces**: `test-results/[test-name]/trace.zip` - Detailed trace for debugging failures
+- **Readable artifact bundle**: `playwright-artifacts-readable/index.html` - Human-readable index of screenshots, videos and trace ZIP files
 
 View the HTML report:
 ```bash
@@ -158,6 +159,11 @@ View a specific trace:
 npx playwright show-trace test-results/[test-name]/trace.zip
 ```
 
+Prepare a readable artifact bundle locally:
+```bash
+npm run test:artifacts
+```
+
 ### CI/CD Integration
 
 The GitHub Actions workflow runs E2E tests on every push and pull request:
@@ -167,6 +173,7 @@ The GitHub Actions workflow runs E2E tests on every push and pull request:
 - Provides immediate feedback
 - 2 retries on failure
 - HTML report generation
+- Readable artifact bundle with screenshots, videos and trace ZIP links
 - Screenshot and video artifacts uploaded for all tests
 - Test artifacts retained for 30 days
 - Trace files uploaded on failures for debugging

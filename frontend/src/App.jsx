@@ -9,7 +9,21 @@ import UserSettings from './pages/UserSettings';
 import TeamManagement from './pages/TeamManagement';
 import LanguageSwitcher from './components/LanguageSwitcher';
 import apiClient from './services/apiClient';
+import teamService from './services/teamService';
 import './styles/app.css';
+
+// Helper to get invite token from URL
+const getInviteTokenFromUrl = () => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('invite');
+};
+
+// Helper to clear invite token from URL
+const clearInviteTokenFromUrl = () => {
+    const url = new URL(window.location.href);
+    url.searchParams.delete('invite');
+    window.history.replaceState({}, document.title, url.pathname + url.search);
+};
 
 function App() {
     const { t } = useTranslation();
@@ -19,6 +33,46 @@ function App() {
     const [currentPage, setCurrentPage] = React.useState('tasks');
     const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
     const [showRegister, setShowRegister] = React.useState(false);
+    const [inviteToken, setInviteToken] = React.useState(null);
+
+    // Check for invite token in URL on mount
+    React.useEffect(() => {
+        const tokenFromUrl = getInviteTokenFromUrl();
+        if (tokenFromUrl) {
+            setInviteToken(tokenFromUrl);
+            // Store in localStorage as backup
+            localStorage.setItem('pendingInviteToken', tokenFromUrl);
+            // Show registration form if there's an invite token
+            setShowRegister(true);
+        } else {
+            // Check localStorage for pending invite token
+            const storedToken = localStorage.getItem('pendingInviteToken');
+            if (storedToken) {
+                setInviteToken(storedToken);
+            }
+        }
+    }, []);
+
+    // Process pending invitation after authentication
+    const processPendingInvitation = React.useCallback(async () => {
+        const token = inviteToken || localStorage.getItem('pendingInviteToken');
+        if (token) {
+            try {
+                await teamService.acceptInvitation(token);
+                // Clear the stored token
+                localStorage.removeItem('pendingInviteToken');
+                setInviteToken(null);
+                clearInviteTokenFromUrl();
+                // Optionally navigate to teams page
+                setCurrentPage('teams');
+            } catch (err) {
+                console.error('Error accepting invitation:', err);
+                // Clear invalid token
+                localStorage.removeItem('pendingInviteToken');
+                setInviteToken(null);
+            }
+        }
+    }, [inviteToken]);
 
     React.useEffect(() => {
         // Check if user is authenticated
@@ -36,6 +90,13 @@ function App() {
                 setIsAuthenticated(false);
             });
     }, []);
+
+    // Process invitation when user becomes authenticated
+    React.useEffect(() => {
+        if (isAuthenticated && (inviteToken || localStorage.getItem('pendingInviteToken'))) {
+            processPendingInvitation();
+        }
+    }, [isAuthenticated, inviteToken, processPendingInvitation]);
 
     const handleLogin = (userData) => {
         setUser(userData);
@@ -67,9 +128,9 @@ function App() {
 
     if (!isAuthenticated) {
         if (showRegister) {
-            return <Register onBackToLogin={() => setShowRegister(false)} />;
+            return <Register onBackToLogin={() => setShowRegister(false)} inviteToken={inviteToken} />;
         }
-        return <Login onLogin={handleLogin} onSwitchToRegister={() => setShowRegister(true)} />;
+        return <Login onLogin={handleLogin} onSwitchToRegister={() => setShowRegister(true)} inviteToken={inviteToken} />;
     }
 
     const handlePageChange = (page) => {

@@ -442,6 +442,29 @@ button:hover {
     margin-bottom: 1rem;
 }
 
+/* Invite Banner */
+.invite-banner {
+    background-color: #dbeafe;
+    border: 1px solid #3b82f6;
+    color: #1e40af;
+    padding: 1rem;
+    border-radius: 8px;
+    margin-bottom: 1.5rem;
+    text-align: center;
+}
+
+.invite-banner p {
+    margin: 0 0 0.5rem 0;
+    font-weight: 600;
+    font-size: 1.1rem;
+}
+
+.invite-banner small {
+    display: block;
+    color: #3b82f6;
+    font-size: 0.875rem;
+}
+
 /* Auth Switch Link */
 .auth-switch {
     text-align: center;

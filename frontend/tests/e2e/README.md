@@ -125,7 +125,7 @@ Tests use mocked API responses to avoid dependencies on the backend:
 Playwright automatically captures the following artifacts during test execution:
 
 ### Screenshots
-- Captured after each test completes
+- Captured on failure
 - Location: `test-results/[test-name]/test-finished-1.png`
 - Useful for visual verification of test states
 - Automatically uploaded in CI pipeline
@@ -137,7 +137,7 @@ Playwright automatically captures the following artifacts during test execution:
 - Helps debug test failures
 
 ### Traces
-- Captured on test retry/failure
+- Captured for every test in CI and on retry locally
 - Location: `test-results/[test-name]/trace.zip`
 - Contains detailed execution information
 - View with: `npx playwright show-trace path/to/trace.zip`
@@ -147,6 +147,12 @@ Playwright automatically captures the following artifacts during test execution:
 - Location: `playwright-report/index.html`
 - Includes screenshots and test timings
 - View with: `npm run test:report`
+
+### Readable artifact bundle
+- Location: `playwright-artifacts-readable/index.html`
+- Groups screenshots, videos and trace ZIP files by test
+- Shows screenshots inline after downloading the artifact
+- Generate locally with: `npm run test:artifacts`
 
 ## Configuration
 
@@ -174,6 +180,7 @@ See `playwright.config.js` for:
 ### Viewing test artifacts
 - Check `test-results/` directory for screenshots and videos
 - Use `npm run test:report` to view HTML report with screenshots
+- Use `npm run test:artifacts` to build a human-readable artifact bundle
 - Use `npx playwright show-trace [trace-file]` for detailed debugging
 
 ### Dev server conflicts
@@ -187,16 +194,17 @@ Tests are configured to run in CI with:
 - Automatic retries on failure (2 retries in CI)
 - Serial execution for stability
 - HTML report generation
-- **Screenshots and videos captured for all tests**
+- **Human-readable artifact bundle generated for every run**
 - **All test artifacts uploaded and retained for 30 days**
-- Trace files captured on failures for debugging
+- Trace files captured for every CI test for debugging
 
 ### CI Artifacts
 
 The GitHub Actions workflow automatically uploads:
 1. **playwright-report** - HTML test report with screenshots (always uploaded)
-2. **playwright-test-results** - All screenshots and videos (always uploaded)
-3. **playwright-traces** - Trace files for failed tests (uploaded on failure)
+2. **playwright-artifacts-readable** - Human-readable index with screenshots, videos and trace ZIP links (always uploaded)
+3. **playwright-test-results** - Raw Playwright output files (always uploaded)
+4. **playwright-traces** - Raw trace ZIP files (always uploaded)
 
 Access artifacts from the Actions tab in GitHub after the workflow completes.
 

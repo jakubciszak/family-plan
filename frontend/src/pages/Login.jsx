@@ -2,11 +2,14 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import apiClient from '../services/apiClient';
 
-function Login({ onLogin, onSwitchToRegister }) {
+function Login({ onLogin, onSwitchToRegister, inviteToken }) {
     const { t } = useTranslation();
     const [email, setEmail] = React.useState('');
     const [password, setPassword] = React.useState('');
     const [error, setError] = React.useState('');
+
+    // Check if this is an invitation-based login
+    const hasInvitation = !!inviteToken;
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -24,6 +27,12 @@ function Login({ onLogin, onSwitchToRegister }) {
         <div className="login-container">
             <div className="login-form">
                 <h2>{t('auth.login')}</h2>
+                {hasInvitation && (
+                    <div className="invite-banner">
+                        <p>{t('auth.invitedToTeam')}</p>
+                        <small>{t('auth.loginToJoin')}</small>
+                    </div>
+                )}
                 {error && <div className="error-message">{error}</div>}
                 <form onSubmit={handleSubmit}>
                     <div className="form-group">

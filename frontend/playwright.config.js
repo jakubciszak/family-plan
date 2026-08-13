@@ -1,3 +1,4 @@
+const path = require('path');
 const { defineConfig, devices } = require('@playwright/test');
 
 /**
@@ -19,8 +20,8 @@ const webServers = [
 
 if (realApiEnabled) {
   webServers.unshift({
-    command: `API_BASE_URL=${apiBaseUrl} bash ../scripts/start-backend-e2e.sh`,
-    url: `${apiBaseUrl}/api/doc`,
+    command: `API_BASE_URL=${apiBaseUrl} bash "${path.join(__dirname, '../scripts/start-backend-e2e.sh')}"`,
+    url: `${apiBaseUrl}/api/auth/me`,
     reuseExistingServer: false,
     timeout: 120 * 1000,
   });
@@ -28,6 +29,7 @@ if (realApiEnabled) {
 
 module.exports = defineConfig({
   testDir,
+  testIgnore: realApiEnabled ? [] : ['**/*-real.spec.js', '**/real-api/**'],
   
   // Maximum time one test can run
   timeout: 30 * 1000,
@@ -56,8 +58,8 @@ module.exports = defineConfig({
     // Base URL to use in actions like `await page.goto('/')`
     baseURL: process.env.BASE_URL || 'http://localhost:3000',
     
-    // Collect trace when retrying the failed test
-    trace: 'on-first-retry',
+    // Collect trace for every CI test so step-by-step screenshots are always available in artifacts
+    trace: process.env.CI ? 'on' : 'on-first-retry',
     
     // Take screenshots only on failure
     screenshot: 'only-on-failure',

@@ -26,7 +26,10 @@
     "alreadyHaveAccount": "Already have an account?",
     "noAccount": "Don't have an account?",
     "activationRequired": "Please activate your account via the link sent to your email.",
-    "duplicateEmail": "An account with this email already exists."
+    "duplicateEmail": "An account with this email already exists.",
+    "invitedToTeam": "You've been invited to join a team!",
+    "registerToJoin": "Create an account to accept the invitation and join the team.",
+    "loginToJoin": "Login to accept your pending invitation."
   },
   "tasks": {
     "title": "Tasks",

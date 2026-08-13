@@ -34,6 +34,11 @@ jobs:
     - name: Run Mocked Playwright tests
       working-directory: ./frontend
       run: npm test -- --project=chromium
+
+    - name: Prepare readable Playwright artifacts
+      if: always()
+      working-directory: ./frontend
+      run: npm run test:artifacts
     
     - name: Upload HTML test report
       uses: actions/upload-artifact@v4
@@ -41,6 +46,14 @@ jobs:
       with:
         name: playwright-report-mocked
         path: frontend/playwright-report/
+        retention-days: 30
+
+    - name: Upload readable Playwright artifacts
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: playwright-artifacts-readable-mocked
+        path: frontend/playwright-artifacts-readable/
         retention-days: 30
     
     - name: Upload test screenshots and videos
@@ -53,7 +66,7 @@ jobs:
     
     - name: Upload trace files
       uses: actions/upload-artifact@v4
-      if: failure()
+      if: always()
       with:
         name: playwright-traces-mocked
         path: frontend/test-results/**/*.zip

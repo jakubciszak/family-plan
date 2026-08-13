@@ -26,7 +26,10 @@
     "alreadyHaveAccount": "Masz już konto?",
     "noAccount": "Nie masz konta?",
     "activationRequired": "Aktywuj swoje konto poprzez link wysłany na email.",
-    "duplicateEmail": "Konto z tym adresem email już istnieje."
+    "duplicateEmail": "Konto z tym adresem email już istnieje.",
+    "invitedToTeam": "Zostałeś zaproszony do zespołu!",
+    "registerToJoin": "Utwórz konto, aby zaakceptować zaproszenie i dołączyć do zespołu.",
+    "loginToJoin": "Zaloguj się, aby zaakceptować oczekujące zaproszenie."
   },
   "tasks": {
     "title": "Zadania",

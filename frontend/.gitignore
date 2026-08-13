@@ -28,4 +28,5 @@ Thumbs.db
 # Playwright
 test-results/
 playwright-report/
+playwright-artifacts-readable/
 tests/screenshots/

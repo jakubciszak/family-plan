@@ -3,7 +3,7 @@ const { test, expect } = require('@playwright/test');
 const isRealApiEnabled = Boolean(process.env.REAL_API);
 const baseUrl = process.env.REAL_APP_URL || process.env.BASE_URL || 'http://localhost:3000';
 const email = process.env.E2E_EMAIL || 'admin@familyplan.local';
-const password = process.env.E2E_PASSWORD || 'admin123';
+const password = process.env.E2E_PASSWORD || 'FamilyPlanE2E123!';
 
 test.describe('Real API - Login', () => {
   test.skip(!isRealApiEnabled, 'REAL_API not enabled');
