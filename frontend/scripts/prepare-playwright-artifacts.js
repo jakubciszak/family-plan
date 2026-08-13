@@ -138,7 +138,9 @@ function buildHtml(entries) {
         .map(entry => {
           const preview = entry.type === 'screenshot'
             ? `<a href="${encodeURI(entry.destinationRelativePath)}" target="_blank" rel="noopener noreferrer"><img src="${encodeURI(entry.destinationRelativePath)}" alt="${escapeHtml(entry.displayName)}"></a>`
-            : '';
+            : entry.type === 'video'
+              ? `<video controls preload="metadata" src="${encodeURI(entry.destinationRelativePath)}"></video>`
+              : '';
           const traceHint = entry.type === 'trace'
             ? '<p class="hint">Open locally with <code>npx playwright show-trace &lt;file.zip&gt;</code>.</p>'
             : '';
@@ -236,6 +238,13 @@ function buildHtml(entries) {
       border: 1px solid #dbe3f0;
     }
 
+    .artifact-card video {
+      width: 100%;
+      border-radius: 8px;
+      border: 1px solid #dbe3f0;
+      background: #111827;
+    }
+
     .artifact-card h3 {
       margin: 0 0 0.5rem;
       font-size: 1rem;
@@ -294,7 +303,7 @@ function main() {
   const entries = walkFiles(inputDirectory)
     .filter(filePath => SUPPORTED_EXTENSIONS.has(path.extname(filePath).toLowerCase()))
     .map(filePath => {
-      const sourceRelativePath = path.relative(inputDirectory, filePath);
+      const sourceRelativePath = toPosixPath(path.relative(inputDirectory, filePath));
       const extension = path.extname(filePath).toLowerCase();
       const outputSubdirectory = TYPE_DIRECTORIES[extension];
       const destinationFileName = sanitizeFilename(sourceRelativePath);
