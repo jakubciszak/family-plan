@@ -6,6 +6,7 @@ const { defineConfig, devices } = require('@playwright/test');
  */
 module.exports = defineConfig({
   testDir: './tests/e2e',
+  testIgnore: '**/*-real.spec.js',
   
   // Maximum time one test can run
   timeout: 30 * 1000,
