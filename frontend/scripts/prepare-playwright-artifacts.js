@@ -33,7 +33,7 @@ function sanitizeFilename(relativeFilePath) {
 function humanizeGroupName(groupName) {
   return groupName
     .split(path.sep)
-    .filter(Boolean)
+    .filter(part => part && part !== '.')
     .map(part => part.replace(/[-_]+/g, ' ').trim())
     .join(' / ');
 }
@@ -45,6 +45,10 @@ function escapeHtml(value) {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
+}
+
+function escapeMarkdown(value) {
+  return value.replace(/([\\`*_[\]{}()#+.!|-])/g, '\\$1');
 }
 
 function toPosixPath(filePath) {
@@ -100,7 +104,7 @@ function buildReadme(entries) {
   Object.entries(groupedEntries)
     .sort(([left], [right]) => left.localeCompare(right))
     .forEach(([groupName, groupEntries]) => {
-      lines.push(`### ${groupName}`);
+      lines.push(`### ${escapeMarkdown(groupName)}`);
       lines.push('');
 
       groupEntries.forEach(entry => {
