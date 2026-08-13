@@ -53,7 +53,7 @@ jobs:
     
     - name: Upload trace files
       uses: actions/upload-artifact@v4
-      if: failure()
+      if: always()
       with:
         name: playwright-traces-mocked
         path: frontend/test-results/**/*.zip

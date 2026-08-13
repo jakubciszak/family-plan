@@ -45,8 +45,8 @@ module.exports = defineConfig({
     // Base URL - frontend dev server
     baseURL: process.env.BASE_URL || 'http://localhost:3000',
 
-    // Collect trace on failure
-    trace: 'on-first-retry',
+    // Collect trace for every test so step-by-step screenshots are always available in artifacts
+    trace: 'on',
 
     // Take screenshots on failure
     screenshot: 'only-on-failure',

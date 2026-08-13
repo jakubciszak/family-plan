@@ -58,8 +58,8 @@ module.exports = defineConfig({
     // Base URL to use in actions like `await page.goto('/')`
     baseURL: process.env.BASE_URL || 'http://localhost:3000',
     
-    // Collect trace when retrying the failed test
-    trace: 'on-first-retry',
+    // Collect trace for every test so step-by-step screenshots are always available in artifacts
+    trace: 'on',
     
     // Take screenshots only on failure
     screenshot: 'only-on-failure',
