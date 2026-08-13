@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 
 const SUPPORTED_EXTENSIONS = new Set(['.png', '.jpg', '.jpeg', '.webm', '.zip']);
 const TYPE_DIRECTORIES = {
@@ -25,14 +26,19 @@ function walkFiles(directory) {
 }
 
 function sanitizeFilename(relativeFilePath) {
-  return relativeFilePath
+  const extension = path.extname(relativeFilePath);
+  const baseName = extension ? relativeFilePath.slice(0, -extension.length) : relativeFilePath;
+  const hash = crypto.createHash('sha1').update(relativeFilePath).digest('hex').slice(0, 8);
+  const normalizedBaseName = baseName
     .replace(/[\\/]+/g, '__')
     .replace(/[^a-zA-Z0-9._-]/g, '-');
+
+  return `${normalizedBaseName}__${hash}${extension}`;
 }
 
 function humanizeGroupName(groupName) {
-  return groupName
-    .split(path.sep)
+  return toPosixPath(groupName)
+    .split('/')
     .filter(part => part && part !== '.')
     .map(part => part.replace(/[-_]+/g, ' ').trim())
     .join(' / ');
