@@ -26,6 +26,7 @@
         "symfony/runtime": "7.4.*",
         "symfony/security-bundle": "7.4.*",
         "symfony/sendgrid-mailer": "7.4.*",
+        "symfony/serializer": "7.4.*",
         "symfony/stimulus-bundle": "*",
         "symfony/translation": "7.4.*",
         "symfony/twig-bundle": "7.4.*",

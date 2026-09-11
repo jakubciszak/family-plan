@@ -352,7 +352,7 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *         enabled?: bool|Param, // Default: false
  *     },
  *     serializer?: bool|array{ // Serializer configuration
- *         enabled?: bool|Param, // Default: false
+ *         enabled?: bool|Param, // Default: true
  *         enable_attributes?: bool|Param, // Default: true
  *         name_converter?: scalar|null|Param,
  *         circular_reference_handler?: scalar|null|Param,
