@@ -26,6 +26,50 @@ const clearInviteTokenFromUrl = () => {
     window.history.replaceState({}, document.title, url.pathname + url.search);
 };
 
+const INVITE_STORAGE_KEY = 'pendingInviteToken';
+const INVITE_TTL_MS = 60 * 60 * 1000;
+
+const clearPendingInvite = () => {
+    try {
+        localStorage.removeItem(INVITE_STORAGE_KEY);
+    } catch {
+        // storage unavailable
+    }
+};
+
+const storePendingInvite = (token) => {
+    try {
+        localStorage.setItem(INVITE_STORAGE_KEY, JSON.stringify({ token, storedAt: Date.now() }));
+    } catch {
+        // storage unavailable
+    }
+};
+
+const readPendingInvite = () => {
+    let raw = null;
+    try {
+        raw = localStorage.getItem(INVITE_STORAGE_KEY);
+    } catch {
+        return null;
+    }
+
+    if (!raw) {
+        return null;
+    }
+
+    try {
+        const { token, storedAt } = JSON.parse(raw);
+        if (!token || !storedAt || Date.now() - storedAt > INVITE_TTL_MS) {
+            clearPendingInvite();
+            return null;
+        }
+        return token;
+    } catch {
+        clearPendingInvite();
+        return null;
+    }
+};
+
 function App() {
     const { t } = useTranslation();
     const [isAuthenticated, setIsAuthenticated] = React.useState(false);
@@ -41,35 +85,28 @@ function App() {
         const tokenFromUrl = getInviteTokenFromUrl();
         if (tokenFromUrl) {
             setInviteToken(tokenFromUrl);
-            // Store in localStorage as backup
-            localStorage.setItem('pendingInviteToken', tokenFromUrl);
-            // Show registration form if there's an invite token
+            storePendingInvite(tokenFromUrl);
             setShowRegister(true);
-        } else {
-            // Check localStorage for pending invite token
-            const storedToken = localStorage.getItem('pendingInviteToken');
-            if (storedToken) {
-                setInviteToken(storedToken);
-            }
+            return;
         }
+
+        readPendingInvite();
     }, []);
 
     // Process pending invitation after authentication
     const processPendingInvitation = React.useCallback(async () => {
-        const token = inviteToken || localStorage.getItem('pendingInviteToken');
+        const token = inviteToken || readPendingInvite();
         if (token) {
             try {
                 await teamService.acceptInvitation(token);
-                // Clear the stored token
-                localStorage.removeItem('pendingInviteToken');
+                clearPendingInvite();
                 setInviteToken(null);
                 clearInviteTokenFromUrl();
                 // Optionally navigate to teams page
                 setCurrentPage('teams');
             } catch (err) {
                 console.error('Error accepting invitation:', err);
-                // Clear invalid token
-                localStorage.removeItem('pendingInviteToken');
+                clearPendingInvite();
                 setInviteToken(null);
             }
         }
@@ -94,7 +131,7 @@ function App() {
 
     // Process invitation when user becomes authenticated
     React.useEffect(() => {
-        if (isAuthenticated && (inviteToken || localStorage.getItem('pendingInviteToken'))) {
+        if (isAuthenticated && (inviteToken || readPendingInvite())) {
             processPendingInvitation();
         }
     }, [isAuthenticated, inviteToken, processPendingInvitation]);
