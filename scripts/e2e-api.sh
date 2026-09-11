@@ -102,6 +102,7 @@ check "szablony zadan"             200 GET  /api/task-templates "" $CO
 check "ustawienia uzytkownika"     200 GET  "/api/user-settings/$OWNER" "" $CO
 check "lista uzytkownikow"         200 GET  /api/users "" $CO
 check "wylogowanie"                200 POST /api/auth/logout "" $CO
+check "sesja martwa po wylogowaniu" 401 GET  /api/auth/me "" $CO
 
 echo
 echo "PASS=$PASS FAIL=$FAIL"

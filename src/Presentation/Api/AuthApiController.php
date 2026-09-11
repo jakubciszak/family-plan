@@ -15,10 +15,12 @@ use App\UserManagement\Domain\ValueObject\Email;
 use OpenApi\Attributes as OA;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInterface;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
 
@@ -157,9 +159,14 @@ class AuthApiController extends AbstractController
             ]
         )
     )]
-    public function logout(): JsonResponse
+    public function logout(Request $request, TokenStorageInterface $tokenStorage): JsonResponse
     {
-        // This is handled by Symfony Security
+        $tokenStorage->setToken(null);
+
+        if ($request->hasSession()) {
+            $request->getSession()->invalidate();
+        }
+
         return $this->json([
             'message' => 'Logout successful'
         ]);
