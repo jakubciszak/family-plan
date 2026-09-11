@@ -216,6 +216,15 @@
             "config/routes/security.yaml"
         ]
     },
+    "symfony/sendgrid-mailer": {
+        "version": "7.4",
+        "recipe": {
+            "repo": "github.com/symfony/recipes",
+            "branch": "main",
+            "version": "4.4",
+            "ref": "1caff9467bfc5c7f68503aa9eba9dc762a30ae21"
+        }
+    },
     "symfony/stimulus-bundle": {
         "version": "2.31",
         "recipe": {

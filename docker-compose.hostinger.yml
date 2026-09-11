@@ -1,8 +1,4 @@
-# Docker Compose configuration for Hostinger deployment
-# Uses pre-built images from GitHub Container Registry (ghcr.io)
-
 services:
-  # PostgreSQL Database
   database:
     image: postgres:16-alpine
     container_name: family-plan-db
@@ -22,48 +18,47 @@ services:
     networks:
       - family-plan-network
 
-  # PHP-FPM Backend (pre-built image from ghcr.io)
   php:
-    image: ghcr.io/jakubciszak/family-plan-php:latest
+    image: ghcr.io/jakubciszak/family-plan-php:${IMAGE_TAG:-latest}
     container_name: family-plan-php
     restart: unless-stopped
     working_dir: /app
     environment:
       APP_ENV: ${APP_ENV:-prod}
-      APP_SECRET: ${APP_SECRET:-CHANGE_ME_GENERATE_RANDOM_SECRET_KEY_FOR_PRODUCTION}
-      DATABASE_URL: "postgresql://${POSTGRES_USER:-app}:${POSTGRES_PASSWORD:-!ChangeMe!}@database:5432/${POSTGRES_DB:-app}?serverVersion=16&charset=utf8"
+      APP_SECRET: ${APP_SECRET:-CHANGE_ME}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-app}:${POSTGRES_PASSWORD:-!ChangeMe!}@database:5432/${POSTGRES_DB:-app}?serverVersion=16&charset=utf8
       SUPER_ADMIN_EMAIL: ${SUPER_ADMIN_EMAIL:-admin@familyplan.local}
       SUPER_ADMIN_NAME: ${SUPER_ADMIN_NAME:-Super Admin}
-      SUPER_ADMIN_PASSWORD: ${SUPER_ADMIN_PASSWORD:-CHANGE_ME_TO_STRONG_PASSWORD}
+      SUPER_ADMIN_PASSWORD: ${SUPER_ADMIN_PASSWORD:-CHANGE_ME}
+      MAILER_DSN: ${MAILER_DSN:-null://null}
+      MAILER_FROM_EMAIL: ${MAILER_FROM_EMAIL:-noreply@familyplan.local}
+      MAILER_FROM_NAME: ${MAILER_FROM_NAME:-Family Plan}
+      APP_URL: ${APP_URL:-https://family-plan.srv1201847.hstgr.cloud}
     depends_on:
       database:
         condition: service_healthy
     networks:
       - family-plan-network
 
-  # Nginx Web Server (pre-built image with static files from ghcr.io)
   nginx:
-    image: ghcr.io/jakubciszak/family-plan-nginx:latest
+    image: ghcr.io/jakubciszak/family-plan-nginx:${IMAGE_TAG:-latest}
     container_name: family-plan-nginx
     restart: unless-stopped
-    ports:
-      - "${APP_PORT:-8080}:80"
     depends_on:
       - php
     networks:
       - family-plan-network
+      - proxy-net
 
-  # React Frontend (pre-built image from ghcr.io)
   frontend:
-    image: ghcr.io/jakubciszak/family-plan-frontend:latest
+    image: ghcr.io/jakubciszak/family-plan-frontend:${IMAGE_TAG:-latest}
     container_name: family-plan-frontend
     restart: unless-stopped
-    ports:
-      - "${FRONTEND_PORT:-3000}:80"
-    networks:
-      - family-plan-network
     depends_on:
       - nginx
+    networks:
+      - family-plan-network
+      - proxy-net
 
 volumes:
   database_data:
@@ -72,3 +67,6 @@ volumes:
 networks:
   family-plan-network:
     driver: bridge
+  proxy-net:
+    external: true
+    name: proxy-net

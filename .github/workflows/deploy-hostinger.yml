@@ -9,11 +9,16 @@ permissions:
   contents: read
   packages: write
 
+concurrency:
+  group: deploy-hostinger
+  cancel-in-progress: false
+
 env:
   REGISTRY: ghcr.io
   PHP_IMAGE: ghcr.io/${{ github.repository_owner }}/family-plan-php
   NGINX_IMAGE: ghcr.io/${{ github.repository_owner }}/family-plan-nginx
   FRONTEND_IMAGE: ghcr.io/${{ github.repository_owner }}/family-plan-frontend
+  APP_HEALTH_URL: https://family-plan.srv1201847.hstgr.cloud
 
 jobs:
   build-and-push:
@@ -73,12 +78,30 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Deploy to Hostinger VPS
+      - name: Trigger project update on Hostinger VPS
         env:
           HOSTINGER_API_TOKEN: ${{ secrets.HOSTINGER_API_TOKEN }}
           VPS_ID: ${{ secrets.HOSTINGER_VPS_ID }}
+          PROJECT: family-plan-project
         run: |
-          # Update project on Hostinger
-          curl -X POST "https://api.hostinger.com/v1/vps/${VPS_ID}/projects/family-plan-project/update" \
+          set -euo pipefail
+          curl --fail-with-body -sS -X POST \
+            "https://developers.hostinger.com/api/vps/v1/virtual-machines/${VPS_ID}/docker/${PROJECT}/update" \
             -H "Authorization: Bearer ${HOSTINGER_API_TOKEN}" \
             -H "Content-Type: application/json"
+
+      - name: Wait for the application to come back up
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 30); do
+            api=$(curl -s -o /dev/null -w '%{http_code}' "${APP_HEALTH_URL}/api/auth/me" || true)
+            spa=$(curl -s -o /dev/null -w '%{http_code}' "${APP_HEALTH_URL}/" || true)
+            echo "attempt ${attempt}: api=${api} spa=${spa}"
+            if [ "$api" = "401" ] && [ "$spa" = "200" ]; then
+              echo "Deployment is healthy."
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "Application did not become healthy within 5 minutes."
+          exit 1
