@@ -24,6 +24,10 @@ services:
             - '../src/**/Domain/Event/'
             - '../src/**/Application/Command/'
 
+    App\TeamManagement\Application\Handler\InviteToTeamHandler:
+        arguments:
+            $appUrl: '%env(APP_URL)%'
+
     App\UserManagement\Application\Handler\RegisterUserHandler:
         arguments:
             $requireEmailActivation: '%env(bool:REQUIRE_EMAIL_ACTIVATION)%'

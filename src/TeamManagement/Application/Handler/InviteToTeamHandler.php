@@ -17,7 +17,6 @@ use App\TeamManagement\Domain\ValueObject\TeamRole;
 use App\UserManagement\Domain\Repository\UserRepositoryInterface;
 use App\UserManagement\Domain\ValueObject\Email;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
-use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 
 #[AsMessageHandler]
 final class InviteToTeamHandler
@@ -28,7 +27,7 @@ final class InviteToTeamHandler
         private readonly TeamInvitationRepositoryInterface $invitationRepository,
         private readonly UserRepositoryInterface $userRepository,
         private readonly NotificationFacade $notificationFacade,
-        private readonly UrlGeneratorInterface $urlGenerator
+        private readonly string $appUrl
     ) {
     }
 
@@ -70,11 +69,7 @@ final class InviteToTeamHandler
         $user = $this->userRepository->findByEmail($invitation->email());
         
         // Generate invitation link
-        $invitationUrl = $this->urlGenerator->generate(
-            'app_team_accept_invitation',
-            ['token' => $invitation->token()],
-            UrlGeneratorInterface::ABSOLUTE_URL
-        );
+        $invitationUrl = sprintf('%s/?invite=%s', rtrim($this->appUrl, '/'), $invitation->token());
         
         if ($user !== null) {
             // User exists - send invitation with link to accept
