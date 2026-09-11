@@ -78,6 +78,22 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Check required secrets are available
+        env:
+          HOSTINGER_API_TOKEN: ${{ secrets.HOSTINGER_API_TOKEN }}
+          VPS_ID: ${{ secrets.HOSTINGER_VPS_ID }}
+        run: |
+          missing=""
+          [ -n "${HOSTINGER_API_TOKEN}" ] || missing="${missing} HOSTINGER_API_TOKEN"
+          [ -n "${VPS_ID}" ] || missing="${missing} HOSTINGER_VPS_ID"
+          if [ -n "$missing" ]; then
+            echo "Missing repository secrets:${missing}"
+            echo "Set them under Settings > Secrets and variables > Actions > Repository secrets."
+            echo "Environment-scoped secrets are not visible to this job."
+            exit 1
+          fi
+          echo "Both secrets are present."
+
       - name: Trigger project update on Hostinger VPS
         env:
           HOSTINGER_API_TOKEN: ${{ secrets.HOSTINGER_API_TOKEN }}
