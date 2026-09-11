@@ -48,6 +48,31 @@ TOKEN=$(j "['invitations'][0]['token']")
 check "przyjecie zaproszenia"      200 POST "/api/teams/invitations/$TOKEN/accept" "" $CM
 check "zespol widoczny u dziecka"  200 GET  /api/teams "" $CM
 
+echo "Widocznosc zaproszen"
+check "zaproszenie osoby bez konta"   201 POST "/api/teams/$TEAM/invite" "{\"email\":\"nikt+$TS@example.com\",\"role\":\"member\"}" $CO
+curl -sS -o $D/b.txt -b $CO "$U/api/teams/$TEAM/members"
+INV=$(python3 -c "
+import json
+d=json.load(open('$D/b.txt'))
+i=d.get('invitations')
+print('BRAK' if i is None else len(i))" 2>/dev/null)
+if [ "$INV" = "1" ]; then PASS=$((PASS+1)); printf '  OK   %-46s %s\n' "admin widzi oczekujace zaproszenie" "$INV"
+else FAIL=$((FAIL+1)); printf '  FAIL %-46s oczekiwano 1, jest %s\n' "admin widzi oczekujace zaproszenie" "$INV"; fi
+
+LINK=$(python3 -c "
+import json
+d=json.load(open('$D/b.txt'))['invitations'][0]
+print('ok' if d.get('invitationUrl','').find('?invite=')>0 and d.get('accountExists') is False else 'zle')" 2>/dev/null)
+if [ "$LINK" = "ok" ]; then PASS=$((PASS+1)); printf '  OK   %-46s\n' "zaproszenie niesie link i flage konta"
+else FAIL=$((FAIL+1)); printf '  FAIL %-46s %s\n' "zaproszenie niesie link i flage konta" "$LINK"; fi
+
+curl -sS -o $D/b.txt -b $CM "$U/api/teams/$TEAM/members"
+HID=$(python3 -c "
+import json
+print('tak' if json.load(open('$D/b.txt')).get('invitations') is None else 'nie')" 2>/dev/null)
+if [ "$HID" = "tak" ]; then PASS=$((PASS+1)); printf '  OK   %-46s\n' "zwykly czlonek nie widzi tokenow"
+else FAIL=$((FAIL+1)); printf '  FAIL %-46s czlonek widzi zaproszenia\n' "zwykly czlonek nie widzi tokenow"; fi
+
 echo "Zadania"
 check "utworzenie zadania"         201 POST /api/tasks "{\"name\":\"Odkurzyc\",\"points\":30,\"frequency\":\"weekly\",\"teamId\":\"$TEAM\",\"createdBy\":\"$OWNER\"}" $CO
 TASK=$(j "['id']")

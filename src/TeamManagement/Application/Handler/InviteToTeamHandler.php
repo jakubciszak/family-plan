@@ -7,6 +7,7 @@ namespace App\TeamManagement\Application\Handler;
 use App\Notifications\Application\Service\NotificationFacade;
 use App\Shared\Domain\ValueObject\Uuid;
 use App\TeamManagement\Application\Command\InviteToTeamCommand;
+use App\TeamManagement\Application\Service\InvitationLinkGenerator;
 use App\TeamManagement\Domain\Entity\TeamInvitation;
 use App\TeamManagement\Domain\Exception\TeamNotFoundException;
 use App\TeamManagement\Domain\Exception\UnauthorizedTeamActionException;
@@ -27,7 +28,7 @@ final class InviteToTeamHandler
         private readonly TeamInvitationRepositoryInterface $invitationRepository,
         private readonly UserRepositoryInterface $userRepository,
         private readonly NotificationFacade $notificationFacade,
-        private readonly string $appUrl
+        private readonly InvitationLinkGenerator $invitationLink
     ) {
     }
 
@@ -69,7 +70,7 @@ final class InviteToTeamHandler
         $user = $this->userRepository->findByEmail($invitation->email());
         
         // Generate invitation link
-        $invitationUrl = sprintf('%s/?invite=%s', rtrim($this->appUrl, '/'), $invitation->token());
+        $invitationUrl = $this->invitationLink->forToken($invitation->token());
         
         if ($user !== null) {
             // User exists - send invitation with link to accept

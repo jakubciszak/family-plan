@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Api;
 
+use App\UserManagement\Domain\ValueObject\Role;
 use Symfony\Component\HttpFoundation\Response;
 
 class TeamApiTest extends ApiTestCase
@@ -25,5 +26,52 @@ class TeamApiTest extends ApiTestCase
             'The task list hides its create button unless the team carries the caller role.'
         );
         $this->assertSame('admin', $teams[0]['role']);
+    }
+
+    public function testMembersListCarriesPendingInvitationsWithACopyableLink(): void
+    {
+        $team = $this->assertJsonResponse(
+            $this->postJson('/api/teams', ['name' => 'Rodzina', 'description' => null]),
+            Response::HTTP_CREATED
+        );
+
+        $this->assertJsonResponse(
+            $this->postJson("/api/teams/{$team['id']}/invite", [
+                'email' => 'bezkonta@example.com',
+                'role' => 'member',
+            ]),
+            Response::HTTP_CREATED
+        );
+
+        $payload = $this->getJson("/api/teams/{$team['id']}/members");
+
+        $this->assertArrayHasKey('invitations', $payload);
+        $this->assertCount(1, $payload['invitations']);
+
+        $invitation = $payload['invitations'][0];
+        $this->assertSame('bezkonta@example.com', $invitation['email']);
+        $this->assertSame('pending', $invitation['status']);
+        $this->assertFalse($invitation['accountExists']);
+        $this->assertStringContainsString('?invite=' . $invitation['token'], $invitation['invitationUrl']);
+    }
+
+    public function testInvitationTokensAreHiddenFromPlainMembers(): void
+    {
+        $team = $this->assertJsonResponse(
+            $this->postJson('/api/teams', ['name' => 'Rodzina', 'description' => null]),
+            Response::HTTP_CREATED
+        );
+
+        $this->assertJsonResponse(
+            $this->postJson("/api/teams/{$team['id']}/invite", [
+                'email' => 'bezkonta@example.com',
+                'role' => 'member',
+            ]),
+            Response::HTTP_CREATED
+        );
+
+        $this->loginAs($this->authenticate(Role::USER));
+
+        $this->assertArrayNotHasKey('invitations', $this->getJson("/api/teams/{$team['id']}/members"));
     }
 }

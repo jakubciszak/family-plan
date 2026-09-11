@@ -164,7 +164,7 @@
     "roleAdmin": "Admin",
     "roleMember": "Member",
     "remove": "Remove",
-    "pendingInvitations": "Pending Invitations",
+    "pendingInvitations": "Pending invitations",
     "acceptInvitation": "Accept",
     "invitationText": "You've been invited as {{role}}",
     "invitationSent": "Invitation sent successfully",
@@ -174,6 +174,11 @@
     "errorCreatingTeam": "Error creating team",
     "errorSendingInvitation": "Error sending invitation",
     "errorAcceptingInvitation": "Error accepting invitation",
-    "errorRemovingMember": "Error removing member"
+    "errorRemovingMember": "Error removing member",
+    "pendingInvitationsHint": "Email is disabled — copy the link and pass it to the invited person.",
+    "invitationAwaitingAcceptance": "Has an account, awaiting acceptance",
+    "invitationNeedsRegistration": "No account yet, the link leads to registration",
+    "copyLink": "Copy link",
+    "linkCopied": "Copied"
   }
 }

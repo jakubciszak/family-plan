@@ -164,7 +164,7 @@
     "roleAdmin": "Administrator",
     "roleMember": "Członek",
     "remove": "Usuń",
-    "pendingInvitations": "Oczekujące Zaproszenia",
+    "pendingInvitations": "Oczekujące zaproszenia",
     "acceptInvitation": "Akceptuj",
     "invitationText": "Zostałeś zaproszony jako {{role}}",
     "invitationSent": "Zaproszenie wysłane pomyślnie",
@@ -174,6 +174,11 @@
     "errorCreatingTeam": "Błąd podczas tworzenia zespołu",
     "errorSendingInvitation": "Błąd podczas wysyłania zaproszenia",
     "errorAcceptingInvitation": "Błąd podczas akceptowania zaproszenia",
-    "errorRemovingMember": "Błąd podczas usuwania członka"
+    "errorRemovingMember": "Błąd podczas usuwania członka",
+    "pendingInvitationsHint": "Poczta jest wyłączona — skopiuj link i przekaż go zapraszanej osobie.",
+    "invitationAwaitingAcceptance": "Ma już konto, czeka na akceptację",
+    "invitationNeedsRegistration": "Nie ma jeszcze konta, link poprowadzi do rejestracji",
+    "copyLink": "Kopiuj link",
+    "linkCopied": "Skopiowano"
   }
 }

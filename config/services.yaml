@@ -24,7 +24,7 @@ services:
             - '../src/**/Domain/Event/'
             - '../src/**/Application/Command/'
 
-    App\TeamManagement\Application\Handler\InviteToTeamHandler:
+    App\TeamManagement\Application\Service\InvitationLinkGenerator:
         arguments:
             $appUrl: '%env(APP_URL)%'
 

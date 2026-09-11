@@ -12,6 +12,7 @@ use App\Notifications\Domain\ValueObject\Recipient;
 use App\Shared\Domain\ValueObject\Uuid;
 use App\TeamManagement\Application\Command\InviteToTeamCommand;
 use App\TeamManagement\Application\Handler\InviteToTeamHandler;
+use App\TeamManagement\Application\Service\InvitationLinkGenerator;
 use App\TeamManagement\Domain\Entity\Team;
 use App\TeamManagement\Domain\Entity\TeamInvitation;
 use App\TeamManagement\Domain\Repository\TeamInvitationRepositoryInterface;
@@ -68,7 +69,7 @@ class InviteToTeamHandlerTest extends TestCase
             $invitationRepository,
             $userRepository,
             new NotificationFacade([$recorder]),
-            'https://family-plan.example.com/'
+            new InvitationLinkGenerator('https://family-plan.example.com/')
         );
 
         $handler(new InviteToTeamCommand(

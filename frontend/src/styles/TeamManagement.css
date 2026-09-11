@@ -350,3 +350,49 @@
         font-size: 13px;
     }
 }
+
+.invitation-card {
+    border-style: dashed;
+}
+
+.pending-invitations-hint {
+    margin: 0 0 12px;
+    color: #6c757d;
+    font-size: 0.9rem;
+}
+
+.invitation-status {
+    color: #6c757d;
+    font-size: 0.85rem;
+}
+
+.invitation-link {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex: 1 1 320px;
+    justify-content: flex-end;
+}
+
+.invitation-link-input {
+    flex: 1 1 auto;
+    min-width: 0;
+    max-width: 380px;
+    padding: 6px 8px;
+    font-family: monospace;
+    font-size: 0.8rem;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    background-color: #fff;
+}
+
+@media (max-width: 768px) {
+    .invitation-link {
+        width: 100%;
+        flex-wrap: wrap;
+    }
+
+    .invitation-link-input {
+        max-width: none;
+    }
+}

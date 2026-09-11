@@ -9,6 +9,8 @@ const TeamManagement = () => {
     const [selectedTeam, setSelectedTeam] = useState(null);
     const [members, setMembers] = useState([]);
     const [invitations, setInvitations] = useState([]);
+    const [pendingInvitations, setPendingInvitations] = useState([]);
+    const [copiedInvitationId, setCopiedInvitationId] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [showCreateForm, setShowCreateForm] = useState(false);
@@ -49,6 +51,7 @@ const TeamManagement = () => {
         try {
             const response = await teamService.getTeamMembers(teamId);
             setMembers(response.members || []);
+            setPendingInvitations(response.invitations || []);
         } catch (err) {
             console.error('Error loading team members:', err);
         }
@@ -92,10 +95,20 @@ const TeamManagement = () => {
             setInviteEmail('');
             setInviteRole('member');
             setShowInviteForm(false);
-            alert(t('teams.invitationSent'));
+            loadTeamMembers(selectedTeam.id);
         } catch (err) {
             setError(t('teams.errorSendingInvitation'));
             console.error('Error inviting member:', err);
+        }
+    };
+
+    const handleCopyInvitationLink = async (invitation) => {
+        try {
+            await navigator.clipboard.writeText(invitation.invitationUrl);
+            setCopiedInvitationId(invitation.id);
+            setTimeout(() => setCopiedInvitationId(null), 2000);
+        } catch (err) {
+            console.error('Error copying invitation link:', err);
         }
     };
 
@@ -273,6 +286,50 @@ const TeamManagement = () => {
                             </div>
                         ))}
                     </div>
+
+                    {pendingInvitations.length > 0 && (
+                        <>
+                            <h3>{t('teams.pendingInvitations')}</h3>
+                            <p className="pending-invitations-hint">{t('teams.pendingInvitationsHint')}</p>
+                            <div className="members-list">
+                                {pendingInvitations.map((invitation) => (
+                                    <div key={invitation.id} className="member-card invitation-card">
+                                        <div className="member-info">
+                                            <strong>{invitation.email}</strong>
+                                            <span className={`member-role role-${invitation.role}`}>
+                                                {t(`teams.role${invitation.role.charAt(0).toUpperCase()}${invitation.role.slice(1)}`)}
+                                            </span>
+                                            <span className="invitation-status">
+                                                {invitation.accountExists
+                                                    ? t('teams.invitationAwaitingAcceptance')
+                                                    : t('teams.invitationNeedsRegistration')}
+                                            </span>
+                                        </div>
+                                        {invitation.invitationUrl && (
+                                            <div className="invitation-link">
+                                                <input
+                                                    type="text"
+                                                    readOnly
+                                                    value={invitation.invitationUrl}
+                                                    onFocus={(e) => e.target.select()}
+                                                    className="invitation-link-input"
+                                                />
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleCopyInvitationLink(invitation)}
+                                                    className="btn-secondary"
+                                                >
+                                                    {copiedInvitationId === invitation.id
+                                                        ? t('teams.linkCopied')
+                                                        : t('teams.copyLink')}
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        </>
+                    )}
                 </div>
             )}
         </div>

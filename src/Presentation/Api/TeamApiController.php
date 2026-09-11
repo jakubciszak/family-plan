@@ -15,6 +15,8 @@ use App\TeamManagement\Application\Query\GetTeamMembersQuery;
 use App\TeamManagement\Application\Query\GetUserInvitationsQuery;
 use App\TeamManagement\Application\Query\GetUserTeamsQuery;
 use App\TeamManagement\Domain\Entity\Team;
+use App\TeamManagement\Domain\Repository\TeamInvitationRepositoryInterface;
+use App\TeamManagement\Application\Service\InvitationLinkGenerator;
 use App\TeamManagement\Domain\Repository\TeamMemberRepositoryInterface;
 use App\TeamManagement\Domain\Entity\TeamInvitation;
 use App\TeamManagement\Domain\Entity\TeamMember;
@@ -41,7 +43,9 @@ class TeamApiController extends AbstractController
         private readonly MessageBusInterface $commandBus,
         private readonly MessageBusInterface $queryBus,
         private readonly UserRepositoryInterface $userRepository,
-        private readonly TeamMemberRepositoryInterface $teamMemberRepository
+        private readonly TeamMemberRepositoryInterface $teamMemberRepository,
+        private readonly InvitationLinkGenerator $invitationLink,
+        private readonly TeamInvitationRepositoryInterface $invitationRepository
     ) {
     }
 
@@ -224,9 +228,21 @@ class TeamApiController extends AbstractController
         $members = $this->queryBus->dispatch(new GetTeamMembersQuery($id))
             ->last(HandledStamp::class)->getResult();
 
-        return $this->json([
-            'members' => array_map(fn(TeamMember $member) => $this->serializeMember($member), $members),
-        ]);
+        $payload = [
+            'members' => array_map(fn (TeamMember $member) => $this->serializeMember($member), $members),
+        ];
+
+        if ($this->teamMemberRepository->isUserAdminOfTeam($this->currentUserId(), Uuid::fromString($id))) {
+            $invitations = $this->queryBus->dispatch(new GetTeamInvitationsQuery($id))
+                ->last(HandledStamp::class)->getResult();
+
+            $payload['invitations'] = array_values(array_map(
+                fn (TeamInvitation $invitation) => $this->serializeInvitation($invitation),
+                array_filter($invitations, fn (TeamInvitation $invitation) => $invitation->status()->isPending())
+            ));
+        }
+
+        return $this->json($payload);
     }
 
     #[Route('/{id}/invite', name: 'invite', methods: ['POST'])]
@@ -271,9 +287,12 @@ class TeamApiController extends AbstractController
             $userEntity->id()->value()
         ));
 
+        $invitation = $this->invitationRepository->findById(Uuid::fromString($invitationId));
+
         return $this->json([
             'message' => 'Invitation sent successfully',
-            'invitationId' => $invitationId
+            'invitationId' => $invitationId,
+            'invitation' => $invitation === null ? null : $this->serializeInvitation($invitation),
         ], Response::HTTP_CREATED);
     }
 
@@ -401,6 +420,13 @@ class TeamApiController extends AbstractController
         return $data;
     }
 
+    private function currentUserId(): Uuid
+    {
+        return $this->userRepository
+            ->findByEmail(\App\UserManagement\Domain\ValueObject\Email::fromString($this->getUser()->getUserIdentifier()))
+            ->id();
+    }
+
     private function serializeMember(TeamMember $member): array
     {
         $user = $this->userRepository->findById($member->userId());
@@ -417,14 +443,19 @@ class TeamApiController extends AbstractController
 
     private function serializeInvitation(TeamInvitation $invitation): array
     {
+        $token = $invitation->token();
+
         return [
             'id' => $invitation->id()->value(),
             'teamId' => $invitation->teamId()->value(),
+            'email' => $invitation->email()->value(),
             'role' => $invitation->role()->value(),
-            'token' => $invitation->token(),
+            'token' => $token,
             'status' => $invitation->status()->value(),
             'createdAt' => $invitation->createdAt()->format('c'),
-            'expiresAt' => $invitation->expiresAt()?->format('c')
+            'expiresAt' => $invitation->expiresAt()?->format('c'),
+            'accountExists' => $this->userRepository->findByEmail($invitation->email()) !== null,
+            'invitationUrl' => $token === null ? null : $this->invitationLink->forToken($token)
         ];
     }
 }
