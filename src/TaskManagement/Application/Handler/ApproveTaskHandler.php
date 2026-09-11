@@ -25,16 +25,15 @@ final readonly class ApproveTaskHandler
     public function __invoke(ApproveTaskCommand $command): void
     {
         $adminId = Uuid::fromString($command->adminId);
-        
-        // Check if user has permission to approve tasks
-        if (!$this->approvalPolicy->canApprove($adminId)) {
-            throw new UnauthorizedTaskActionException('Only administrators can approve tasks');
-        }
-        
+
         $task = $this->taskRepository->findById(Uuid::fromString($command->taskId));
 
         if (!$task) {
             throw new \RuntimeException('Task not found');
+        }
+
+        if (!$this->approvalPolicy->canApprove($adminId, $task->teamId())) {
+            throw new UnauthorizedTaskActionException('Only team admins can approve tasks');
         }
 
         // Get the user who completed the task before approving

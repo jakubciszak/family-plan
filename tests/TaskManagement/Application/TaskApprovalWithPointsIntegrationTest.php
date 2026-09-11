@@ -216,7 +216,7 @@ class TaskApprovalWithPointsIntegrationTest extends TestCase
 
         // When/Then - User2 (non-admin) tries to approve
         $this->expectException(\DomainException::class);
-        $this->expectExceptionMessage('Only administrators can approve tasks');
+        $this->expectExceptionMessage('Only team admins can approve tasks');
 
         $approveCommand = new ApproveTaskCommand($taskId->value(), $userId2->value());
         ($this->approveHandler)($approveCommand);

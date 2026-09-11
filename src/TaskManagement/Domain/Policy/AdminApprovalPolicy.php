@@ -18,7 +18,7 @@ final readonly class AdminApprovalPolicy implements TaskApprovalPolicyInterface
     ) {
     }
 
-    public function canApprove(Uuid $userId): bool
+    public function canApprove(Uuid $userId, ?Uuid $teamId = null): bool
     {
         $user = $this->userRepository->findById($userId);
         

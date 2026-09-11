@@ -79,7 +79,7 @@ services:
 
     # Policy implementations
     App\TaskManagement\Domain\Policy\TaskApprovalPolicyInterface:
-        class: App\TaskManagement\Domain\Policy\AdminApprovalPolicy
+        class: App\TaskManagement\Domain\Policy\TeamAdminApprovalPolicy
 
     # Strategy implementations
     App\TaskManagement\Domain\Strategy\PointsAwardStrategyInterface:

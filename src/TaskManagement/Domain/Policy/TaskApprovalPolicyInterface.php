@@ -17,7 +17,8 @@ interface TaskApprovalPolicyInterface
      * Determines if a user can approve a task.
      *
      * @param Uuid $userId The ID of the user attempting to approve
+     * @param Uuid|null $teamId The team the task belongs to, when known
      * @return bool True if the user is authorized to approve tasks
      */
-    public function canApprove(Uuid $userId): bool;
+    public function canApprove(Uuid $userId, ?Uuid $teamId = null): bool;
 }

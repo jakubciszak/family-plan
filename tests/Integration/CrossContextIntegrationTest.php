@@ -246,7 +246,7 @@ class CrossContextIntegrationTest extends TestCase
         
         // When/Then - User2 tries to approve (should fail)
         $this->expectException(\DomainException::class);
-        $this->expectExceptionMessage('Only administrators can approve tasks');
+        $this->expectExceptionMessage('Only team admins can approve tasks');
         
         ($this->approveTaskHandler)(new ApproveTaskCommand($taskId->value(), $user2Id->value()));
     }
