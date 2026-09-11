@@ -87,6 +87,7 @@ Zmienne środowiskowe projektu:
 | `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD` | Hasło jest zapisane w wolumenie przy inicjalizacji bazy — zmiana samej zmiennej nie zmienia hasła w PostgreSQL |
 | `APP_SECRET` | Klucz podpisujący sesje i CSRF; zmiana wylogowuje wszystkich |
 | `SUPER_ADMIN_EMAIL`, `SUPER_ADMIN_NAME`, `SUPER_ADMIN_PASSWORD` | Konto zakładane/aktualizowane przy każdym starcie kontenera PHP |
+| `REQUIRE_EMAIL_ACTIVATION` | `false` aktywuje konto od razu przy rejestracji; `true` wymaga kliknięcia w link z maila |
 | `MAILER_DSN` | `sendgrid://KEY@default`; `null://null` wycisza wysyłkę bez błędu |
 | `MAILER_FROM_EMAIL`, `MAILER_FROM_NAME` | Adres nadawcy musi być zweryfikowany w SendGridzie, inaczej wysyłka kończy się odrzuceniem |
 | `APP_URL` | Baza linków w mailach, m.in. w zaproszeniach |
