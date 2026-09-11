@@ -40,7 +40,7 @@ abstract class Party
         #[ORM\Column(type: 'uuid')]
         protected Uuid $id,
 
-        #[ORM\Column(type: 'string', length: 50)]
+        #[ORM\Column(type: 'party_type', length: 50)]
         protected PartyType $type,
 
         #[ORM\Column(type: 'datetime_immutable')]

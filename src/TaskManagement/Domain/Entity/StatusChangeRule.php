@@ -38,7 +38,7 @@ class StatusChangeRule
         #[ORM\Column(type: 'text')]
         private string $description,
 
-        #[ORM\Column(type: 'string', length: 50)]
+        #[ORM\Column(type: 'string', length: 50, enumType: StatusChangeConditionType::class)]
         private StatusChangeConditionType $conditionType,
 
         #[ORM\Column(type: 'json')]

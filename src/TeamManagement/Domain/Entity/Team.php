@@ -22,7 +22,7 @@ class Team
         #[ORM\Column(type: 'uuid')]
         private Uuid $id,
         
-        #[ORM\Column(type: 'string', length: 255)]
+        #[ORM\Column(type: 'team_name', length: 255)]
         private TeamName $name,
         
         #[ORM\Column(type: 'text', nullable: true)]

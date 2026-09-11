@@ -32,10 +32,10 @@ class TeamInvitation
         #[ORM\Column(type: 'email')]
         private Email $email,
         
-        #[ORM\Column(type: 'string', length: 50)]
+        #[ORM\Column(type: 'team_role', length: 50)]
         private TeamRole $role,
         
-        #[ORM\Column(type: 'string', length: 50)]
+        #[ORM\Column(type: 'invitation_status', length: 50)]
         private InvitationStatus $status,
         
         #[ORM\Column(type: 'uuid')]
