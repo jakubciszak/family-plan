@@ -55,6 +55,35 @@ class TeamApiTest extends ApiTestCase
         $this->assertStringContainsString('?invite=' . $invitation['token'], $invitation['invitationUrl']);
     }
 
+    public function testInvitationCannotBeAcceptedByADifferentAccount(): void
+    {
+        $team = $this->assertJsonResponse(
+            $this->postJson('/api/teams', ['name' => 'Rodzina', 'description' => null]),
+            Response::HTTP_CREATED
+        );
+
+        $invite = $this->assertJsonResponse(
+            $this->postJson("/api/teams/{$team['id']}/invite", [
+                'email' => 'ktos-inny@example.com',
+                'role' => 'member',
+            ]),
+            Response::HTTP_CREATED
+        );
+
+        $token = $invite['invitation']['token'];
+
+        $this->assertSame(
+            Response::HTTP_FORBIDDEN,
+            $this->postJson("/api/teams/invitations/{$token}/accept", [])->getStatusCode()
+        );
+
+        $teams = $this->getJson('/api/teams')['teams'];
+        $this->assertCount(1, $teams);
+        $this->assertSame('admin', $teams[0]['role']);
+
+        $this->assertCount(1, $this->getJson("/api/teams/{$team['id']}/members")['members']);
+    }
+
     public function testInvitationTokensAreHiddenFromPlainMembers(): void
     {
         $team = $this->assertJsonResponse(

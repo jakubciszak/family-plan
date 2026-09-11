@@ -7,6 +7,7 @@ import BonusRulesManagement from './pages/BonusRulesManagement';
 import StatusChangeRulesManagement from './pages/StatusChangeRulesManagement';
 import UserSettings from './pages/UserSettings';
 import TeamManagement from './pages/TeamManagement';
+import Account from './pages/Account';
 import LanguageSwitcher from './components/LanguageSwitcher';
 import apiClient from './services/apiClient';
 import teamService from './services/teamService';
@@ -183,6 +184,12 @@ function App() {
                         </>
                     )}
                     <button
+                        onClick={() => handlePageChange('account')}
+                        className={currentPage === 'account' ? 'nav-active' : ''}
+                    >
+                        {t('nav.account')}
+                    </button>
+                    <button
                         onClick={() => handlePageChange('settings')}
                         className={currentPage === 'settings' ? 'nav-active' : ''}
                     >
@@ -201,6 +208,7 @@ function App() {
                 {currentPage === 'teams' && <TeamManagement user={user} />}
                 {currentPage === 'bonus-rules' && <BonusRulesManagement user={user} />}
                 {currentPage === 'status-change-rules' && <StatusChangeRulesManagement user={user} />}
+                {currentPage === 'account' && <Account user={user} points={userPoints} />}
                 {currentPage === 'settings' && <UserSettings user={user} />}
             </main>
         </div>

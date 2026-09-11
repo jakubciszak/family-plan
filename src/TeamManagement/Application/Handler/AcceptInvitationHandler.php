@@ -8,8 +8,10 @@ use App\Shared\Domain\ValueObject\Uuid;
 use App\TeamManagement\Application\Command\AcceptInvitationCommand;
 use App\TeamManagement\Domain\Entity\TeamMember;
 use App\TeamManagement\Domain\Exception\InvitationNotFoundException;
+use App\TeamManagement\Domain\Exception\UnauthorizedTeamActionException;
 use App\TeamManagement\Domain\Repository\TeamInvitationRepositoryInterface;
 use App\TeamManagement\Domain\Repository\TeamMemberRepositoryInterface;
+use App\UserManagement\Domain\Repository\UserRepositoryInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 
 #[AsMessageHandler]
@@ -17,7 +19,8 @@ final class AcceptInvitationHandler
 {
     public function __construct(
         private readonly TeamInvitationRepositoryInterface $invitationRepository,
-        private readonly TeamMemberRepositoryInterface $teamMemberRepository
+        private readonly TeamMemberRepositoryInterface $teamMemberRepository,
+        private readonly UserRepositoryInterface $userRepository
     ) {
     }
 
@@ -28,20 +31,35 @@ final class AcceptInvitationHandler
         if ($invitation === null) {
             throw new InvitationNotFoundException($command->token);
         }
-        
+
+        $userId = Uuid::fromString($command->userId);
+        $user = $this->userRepository->findById($userId);
+
+        if ($user === null) {
+            throw new UnauthorizedTeamActionException('Only the invited account can accept this invitation');
+        }
+
+        if (!$user->email()->equals($invitation->email())) {
+            throw new UnauthorizedTeamActionException(
+                sprintf('This invitation was issued for %s', $invitation->email()->value())
+            );
+        }
+
         // Accept invitation (this validates it's pending and not expired)
         $invitation->accept();
         $this->invitationRepository->save($invitation);
-        
-        // Add user as team member
-        $userId = Uuid::fromString($command->userId);
+
+        if ($this->teamMemberRepository->findByTeamIdAndUserId($invitation->teamId(), $userId) !== null) {
+            return;
+        }
+
         $member = TeamMember::create(
             Uuid::generate(),
             $invitation->teamId(),
             $userId,
             $invitation->role()
         );
-        
+
         $this->teamMemberRepository->save($member);
     }
 }

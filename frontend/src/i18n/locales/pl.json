@@ -8,7 +8,8 @@
     "teams": "Zespoły",
     "bonusRules": "Zasady bonusowe",
     "statusChangeRules": "Reguły Zmian Statusów",
-    "settings": "Ustawienia"
+    "settings": "Ustawienia",
+    "account": "Moje Konto"
   },
   "auth": {
     "login": "Zaloguj",
@@ -113,7 +114,8 @@
     "error": "Wystąpił błąd",
     "success": "Operacja zakończona sukcesem",
     "submit": "Wyślij",
-    "close": "Zamknij"
+    "close": "Zamknij",
+    "saving": "Zapisywanie..."
   },
   "errors": {
     "required": "To pole jest wymagane",
@@ -180,5 +182,24 @@
     "invitationNeedsRegistration": "Nie ma jeszcze konta, link poprowadzi do rejestracji",
     "copyLink": "Kopiuj link",
     "linkCopied": "Skopiowano"
+  },
+  "account": {
+    "title": "Moje Konto",
+    "details": "Dane konta",
+    "name": "Imię",
+    "email": "Email",
+    "role": "Rola",
+    "points": "Punkty",
+    "roleAdmin": "Administrator",
+    "roleUser": "Użytkownik",
+    "changePassword": "Zmień hasło",
+    "currentPassword": "Obecne hasło",
+    "newPassword": "Nowe hasło",
+    "confirmPassword": "Powtórz nowe hasło",
+    "passwordChanged": "Hasło zostało zmienione.",
+    "passwordsDoNotMatch": "Hasła nie są takie same.",
+    "passwordTooShort": "Hasło musi mieć co najmniej 8 znaków.",
+    "currentPasswordIncorrect": "Obecne hasło jest nieprawidłowe.",
+    "passwordChangeError": "Nie udało się zmienić hasła. Spróbuj ponownie."
   }
 }

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Presentation\Api;
 
 use App\Presentation\Api\Dto\Auth\RegisterUserRequest;
+use App\Presentation\Api\Dto\Auth\ChangePasswordRequest;
 use App\Shared\Domain\ValueObject\Uuid;
 use App\UserManagement\Application\Command\RegisterUserCommand;
 use App\UserManagement\Application\Handler\RegisterUserHandler;
@@ -16,7 +17,9 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
+use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
 
 #[Route('/api/auth', name: 'api_auth_')]
@@ -26,6 +29,7 @@ class AuthApiController extends AbstractController
     public function __construct(
         private readonly RegisterUserHandler $registerUserHandler,
         private readonly UserRepositoryInterface $userRepository,
+        private readonly UserPasswordHasherInterface $passwordHasher,
         private readonly bool $requireEmailActivation = true
     ) {
     }
@@ -228,6 +232,44 @@ class AuthApiController extends AbstractController
                 'error' => 'Registration failed: ' . $e->getMessage()
             ], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
+    }
+
+    #[Route('/change-password', name: 'change_password', methods: ['POST'])]
+    #[IsGranted('ROLE_USER')]
+    #[OA\Post(
+        path: '/api/auth/change-password',
+        summary: 'Change the password of the signed in account',
+        tags: ['Authentication']
+    )]
+    #[OA\RequestBody(
+        required: true,
+        content: new OA\JsonContent(
+            required: ['currentPassword', 'newPassword'],
+            properties: [
+                new OA\Property(property: 'currentPassword', type: 'string', format: 'password'),
+                new OA\Property(property: 'newPassword', type: 'string', format: 'password', minLength: 8)
+            ]
+        )
+    )]
+    #[OA\Response(response: 200, description: 'Password changed')]
+    #[OA\Response(response: 400, description: 'Current password does not match')]
+    public function changePassword(#[MapRequestPayload] ChangePasswordRequest $request): JsonResponse
+    {
+        $user = $this->userRepository->findByEmail(
+            Email::fromString($this->getUser()->getUserIdentifier())
+        );
+
+        if ($user === null || !$this->passwordHasher->isPasswordValid($user, $request->currentPassword)) {
+            return $this->json(
+                ['error' => 'Current password is incorrect'],
+                Response::HTTP_BAD_REQUEST
+            );
+        }
+
+        $user->changePassword($this->passwordHasher->hashPassword($user, $request->newPassword));
+        $this->userRepository->save($user);
+
+        return $this->json(['message' => 'Password changed successfully']);
     }
 
     #[Route('/activate/{token}', name: 'activate', methods: ['GET', 'POST'])]

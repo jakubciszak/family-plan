@@ -8,7 +8,8 @@
     "teams": "Teams",
     "bonusRules": "Bonus Rules",
     "statusChangeRules": "Status Change Rules",
-    "settings": "Settings"
+    "settings": "Settings",
+    "account": "My Account"
   },
   "auth": {
     "login": "Login",
@@ -113,7 +114,8 @@
     "error": "An error occurred",
     "success": "Operation successful",
     "submit": "Submit",
-    "close": "Close"
+    "close": "Close",
+    "saving": "Saving..."
   },
   "errors": {
     "required": "This field is required",
@@ -180,5 +182,24 @@
     "invitationNeedsRegistration": "No account yet, the link leads to registration",
     "copyLink": "Copy link",
     "linkCopied": "Copied"
+  },
+  "account": {
+    "title": "My Account",
+    "details": "Account details",
+    "name": "Name",
+    "email": "Email",
+    "role": "Role",
+    "points": "Points",
+    "roleAdmin": "Administrator",
+    "roleUser": "User",
+    "changePassword": "Change password",
+    "currentPassword": "Current password",
+    "newPassword": "New password",
+    "confirmPassword": "Repeat new password",
+    "passwordChanged": "Your password has been changed.",
+    "passwordsDoNotMatch": "The passwords do not match.",
+    "passwordTooShort": "The password must be at least 8 characters long.",
+    "currentPasswordIncorrect": "The current password is incorrect.",
+    "passwordChangeError": "Could not change the password. Please try again."
   }
 }

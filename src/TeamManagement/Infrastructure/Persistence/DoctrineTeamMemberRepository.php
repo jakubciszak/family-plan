@@ -35,6 +35,8 @@ final class DoctrineTeamMemberRepository implements TeamMemberRepositoryInterfac
             ->andWhere('tm.userId = :userId')
             ->setParameter('teamId', $teamId->value())
             ->setParameter('userId', $userId->value())
+            ->orderBy('tm.joinedAt', 'ASC')
+            ->setMaxResults(1)
             ->getQuery()
             ->getOneOrNullResult();
     }
