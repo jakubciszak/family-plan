@@ -17,7 +17,8 @@ RUN apt-get update \
     && { \
         echo 'opcache.enable=1'; \
         echo 'opcache.enable_cli=1'; \
-        echo 'opcache.validate_timestamps=0'; \
+        echo 'opcache.validate_timestamps=1'; \
+        echo 'opcache.revalidate_freq=0'; \
     } > /usr/local/etc/php/conf.d/opcache.ini \
     && rm -rf /var/lib/apt/lists/*
 

@@ -23,6 +23,7 @@ security:
                 check_path: /api/auth/login
                 username_path: email
                 password_path: password
+            entry_point: App\Presentation\Api\Security\ApiAuthenticationEntryPoint
             form_login:
                 login_path: app_login
                 check_path: app_login
@@ -41,6 +42,8 @@ security:
         - { path: ^/api/auth/login, roles: PUBLIC_ACCESS }
         - { path: ^/api/auth/register, roles: PUBLIC_ACCESS }
         - { path: ^/api/auth/activate, roles: PUBLIC_ACCESS }
+        - { path: ^/api/doc, roles: PUBLIC_ACCESS }
+        - { path: ^/api, roles: ROLE_USER }
         - { path: ^/task/approve, roles: ROLE_ADMIN }
         - { path: ^/task, roles: ROLE_USER }
         - { path: ^/user, roles: ROLE_ADMIN }

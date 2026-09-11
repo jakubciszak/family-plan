@@ -16,6 +16,7 @@ use App\TaskManagement\Domain\Entity\Task;
 use App\TaskManagement\Domain\Repository\TaskRepositoryInterface;
 use App\UserManagement\Application\Query\FindUserByIdQuery;
 use App\UserManagement\Domain\Repository\UserRepositoryInterface;
+use App\UserManagement\Domain\ValueObject\Email;
 use OpenApi\Attributes as OA;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -296,10 +297,7 @@ class TaskApiController extends AbstractController
     )]
     public function complete(string $id, Request $request): JsonResponse
     {
-        $data = json_decode($request->getContent(), true);
-        $userId = $data['userId'] ?? Uuid::generate()->value();
-
-        $command = new CompleteTaskCommand($id, $userId);
+        $command = new CompleteTaskCommand($id, $this->currentUserId());
         $this->commandBus->dispatch($command);
 
         $task = $this->queryBus->dispatch(new FindTaskByIdQuery($id))->last(HandledStamp::class)->getResult();
@@ -346,10 +344,7 @@ class TaskApiController extends AbstractController
     )]
     public function approve(string $id, Request $request): JsonResponse
     {
-        $data = json_decode($request->getContent(), true);
-        $adminId = $data['adminId'] ?? Uuid::generate()->value();
-
-        $command = new ApproveTaskCommand($id, $adminId);
+        $command = new ApproveTaskCommand($id, $this->currentUserId());
         $this->commandBus->dispatch($command);
 
         $task = $this->queryBus->dispatch(new FindTaskByIdQuery($id))->last(HandledStamp::class)->getResult();
@@ -433,6 +428,19 @@ class TaskApiController extends AbstractController
         $task = $this->queryBus->dispatch(new FindTaskByIdQuery($id))->last(HandledStamp::class)->getResult();
 
         return $this->json($this->serializeTask($task));
+    }
+
+    private function currentUserId(): string
+    {
+        $user = $this->userRepository->findByEmail(
+            Email::fromString($this->getUser()->getUserIdentifier())
+        );
+
+        if ($user === null) {
+            throw $this->createAccessDeniedException();
+        }
+
+        return $user->id()->value();
     }
 
     private function serializeTask(Task $task): array

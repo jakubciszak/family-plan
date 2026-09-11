@@ -4,6 +4,11 @@ declare(strict_types=1);
 
 namespace App\Tests\Api;
 
+use App\Shared\Domain\ValueObject\Uuid;
+use App\UserManagement\Domain\Entity\User;
+use App\UserManagement\Domain\Repository\UserRepositoryInterface;
+use App\UserManagement\Domain\ValueObject\Email;
+use App\UserManagement\Domain\ValueObject\Role;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Symfony\Component\HttpFoundation\Response;
@@ -12,10 +17,35 @@ abstract class ApiTestCase extends WebTestCase
 {
     protected KernelBrowser $client;
 
+    protected User $currentUser;
+
     protected function setUp(): void
     {
         parent::setUp();
         $this->client = static::createClient();
+        $this->currentUser = $this->authenticate();
+    }
+
+    protected function loginAs(User $user): void
+    {
+        $this->client->loginUser($user);
+        $this->currentUser = $user;
+    }
+
+    protected function authenticate(Role $role = Role::ADMIN): User
+    {
+        $user = User::create(
+            Uuid::generate(),
+            'Api Test User',
+            Email::fromString(sprintf('api-test-%s@example.com', uniqid())),
+            password_hash('password123', PASSWORD_BCRYPT),
+            $role
+        );
+
+        static::getContainer()->get(UserRepositoryInterface::class)->save($user);
+        $this->client->loginUser($user);
+
+        return $user;
     }
 
     protected function getJson(string $uri): array
@@ -85,6 +115,12 @@ abstract class ApiTestCase extends WebTestCase
         $adminResponse = $this->postJson('/api/users', $adminData);
         $admin = $this->assertJsonResponse($adminResponse, 201);
 
+        $adminUser = static::getContainer()
+            ->get(UserRepositoryInterface::class)
+            ->findByEmail(Email::fromString($adminData['email']));
+        $this->client->loginUser($adminUser);
+        $this->currentUser = $adminUser;
+
         // Create team directly using command bus
         $container = static::getContainer();
         $commandBus = $container->get('command.bus');
@@ -102,6 +138,7 @@ abstract class ApiTestCase extends WebTestCase
         return [
             'adminId' => $admin['id'],
             'teamId' => $teamId,
+            'user' => $adminUser,
         ];
     }
 }

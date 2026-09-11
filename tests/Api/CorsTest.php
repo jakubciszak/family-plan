@@ -169,6 +169,18 @@ class CorsTest extends WebTestCase
     {
         $client = static::createClient();
 
+        $authenticatedUser = \App\UserManagement\Domain\Entity\User::create(
+            \App\Shared\Domain\ValueObject\Uuid::generate(),
+            'Cors Test User',
+            \App\UserManagement\Domain\ValueObject\Email::fromString('cors_' . uniqid() . '@example.com'),
+            password_hash('pass123', PASSWORD_BCRYPT),
+            \App\UserManagement\Domain\ValueObject\Role::ADMIN
+        );
+        static::getContainer()
+            ->get(\App\UserManagement\Domain\Repository\UserRepositoryInterface::class)
+            ->save($authenticatedUser);
+        $client->loginUser($authenticatedUser);
+
         // Create admin user
         $userData = [
             'name' => 'Admin',

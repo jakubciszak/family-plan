@@ -172,15 +172,19 @@ class TaskApiTest extends ApiTestCase
         ];
         $this->postJson('/api/tasks', $taskDataB);
 
-        // Get all tasks - should return tasks from both teams (current behavior returns all)
         $data = $this->getJson('/api/tasks');
 
         $this->assertIsArray($data);
         $this->assertArrayHasKey('tasks', $data);
 
-        // After implementing team-based filtering, this should only return tasks from user's teams
-        // For now, we expect all tasks to be returned (2 tasks)
-        $this->assertGreaterThanOrEqual(2, count($data['tasks']));
+        $taskNames = array_map(fn($task) => $task['name'], $data['tasks']);
+        $this->assertContains('Team B Task', $taskNames);
+        $this->assertNotContains('Team A Task', $taskNames);
+
+        $this->loginAs($contextA['user']);
+        $taskNames = array_map(fn($task) => $task['name'], $this->getJson('/api/tasks')['tasks']);
+        $this->assertContains('Team A Task', $taskNames);
+        $this->assertNotContains('Team B Task', $taskNames);
     }
 
     public function testListTasksWithTeamIdFilterReturnsOnlyTasksFromThatTeam(): void
@@ -216,6 +220,7 @@ class TaskApiTest extends ApiTestCase
         $createdTaskB = $this->assertJsonResponse($responseB, 201);
 
         // Filter by team A - should only return team A tasks
+        $this->loginAs($contextA['user']);
         $data = $this->getJson('/api/tasks?teamId=' . $contextA['teamId']);
 
         $this->assertIsArray($data);
