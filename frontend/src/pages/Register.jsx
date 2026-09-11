@@ -31,9 +31,11 @@ function Register({ onBackToLogin, inviteToken }) {
                 payload.phoneNumber = phoneNumber;
             }
 
-            await apiClient.post('/api/auth/register', payload);
+            const data = await apiClient.post('/api/auth/register', payload);
 
-            setSuccess(t('auth.registerSuccess'));
+            setSuccess(data?.activationRequired === false
+                ? t('auth.registerSuccessNoActivation')
+                : t('auth.registerSuccess'));
 
             // Clear form on success
             setName('');

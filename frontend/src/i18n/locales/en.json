@@ -29,7 +29,8 @@
     "duplicateEmail": "An account with this email already exists.",
     "invitedToTeam": "You've been invited to join a team!",
     "registerToJoin": "Create an account to accept the invitation and join the team.",
-    "loginToJoin": "Login to accept your pending invitation."
+    "loginToJoin": "Login to accept your pending invitation.",
+    "registerSuccessNoActivation": "Registration successful! You can log in now."
   },
   "tasks": {
     "title": "Tasks",

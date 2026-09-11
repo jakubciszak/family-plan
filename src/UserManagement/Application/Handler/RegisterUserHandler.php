@@ -15,7 +15,8 @@ use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 final readonly class RegisterUserHandler
 {
     public function __construct(
-        private UserRepositoryInterface $userRepository
+        private UserRepositoryInterface $userRepository,
+        private bool $requireEmailActivation = true
     ) {
     }
 
@@ -34,6 +35,10 @@ final readonly class RegisterUserHandler
             password_hash($command->password, PASSWORD_BCRYPT),
             $command->phoneNumber
         );
+
+        if (!$this->requireEmailActivation) {
+            $user->activate($user->activationToken());
+        }
 
         $this->userRepository->save($user);
     }

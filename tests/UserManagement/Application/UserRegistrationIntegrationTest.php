@@ -115,4 +115,39 @@ class UserRegistrationIntegrationTest extends TestCase
         // The UserChecker in the security system should prevent login
         // This is tested by the UserChecker itself
     }
+
+    public function testRegisteredUserIsActiveWhenEmailActivationIsNotRequired(): void
+    {
+        $handler = new RegisterUserHandler($this->repository, false);
+        $userId = UuidMother::random();
+
+        $handler(new RegisterUserCommand(
+            $userId->value(),
+            'Self Serve User',
+            'selfserve@example.com',
+            'password123'
+        ));
+
+        $user = $this->repository->findById($userId);
+        $this->assertNotNull($user);
+        $this->assertTrue($user->isActive());
+        $this->assertNull($user->activationToken());
+    }
+
+    public function testEmailActivationIsRequiredByDefault(): void
+    {
+        $handler = new RegisterUserHandler($this->repository);
+        $userId = UuidMother::random();
+
+        $handler(new RegisterUserCommand(
+            $userId->value(),
+            'Default User',
+            'default@example.com',
+            'password123'
+        ));
+
+        $user = $this->repository->findById($userId);
+        $this->assertNotNull($user);
+        $this->assertFalse($user->isActive());
+    }
 }

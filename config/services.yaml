@@ -24,6 +24,15 @@ services:
             - '../src/**/Domain/Event/'
             - '../src/**/Application/Command/'
 
+    App\UserManagement\Application\Handler\RegisterUserHandler:
+        arguments:
+            $requireEmailActivation: '%env(bool:REQUIRE_EMAIL_ACTIVATION)%'
+
+    App\Presentation\Api\AuthApiController:
+        arguments:
+            $requireEmailActivation: '%env(bool:REQUIRE_EMAIL_ACTIVATION)%'
+        tags: ['controller.service_arguments']
+
     # Repository implementations
     App\UserManagement\Domain\Repository\UserRepositoryInterface:
         class: App\UserManagement\Infrastructure\Persistence\DoctrineUserRepository

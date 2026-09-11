@@ -25,7 +25,8 @@ class AuthApiController extends AbstractController
 {
     public function __construct(
         private readonly RegisterUserHandler $registerUserHandler,
-        private readonly UserRepositoryInterface $userRepository
+        private readonly UserRepositoryInterface $userRepository,
+        private readonly bool $requireEmailActivation = true
     ) {
     }
     #[Route('/login', name: 'login', methods: ['POST'])]
@@ -212,7 +213,10 @@ class AuthApiController extends AbstractController
             ($this->registerUserHandler)($command);
 
             return $this->json([
-                'message' => 'User registered successfully. Check your email for activation link.',
+                'message' => $this->requireEmailActivation
+                    ? 'User registered successfully. Check your email for activation link.'
+                    : 'User registered successfully. You can log in now.',
+                'activationRequired' => $this->requireEmailActivation,
                 'id' => $id
             ], Response::HTTP_CREATED);
         } catch (\DomainException $e) {
