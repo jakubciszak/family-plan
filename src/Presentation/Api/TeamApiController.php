@@ -15,6 +15,7 @@ use App\TeamManagement\Application\Query\GetTeamMembersQuery;
 use App\TeamManagement\Application\Query\GetUserInvitationsQuery;
 use App\TeamManagement\Application\Query\GetUserTeamsQuery;
 use App\TeamManagement\Domain\Entity\Team;
+use App\TeamManagement\Domain\Repository\TeamMemberRepositoryInterface;
 use App\TeamManagement\Domain\Entity\TeamInvitation;
 use App\TeamManagement\Domain\Entity\TeamMember;
 use App\UserManagement\Domain\Repository\UserRepositoryInterface;
@@ -39,7 +40,8 @@ class TeamApiController extends AbstractController
     public function __construct(
         private readonly MessageBusInterface $commandBus,
         private readonly MessageBusInterface $queryBus,
-        private readonly UserRepositoryInterface $userRepository
+        private readonly UserRepositoryInterface $userRepository,
+        private readonly TeamMemberRepositoryInterface $teamMemberRepository
     ) {
     }
 
@@ -82,7 +84,10 @@ class TeamApiController extends AbstractController
             ->last(HandledStamp::class)->getResult();
 
         return $this->json([
-            'teams' => array_map(fn(Team $team) => $this->serializeTeam($team), $teams),
+            'teams' => array_map(
+                fn (Team $team) => $this->serializeTeam($team, $userEntity->id()),
+                $teams
+            ),
         ]);
     }
 
@@ -377,9 +382,9 @@ class TeamApiController extends AbstractController
         return $this->json(['message' => 'Invitation accepted successfully']);
     }
 
-    private function serializeTeam(Team $team): array
+    private function serializeTeam(Team $team, ?Uuid $forUserId = null): array
     {
-        return [
+        $data = [
             'id' => $team->id()->value(),
             'name' => $team->name()->value(),
             'description' => $team->description(),
@@ -387,6 +392,13 @@ class TeamApiController extends AbstractController
             'createdAt' => $team->createdAt()->format('c'),
             'updatedAt' => $team->updatedAt()?->format('c')
         ];
+
+        if ($forUserId !== null) {
+            $member = $this->teamMemberRepository->findByTeamIdAndUserId($team->id(), $forUserId);
+            $data['role'] = $member?->role()->value();
+        }
+
+        return $data;
     }
 
     private function serializeMember(TeamMember $member): array
