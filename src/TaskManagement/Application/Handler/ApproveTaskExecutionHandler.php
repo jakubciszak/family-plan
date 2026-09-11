@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\TaskManagement\Application\Handler;
 
 use App\Shared\Domain\ValueObject\Uuid;
+use App\TaskManagement\Domain\Exception\UnauthorizedTaskActionException;
 use App\TaskManagement\Application\Command\ApproveTaskExecutionCommand;
 use App\TaskManagement\Domain\Repository\TaskExecutionRepositoryInterface;
 use App\TaskManagement\Domain\Policy\TaskApprovalPolicyInterface;
@@ -25,7 +26,7 @@ final readonly class ApproveTaskExecutionHandler
         
         // Check if user has permission to approve task executions
         if (!$this->approvalPolicy->canApprove($adminId)) {
-            throw new \DomainException('Only administrators can approve task executions');
+            throw new UnauthorizedTaskActionException('Only administrators can approve task executions');
         }
         
         $execution = $this->taskExecutionRepository->findById(

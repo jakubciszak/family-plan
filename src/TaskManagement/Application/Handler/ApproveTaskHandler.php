@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\TaskManagement\Application\Handler;
 
 use App\Shared\Domain\ValueObject\Uuid;
+use App\TaskManagement\Domain\Exception\UnauthorizedTaskActionException;
 use App\TaskManagement\Application\Command\ApproveTaskCommand;
 use App\TaskManagement\Domain\Repository\TaskRepositoryInterface;
 use App\TaskManagement\Domain\Policy\TaskApprovalPolicyInterface;
@@ -27,7 +28,7 @@ final readonly class ApproveTaskHandler
         
         // Check if user has permission to approve tasks
         if (!$this->approvalPolicy->canApprove($adminId)) {
-            throw new \DomainException('Only administrators can approve tasks');
+            throw new UnauthorizedTaskActionException('Only administrators can approve tasks');
         }
         
         $task = $this->taskRepository->findById(Uuid::fromString($command->taskId));
