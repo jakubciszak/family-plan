@@ -201,5 +201,11 @@
     "passwordTooShort": "Hasło musi mieć co najmniej 8 znaków.",
     "currentPasswordIncorrect": "Obecne hasło jest nieprawidłowe.",
     "passwordChangeError": "Nie udało się zmienić hasła. Spróbuj ponownie."
+  },
+  "install": {
+    "title": "Zainstaluj Family Plan",
+    "description": "Dodaj aplikację do ekranu głównego i otwieraj ją jak zwykłą apkę.",
+    "action": "Zainstaluj",
+    "dismiss": "Nie teraz"
   }
 }

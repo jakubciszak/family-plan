@@ -1,4 +1,5 @@
 const path = require('path');
+const CopyWebpackPlugin = require('copy-webpack-plugin');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const webpack = require('webpack');
 
@@ -38,6 +39,14 @@ module.exports = (env, argv) => {
       new HtmlWebpackPlugin({
         template: './public/index.html',
         filename: 'index.html',
+      }),
+      new CopyWebpackPlugin({
+        patterns: [
+          {
+            from: 'public',
+            globOptions: { ignore: ['**/index.html'] },
+          },
+        ],
       }),
       new webpack.DefinePlugin({
         'process.env.REACT_APP_API_URL': JSON.stringify(

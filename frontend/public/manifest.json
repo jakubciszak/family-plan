@@ -1,0 +1,39 @@
+{
+  "name": "Family Plan - zadania rodzinne",
+  "short_name": "Family Plan",
+  "description": "Zadania rodzinne z punktami i nagrodami",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f8f9fa",
+  "theme_color": "#2c3e50",
+  "orientation": "portrait-primary",
+  "lang": "pl",
+  "categories": ["productivity", "lifestyle"],
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

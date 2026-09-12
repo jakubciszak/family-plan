@@ -201,5 +201,11 @@
     "passwordTooShort": "The password must be at least 8 characters long.",
     "currentPasswordIncorrect": "The current password is incorrect.",
     "passwordChangeError": "Could not change the password. Please try again."
+  },
+  "install": {
+    "title": "Install Family Plan",
+    "description": "Add the app to your home screen and open it like a native one.",
+    "action": "Install",
+    "dismiss": "Not now"
   }
 }

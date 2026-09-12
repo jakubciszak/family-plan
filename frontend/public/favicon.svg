@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Family Plan">
+  <rect width="512" height="512" rx="112" fill="#2c3e50"/>
+  <rect x="104" y="128" width="304" height="272" rx="36" fill="#ffffff"/>
+  <rect x="104" y="128" width="304" height="64" rx="36" fill="#4a90d9"/>
+  <rect x="104" y="160" width="304" height="32" fill="#4a90d9"/>
+  <circle cx="168" cy="112" r="20" fill="#2c3e50"/>
+  <circle cx="344" cy="112" r="20" fill="#2c3e50"/>
+  <path d="M160 268l36 36 76-84" fill="none" stroke="#4a90d9" stroke-width="28" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="296" y="252" width="72" height="24" rx="12" fill="#dbe4ec"/>
+  <path d="M160 348l36 36 76-84" fill="none" stroke="#f5a623" stroke-width="28" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="296" y="332" width="72" height="24" rx="12" fill="#dbe4ec"/>
+</svg>

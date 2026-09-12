@@ -8,6 +8,7 @@ import StatusChangeRulesManagement from './pages/StatusChangeRulesManagement';
 import UserSettings from './pages/UserSettings';
 import TeamManagement from './pages/TeamManagement';
 import Account from './pages/Account';
+import InstallPrompt from './components/InstallPrompt';
 import LanguageSwitcher from './components/LanguageSwitcher';
 import apiClient from './services/apiClient';
 import teamService from './services/teamService';
@@ -165,10 +166,14 @@ function App() {
     };
 
     if (!isAuthenticated) {
-        if (showRegister) {
-            return <Register onBackToLogin={() => setShowRegister(false)} inviteToken={inviteToken} />;
-        }
-        return <Login onLogin={handleLogin} onSwitchToRegister={() => setShowRegister(true)} inviteToken={inviteToken} />;
+        return (
+            <>
+                {showRegister
+                    ? <Register onBackToLogin={() => setShowRegister(false)} inviteToken={inviteToken} />
+                    : <Login onLogin={handleLogin} onSwitchToRegister={() => setShowRegister(true)} inviteToken={inviteToken} />}
+                <InstallPrompt />
+            </>
+        );
     }
 
     const handlePageChange = (page) => {
@@ -248,6 +253,7 @@ function App() {
                 {currentPage === 'account' && <Account user={user} points={userPoints} />}
                 {currentPage === 'settings' && <UserSettings user={user} />}
             </main>
+            <InstallPrompt />
         </div>
     );
 }
