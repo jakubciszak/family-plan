@@ -16,7 +16,7 @@ use App\TaskManagement\Domain\Entity\Task;
 use App\TaskManagement\Domain\Repository\TaskRepositoryInterface;
 use App\UserManagement\Application\Query\FindUserByIdQuery;
 use App\TaskManagement\Domain\Exception\UnauthorizedTaskActionException;
-use App\TeamManagement\Domain\Repository\TeamMemberRepositoryInterface;
+use App\TeamManagement\Domain\Repository\TeamMembershipRepositoryInterface;
 use App\UserManagement\Domain\Repository\UserRepositoryInterface;
 use App\UserManagement\Domain\ValueObject\Email;
 use OpenApi\Attributes as OA;
@@ -37,7 +37,7 @@ class TaskApiController extends AbstractController
         private readonly MessageBusInterface $queryBus,
         private readonly UserRepositoryInterface $userRepository,
         private readonly TaskRepositoryInterface $taskRepository,
-        private readonly TeamMemberRepositoryInterface $teamMemberRepository
+        private readonly TeamMembershipRepositoryInterface $memberships
     ) {
     }
 
@@ -451,12 +451,12 @@ class TaskApiController extends AbstractController
         $actor = Uuid::fromString($this->currentUserId());
         $teamId = $task->teamId();
 
-        if ($teamId === null || !$this->teamMemberRepository->findByTeamIdAndUserId($teamId, $actor)) {
+        if ($teamId === null || !$this->memberships->find($teamId, $actor)) {
             throw new UnauthorizedTaskActionException('Only team members can assign tasks in this team');
         }
 
-        if ($this->teamMemberRepository->isUserAdminOfTeam($actor, $teamId)) {
-            if (!$this->teamMemberRepository->findByTeamIdAndUserId($teamId, $assignee)) {
+        if ($this->memberships->isAdmin($actor, $teamId)) {
+            if (!$this->memberships->find($teamId, $assignee)) {
                 throw new UnauthorizedTaskActionException('The person must belong to the team');
             }
 
@@ -479,7 +479,7 @@ class TaskApiController extends AbstractController
         $actor = Uuid::fromString($this->currentUserId());
         $teamId = $task->teamId();
 
-        $isTeamAdmin = $teamId !== null && $this->teamMemberRepository->isUserAdminOfTeam($actor, $teamId);
+        $isTeamAdmin = $teamId !== null && $this->memberships->isAdmin($actor, $teamId);
         $isAssignee = $task->assignedUserId() !== null && $task->assignedUserId()->equals($actor);
 
         if (!$isTeamAdmin && !$isAssignee) {

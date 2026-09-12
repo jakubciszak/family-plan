@@ -7,9 +7,8 @@ namespace App\TeamManagement\Application\Handler;
 use App\Shared\Domain\ValueObject\Uuid;
 use App\TeamManagement\Application\Command\CreateTeamCommand;
 use App\TeamManagement\Domain\Entity\Team;
-use App\TeamManagement\Domain\Entity\TeamMember;
 use App\TeamManagement\Domain\Repository\TeamRepositoryInterface;
-use App\TeamManagement\Domain\Repository\TeamMemberRepositoryInterface;
+use App\TeamManagement\Domain\Repository\TeamMembershipRepositoryInterface;
 use App\TeamManagement\Domain\ValueObject\TeamName;
 use App\TeamManagement\Domain\ValueObject\TeamRole;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
@@ -19,7 +18,7 @@ final class CreateTeamHandler
 {
     public function __construct(
         private readonly TeamRepositoryInterface $teamRepository,
-        private readonly TeamMemberRepositoryInterface $teamMemberRepository
+        private readonly TeamMembershipRepositoryInterface $memberships
     ) {
     }
 
@@ -37,14 +36,6 @@ final class CreateTeamHandler
         
         $this->teamRepository->save($team);
         
-        // Automatically add creator as admin
-        $member = TeamMember::create(
-            Uuid::generate(),
-            $teamId,
-            $createdBy,
-            TeamRole::admin()
-        );
-        
-        $this->teamMemberRepository->save($member);
+        $this->memberships->join($teamId, $createdBy, TeamRole::admin());
     }
 }

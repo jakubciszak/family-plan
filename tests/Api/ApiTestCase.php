@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Api;
 
 use App\Shared\Domain\ValueObject\Uuid;
+use App\Tests\TestDatabase;
 use App\UserManagement\Domain\Entity\User;
 use App\UserManagement\Domain\Repository\UserRepositoryInterface;
 use App\UserManagement\Domain\ValueObject\Email;
@@ -22,6 +23,7 @@ abstract class ApiTestCase extends WebTestCase
     protected function setUp(): void
     {
         parent::setUp();
+        TestDatabase::prepareOnce();
         $this->client = static::createClient();
         $this->currentUser = $this->authenticate();
     }

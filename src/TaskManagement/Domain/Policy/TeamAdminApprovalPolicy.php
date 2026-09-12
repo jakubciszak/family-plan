@@ -5,14 +5,14 @@ declare(strict_types=1);
 namespace App\TaskManagement\Domain\Policy;
 
 use App\Shared\Domain\ValueObject\Uuid;
-use App\TeamManagement\Domain\Repository\TeamMemberRepositoryInterface;
+use App\TeamManagement\Domain\Repository\TeamMembershipRepositoryInterface;
 use App\UserManagement\Domain\Repository\UserRepositoryInterface;
 
 final readonly class TeamAdminApprovalPolicy implements TaskApprovalPolicyInterface
 {
     public function __construct(
         private UserRepositoryInterface $userRepository,
-        private TeamMemberRepositoryInterface $teamMemberRepository
+        private TeamMembershipRepositoryInterface $memberships
     ) {
     }
 
@@ -32,6 +32,6 @@ final readonly class TeamAdminApprovalPolicy implements TaskApprovalPolicyInterf
             return false;
         }
 
-        return $this->teamMemberRepository->isUserAdminOfTeam($userId, $teamId);
+        return $this->memberships->isAdmin($userId, $teamId);
     }
 }

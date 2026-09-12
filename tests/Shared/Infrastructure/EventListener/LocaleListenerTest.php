@@ -7,16 +7,23 @@ namespace App\Tests\Shared\Infrastructure\EventListener;
 use App\Shared\Infrastructure\EventListener\LocaleListener;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\EventDispatcher\EventDispatcher;
+use Symfony\Component\HttpKernel\Controller\ArgumentResolver;
+use Symfony\Component\HttpKernel\Controller\ControllerResolver;
 use Symfony\Component\HttpKernel\Event\RequestEvent;
+use Symfony\Component\HttpKernel\HttpKernel;
 use Symfony\Component\HttpKernel\HttpKernelInterface;
 
 class LocaleListenerTest extends TestCase
 {
     private LocaleListener $listener;
 
+    private HttpKernel $kernel;
+
     protected function setUp(): void
     {
         $this->listener = new LocaleListener('pl');
+        $this->kernel = new HttpKernel(new EventDispatcher(), new ControllerResolver(), null, new ArgumentResolver());
     }
 
     public function testSetsLocaleFromAcceptLanguageHeaderToEnglish(): void
@@ -25,7 +32,7 @@ class LocaleListenerTest extends TestCase
         $request->headers->set('Accept-Language', 'en-US,en;q=0.9');
         
         $event = new RequestEvent(
-            $this->createMock(HttpKernelInterface::class),
+            $this->kernel,
             $request,
             HttpKernelInterface::MAIN_REQUEST
         );
@@ -41,7 +48,7 @@ class LocaleListenerTest extends TestCase
         $request->headers->set('Accept-Language', 'pl-PL,pl;q=0.9');
         
         $event = new RequestEvent(
-            $this->createMock(HttpKernelInterface::class),
+            $this->kernel,
             $request,
             HttpKernelInterface::MAIN_REQUEST
         );
@@ -57,7 +64,7 @@ class LocaleListenerTest extends TestCase
         $request->headers->remove('Accept-Language');
         
         $event = new RequestEvent(
-            $this->createMock(HttpKernelInterface::class),
+            $this->kernel,
             $request,
             HttpKernelInterface::MAIN_REQUEST
         );
@@ -73,7 +80,7 @@ class LocaleListenerTest extends TestCase
         $request->headers->set('Accept-Language', 'fr-FR,fr;q=0.9');
         
         $event = new RequestEvent(
-            $this->createMock(HttpKernelInterface::class),
+            $this->kernel,
             $request,
             HttpKernelInterface::MAIN_REQUEST
         );
@@ -90,7 +97,7 @@ class LocaleListenerTest extends TestCase
         $request->attributes->set('_locale', 'en');
         
         $event = new RequestEvent(
-            $this->createMock(HttpKernelInterface::class),
+            $this->kernel,
             $request,
             HttpKernelInterface::MAIN_REQUEST
         );

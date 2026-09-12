@@ -18,11 +18,5 @@ interface TeamRepositoryInterface
      */
     public function findAll(): array;
     
-    /**
-     * Find teams where the user is a member
-     * @return Team[]
-     */
-    public function findByUserId(Uuid $userId): array;
-    
     public function remove(Team $team): void;
 }

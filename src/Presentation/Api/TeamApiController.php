@@ -17,9 +17,9 @@ use App\TeamManagement\Application\Query\GetUserTeamsQuery;
 use App\TeamManagement\Domain\Entity\Team;
 use App\TeamManagement\Domain\Repository\TeamInvitationRepositoryInterface;
 use App\TeamManagement\Application\Service\InvitationLinkGenerator;
-use App\TeamManagement\Domain\Repository\TeamMemberRepositoryInterface;
+use App\TeamManagement\Domain\Repository\TeamMembershipRepositoryInterface;
 use App\TeamManagement\Domain\Entity\TeamInvitation;
-use App\TeamManagement\Domain\Entity\TeamMember;
+use App\TeamManagement\Domain\ReadModel\TeamMembership;
 use App\UserManagement\Domain\Repository\UserRepositoryInterface;
 use App\Presentation\Api\Dto\Team\CreateTeamRequest;
 use App\Presentation\Api\Dto\Team\UpdateTeamRequest;
@@ -43,7 +43,7 @@ class TeamApiController extends AbstractController
         private readonly MessageBusInterface $commandBus,
         private readonly MessageBusInterface $queryBus,
         private readonly UserRepositoryInterface $userRepository,
-        private readonly TeamMemberRepositoryInterface $teamMemberRepository,
+        private readonly TeamMembershipRepositoryInterface $memberships,
         private readonly InvitationLinkGenerator $invitationLink,
         private readonly TeamInvitationRepositoryInterface $invitationRepository
     ) {
@@ -229,10 +229,10 @@ class TeamApiController extends AbstractController
             ->last(HandledStamp::class)->getResult();
 
         $payload = [
-            'members' => array_map(fn (TeamMember $member) => $this->serializeMember($member), $members),
+            'members' => array_map(fn (TeamMembership $member) => $this->serializeMember($member), $members),
         ];
 
-        if ($this->teamMemberRepository->isUserAdminOfTeam($this->currentUserId(), Uuid::fromString($id))) {
+        if ($this->memberships->isAdmin($this->currentUserId(), Uuid::fromString($id))) {
             $invitations = $this->queryBus->dispatch(new GetTeamInvitationsQuery($id))
                 ->last(HandledStamp::class)->getResult();
 
@@ -413,7 +413,7 @@ class TeamApiController extends AbstractController
         ];
 
         if ($forUserId !== null) {
-            $member = $this->teamMemberRepository->findByTeamIdAndUserId($team->id(), $forUserId);
+            $member = $this->memberships->find($team->id(), $forUserId);
             $data['role'] = $member?->role()->value();
         }
 
@@ -427,7 +427,7 @@ class TeamApiController extends AbstractController
             ->id();
     }
 
-    private function serializeMember(TeamMember $member): array
+    private function serializeMember(TeamMembership $member): array
     {
         $user = $this->userRepository->findById($member->userId());
         

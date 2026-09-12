@@ -47,13 +47,6 @@ final class InMemoryTeamRepository implements TeamRepositoryInterface
     /**
      * @return Team[]
      */
-    public function findByUserId(Uuid $userId): array
-    {
-        // In memory implementation - will return all teams
-        // In real implementation, this would query team_members table
-        return array_values($this->teams);
-    }
-
     public function remove(Team $team): void
     {
         unset($this->teams[$team->id()->value()]);

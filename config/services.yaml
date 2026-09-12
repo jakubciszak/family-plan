@@ -65,8 +65,8 @@ services:
     App\TeamManagement\Domain\Repository\TeamRepositoryInterface:
         class: App\TeamManagement\Infrastructure\Persistence\DoctrineTeamRepository
 
-    App\TeamManagement\Domain\Repository\TeamMemberRepositoryInterface:
-        class: App\TeamManagement\Infrastructure\Persistence\DoctrineTeamMemberRepository
+    App\TeamManagement\Domain\Repository\TeamMembershipRepositoryInterface:
+        class: App\TeamManagement\Infrastructure\Persistence\PartyTeamMemberships
 
     App\TeamManagement\Domain\Repository\TeamInvitationRepositoryInterface:
         class: App\TeamManagement\Infrastructure\Persistence\DoctrineTeamInvitationRepository

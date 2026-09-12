@@ -142,6 +142,12 @@ backend-test: phpunit behat ## Run all backend tests (PHPUnit + Behat)
 phpunit: ## Run PHPUnit tests
 	docker compose exec php vendor/bin/phpunit
 
+phpunit-unit: ## Run unit tests only (no database)
+	docker compose exec php vendor/bin/phpunit --testsuite unit
+
+phpunit-integration: ## Run integration tests (real test database)
+	docker compose exec php vendor/bin/phpunit --testsuite integration
+
 phpunit-coverage: ## Run PHPUnit tests with coverage
 	docker compose exec php vendor/bin/phpunit --coverage-html coverage
 

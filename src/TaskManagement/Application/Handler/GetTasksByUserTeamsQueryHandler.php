@@ -8,7 +8,8 @@ use App\Shared\Domain\ValueObject\Uuid;
 use App\TaskManagement\Application\Query\GetTasksByUserTeamsQuery;
 use App\TaskManagement\Domain\Entity\Task;
 use App\TaskManagement\Domain\Repository\TaskRepositoryInterface;
-use App\TeamManagement\Domain\Repository\TeamRepositoryInterface;
+use App\TeamManagement\Domain\ReadModel\TeamMembership;
+use App\TeamManagement\Domain\Repository\TeamMembershipRepositoryInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 
 #[AsMessageHandler(bus: 'query.bus')]
@@ -16,7 +17,7 @@ final readonly class GetTasksByUserTeamsQueryHandler
 {
     public function __construct(
         private TaskRepositoryInterface $taskRepository,
-        private TeamRepositoryInterface $teamRepository
+        private TeamMembershipRepositoryInterface $memberships
     ) {
     }
 
@@ -29,14 +30,14 @@ final readonly class GetTasksByUserTeamsQueryHandler
     {
         $userId = Uuid::fromString($query->userId);
 
-        // Get all teams the user is a member of
-        $userTeams = $this->teamRepository->findByUserId($userId);
+        $teamIds = array_map(
+            fn (TeamMembership $membership) => $membership->teamId(),
+            $this->memberships->ofUser($userId)
+        );
 
-        if (empty($userTeams)) {
+        if (empty($teamIds)) {
             return [];
         }
-
-        $teamIds = array_map(fn($team) => $team->id(), $userTeams);
 
         // If a specific teamId is requested, verify user is member and filter by that team only
         if ($query->teamId !== null) {

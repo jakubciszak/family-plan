@@ -48,8 +48,7 @@ module.exports = defineConfig({
   // Retry on CI only
   retries: process.env.CI ? 2 : 0,
   
-  // Use multiple workers for faster execution
-  workers: process.env.CI ? 2 : undefined,
+  workers: realApiEnabled ? 1 : (process.env.CI ? 2 : undefined),
   
   // Reporter to use
   reporter: 'html',

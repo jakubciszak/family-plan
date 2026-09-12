@@ -32,18 +32,6 @@ final class DoctrineTeamRepository implements TeamRepositoryInterface
         return $this->entityManager->getRepository(Team::class)->findAll();
     }
 
-    public function findByUserId(Uuid $userId): array
-    {
-        return $this->entityManager->createQueryBuilder()
-            ->select('t')
-            ->from(Team::class, 't')
-            ->join('App\TeamManagement\Domain\Entity\TeamMember', 'tm', 'WITH', 'tm.teamId = t.id')
-            ->where('tm.userId = :userId')
-            ->setParameter('userId', $userId->value())
-            ->getQuery()
-            ->getResult();
-    }
-
     public function remove(Team $team): void
     {
         $this->entityManager->remove($team);

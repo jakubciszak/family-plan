@@ -16,7 +16,7 @@ use App\Presentation\Api\Dto\BonusRule\CreateBonusRuleRequest;
 use App\Presentation\Api\Dto\BonusRule\UpdateBonusRuleRequest;
 use App\TaskManagement\Domain\Repository\BonusPointsRuleRepositoryInterface;
 use App\TeamManagement\Domain\Exception\UnauthorizedTeamActionException;
-use App\TeamManagement\Domain\Repository\TeamMemberRepositoryInterface;
+use App\TeamManagement\Domain\Repository\TeamMembershipRepositoryInterface;
 use App\UserManagement\Domain\Repository\UserRepositoryInterface;
 use App\UserManagement\Domain\ValueObject\Email;
 use OpenApi\Attributes as OA;
@@ -39,7 +39,7 @@ class BonusPointsRuleApiController extends AbstractController
         private readonly MessageBusInterface $commandBus,
         private readonly MessageBusInterface $queryBus,
         private readonly UserRepositoryInterface $userRepository,
-        private readonly TeamMemberRepositoryInterface $teamMemberRepository,
+        private readonly TeamMembershipRepositoryInterface $memberships,
         private readonly BonusPointsRuleRepositoryInterface $ruleRepository
     ) {
     }
@@ -53,7 +53,7 @@ class BonusPointsRuleApiController extends AbstractController
 
     private function assertTeamAdmin(Uuid $teamId): void
     {
-        if (!$this->teamMemberRepository->isUserAdminOfTeam($this->currentUserId(), $teamId)) {
+        if (!$this->memberships->isAdmin($this->currentUserId(), $teamId)) {
             throw new UnauthorizedTeamActionException('Only team admins manage bonus rules');
         }
     }
@@ -100,7 +100,7 @@ class BonusPointsRuleApiController extends AbstractController
         $userId = $this->currentUserId();
 
         $rules = [];
-        foreach ($this->teamMemberRepository->findByUserId($userId) as $membership) {
+        foreach ($this->memberships->ofUser($userId) as $membership) {
             foreach ($this->ruleRepository->findByTeamId($membership->teamId()) as $rule) {
                 if (!$activeOnly || $rule->isActive()) {
                     $rules[] = $rule;

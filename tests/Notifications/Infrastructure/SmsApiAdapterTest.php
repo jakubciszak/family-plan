@@ -9,7 +9,7 @@ use App\Notifications\Domain\ValueObject\NotificationMessage;
 use App\Notifications\Domain\ValueObject\Recipient;
 use App\Notifications\Infrastructure\Adapter\SmsApiAdapter;
 use PHPUnit\Framework\TestCase;
-use Psr\Log\LoggerInterface;
+use Symfony\Component\HttpKernel\Log\Logger;
 
 class SmsApiAdapterTest extends TestCase
 {
@@ -52,21 +52,16 @@ class SmsApiAdapterTest extends TestCase
 
     public function testSkipsSendingWhenTokenIsEmpty(): void
     {
-        $logger = $this->createMock(LoggerInterface::class);
-        $logger->expects($this->once())
-            ->method('warning')
-            ->with(
-                'SMS API token not configured, skipping SMS send',
-                $this->arrayHasKey('recipient')
-            );
-
-        $adapter = new SmsApiAdapter(self::TEST_API_URL, '', $logger);
+        $log = fopen('php://memory', 'r+');
+        $adapter = new SmsApiAdapter(self::TEST_API_URL, '', new Logger('debug', $log));
         $recipient = Recipient::phoneNumber('+48123456789');
         $message = NotificationMessage::create('Test SMS');
         $channel = NotificationChannel::sms();
 
-        // Should not throw exception, just log warning
         $adapter->send($recipient, $message, $channel);
+
+        rewind($log);
+        $this->assertStringContainsString('SMS API token not configured', stream_get_contents($log));
     }
 
     public function testConstructorAcceptsRequiredParameters(): void
@@ -78,9 +73,8 @@ class SmsApiAdapterTest extends TestCase
 
     public function testConstructorAcceptsOptionalLogger(): void
     {
-        $logger = $this->createMock(LoggerInterface::class);
-        $adapter = new SmsApiAdapter(self::TEST_API_URL, self::TEST_API_TOKEN, $logger);
-        
-        $this->assertInstanceOf(SmsApiAdapter::class, $adapter);
+        $adapter = new SmsApiAdapter(self::TEST_API_URL, self::TEST_API_TOKEN, new Logger());
+
+        $this->assertTrue($adapter->supports(NotificationChannel::sms()));
     }
 }

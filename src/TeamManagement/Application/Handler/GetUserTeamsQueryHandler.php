@@ -7,6 +7,8 @@ namespace App\TeamManagement\Application\Handler;
 use App\Shared\Domain\ValueObject\Uuid;
 use App\TeamManagement\Application\Query\GetUserTeamsQuery;
 use App\TeamManagement\Domain\Entity\Team;
+use App\TeamManagement\Domain\ReadModel\TeamMembership;
+use App\TeamManagement\Domain\Repository\TeamMembershipRepositoryInterface;
 use App\TeamManagement\Domain\Repository\TeamRepositoryInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 
@@ -14,7 +16,8 @@ use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 final class GetUserTeamsQueryHandler
 {
     public function __construct(
-        private readonly TeamRepositoryInterface $teamRepository
+        private readonly TeamRepositoryInterface $teamRepository,
+        private readonly TeamMembershipRepositoryInterface $memberships
     ) {
     }
 
@@ -23,7 +26,11 @@ final class GetUserTeamsQueryHandler
      */
     public function __invoke(GetUserTeamsQuery $query): array
     {
-        $userId = Uuid::fromString($query->userId);
-        return $this->teamRepository->findByUserId($userId);
+        $teams = array_map(
+            fn (TeamMembership $membership) => $this->teamRepository->findById($membership->teamId()),
+            $this->memberships->ofUser(Uuid::fromString($query->userId))
+        );
+
+        return array_values(array_filter($teams));
     }
 }

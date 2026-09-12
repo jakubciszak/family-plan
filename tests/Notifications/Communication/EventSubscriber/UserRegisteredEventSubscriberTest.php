@@ -12,6 +12,7 @@ use App\Shared\Domain\ValueObject\Uuid;
 use App\UserManagement\Domain\Event\UserRegistered;
 use App\UserManagement\Domain\ValueObject\Email;
 use App\UserManagement\Infrastructure\Persistence\InMemoryUserRepository;
+use App\UserSettings\Infrastructure\Persistence\InMemoryUserSettingsRepository;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -43,7 +44,7 @@ class UserRegisteredEventSubscriberTest extends TestCase
         // Given
         $appUrl = 'http://localhost:8080';
         $userRepo = new InMemoryUserRepository();
-        $settingsRepo = $this->createStub(\App\UserSettings\Domain\Repository\UserSettingsRepositoryInterface::class);
+        $settingsRepo = new InMemoryUserSettingsRepository();
         $orchestrator = new NotificationOrchestrator($this->facade, $userRepo, $settingsRepo);
         
         $event = new UserRegistered(
@@ -73,7 +74,7 @@ class UserRegisteredEventSubscriberTest extends TestCase
         $appUrl = 'http://localhost:8080';
         
         $userRepo = new InMemoryUserRepository();
-        $settingsRepo = $this->createStub(\App\UserSettings\Domain\Repository\UserSettingsRepositoryInterface::class);
+        $settingsRepo = new InMemoryUserSettingsRepository();
         $orchestrator = new NotificationOrchestrator($this->facade, $userRepo, $settingsRepo);
         
         $activationToken = 'my-unique-token-456';
@@ -105,7 +106,7 @@ class UserRegisteredEventSubscriberTest extends TestCase
         // Given
         $appUrl = 'http://localhost:8080';
         $userRepo = new InMemoryUserRepository();
-        $settingsRepo = $this->createStub(\App\UserSettings\Domain\Repository\UserSettingsRepositoryInterface::class);
+        $settingsRepo = new InMemoryUserSettingsRepository();
         $orchestrator = new NotificationOrchestrator($this->facade, $userRepo, $settingsRepo);
         
         $recipientEmail = 'recipient@example.com';

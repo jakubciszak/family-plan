@@ -8,7 +8,7 @@ use App\Shared\Domain\ValueObject\Uuid;
 use App\TeamManagement\Application\Command\UpdateTeamCommand;
 use App\TeamManagement\Domain\Exception\TeamNotFoundException;
 use App\TeamManagement\Domain\Exception\UnauthorizedTeamActionException;
-use App\TeamManagement\Domain\Repository\TeamMemberRepositoryInterface;
+use App\TeamManagement\Domain\Repository\TeamMembershipRepositoryInterface;
 use App\TeamManagement\Domain\Repository\TeamRepositoryInterface;
 use App\TeamManagement\Domain\ValueObject\TeamName;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
@@ -18,7 +18,7 @@ final class UpdateTeamHandler
 {
     public function __construct(
         private readonly TeamRepositoryInterface $teamRepository,
-        private readonly TeamMemberRepositoryInterface $teamMemberRepository
+        private readonly TeamMembershipRepositoryInterface $memberships
     ) {
     }
 
@@ -34,7 +34,7 @@ final class UpdateTeamHandler
         }
         
         // Verify updater is admin of the team
-        if (!$this->teamMemberRepository->isUserAdminOfTeam($updatedBy, $teamId)) {
+        if (!$this->memberships->isAdmin($updatedBy, $teamId)) {
             throw new UnauthorizedTeamActionException('Only team admins can update team details');
         }
         

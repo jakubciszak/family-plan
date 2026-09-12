@@ -12,7 +12,7 @@ use App\TeamManagement\Domain\Entity\TeamInvitation;
 use App\TeamManagement\Domain\Exception\TeamNotFoundException;
 use App\TeamManagement\Domain\Exception\UnauthorizedTeamActionException;
 use App\TeamManagement\Domain\Repository\TeamInvitationRepositoryInterface;
-use App\TeamManagement\Domain\Repository\TeamMemberRepositoryInterface;
+use App\TeamManagement\Domain\Repository\TeamMembershipRepositoryInterface;
 use App\TeamManagement\Domain\Repository\TeamRepositoryInterface;
 use App\TeamManagement\Domain\ValueObject\TeamRole;
 use App\UserManagement\Domain\Repository\UserRepositoryInterface;
@@ -24,7 +24,7 @@ final class InviteToTeamHandler
 {
     public function __construct(
         private readonly TeamRepositoryInterface $teamRepository,
-        private readonly TeamMemberRepositoryInterface $teamMemberRepository,
+        private readonly TeamMembershipRepositoryInterface $memberships,
         private readonly TeamInvitationRepositoryInterface $invitationRepository,
         private readonly UserRepositoryInterface $userRepository,
         private readonly NotificationFacade $notificationFacade,
@@ -45,7 +45,7 @@ final class InviteToTeamHandler
         }
         
         // Verify inviter is admin of the team
-        if (!$this->teamMemberRepository->isUserAdminOfTeam($invitedBy, $teamId)) {
+        if (!$this->memberships->isAdmin($invitedBy, $teamId)) {
             throw new UnauthorizedTeamActionException('Only team admins can invite members');
         }
         

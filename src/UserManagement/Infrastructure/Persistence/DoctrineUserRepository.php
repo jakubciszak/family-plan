@@ -6,6 +6,7 @@ namespace App\UserManagement\Infrastructure\Persistence;
 
 use App\Shared\Domain\ValueObject\Uuid;
 use App\UserManagement\Domain\Entity\User;
+use App\UserManagement\Domain\ValueObject\Role;
 use App\UserManagement\Domain\Repository\UserRepositoryInterface;
 use App\UserManagement\Domain\ValueObject\Email;
 use Doctrine\ORM\EntityManagerInterface;
@@ -58,7 +59,7 @@ final class DoctrineUserRepository implements UserRepositoryInterface
         return $this->entityManager->getRepository(User::class)
             ->createQueryBuilder('u')
             ->where('u.role = :role')
-            ->setParameter('role', 'admin')
+            ->setParameter('role', Role::ADMIN->value)
             ->getQuery()
             ->getResult();
     }
