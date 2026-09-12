@@ -5,48 +5,43 @@ declare(strict_types=1);
 namespace App\Notifications\Communication\EventSubscriber;
 
 use App\Notifications\Communication\Service\NotificationOrchestrator;
-use App\TaskManagement\Domain\Event\TaskApproved;
-use App\TaskManagement\Domain\Repository\TaskRepositoryInterface;
+use App\TaskManagement\Domain\Event\TaskExecutionApproved;
+use App\TaskManagement\Domain\Repository\TaskExecutionRepositoryInterface;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
-use Symfony\Component\Messenger\MessageBusInterface;
-use Symfony\Component\Messenger\Stamp\HandledStamp;
 
-/**
- * Subscribes to TaskApproved events and sends notifications to the user
- */
 final readonly class TaskApprovedEventSubscriber implements EventSubscriberInterface
 {
     public function __construct(
         private NotificationOrchestrator $notificationOrchestrator,
-        private TaskRepositoryInterface $taskRepository,
-        private MessageBusInterface $eventBus
+        private TaskExecutionRepositoryInterface $executionRepository
     ) {
     }
 
     public static function getSubscribedEvents(): array
     {
         return [
-            TaskApproved::class => 'onTaskApproved',
+            TaskExecutionApproved::class => 'onTaskApproved',
         ];
     }
 
-    public function onTaskApproved(TaskApproved $event): void
+    public function onTaskApproved(TaskExecutionApproved $event): void
     {
-        $task = $this->taskRepository->findById($event->taskId());
-        
-        if ($task === null) {
+        $execution = $this->executionRepository->findById($event->executionId());
+
+        if ($execution === null || $execution->name() === null || $execution->points() === null) {
             return;
         }
 
-        $assignedUserId = $task->assignedUserId();
+        $assignedUserId = $execution->assignedUserId();
+
         if ($assignedUserId === null) {
             return;
         }
 
         $message = sprintf(
             'Your task "%s" has been approved! You earned %d points.',
-            $task->name()->value(),
-            $task->points()->value()
+            $execution->name()->value(),
+            $execution->points()->value()
         );
 
         $this->notificationOrchestrator->notifyUser(
@@ -54,9 +49,9 @@ final readonly class TaskApprovedEventSubscriber implements EventSubscriberInter
             $message,
             'Task Approved',
             [
-                'task_id' => $task->id()->value(),
-                'task_name' => $task->name()->value(),
-                'points' => $task->points()->value(),
+                'task_id' => $execution->id()->value(),
+                'task_name' => $execution->name()->value(),
+                'points' => $execution->points()->value(),
                 'admin_id' => $event->adminId()->value(),
             ]
         );

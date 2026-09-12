@@ -64,17 +64,6 @@ async function addTeamMember(owner, memberName = 'Dziecko') {
   return { ...member, token };
 }
 
-async function createTask(owner, { name = 'Zadanie testowe', points = 30, frequency = 'weekly' } = {}) {
-  const task = await owner.session.post('/api/tasks', {
-    name,
-    points,
-    frequency,
-    teamId: owner.teamId,
-    createdBy: owner.id,
-  });
-  return task.body;
-}
-
 async function createTaskType(owner, { name = 'Typ testowy', points = 30, frequency = 'daily', executionLimit = { type: 'unlimited' }, description = 'opis' } = {}) {
   const response = await owner.session.post('/api/task-templates', {
     teamId: owner.teamId,
@@ -125,7 +114,6 @@ module.exports = {
   createAccount,
   createTeamOwner,
   addTeamMember,
-  createTask,
   createTaskType,
   loginThroughUi,
   openTab,

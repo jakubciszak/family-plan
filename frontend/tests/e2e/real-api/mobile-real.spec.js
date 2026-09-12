@@ -2,7 +2,7 @@ const { test, expect } = require('@playwright/test');
 const {
   createTeamOwner,
   addTeamMember,
-  createTask,
+  createTaskType,
   loginThroughUi,
   openTab,
   horizontalOverflow,
@@ -15,7 +15,8 @@ const VIEWPORTS = [
 ];
 
 const SCREENS = [
-  ['Zadania', /^tasks|^zadani/i],
+  ['Zadania', /^tasks$|^zadania$/i],
+  ['Typy zadan', /task types|typy zada[nń]/i],
   ['Zespoly', /^teams|^zespo/i],
   ['Moje Konto', /my account|moje konto/i],
   ['Ustawienia', /settings|ustawieni/i],
@@ -35,7 +36,10 @@ test.describe('M. Mobile first', () => {
       test('M1 zaden ekran nie przewija sie w poziomie', async ({ page }) => {
         const owner = await createTeamOwner();
         await addTeamMember(owner);
-        await createTask(owner, { name: 'Bardzo dlugie zadanie do sprzatania calego domu' });
+        await createTaskType(owner, {
+          name: 'Bardzo dlugie zadanie do sprzatania calego domu',
+          executionLimit: { type: 'per_day', count: 3 },
+        });
 
         await loginThroughUi(page, owner.email);
 
