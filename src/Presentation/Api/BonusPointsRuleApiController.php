@@ -163,7 +163,7 @@ class BonusPointsRuleApiController extends AbstractController
                 new OA\Property(
                     property: 'ruleConfig',
                     type: 'object',
-                    example: ['taskTemplateId' => '123e4567-e89b-12d3-a456-426614174000', 'requiredDays' => 5]
+                    example: ['requiredDays' => 5, 'pointsPerDay' => 20]
                 )
             ]
         )
@@ -184,9 +184,18 @@ class BonusPointsRuleApiController extends AbstractController
         if ($request->ruleType === 'consecutive_days') {
             $templateId = $request->ruleConfig['taskTemplateId'] ?? null;
 
-            if (!is_string($templateId) || !Uuid::isValid($templateId)) {
+            if ($templateId !== null && (!is_string($templateId) || !Uuid::isValid($templateId))) {
                 return $this->json(
                     ['error' => 'ruleConfig.taskTemplateId must be a valid task template id'],
+                    Response::HTTP_BAD_REQUEST
+                );
+            }
+
+            $pointsPerDay = $request->ruleConfig['pointsPerDay'] ?? 1;
+
+            if (!is_numeric($pointsPerDay) || (int) $pointsPerDay < 1) {
+                return $this->json(
+                    ['error' => 'ruleConfig.pointsPerDay must be at least 1'],
                     Response::HTTP_BAD_REQUEST
                 );
             }

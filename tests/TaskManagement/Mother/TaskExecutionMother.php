@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\TaskManagement\Mother;
 
+use App\Shared\Infrastructure\Clock\SystemClock;
 use App\Shared\Domain\ValueObject\Uuid;
 use App\TaskManagement\Domain\Entity\TaskExecution;
 use App\TaskManagement\Domain\ValueObject\TaskName;
@@ -164,11 +165,11 @@ final class TaskExecutionMother
         }
 
         if ($this->shouldComplete && $this->completingUserId !== null) {
-            $taskExecution->complete($this->completingUserId);
+            $taskExecution->complete($this->completingUserId, new SystemClock());
         }
 
         if ($this->shouldApprove && $this->approvingAdminId !== null) {
-            $taskExecution->approve($this->approvingAdminId);
+            $taskExecution->approve($this->approvingAdminId, new SystemClock());
         }
 
         if ($this->shouldReject) {

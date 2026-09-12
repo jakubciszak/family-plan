@@ -4,19 +4,20 @@ declare(strict_types=1);
 
 namespace App\TaskManagement\Domain\State;
 
+use App\Shared\Domain\Clock\ClockInterface;
 use App\Shared\Domain\ValueObject\Uuid;
 use App\TaskManagement\Domain\Entity\TaskExecution;
 use App\TaskManagement\Domain\ValueObject\ExecutionStatus;
 
 final class NewExecutionState implements ExecutionStateInterface
 {
-    public function complete(TaskExecution $execution, Uuid $userId): void
+    public function complete(TaskExecution $execution, Uuid $userId, ClockInterface $clock): void
     {
         // Transition to completed state
-        $execution->transitionToState(new CompletedExecutionState(), $userId);
+        $execution->transitionToState(new CompletedExecutionState(), $userId, $clock);
     }
     
-    public function approve(TaskExecution $execution, Uuid $adminId): void
+    public function approve(TaskExecution $execution, Uuid $adminId, ClockInterface $clock): void
     {
         throw new \DomainException('Only completed task executions can be approved');
     }

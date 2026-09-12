@@ -125,6 +125,28 @@ const mockApiResponses = {
     assignedUserName: null
   },
   
+  weekWithStreak: {
+    weekStart: '2026-03-02',
+    total: 55,
+    days: [
+      { date: '2026-03-02', points: 25, reachedThreshold: true, inStreak: true, isToday: false },
+      { date: '2026-03-03', points: 30, reachedThreshold: true, inStreak: true, isToday: true },
+      { date: '2026-03-04', points: 0, reachedThreshold: false, inStreak: false, isToday: false },
+      { date: '2026-03-05', points: 0, reachedThreshold: false, inStreak: false, isToday: false },
+      { date: '2026-03-06', points: 0, reachedThreshold: false, inStreak: false, isToday: false },
+      { date: '2026-03-07', points: 0, reachedThreshold: false, inStreak: false, isToday: false },
+      { date: '2026-03-08', points: 0, reachedThreshold: false, inStreak: false, isToday: false }
+    ],
+    streak: {
+      name: 'Dishwasher Streak',
+      requiredDays: 3,
+      pointsPerDay: 20,
+      bonusPoints: 50,
+      length: 2,
+      met: false
+    }
+  },
+
   emptyTaskTypes: {
     templates: []
   },
@@ -307,6 +329,14 @@ async function setupAuthenticatedSession(page, role = 'user') {
         body: JSON.stringify(teamsData)
       });
     }
+  });
+
+  await page.route('**/api/points/week*', async route => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(mockApiResponses.weekWithStreak)
+    });
   });
 
   await page.route('**/api/task-templates', async route => {

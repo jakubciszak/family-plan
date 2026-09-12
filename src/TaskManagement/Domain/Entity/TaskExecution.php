@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\TaskManagement\Domain\Entity;
 
+use App\Shared\Domain\Clock\ClockInterface;
 use App\Shared\Domain\ValueObject\Uuid;
 use App\TaskManagement\Domain\ValueObject\TaskName;
 use App\TaskManagement\Domain\ValueObject\Points;
@@ -232,6 +233,11 @@ class TaskExecution
         return $this->approvedAt;
     }
 
+    public function earnedOn(): DateTimeImmutable
+    {
+        return $this->completedAt ?? $this->scheduledFor;
+    }
+
     public function createdAt(): DateTimeImmutable
     {
         return $this->createdAt;
@@ -253,14 +259,14 @@ class TaskExecution
         return $this->status === ExecutionStatus::NEW || $this->status === ExecutionStatus::PENDING;
     }
 
-    public function complete(Uuid $userId): void
+    public function complete(Uuid $userId, ClockInterface $clock): void
     {
-        $this->getState()->complete($this, $userId);
+        $this->getState()->complete($this, $userId, $clock);
     }
 
-    public function approve(Uuid $adminId): void
+    public function approve(Uuid $adminId, ClockInterface $clock): void
     {
-        $this->getState()->approve($this, $adminId);
+        $this->getState()->approve($this, $adminId, $clock);
     }
 
     public function reject(): void
@@ -269,24 +275,24 @@ class TaskExecution
     }
 
     // Internal method called by state objects to transition to completed state
-    public function transitionToState(ExecutionStateInterface $newState, Uuid $userId): void
+    public function transitionToState(ExecutionStateInterface $newState, Uuid $userId, ClockInterface $clock): void
     {
         $this->status = ExecutionStatus::COMPLETED;
         $this->completedByUserId = $userId;
-        $this->completedAt = new DateTimeImmutable();
-        $this->updatedAt = new DateTimeImmutable();
+        $this->completedAt = $clock->now();
+        $this->updatedAt = $clock->now();
         $this->state = $newState;
 
         $this->record(new TaskExecutionCompleted($this->id, $userId, $this->completedAt));
     }
 
     // Internal method called by state objects to transition to approved state
-    public function transitionToApproved(Uuid $adminId): void
+    public function transitionToApproved(Uuid $adminId, ClockInterface $clock): void
     {
         $this->status = ExecutionStatus::APPROVED;
         $this->approvedByAdminId = $adminId;
-        $this->approvedAt = new DateTimeImmutable();
-        $this->updatedAt = new DateTimeImmutable();
+        $this->approvedAt = $clock->now();
+        $this->updatedAt = $clock->now();
         $this->state = ExecutionStateFactory::createFromStatus(ExecutionStatus::APPROVED);
 
         $this->record(new TaskExecutionApproved($this->id, $adminId, $this->approvedAt));

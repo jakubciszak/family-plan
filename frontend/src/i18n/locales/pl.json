@@ -94,7 +94,13 @@
     "team": "Zespół",
     "noAdminTeam": "Brak zespołu, w którym jesteś adminem",
     "accessDeniedTitle": "Brak dostępu",
-    "accessDeniedBody": "Zasadami bonusowymi zarządza admin zespołu."
+    "accessDeniedBody": "Zasadami bonusowymi zarządza admin zespołu.",
+    "requiredDays": "Ile dni z rzędu",
+    "requiredDaysHint": "Liczba kolejnych dni, w których trzeba zebrać punkty",
+    "pointsPerDay": "Punktów dziennie",
+    "pointsPerDayHint": "Tyle punktów trzeba zebrać w ciągu dnia, żeby dzień liczył się do serii",
+    "consecutiveDaysSummary": "{{days}} dni z rzędu po min. {{points}} pkt dziennie",
+    "monthlyCountSummary": "{{count}} zadań w miesiącu"
   },
   "user": {
     "points": "{{points}} punktów",
@@ -246,6 +252,20 @@
       "per_day": "Określona liczba dziennie",
       "per_week": "Określona liczba tygodniowo",
       "per_month": "Określona liczba miesięcznie"
+    }
+  },
+  "week": {
+    "title": "Ten tydzień",
+    "streakMet": "Seria {{count}} dni z rzędu — bonus {{points}} pkt",
+    "streakProgress": "Seria: {{count}} z {{required}} dni (min. {{pointsPerDay}} pkt dziennie)",
+    "days": {
+      "mon": "Pn",
+      "tue": "Wt",
+      "wed": "Śr",
+      "thu": "Cz",
+      "fri": "Pt",
+      "sat": "So",
+      "sun": "Nd"
     }
   }
 }

@@ -94,7 +94,13 @@
     "team": "Team",
     "noAdminTeam": "You are not an admin of any team",
     "accessDeniedTitle": "Access denied",
-    "accessDeniedBody": "Bonus rules are managed by a team admin."
+    "accessDeniedBody": "Bonus rules are managed by a team admin.",
+    "requiredDays": "Days in a row",
+    "requiredDaysHint": "How many days in a row must earn points",
+    "pointsPerDay": "Points a day",
+    "pointsPerDayHint": "How many points a day must be earned for the day to count towards the streak",
+    "consecutiveDaysSummary": "{{days}} days in a row with at least {{points}} points a day",
+    "monthlyCountSummary": "{{count}} tasks in a month"
   },
   "user": {
     "points": "{{points}} points",
@@ -246,6 +252,20 @@
       "per_day": "A set number per day",
       "per_week": "A set number per week",
       "per_month": "A set number per month"
+    }
+  },
+  "week": {
+    "title": "This week",
+    "streakMet": "A streak of {{count}} days — {{points}} bonus points",
+    "streakProgress": "Streak: {{count}} of {{required}} days (at least {{pointsPerDay}} points a day)",
+    "days": {
+      "mon": "Mon",
+      "tue": "Tue",
+      "wed": "Wed",
+      "thu": "Thu",
+      "fri": "Fri",
+      "sat": "Sat",
+      "sun": "Sun"
     }
   }
 }

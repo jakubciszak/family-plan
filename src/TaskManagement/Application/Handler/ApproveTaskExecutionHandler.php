@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\TaskManagement\Application\Handler;
 
+use App\Shared\Domain\Clock\ClockInterface;
 use App\Shared\Domain\ValueObject\Uuid;
 use App\TaskManagement\Domain\Exception\UnauthorizedTaskActionException;
 use App\TaskManagement\Application\Command\ApproveTaskExecutionCommand;
@@ -14,6 +15,7 @@ use App\TaskManagement\Domain\Strategy\ExecutionPointsAwardStrategyInterface;
 final readonly class ApproveTaskExecutionHandler
 {
     public function __construct(
+        private ClockInterface $clock,
         private TaskExecutionRepositoryInterface $taskExecutionRepository,
         private TaskApprovalPolicyInterface $approvalPolicy,
         private ExecutionPointsAwardStrategyInterface $pointsAwardStrategy
@@ -45,7 +47,7 @@ final readonly class ApproveTaskExecutionHandler
             throw new \DomainException('Cannot approve task execution that was not assigned to anyone');
         }
 
-        $execution->approve($adminId);
+        $execution->approve($adminId, $this->clock);
         $this->taskExecutionRepository->save($execution);
         
         // Award points to the user who completed the execution

@@ -116,6 +116,26 @@ final class DoctrineTaskExecutionRepository implements TaskExecutionRepositoryIn
             ->getResult();
     }
 
+    public function findApprovedByUserSince(Uuid $userId, DateTimeImmutable $since, ?Uuid $taskTemplateId = null): array
+    {
+        $builder = $this->entityManager->getRepository(TaskExecution::class)
+            ->createQueryBuilder('te')
+            ->where('te.assignedUserId = :userId')
+            ->andWhere('te.status = :status')
+            ->andWhere('COALESCE(te.completedAt, te.scheduledFor) >= :since')
+            ->setParameter('userId', $userId->value())
+            ->setParameter('status', ExecutionStatus::APPROVED->value)
+            ->setParameter('since', $since->setTime(0, 0))
+            ->orderBy('te.scheduledFor', 'ASC');
+
+        if ($taskTemplateId !== null) {
+            $builder->andWhere('te.taskTemplateId = :templateId')
+                ->setParameter('templateId', $taskTemplateId->value());
+        }
+
+        return $builder->getQuery()->getResult();
+    }
+
     public function countApprovedInCurrentMonth(Uuid $userId): int
     {
         $now = new DateTimeImmutable();

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\TaskManagement\Domain;
 
+use App\Shared\Infrastructure\Clock\SystemClock;
 use App\Tests\Shared\Mother\UuidMother;
 use App\Tests\TaskManagement\Assert\TaskExecutionAssert;
 use App\Tests\TaskManagement\Mother\FrequencyMother;
@@ -78,7 +79,7 @@ class TaskTemplateManagementTest extends TestCase
         $execution->pullDomainEvents(); // Clear creation events
 
         // When
-        $execution->complete($userId);
+        $execution->complete($userId, new SystemClock());
 
         // Then
         TaskExecutionAssert::assertTaskExecutionIsCompleted($execution);
@@ -98,7 +99,7 @@ class TaskTemplateManagementTest extends TestCase
         $executionId = $execution->id();
 
         // When
-        $execution->approve($adminId);
+        $execution->approve($adminId, new SystemClock());
 
         // Then
         TaskExecutionAssert::assertTaskExecutionIsApproved($execution);
@@ -130,7 +131,7 @@ class TaskTemplateManagementTest extends TestCase
 
         // Then
         TaskExecutionAssert::assertTaskExecutionCannotPerformAction(
-            fn() => $execution->approve($adminId),
+            fn() => $execution->approve($adminId, new SystemClock()),
             'Only completed task executions can be approved'
         );
     }
@@ -147,7 +148,7 @@ class TaskTemplateManagementTest extends TestCase
 
         // Then
         TaskExecutionAssert::assertTaskExecutionCannotPerformAction(
-            fn() => $execution->complete(UuidMother::random()),
+            fn() => $execution->complete(UuidMother::random(), new SystemClock()),
             'Cannot complete an already approved task execution'
         );
     }

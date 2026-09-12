@@ -38,6 +38,13 @@ interface TaskExecutionRepositoryInterface
     public function findRecentApprovedByUserAndTemplate(Uuid $userId, Uuid $taskTemplateId, int $limit = 30): array;
 
     /**
+     * Find the approved executions a user earned on or after a day, optionally narrowed to one task type
+     *
+     * @return TaskExecution[]
+     */
+    public function findApprovedByUserSince(Uuid $userId, DateTimeImmutable $since, ?Uuid $taskTemplateId = null): array;
+
+    /**
      * Count approved executions in the current month for a specific user
      * @param Uuid $userId
      * @return int

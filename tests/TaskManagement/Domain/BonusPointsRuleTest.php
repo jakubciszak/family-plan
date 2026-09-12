@@ -26,8 +26,9 @@ class BonusPointsRuleTest extends TestCase
         $description = 'Earn 20 bonus points for emptying dishwasher 5 consecutive days';
         $bonusPoints = Points::fromInt(20);
         $config = RuleConfig::consecutiveDays(
-            taskTemplateId: Uuid::generate(),
-            requiredDays: 5
+            requiredDays: 5,
+            pointsPerDay: 20,
+            taskTemplateId: Uuid::generate()
         );
 
         // When
@@ -134,8 +135,9 @@ class BonusPointsRuleTest extends TestCase
             'Sample Description',
             Points::fromInt(20),
             RuleConfig::consecutiveDays(
-                taskTemplateId: Uuid::generate(),
-                requiredDays: 5
+                requiredDays: 5,
+                pointsPerDay: 20,
+                taskTemplateId: Uuid::generate()
             )
         );
     }

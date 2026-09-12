@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\TaskManagement\Domain\Service;
 
 use App\Shared\Domain\ValueObject\Uuid;
+use DateTimeImmutable;
 use App\TaskManagement\Domain\Entity\BonusPointsRule;
 use App\TaskManagement\Domain\Repository\TaskExecutionRepositoryInterface;
 use App\TaskManagement\Domain\ValueObject\RuleType;
@@ -31,24 +32,19 @@ class BonusPointsEvaluator
     private function evaluateConsecutiveDays(BonusPointsRule $rule, Uuid $userId): bool
     {
         $config = $rule->config();
-        $taskTemplateId = $config->taskTemplateId();
         $requiredDays = $config->requiredDays();
 
-        if ($taskTemplateId === null || $requiredDays === null) {
+        if ($requiredDays === null) {
             return false;
         }
 
-        $executions = $this->executionRepository->findRecentApprovedByUserAndTemplate(
+        $executions = $this->executionRepository->findApprovedByUserSince(
             $userId,
-            $taskTemplateId,
-            $requiredDays * 2 // Get more than needed to check for consecutive days
+            new DateTimeImmutable(sprintf('-%d days', $requiredDays * 2)),
+            $config->taskTemplateId()
         );
 
-        if (count($executions) < $requiredDays) {
-            return false;
-        }
-
-        return ExecutionStreak::longest($executions) >= $requiredDays;
+        return ExecutionStreak::longest($executions, $config->pointsPerDay() ?? 1) >= $requiredDays;
     }
 
     private function evaluateMonthlyTaskCount(BonusPointsRule $rule, Uuid $userId): bool

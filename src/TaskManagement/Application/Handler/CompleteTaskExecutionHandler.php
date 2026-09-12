@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\TaskManagement\Application\Handler;
 
+use App\Shared\Domain\Clock\ClockInterface;
 use App\Shared\Domain\ValueObject\Uuid;
 use App\TaskManagement\Application\Command\CompleteTaskExecutionCommand;
 use App\TaskManagement\Domain\Repository\TaskExecutionRepositoryInterface;
@@ -11,6 +12,7 @@ use App\TaskManagement\Domain\Repository\TaskExecutionRepositoryInterface;
 final readonly class CompleteTaskExecutionHandler
 {
     public function __construct(
+        private ClockInterface $clock,
         private TaskExecutionRepositoryInterface $taskExecutionRepository
     ) {
     }
@@ -27,7 +29,7 @@ final readonly class CompleteTaskExecutionHandler
             );
         }
 
-        $execution->complete(Uuid::fromString($command->userId));
+        $execution->complete(Uuid::fromString($command->userId), $this->clock);
         $this->taskExecutionRepository->save($execution);
     }
 }

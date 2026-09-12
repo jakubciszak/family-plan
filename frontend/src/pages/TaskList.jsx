@@ -1,5 +1,6 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
+import WeekCalendar from '../components/WeekCalendar';
 import taskService from '../services/taskService';
 import teamService from '../services/teamService';
 
@@ -28,6 +29,7 @@ function TaskList() {
     const [selectedTeam, setSelectedTeam] = React.useState(null);
     const [loading, setLoading] = React.useState(true);
     const [error, setError] = React.useState(null);
+    const [refreshToken, setRefreshToken] = React.useState(0);
     const limitLabel = useLimitLabel();
 
     const isTeamAdmin = selectedTeam?.role === 'admin';
@@ -75,6 +77,7 @@ function TaskList() {
 
     const refresh = async () => {
         await Promise.all([loadTasks(), loadAwaitingApproval()]);
+        setRefreshToken((token) => token + 1);
     };
 
     const run = async (action) => {
@@ -127,6 +130,8 @@ function TaskList() {
             </div>
 
             {error && <div className="error-message">{error}</div>}
+
+            <WeekCalendar refreshToken={refreshToken} />
 
             <section className="task-section" data-testid="my-tasks">
                 <h3>{t('tasks.mySection')}</h3>

@@ -13,22 +13,20 @@ final readonly class RuleConfig
         private RuleType $type,
         private ?Uuid $taskTemplateId,
         private ?int $requiredDays,
-        private ?int $requiredCount
+        private ?int $requiredCount,
+        private ?int $pointsPerDay = null
     ) {
         $this->validate();
     }
 
-    public static function consecutiveDays(Uuid $taskTemplateId, int $requiredDays): self
+    public static function consecutiveDays(int $requiredDays, int $pointsPerDay = 1, ?Uuid $taskTemplateId = null): self
     {
-        if ($requiredDays < 2) {
-            throw new InvalidArgumentException('Required days must be at least 2');
-        }
-
         return new self(
             RuleType::CONSECUTIVE_DAYS,
             $taskTemplateId,
             $requiredDays,
-            null
+            null,
+            $pointsPerDay
         );
     }
 
@@ -42,7 +40,8 @@ final readonly class RuleConfig
             RuleType::MONTHLY_TASK_COUNT,
             null,
             null,
-            $requiredCount
+            $requiredCount,
+            null
         );
     }
 
@@ -66,6 +65,11 @@ final readonly class RuleConfig
         return $this->requiredCount;
     }
 
+    public function pointsPerDay(): ?int
+    {
+        return $this->pointsPerDay;
+    }
+
     public function toArray(): array
     {
         return [
@@ -73,6 +77,7 @@ final readonly class RuleConfig
             'taskTemplateId' => $this->taskTemplateId?->value(),
             'requiredDays' => $this->requiredDays,
             'requiredCount' => $this->requiredCount,
+            'pointsPerDay' => $this->pointsPerDay,
         ];
     }
 
@@ -84,7 +89,8 @@ final readonly class RuleConfig
             $type,
             isset($data['taskTemplateId']) ? Uuid::fromString($data['taskTemplateId']) : null,
             $data['requiredDays'] ?? null,
-            $data['requiredCount'] ?? null
+            $data['requiredCount'] ?? null,
+            isset($data['requiredDays']) ? (int) ($data['pointsPerDay'] ?? 1) : null
         );
     }
 
@@ -98,12 +104,12 @@ final readonly class RuleConfig
 
     private function validateConsecutiveDays(): void
     {
-        if ($this->taskTemplateId === null) {
-            throw new InvalidArgumentException('Task template ID is required for consecutive days rule');
-        }
-
         if ($this->requiredDays === null || $this->requiredDays < 2) {
             throw new InvalidArgumentException('Required days must be at least 2');
+        }
+
+        if ($this->pointsPerDay === null || $this->pointsPerDay < 1) {
+            throw new InvalidArgumentException('A streak day needs at least 1 point');
         }
     }
 

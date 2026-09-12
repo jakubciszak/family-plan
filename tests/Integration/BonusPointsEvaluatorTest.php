@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Integration;
 
+use App\Shared\Infrastructure\Clock\FixedClock;
 use App\Shared\Domain\ValueObject\Uuid;
 use App\TaskManagement\Domain\Entity\BonusPointsRule;
 use App\TaskManagement\Domain\Entity\TaskExecution;
@@ -138,7 +139,7 @@ class BonusPointsEvaluatorTest extends IntegrationTestCase
             sprintf('%d dni z rzedu', $days),
             'opis',
             Points::fromInt(50),
-            RuleConfig::consecutiveDays($templateId, $days)
+            RuleConfig::consecutiveDays($days, 1, $templateId)
         );
     }
 
@@ -171,8 +172,9 @@ class BonusPointsEvaluatorTest extends IntegrationTestCase
             $doer->id(),
             new DateTimeImmutable($day)
         );
-        $execution->complete($doer->id());
-        $execution->approve($approver->id());
+        $clock = new FixedClock(new DateTimeImmutable($day));
+        $execution->complete($doer->id(), $clock);
+        $execution->approve($approver->id(), $clock);
 
         $this->executions->save($execution);
     }

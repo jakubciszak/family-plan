@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Presentation\Api;
 
 use App\Party\Application\Service\PartyResponsibilities;
+use App\Shared\Domain\Clock\ClockInterface;
 use App\Party\Domain\ValueObject\ResponsibilityType;
 use App\Shared\Domain\ValueObject\Uuid;
 use App\TaskManagement\Application\Service\TaskTypePool;
@@ -35,7 +36,8 @@ class TaskExecutionApiController extends AbstractController
         private readonly UserRepositoryInterface $userRepository,
         private readonly ExecutionPointsAwardStrategyInterface $pointsAward,
         private readonly TaskTypePool $pool,
-        private readonly PartyResponsibilities $responsibilities
+        private readonly PartyResponsibilities $responsibilities,
+        private readonly ClockInterface $clock
     ) {
     }
 
@@ -141,7 +143,7 @@ class TaskExecutionApiController extends AbstractController
 
         $this->assertCarries(ResponsibilityType::completeTask(), $teamId);
 
-        $execution->complete($this->callerId());
+        $execution->complete($this->callerId(), $this->clock);
         $this->executionRepository->save($execution);
 
         $this->responsibilities->sign(
@@ -168,7 +170,7 @@ class TaskExecutionApiController extends AbstractController
             throw new UnauthorizedTaskActionException('Nobody approves their own task');
         }
 
-        $execution->approve($this->callerId());
+        $execution->approve($this->callerId(), $this->clock);
         $this->executionRepository->save($execution);
 
         $this->responsibilities->sign(

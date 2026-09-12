@@ -260,7 +260,9 @@ test.describe('Bonus Rules Management', () => {
       
       // Check that required days field appears
       await expect(page.locator('input#requiredDays')).toBeVisible();
-      await expect(page.locator('label[for="requiredDays"]')).toContainText('Required Consecutive Days');
+      await expect(page.locator('label[for="requiredDays"]')).toContainText('Days in a row');
+      await expect(page.locator('input#pointsPerDay')).toBeVisible();
+      await expect(page.locator('label[for="pointsPerDay"]')).toContainText('Points a day');
     });
     
     test('should show monthly task count fields when monthly task count rule type selected', async ({ page }) => {

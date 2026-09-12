@@ -11,21 +11,22 @@ final class ExecutionStreak
     /**
      * @param TaskExecution[] $executions
      */
-    public static function longest(array $executions): int
+    public static function longest(array $executions, int $pointsPerDay = 1): int
     {
-        if ($executions === []) {
+        $days = DailyPoints::daysReaching($executions, $pointsPerDay);
+
+        if ($days === []) {
             return 0;
         }
-
-        $days = self::distinctDaysNewestFirst($executions);
 
         $longest = 1;
         $current = 1;
 
         for ($index = 1; $index < count($days); $index++) {
-            $difference = $days[$index - 1]->diff($days[$index]);
+            $previous = DailyPoints::day($days[$index - 1]);
+            $day = DailyPoints::day($days[$index]);
 
-            if ($difference->days === 1) {
+            if ($previous->diff($day)->days === 1) {
                 $current++;
                 $longest = max($longest, $current);
 
@@ -40,19 +41,28 @@ final class ExecutionStreak
 
     /**
      * @param TaskExecution[] $executions
-     * @return \DateTimeImmutable[]
+     * @return string[] the days of the run that ends on the most recent qualifying day
      */
-    private static function distinctDaysNewestFirst(array $executions): array
+    public static function current(array $executions, int $pointsPerDay = 1): array
     {
-        $days = [];
+        $days = DailyPoints::daysReaching($executions, $pointsPerDay);
 
-        foreach ($executions as $execution) {
-            $day = $execution->scheduledFor()->setTime(0, 0);
-            $days[$day->format('Y-m-d')] = $day;
+        if ($days === []) {
+            return [];
         }
 
-        krsort($days);
+        $run = [array_pop($days)];
 
-        return array_values($days);
+        while ($days !== []) {
+            $candidate = array_pop($days);
+
+            if (DailyPoints::day($candidate)->diff(DailyPoints::day($run[0]))->days !== 1) {
+                break;
+            }
+
+            array_unshift($run, $candidate);
+        }
+
+        return $run;
     }
 }

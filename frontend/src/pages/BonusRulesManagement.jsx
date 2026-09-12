@@ -162,9 +162,12 @@ function BonusRuleCard({ rule, onUpdate, onActivate, onDeactivate }) {
 
     const getRuleDescription = (rule) => {
         if (rule.type === 'consecutive_days' && rule.config.requiredDays) {
-            return `Complete task ${rule.config.requiredDays} consecutive days`;
+            return t('bonusRules.consecutiveDaysSummary', {
+                days: rule.config.requiredDays,
+                points: rule.config.pointsPerDay || 1,
+            });
         } else if (rule.type === 'monthly_task_count' && rule.config.requiredCount) {
-            return `Complete ${rule.config.requiredCount} tasks in a month`;
+            return t('bonusRules.monthlyCountSummary', { count: rule.config.requiredCount });
         }
         return rule.description;
     };
@@ -243,6 +246,7 @@ function BonusRuleForm({ rule, teams = [], onSubmit, onCancel }) {
         bonusPoints: rule?.bonusPoints || 10,
         ruleType: rule?.type || 'consecutive_days',
         requiredDays: rule?.config?.requiredDays || 5,
+        pointsPerDay: rule?.config?.pointsPerDay || 10,
         requiredCount: rule?.config?.requiredCount || 20,
         taskTemplateId: rule?.config?.taskTemplateId || '',
         teamId: rule?.teamId || teams[0]?.id || '',
@@ -258,9 +262,10 @@ function BonusRuleForm({ rule, teams = [], onSubmit, onCancel }) {
         e.preventDefault();
         
         const ruleConfig = formData.ruleType === 'consecutive_days'
-            ? { 
-                taskTemplateId: formData.taskTemplateId || 'default-template-id', 
-                requiredDays: formData.requiredDays 
+            ? {
+                requiredDays: formData.requiredDays,
+                pointsPerDay: formData.pointsPerDay,
+                ...(formData.taskTemplateId ? { taskTemplateId: formData.taskTemplateId } : {}),
               }
             : { requiredCount: formData.requiredCount };
 
@@ -286,7 +291,7 @@ function BonusRuleForm({ rule, teams = [], onSubmit, onCancel }) {
         const { name, value } = e.target;
         setFormData(prev => ({
             ...prev,
-            [name]: ['bonusPoints', 'requiredDays', 'requiredCount'].includes(name) 
+            [name]: ['bonusPoints', 'requiredDays', 'requiredCount', 'pointsPerDay'].includes(name) 
                 ? parseInt(value, 10) 
                 : value,
         }));
@@ -372,7 +377,7 @@ function BonusRuleForm({ rule, teams = [], onSubmit, onCancel }) {
 
                     {formData.ruleType === 'consecutive_days' && (
                         <div className="form-group">
-                            <label htmlFor="requiredDays">Required Consecutive Days</label>
+                            <label htmlFor="requiredDays">{t('bonusRules.requiredDays')}</label>
                             <input
                                 type="number"
                                 id="requiredDays"
@@ -383,7 +388,24 @@ function BonusRuleForm({ rule, teams = [], onSubmit, onCancel }) {
                                 max="365"
                                 required
                             />
-                            <small>Number of consecutive days the task must be completed</small>
+                            <small>{t('bonusRules.requiredDaysHint')}</small>
+                        </div>
+                    )}
+
+                    {formData.ruleType === 'consecutive_days' && (
+                        <div className="form-group">
+                            <label htmlFor="pointsPerDay">{t('bonusRules.pointsPerDay')}</label>
+                            <input
+                                type="number"
+                                id="pointsPerDay"
+                                name="pointsPerDay"
+                                value={formData.pointsPerDay}
+                                onChange={handleChange}
+                                min="1"
+                                max="1000"
+                                required
+                            />
+                            <small>{t('bonusRules.pointsPerDayHint')}</small>
                         </div>
                     )}
 

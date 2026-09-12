@@ -193,3 +193,54 @@ test.describe('Approval queue', () => {
     await expect.poll(() => approved).toBe('exec-2');
   });
 });
+
+test.describe('Week calendar', () => {
+  test.beforeEach(async ({ page }) => {
+    await setupAuthenticatedSession(page, 'user');
+  });
+
+  test('shows seven days with the points of each', async ({ page }) => {
+    await page.goto('/');
+    await page.waitForSelector('.task-list-container');
+
+    const week = page.getByTestId('week-calendar');
+    await expect(week.locator('.week-day')).toHaveCount(7);
+    await expect(week.locator('.week-day').first().locator('.week-day-points')).toHaveText('25');
+    await expect(week.locator('.week-total')).toContainText('55');
+  });
+
+  test('marks today and the days of the streak', async ({ page }) => {
+    await page.goto('/');
+    await page.waitForSelector('.task-list-container');
+
+    const week = page.getByTestId('week-calendar');
+    await expect(week.locator('.week-day.is-today')).toHaveCount(1);
+    await expect(week.locator('.week-day.in-streak')).toHaveCount(2);
+  });
+
+  test('tells how far the streak has got and what a day needs', async ({ page }) => {
+    await page.goto('/');
+    await page.waitForSelector('.task-list-container');
+
+    const streak = page.getByTestId('week-streak');
+    await expect(streak).toContainText('2');
+    await expect(streak).toContainText('3');
+    await expect(streak).toContainText('20');
+  });
+
+  test('without a streak rule only the days are shown', async ({ page }) => {
+    await page.route('**/api/points/week*', async route => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ ...mockApiResponses.weekWithStreak, streak: null })
+      });
+    });
+
+    await page.goto('/');
+    await page.waitForSelector('.task-list-container');
+
+    await expect(page.getByTestId('week-calendar')).toBeVisible();
+    await expect(page.getByTestId('week-streak')).toHaveCount(0);
+  });
+});

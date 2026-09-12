@@ -27,8 +27,11 @@ final readonly class CreateBonusPointsRuleHandler
         
         $config = match ($ruleType) {
             RuleType::CONSECUTIVE_DAYS => RuleConfig::consecutiveDays(
-                Uuid::fromString($command->ruleConfig['taskTemplateId']),
-                $command->ruleConfig['requiredDays']
+                (int) $command->ruleConfig['requiredDays'],
+                (int) ($command->ruleConfig['pointsPerDay'] ?? 1),
+                isset($command->ruleConfig['taskTemplateId'])
+                    ? Uuid::fromString($command->ruleConfig['taskTemplateId'])
+                    : null
             ),
             RuleType::MONTHLY_TASK_COUNT => RuleConfig::monthlyTaskCount(
                 $command->ruleConfig['requiredCount']

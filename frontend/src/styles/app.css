@@ -897,3 +897,85 @@ button:hover {
     font-size: 0.9rem;
     color: #6c757d;
 }
+
+.week-calendar {
+    background: white;
+    border-radius: 8px;
+    padding: 12px 14px;
+    margin-bottom: 20px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.week-calendar-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.week-calendar-header h3 {
+    margin: 0;
+    font-size: 1rem;
+    color: #2c3e50;
+}
+
+.week-total {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #b8860b;
+}
+
+.week-days {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 6px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.week-day {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: 8px 2px;
+    border-radius: 6px;
+    background: #f3f4f6;
+    min-width: 0;
+}
+
+.week-day-name {
+    font-size: 0.75rem;
+    color: #6b7280;
+}
+
+.week-day-points {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+.week-day.reached {
+    background: #ecfdf5;
+}
+
+.week-day.in-streak {
+    background: #d1fae5;
+}
+
+.week-day.is-today {
+    outline: 2px solid #3b82f6;
+}
+
+.week-day-flame {
+    font-size: 0.75rem;
+    line-height: 1;
+}
+
+.week-streak {
+    margin: 10px 0 0;
+    font-size: 0.85rem;
+    color: #6c757d;
+}

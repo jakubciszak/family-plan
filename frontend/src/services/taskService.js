@@ -29,6 +29,11 @@ const taskService = {
         return await apiClient.get('/api/task-executions/mine');
     },
 
+    async getWeek(weekStart) {
+        const query = weekStart ? `?weekStart=${weekStart}` : '';
+        return await apiClient.get(`/api/points/week${query}`);
+    },
+
     async getAwaitingApproval() {
         return await apiClient.get('/api/task-executions/awaiting-approval');
     },
