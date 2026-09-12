@@ -55,7 +55,7 @@ Feature: Complete task lifecycle
     And "John" completes task "Clean room"
 
     When "Kate" approves task "Clean room"
-    Then the operation should fail with "Only administrators can approve tasks"
+    Then the operation should fail with "Only team admins can approve tasks"
 
   Scenario: Accumulating points from multiple tasks
     Given it is "2025-01-01 08:00:00"

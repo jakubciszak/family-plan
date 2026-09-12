@@ -165,7 +165,7 @@ jobs:
     - name: Run Behat Acceptance Tests
       run: |
         mkdir -p test-results
-        vendor/bin/behat --no-colors --format=pretty --out=std --format=junit --out=test-results features/task_management/task_lifecycle.feature || true
+        vendor/bin/behat --no-colors --format=pretty --out=std --format=junit --out=test-results
     
     - name: Upload acceptance test results
       uses: actions/upload-artifact@v4
