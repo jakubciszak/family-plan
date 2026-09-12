@@ -38,8 +38,8 @@ final class DoctrineTaskExecutionRepository implements TaskExecutionRepositoryIn
     {
         return $this->entityManager->getRepository(TaskExecution::class)
             ->createQueryBuilder('te')
-            ->where('te.routineTaskId = :routineTaskId')
-            ->setParameter('routineTaskId', $routineTaskId->value())
+            ->where('te.taskTemplateId = :taskTemplateId')
+            ->setParameter('taskTemplateId', $routineTaskId->value())
             ->orderBy('te.scheduledFor', 'DESC')
             ->getQuery()
             ->getResult();

@@ -8,6 +8,7 @@ use App\Shared\Domain\ValueObject\Uuid;
 use App\TaskManagement\Domain\ValueObject\TaskName;
 use App\TaskManagement\Domain\ValueObject\Points;
 use App\TaskManagement\Domain\ValueObject\Frequency;
+use App\TaskManagement\Domain\ValueObject\ExecutionLimit;
 use App\TaskManagement\Domain\ValueObject\ScheduleConfig;
 use App\TaskManagement\Domain\Event\TaskTemplateCreated;
 use DateTimeImmutable;
@@ -42,6 +43,9 @@ class TaskTemplate
         #[ORM\Column(type: 'schedule_config')]
         private ScheduleConfig $scheduleConfig,
         
+        #[ORM\Column(type: 'execution_limit')]
+        private ExecutionLimit $executionLimit,
+
         #[ORM\Column(type: 'boolean')]
         private bool $isActive,
         
@@ -66,7 +70,9 @@ class TaskTemplate
         Points $points,
         Frequency $frequency,
         ScheduleConfig $scheduleConfig,
-        ?Uuid $assignedUserId = null
+        ?Uuid $assignedUserId = null,
+        ?ExecutionLimit $executionLimit = null,
+        ?Uuid $teamId = null
     ): self {
         $taskTemplate = new self(
             $id,
@@ -75,9 +81,12 @@ class TaskTemplate
             $points,
             $frequency,
             $scheduleConfig,
+            $executionLimit ?? ExecutionLimit::unlimited(),
             true, // isActive
             $assignedUserId,
-            new DateTimeImmutable()
+            new DateTimeImmutable(),
+            null,
+            $teamId
         );
 
         $taskTemplate->record(new TaskTemplateCreated(
@@ -90,6 +99,17 @@ class TaskTemplate
         ));
 
         return $taskTemplate;
+    }
+
+    public function executionLimit(): ExecutionLimit
+    {
+        return $this->executionLimit;
+    }
+
+    public function changeExecutionLimit(ExecutionLimit $limit): void
+    {
+        $this->executionLimit = $limit;
+        $this->updatedAt = new DateTimeImmutable();
     }
 
     public function id(): Uuid

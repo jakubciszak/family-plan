@@ -16,6 +16,7 @@ doctrine:
             frequency: App\TaskManagement\Infrastructure\Persistence\Doctrine\Type\FrequencyType
             task_status: App\TaskManagement\Infrastructure\Persistence\Doctrine\Type\TaskStatusType
             schedule_config: App\TaskManagement\Infrastructure\Persistence\Doctrine\Type\ScheduleConfigType
+            execution_limit: App\TaskManagement\Infrastructure\Persistence\Doctrine\Type\ExecutionLimitType
             execution_status: App\TaskManagement\Infrastructure\Persistence\Doctrine\Type\ExecutionStatusType
             rule_type: App\TaskManagement\Infrastructure\Persistence\Doctrine\Type\RuleTypeType
             user_preferences: App\UserSettings\Infrastructure\Persistence\Doctrine\Type\UserPreferencesType
