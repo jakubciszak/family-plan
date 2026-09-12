@@ -7,9 +7,6 @@ namespace DoctrineMigrations;
 use Doctrine\DBAL\Schema\Schema;
 use Doctrine\Migrations\AbstractMigration;
 
-/**
- * Create Party archetype tables: parties (STI) and party_relationships
- */
 final class Version20260117150000 extends AbstractMigration
 {
     public function getDescription(): string
@@ -19,52 +16,42 @@ final class Version20260117150000 extends AbstractMigration
 
     public function up(Schema $schema): void
     {
-        // Create parties table using Single Table Inheritance
-        $this->addSql('
-            CREATE TABLE parties (
-                id CHAR(36) NOT NULL COMMENT \'(DC2Type:uuid)\',
-                party_type VARCHAR(50) NOT NULL COMMENT \'Discriminator: PERSON or ORGANIZATION\',
-                name VARCHAR(255) NOT NULL,
-                email VARCHAR(255) DEFAULT NULL COMMENT \'(DC2Type:email)\',
-                description TEXT DEFAULT NULL,
-                created_at DATETIME NOT NULL COMMENT \'(DC2Type:datetime_immutable)\',
-                PRIMARY KEY(id),
-                INDEX idx_party_type (party_type)
-            ) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB
-        ');
+        $this->addSql('CREATE TABLE IF NOT EXISTS parties (
+            id VARCHAR(36) NOT NULL,
+            party_type VARCHAR(255) NOT NULL,
+            type VARCHAR(50) NOT NULL,
+            name VARCHAR(255) DEFAULT NULL,
+            email VARCHAR(255) DEFAULT NULL,
+            description TEXT DEFAULT NULL,
+            created_at TIMESTAMP(0) WITHOUT TIME ZONE NOT NULL,
+            PRIMARY KEY(id)
+        )');
+        $this->addSql('CREATE INDEX IF NOT EXISTS idx_party_type ON parties (party_type)');
 
-        // Create party_relationships table
-        $this->addSql('
-            CREATE TABLE party_relationships (
-                id CHAR(36) NOT NULL COMMENT \'(DC2Type:uuid)\',
-                from_party_id CHAR(36) NOT NULL COMMENT \'(DC2Type:uuid)\',
-                to_party_id CHAR(36) NOT NULL COMMENT \'(DC2Type:uuid)\',
-                type VARCHAR(50) NOT NULL COMMENT \'(DC2Type:party_relationship_type)\',
-                created_at DATETIME NOT NULL COMMENT \'(DC2Type:datetime_immutable)\',
-                ended_at DATETIME DEFAULT NULL COMMENT \'(DC2Type:datetime_immutable)\',
-                PRIMARY KEY(id),
-                INDEX idx_from_party (from_party_id),
-                INDEX idx_to_party (to_party_id),
-                INDEX idx_relationship_type (type),
-                INDEX idx_active_relationships (ended_at),
-                CONSTRAINT fk_party_rel_from FOREIGN KEY (from_party_id) REFERENCES parties (id) ON DELETE CASCADE,
-                CONSTRAINT fk_party_rel_to FOREIGN KEY (to_party_id) REFERENCES parties (id) ON DELETE CASCADE
-            ) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB
-        ');
+        $this->addSql('CREATE TABLE IF NOT EXISTS party_relationships (
+            id VARCHAR(36) NOT NULL,
+            from_party_id VARCHAR(36) NOT NULL,
+            to_party_id VARCHAR(36) NOT NULL,
+            type VARCHAR(50) NOT NULL,
+            created_at TIMESTAMP(0) WITHOUT TIME ZONE NOT NULL,
+            ended_at TIMESTAMP(0) WITHOUT TIME ZONE DEFAULT NULL,
+            PRIMARY KEY(id)
+        )');
+        $this->addSql('CREATE INDEX IF NOT EXISTS idx_from_party ON party_relationships (from_party_id)');
+        $this->addSql('CREATE INDEX IF NOT EXISTS idx_to_party ON party_relationships (to_party_id)');
+        $this->addSql('CREATE INDEX IF NOT EXISTS idx_relationship_type ON party_relationships (type)');
+        $this->addSql('CREATE INDEX IF NOT EXISTS idx_active_relationships ON party_relationships (ended_at)');
+        $this->addSql('CREATE INDEX IF NOT EXISTS idx_active_rel_from_type ON party_relationships (from_party_id, type, ended_at)');
 
-        // Create index for common queries: finding active relationships
-        $this->addSql('
-            CREATE INDEX idx_active_rel_from_type
-            ON party_relationships (from_party_id, type, ended_at)
-        ');
+        $this->addSql('ALTER TABLE party_relationships
+            ADD CONSTRAINT fk_party_rel_from FOREIGN KEY (from_party_id) REFERENCES parties (id) ON DELETE CASCADE');
+        $this->addSql('ALTER TABLE party_relationships
+            ADD CONSTRAINT fk_party_rel_to FOREIGN KEY (to_party_id) REFERENCES parties (id) ON DELETE CASCADE');
     }
 
     public function down(Schema $schema): void
     {
-        // Drop party_relationships table first (has foreign keys)
         $this->addSql('DROP TABLE IF EXISTS party_relationships');
-
-        // Drop parties table
         $this->addSql('DROP TABLE IF EXISTS parties');
     }
 }

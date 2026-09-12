@@ -6,10 +6,11 @@ namespace App\Tests\TaskManagement\Application;
 
 use App\Party\Application\Service\PartyAdapter;
 use App\Party\Domain\Entity\Organization;
-use App\Party\Domain\Entity\PartyRelationship;
+use App\Tests\Party\Mother\PartyRelationshipMother;
 use App\Party\Domain\Entity\Person;
 use App\Party\Domain\ValueObject\PartyRelationshipType;
 use App\Party\Infrastructure\Persistence\InMemory\InMemoryPartyRelationshipRepository;
+use App\Party\Infrastructure\Persistence\InMemory\InMemoryPartyRoleRepository;
 use App\Party\Infrastructure\Persistence\InMemory\InMemoryPartyRepository;
 use App\Shared\Domain\ValueObject\Uuid;
 use App\TaskManagement\Application\Command\CreateTaskCommand;
@@ -41,6 +42,7 @@ class CreateTaskWithTeamPermissionsTest extends TestCase
     private InMemoryTaskRepository $taskRepository;
     private InMemoryPartyRepository $partyRepository;
     private InMemoryPartyRelationshipRepository $relationshipRepository;
+    private InMemoryPartyRoleRepository $roleRepository;
     private PartyAdapter $partyAdapter;
     private CreateTaskHandler $handler;
 
@@ -49,9 +51,10 @@ class CreateTaskWithTeamPermissionsTest extends TestCase
         $this->taskRepository = new InMemoryTaskRepository();
         $this->partyRepository = new InMemoryPartyRepository();
         $this->relationshipRepository = new InMemoryPartyRelationshipRepository();
+        $this->roleRepository = new InMemoryPartyRoleRepository();
         $this->partyAdapter = new PartyAdapter(
             $this->partyRepository,
-            $this->relationshipRepository
+            $this->roleRepository
         );
         $this->handler = new CreateTaskHandler(
             $this->taskRepository,
@@ -71,7 +74,7 @@ class CreateTaskWithTeamPermissionsTest extends TestCase
         $organization = Organization::create($organizationId, $orgName, null);
         $this->partyRepository->save($organization);
 
-        $relationship = PartyRelationship::create(
+        $relationship = PartyRelationshipMother::create(
             UuidMother::random(),
             $person,
             $organization,
@@ -92,7 +95,7 @@ class CreateTaskWithTeamPermissionsTest extends TestCase
         $organization = Organization::create($organizationId, $orgName, null);
         $this->partyRepository->save($organization);
 
-        $relationship = PartyRelationship::create(
+        $relationship = PartyRelationshipMother::create(
             UuidMother::random(),
             $person,
             $organization,
@@ -248,7 +251,7 @@ class CreateTaskWithTeamPermissionsTest extends TestCase
         $this->partyRepository->save($admin2);
 
         $organization = $this->partyRepository->findById($organizationId);
-        $relationship2 = PartyRelationship::create(
+        $relationship2 = PartyRelationshipMother::create(
             UuidMother::random(),
             $admin2,
             $organization,

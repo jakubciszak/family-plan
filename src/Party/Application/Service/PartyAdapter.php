@@ -5,9 +5,13 @@ declare(strict_types=1);
 namespace App\Party\Application\Service;
 
 use App\Party\Domain\Entity\Organization;
+use App\Party\Domain\Entity\Party;
+use App\Party\Domain\Entity\PartyRole;
 use App\Party\Domain\Entity\Person;
-use App\Party\Domain\Repository\PartyRelationshipRepositoryInterface;
 use App\Party\Domain\Repository\PartyRepositoryInterface;
+use App\Party\Domain\Repository\PartyRoleRepositoryInterface;
+use App\Party\Domain\ValueObject\PartyRoleType;
+use App\Shared\Domain\ValueObject\Uuid;
 use App\TeamManagement\Domain\Entity\Team;
 use App\UserManagement\Domain\Entity\User;
 
@@ -21,7 +25,7 @@ class PartyAdapter
 {
     public function __construct(
         private PartyRepositoryInterface $partyRepository,
-        private PartyRelationshipRepositoryInterface $relationshipRepository
+        private PartyRoleRepositoryInterface $roleRepository
     ) {
     }
 
@@ -85,6 +89,23 @@ class PartyAdapter
         $this->partyRepository->save($organization);
 
         return $organization;
+    }
+
+    /**
+     * Get or start the role a party plays
+     */
+    public function getOrStartRole(Party $party, PartyRoleType $type): PartyRole
+    {
+        $existing = $this->roleRepository->findByPartyAndType($party->id(), $type);
+
+        if ($existing !== null) {
+            return $existing;
+        }
+
+        $role = PartyRole::start(Uuid::generate(), $party, $type);
+        $this->roleRepository->save($role);
+
+        return $role;
     }
 
     /**

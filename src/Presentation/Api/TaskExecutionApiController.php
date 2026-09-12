@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Presentation\Api;
 
+use App\Party\Application\Service\PartyResponsibilities;
+use App\Party\Domain\ValueObject\ResponsibilityType;
 use App\Shared\Domain\ValueObject\Uuid;
 use App\TaskManagement\Application\Service\TaskTypePool;
 use App\TaskManagement\Domain\Entity\TaskExecution;
@@ -12,7 +14,6 @@ use App\TaskManagement\Domain\Exception\UnauthorizedTaskActionException;
 use App\TaskManagement\Domain\Repository\TaskExecutionRepositoryInterface;
 use App\TaskManagement\Domain\Repository\TaskTemplateRepositoryInterface;
 use App\TaskManagement\Domain\Strategy\ExecutionPointsAwardStrategyInterface;
-use App\TeamManagement\Domain\Repository\TeamMemberRepositoryInterface;
 use App\UserManagement\Domain\Repository\UserRepositoryInterface;
 use App\UserManagement\Domain\ValueObject\Email;
 use DateTimeImmutable;
@@ -31,10 +32,10 @@ class TaskExecutionApiController extends AbstractController
     public function __construct(
         private readonly TaskExecutionRepositoryInterface $executionRepository,
         private readonly TaskTemplateRepositoryInterface $taskTemplateRepository,
-        private readonly TeamMemberRepositoryInterface $teamMemberRepository,
         private readonly UserRepositoryInterface $userRepository,
         private readonly ExecutionPointsAwardStrategyInterface $pointsAward,
-        private readonly TaskTypePool $pool
+        private readonly TaskTypePool $pool,
+        private readonly PartyResponsibilities $responsibilities
     ) {
     }
 
@@ -51,7 +52,8 @@ class TaskExecutionApiController extends AbstractController
             throw $this->createNotFoundException('Task type not found');
         }
 
-        $this->assertTeamMember($this->teamOf($template));
+        $teamId = $this->teamOf($template);
+        $this->assertCarries(ResponsibilityType::takeTask(), $teamId);
 
         if (!$template->isActive()) {
             return $this->json(['error' => 'This task type is no longer available'], Response::HTTP_CONFLICT);
@@ -72,6 +74,13 @@ class TaskExecutionApiController extends AbstractController
         );
 
         $this->executionRepository->save($execution);
+
+        $this->responsibilities->sign(
+            $this->callerId(),
+            ResponsibilityType::takeTask(),
+            $execution->id(),
+            $teamId
+        );
 
         return $this->json($this->serialize($execution), Response::HTTP_CREATED);
     }
@@ -124,13 +133,23 @@ class TaskExecutionApiController extends AbstractController
     public function complete(string $id): JsonResponse
     {
         $execution = $this->execution($id);
+        $teamId = $this->teamOf($this->templateOf($execution));
 
         if (!$this->isAssignedToCaller($execution)) {
             throw new UnauthorizedTaskActionException('Only the person who took the task can mark it as done');
         }
 
+        $this->assertCarries(ResponsibilityType::completeTask(), $teamId);
+
         $execution->complete($this->callerId());
         $this->executionRepository->save($execution);
+
+        $this->responsibilities->sign(
+            $this->callerId(),
+            ResponsibilityType::completeTask(),
+            $execution->id(),
+            $teamId
+        );
 
         return $this->json($this->serialize($execution));
     }
@@ -142,7 +161,8 @@ class TaskExecutionApiController extends AbstractController
     public function approve(string $id): JsonResponse
     {
         $execution = $this->execution($id);
-        $this->assertTeamAdmin($this->teamOf($this->templateOf($execution)));
+        $teamId = $this->teamOf($this->templateOf($execution));
+        $this->assertCarries(ResponsibilityType::approveTask(), $teamId);
 
         if ($this->isAssignedToCaller($execution)) {
             throw new UnauthorizedTaskActionException('Nobody approves their own task');
@@ -150,6 +170,13 @@ class TaskExecutionApiController extends AbstractController
 
         $execution->approve($this->callerId());
         $this->executionRepository->save($execution);
+
+        $this->responsibilities->sign(
+            $this->callerId(),
+            ResponsibilityType::approveTask(),
+            $execution->id(),
+            $teamId
+        );
 
         $assignee = $execution->assignedUserId();
         if ($assignee !== null) {
@@ -168,7 +195,7 @@ class TaskExecutionApiController extends AbstractController
     {
         $execution = $this->execution($id);
 
-        if (!$this->isAssignedToCaller($execution) && !$this->isAdminOfOwningTeam($execution)) {
+        if (!$this->isAssignedToCaller($execution) && !$this->carriesAssignment($execution)) {
             throw new UnauthorizedTaskActionException('Only the person who took the task or a team admin can give it back');
         }
 
@@ -220,25 +247,22 @@ class TaskExecutionApiController extends AbstractController
         return $execution->assignedUserId()?->value() === $this->callerId()->value();
     }
 
-    private function isAdminOfOwningTeam(TaskExecution $execution): bool
+    private function carriesAssignment(TaskExecution $execution): bool
     {
-        return $this->teamMemberRepository->isUserAdminOfTeam(
+        return $this->responsibilities->partyMay(
             $this->callerId(),
+            ResponsibilityType::assignTask(),
             $this->teamOf($this->templateOf($execution))
         );
     }
 
-    private function assertTeamMember(Uuid $teamId): void
+    private function assertCarries(ResponsibilityType $type, Uuid $teamId): void
     {
-        if (!$this->teamMemberRepository->isUserMemberOfTeam($this->callerId(), $teamId)) {
-            throw new UnauthorizedTaskActionException('Only team members take tasks of this team');
-        }
-    }
-
-    private function assertTeamAdmin(Uuid $teamId): void
-    {
-        if (!$this->teamMemberRepository->isUserAdminOfTeam($this->callerId(), $teamId)) {
-            throw new UnauthorizedTaskActionException('Only team admins approve tasks');
+        if (!$this->responsibilities->partyMay($this->callerId(), $type, $teamId)) {
+            throw new UnauthorizedTaskActionException(sprintf(
+                'This account carries no %s responsibility in that team',
+                $type->value()
+            ));
         }
     }
 
@@ -247,15 +271,10 @@ class TaskExecutionApiController extends AbstractController
      */
     private function adminTeamIds(): array
     {
-        $callerId = $this->callerId();
-
-        return array_values(array_map(
-            fn ($membership) => $membership->teamId()->value(),
-            array_filter(
-                $this->teamMemberRepository->findByUserId($callerId),
-                fn ($membership) => $this->teamMemberRepository->isUserAdminOfTeam($callerId, $membership->teamId())
-            )
-        ));
+        return $this->responsibilities->organizationsWhereMay(
+            $this->callerId(),
+            ResponsibilityType::approveTask()
+        );
     }
 
     private function callerId(): Uuid

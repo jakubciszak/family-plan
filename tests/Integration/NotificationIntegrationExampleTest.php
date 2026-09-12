@@ -9,7 +9,7 @@ use App\Notifications\Infrastructure\Adapter\EmailNotificationAdapter;
 use App\Notifications\Infrastructure\Adapter\InMemoryNotificationAdapter;
 use App\Notifications\Infrastructure\Adapter\SmsNotificationAdapter;
 use App\Party\Domain\Entity\Organization;
-use App\Party\Domain\Entity\PartyRelationship;
+use App\Tests\Party\Mother\PartyRelationshipMother;
 use App\Party\Domain\Entity\Person;
 use App\Party\Domain\ValueObject\PartyRelationshipType;
 use App\Party\Infrastructure\Persistence\InMemory\InMemoryPartyRelationshipRepository;
@@ -98,7 +98,7 @@ class NotificationIntegrationExampleTest extends TestCase
         $this->partyRepository->save($organization);
 
         // Create ADMIN_OF relationship
-        $relationship = PartyRelationship::create(
+        $relationship = PartyRelationshipMother::create(
             UuidMother::random(),
             $person,
             $organization,

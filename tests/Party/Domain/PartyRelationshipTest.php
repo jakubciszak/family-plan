@@ -6,186 +6,157 @@ namespace App\Tests\Party\Domain;
 
 use App\Party\Domain\Entity\Organization;
 use App\Party\Domain\Entity\PartyRelationship;
+use App\Party\Domain\Entity\PartyRole;
 use App\Party\Domain\Entity\Person;
 use App\Party\Domain\Event\PartyRelationshipCreated;
 use App\Party\Domain\ValueObject\PartyRelationshipType;
+use App\Party\Domain\ValueObject\PartyRoleType;
 use App\Shared\Domain\ValueObject\Uuid;
 use App\UserManagement\Domain\ValueObject\Email;
 use DateTimeImmutable;
+use DomainException;
 use PHPUnit\Framework\TestCase;
 
-/**
- * TDD: PartyRelationship Entity Tests
- *
- * PartyRelationship represents a relationship between two parties.
- * Examples:
- * - Person is MEMBER_OF Organization
- * - Person is ADMIN_OF Organization
- */
 class PartyRelationshipTest extends TestCase
 {
-    public function testCanCreatePartyRelationship(): void
+    public function testRelationshipBindsTheRolesTwoPartiesPlay(): void
     {
-        // Given
         $id = Uuid::generate();
-        $person = Person::create(Uuid::generate(), 'Alice', Email::fromString('alice@example.com'));
-        $organization = Organization::create(Uuid::generate(), 'Smith Family', 'The Smith family');
-        $type = PartyRelationshipType::memberOf();
+        $member = $this->memberRole('Alice');
+        $team = $this->teamRole('Smith Family');
 
-        // When
-        $relationship = PartyRelationship::create($id, $person, $organization, $type);
+        $relationship = PartyRelationship::create($id, $member, $team, PartyRelationshipType::memberOf());
 
-        // Then
         $this->assertEquals($id, $relationship->id());
-        $this->assertEquals($person, $relationship->from());
-        $this->assertEquals($organization, $relationship->to());
-        $this->assertEquals($type, $relationship->type());
+        $this->assertSame($member, $relationship->from());
+        $this->assertSame($team, $relationship->to());
+        $this->assertTrue($relationship->type()->isMemberOf());
         $this->assertInstanceOf(DateTimeImmutable::class, $relationship->createdAt());
         $this->assertNull($relationship->endedAt());
         $this->assertTrue($relationship->isActive());
     }
 
-    public function testPartyRelationshipCreationRecordsDomainEvent(): void
+    public function testRelationshipReachesThroughToThePartiesBehindTheRoles(): void
     {
-        // Given
-        $id = Uuid::generate();
-        $person = Person::create(Uuid::generate(), 'Bob', Email::fromString('bob@example.com'));
-        $organization = Organization::create(Uuid::generate(), 'Jones Family', null);
-        $type = PartyRelationshipType::adminOf();
+        $member = $this->memberRole('Alice');
+        $team = $this->teamRole('Smith Family');
 
-        // When
-        $relationship = PartyRelationship::create($id, $person, $organization, $type);
+        $relationship = PartyRelationship::create(
+            Uuid::generate(),
+            $member,
+            $team,
+            PartyRelationshipType::memberOf()
+        );
+
+        $this->assertSame($member->party(), $relationship->fromParty());
+        $this->assertSame($team->party(), $relationship->toParty());
+        $this->assertTrue($relationship->isPlayedFrom($member->partyId()));
+        $this->assertTrue($relationship->isPlayedTo($team->partyId()));
+    }
+
+    public function testCreationRecordsTheRolesThatWereBound(): void
+    {
+        $admin = $this->adminRole('Bob');
+        $team = $this->teamRole('Jones Family');
+
+        $relationship = PartyRelationship::create(
+            Uuid::generate(),
+            $admin,
+            $team,
+            PartyRelationshipType::adminOf()
+        );
         $events = $relationship->pullDomainEvents();
 
-        // Then
         $this->assertCount(1, $events);
         $this->assertInstanceOf(PartyRelationshipCreated::class, $events[0]);
-
-        /** @var PartyRelationshipCreated $event */
-        $event = $events[0];
-        $this->assertEquals($id, $event->relationshipId);
-        $this->assertEquals($person->id(), $event->fromPartyId);
-        $this->assertEquals($organization->id(), $event->toPartyId);
-        $this->assertEquals($type, $event->type);
+        $this->assertTrue($events[0]->fromPartyRoleId->equals($admin->id()));
+        $this->assertTrue($events[0]->toPartyRoleId->equals($team->id()));
     }
 
     public function testDomainEventsAreClearedAfterPulling(): void
     {
-        // Given
-        $person = Person::create(Uuid::generate(), 'Test', Email::fromString('test@example.com'));
-        $organization = Organization::create(Uuid::generate(), 'Test Org', null);
         $relationship = PartyRelationship::create(
             Uuid::generate(),
-            $person,
-            $organization,
+            $this->memberRole('Carol'),
+            $this->teamRole('Brown Family'),
             PartyRelationshipType::memberOf()
         );
 
-        // When
-        $events1 = $relationship->pullDomainEvents();
-        $events2 = $relationship->pullDomainEvents();
+        $relationship->pullDomainEvents();
 
-        // Then
-        $this->assertCount(1, $events1);
-        $this->assertCount(0, $events2);
+        $this->assertCount(0, $relationship->pullDomainEvents());
+    }
+
+    public function testRelationshipTypeRefusesRolesItDoesNotConnect(): void
+    {
+        $this->expectException(DomainException::class);
+
+        PartyRelationship::create(
+            Uuid::generate(),
+            $this->memberRole('Dave'),
+            $this->teamRole('Green Family'),
+            PartyRelationshipType::adminOf()
+        );
     }
 
     public function testCanEndRelationship(): void
     {
-        // Given
-        $person = Person::create(Uuid::generate(), 'Charlie', Email::fromString('charlie@example.com'));
-        $organization = Organization::create(Uuid::generate(), 'Brown Family', null);
         $relationship = PartyRelationship::create(
             Uuid::generate(),
-            $person,
-            $organization,
+            $this->memberRole('Eve'),
+            $this->teamRole('White Family'),
             PartyRelationshipType::memberOf()
         );
+        $endDate = new DateTimeImmutable('2024-06-01');
 
-        // When
-        $endDate = new DateTimeImmutable();
         $relationship->end($endDate);
 
-        // Then
         $this->assertEquals($endDate, $relationship->endedAt());
         $this->assertFalse($relationship->isActive());
     }
 
-    public function testActiveRelationshipHasNoEndDate(): void
+    public function testCanCheckWhichRolesAreOnEachEnd(): void
     {
-        // Given
-        $person = Person::create(Uuid::generate(), 'Dave', Email::fromString('dave@example.com'));
-        $organization = Organization::create(Uuid::generate(), 'Davis Family', null);
+        $member = $this->memberRole('Frank');
+        $team = $this->teamRole('Black Family');
 
-        // When
         $relationship = PartyRelationship::create(
             Uuid::generate(),
-            $person,
-            $organization,
-            PartyRelationshipType::adminOf()
-        );
-
-        // Then
-        $this->assertNull($relationship->endedAt());
-        $this->assertTrue($relationship->isActive());
-    }
-
-    public function testCanCheckIfPartyIsFrom(): void
-    {
-        // Given
-        $person = Person::create(Uuid::generate(), 'Eve', Email::fromString('eve@example.com'));
-        $organization = Organization::create(Uuid::generate(), 'Evans Family', null);
-        $relationship = PartyRelationship::create(
-            Uuid::generate(),
-            $person,
-            $organization,
+            $member,
+            $team,
             PartyRelationshipType::memberOf()
         );
 
-        // Then
-        $this->assertTrue($relationship->isFrom($person->id()));
-        $this->assertFalse($relationship->isFrom($organization->id()));
+        $this->assertTrue($relationship->isFrom($member->id()));
+        $this->assertTrue($relationship->isTo($team->id()));
+        $this->assertFalse($relationship->isFrom($team->id()));
+        $this->assertFalse($relationship->isTo($member->id()));
     }
 
-    public function testCanCheckIfPartyIsTo(): void
+    private function memberRole(string $name): PartyRole
     {
-        // Given
-        $person = Person::create(Uuid::generate(), 'Frank', Email::fromString('frank@example.com'));
-        $organization = Organization::create(Uuid::generate(), 'Frank Family', null);
-        $relationship = PartyRelationship::create(
+        return PartyRole::start(
             Uuid::generate(),
-            $person,
-            $organization,
-            PartyRelationshipType::adminOf()
+            Person::create(Uuid::generate(), $name, Email::fromString(strtolower($name) . '@example.com')),
+            PartyRoleType::teamMember()
         );
-
-        // Then
-        $this->assertTrue($relationship->isTo($organization->id()));
-        $this->assertFalse($relationship->isTo($person->id()));
     }
 
-    public function testCanCheckRelationshipType(): void
+    private function adminRole(string $name): PartyRole
     {
-        // Given
-        $person = Person::create(Uuid::generate(), 'Grace', Email::fromString('grace@example.com'));
-        $organization = Organization::create(Uuid::generate(), 'Grace Family', null);
-        $memberRelationship = PartyRelationship::create(
+        return PartyRole::start(
             Uuid::generate(),
-            $person,
-            $organization,
-            PartyRelationshipType::memberOf()
+            Person::create(Uuid::generate(), $name, Email::fromString(strtolower($name) . '@example.com')),
+            PartyRoleType::teamAdmin()
         );
-        $adminRelationship = PartyRelationship::create(
-            Uuid::generate(),
-            $person,
-            $organization,
-            PartyRelationshipType::adminOf()
-        );
+    }
 
-        // Then
-        $this->assertTrue($memberRelationship->type()->isMemberOf());
-        $this->assertFalse($memberRelationship->type()->isAdminOf());
-        $this->assertTrue($adminRelationship->type()->isAdminOf());
-        $this->assertFalse($adminRelationship->type()->isMemberOf());
+    private function teamRole(string $name): PartyRole
+    {
+        return PartyRole::start(
+            Uuid::generate(),
+            Organization::create(Uuid::generate(), $name, null),
+            PartyRoleType::team()
+        );
     }
 }

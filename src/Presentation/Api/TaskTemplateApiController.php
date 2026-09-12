@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Presentation\Api;
 
+use App\Party\Application\Service\PartyResponsibilities;
+use App\Party\Domain\ValueObject\ResponsibilityType;
 use App\Presentation\Api\Dto\TaskType\CreateTaskTypeRequest;
 use App\Shared\Domain\ValueObject\Uuid;
 use App\TaskManagement\Domain\Entity\TaskTemplate;
@@ -15,7 +17,6 @@ use App\TaskManagement\Domain\ValueObject\Points;
 use App\TaskManagement\Domain\ValueObject\ScheduleConfig;
 use App\TaskManagement\Domain\ValueObject\TaskName;
 use App\TeamManagement\Domain\Exception\UnauthorizedTeamActionException;
-use App\TeamManagement\Domain\Repository\TeamMemberRepositoryInterface;
 use App\UserManagement\Domain\Repository\UserRepositoryInterface;
 use App\UserManagement\Domain\ValueObject\Email;
 use OpenApi\Attributes as OA;
@@ -34,7 +35,7 @@ class TaskTemplateApiController extends AbstractController
     public function __construct(
         private readonly TaskTemplateRepositoryInterface $taskTemplateRepository,
         private readonly TaskTypePool $pool,
-        private readonly TeamMemberRepositoryInterface $teamMemberRepository,
+        private readonly PartyResponsibilities $responsibilities,
         private readonly UserRepositoryInterface $userRepository
     ) {
     }
@@ -151,7 +152,13 @@ class TaskTemplateApiController extends AbstractController
 
     private function assertTeamAdmin(Uuid $teamId): void
     {
-        if (!$this->teamMemberRepository->isUserAdminOfTeam($this->callerId(), $teamId)) {
+        $mayDefine = $this->responsibilities->partyMay(
+            $this->callerId(),
+            ResponsibilityType::defineTaskType(),
+            $teamId
+        );
+
+        if (!$mayDefine) {
             throw new UnauthorizedTeamActionException('Only team admins manage task types');
         }
     }
@@ -168,10 +175,10 @@ class TaskTemplateApiController extends AbstractController
      */
     private function callerTeamIds(): array
     {
-        return array_map(
-            fn ($membership) => $membership->teamId()->value(),
-            $this->teamMemberRepository->findByUserId($this->callerId())
-        );
+        return array_values(array_unique(array_merge(
+            $this->responsibilities->organizationsWhereMay($this->callerId(), ResponsibilityType::takeTask()),
+            $this->responsibilities->organizationsWhereMay($this->callerId(), ResponsibilityType::defineTaskType())
+        )));
     }
 
     private function scheduleFor(Frequency $frequency): ScheduleConfig

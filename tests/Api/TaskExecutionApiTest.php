@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Api;
 
+use App\Party\Domain\Repository\SignatureRepositoryInterface;
+use App\Party\Domain\ValueObject\ResponsibilityType;
 use App\Shared\Domain\ValueObject\Uuid;
 use App\TeamManagement\Application\Command\CreateTeamCommand;
 use App\UserManagement\Domain\Entity\User;
@@ -238,6 +240,42 @@ class TaskExecutionApiTest extends ApiTestCase
         $this->loginAs($this->authenticate(Role::USER));
 
         $this->assertCount(0, $this->getJson('/api/task-executions/awaiting-approval')['executions']);
+    }
+
+    public function testEveryStepOfTheCycleIsSigned(): void
+    {
+        $context = $this->teamWithMember();
+        $type = $this->defineType($context['teamId'], ['type' => 'unlimited']);
+
+        $this->loginAs($context['member']);
+        $taken = $this->assertJsonResponse(
+            $this->postJson("/api/task-templates/{$type['id']}/take", []),
+            Response::HTTP_CREATED
+        );
+        $this->postJson("/api/task-executions/{$taken['id']}/complete", []);
+
+        $this->loginAs($context['admin']);
+        $this->postJson("/api/task-executions/{$taken['id']}/approve", []);
+
+        $signatures = static::getContainer()
+            ->get(SignatureRepositoryInterface::class)
+            ->findBySubject(Uuid::fromString($taken['id']));
+
+        $acts = array_map(fn ($signature) => $signature->act()->value(), $signatures);
+        $signatories = array_map(fn ($signature) => $signature->signatoryPartyId()->value(), $signatures);
+
+        $this->assertSame(
+            [ResponsibilityType::TAKE_TASK, ResponsibilityType::COMPLETE_TASK, ResponsibilityType::APPROVE_TASK],
+            $acts
+        );
+        $this->assertSame(
+            [
+                $context['member']->id()->value(),
+                $context['member']->id()->value(),
+                $context['admin']->id()->value(),
+            ],
+            $signatories
+        );
     }
 
     private function defineType(string $teamId, array $limit, int $points = 10): array

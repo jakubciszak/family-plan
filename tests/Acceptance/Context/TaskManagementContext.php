@@ -9,7 +9,7 @@ use App\TaskManagement\Application\Command\ApproveTaskCommand;
 use App\TaskManagement\Application\Command\AssignTaskCommand;
 use App\TaskManagement\Application\Command\CompleteTaskCommand;
 use App\TaskManagement\Application\Command\CreateTaskCommand;
-use App\Party\Domain\Entity\PartyRelationship;
+use App\Tests\Party\Mother\PartyRelationshipMother;
 use App\Party\Domain\Entity\Person;
 use App\Party\Domain\ValueObject\PartyRelationshipType;
 use App\Tests\UserManagement\Mother\UserMother;
@@ -61,7 +61,7 @@ final class TaskManagementContext extends AcceptanceContext
         $this->currentAdminId = $userId;
 
         $person = Person::create($userId, $name, $email);
-        $relationship = PartyRelationship::create(
+        $relationship = PartyRelationshipMother::create(
             Uuid::generate(),
             $person,
             $this->teamOrganization,

@@ -9,11 +9,6 @@ use App\Party\Domain\Repository\PartyRelationshipRepositoryInterface;
 use App\Party\Domain\ValueObject\PartyRelationshipType;
 use App\Shared\Domain\ValueObject\Uuid;
 
-/**
- * In-Memory Party Relationship Repository
- *
- * Implementation for testing purposes
- */
 class InMemoryPartyRelationshipRepository implements PartyRelationshipRepositoryInterface
 {
     /**
@@ -31,58 +26,50 @@ class InMemoryPartyRelationshipRepository implements PartyRelationshipRepository
         return $this->relationships[$id->value()] ?? null;
     }
 
+    public function findByFromRole(Uuid $fromPartyRoleId): array
+    {
+        return $this->filter(fn (PartyRelationship $rel) => $rel->isFrom($fromPartyRoleId));
+    }
+
+    public function findByToRole(Uuid $toPartyRoleId): array
+    {
+        return $this->filter(fn (PartyRelationship $rel) => $rel->isTo($toPartyRoleId));
+    }
+
     public function findByFromParty(Uuid $fromPartyId): array
     {
-        return array_values(
-            array_filter(
-                $this->relationships,
-                fn(PartyRelationship $rel) => $rel->isFrom($fromPartyId)
-            )
-        );
+        return $this->filter(fn (PartyRelationship $rel) => $rel->isPlayedFrom($fromPartyId));
     }
 
     public function findByToParty(Uuid $toPartyId): array
     {
-        return array_values(
-            array_filter(
-                $this->relationships,
-                fn(PartyRelationship $rel) => $rel->isTo($toPartyId)
-            )
-        );
+        return $this->filter(fn (PartyRelationship $rel) => $rel->isPlayedTo($toPartyId));
     }
 
     public function findActiveRelationships(Uuid $fromPartyId, Uuid $toPartyId): array
     {
-        return array_values(
-            array_filter(
-                $this->relationships,
-                fn(PartyRelationship $rel) =>
-                    $rel->isFrom($fromPartyId) &&
-                    $rel->isTo($toPartyId) &&
-                    $rel->isActive()
-            )
+        return $this->filter(
+            fn (PartyRelationship $rel) => $rel->isPlayedFrom($fromPartyId)
+                && $rel->isPlayedTo($toPartyId)
+                && $rel->isActive()
         );
     }
 
     public function findByFromPartyAndType(Uuid $fromPartyId, PartyRelationshipType $type): array
     {
-        return array_values(
-            array_filter(
-                $this->relationships,
-                fn(PartyRelationship $rel) =>
-                    $rel->isFrom($fromPartyId) &&
-                    $rel->type()->equals($type)
-            )
+        return $this->filter(
+            fn (PartyRelationship $rel) => $rel->isPlayedFrom($fromPartyId) && $rel->type()->equals($type)
         );
     }
 
     public function isPartyAdminOf(Uuid $fromPartyId, Uuid $toPartyId): bool
     {
         foreach ($this->relationships as $relationship) {
-            if ($relationship->isFrom($fromPartyId) &&
-                $relationship->isTo($toPartyId) &&
-                $relationship->type()->isAdminOf() &&
-                $relationship->isActive()) {
+            if ($relationship->isPlayedFrom($fromPartyId)
+                && $relationship->isPlayedTo($toPartyId)
+                && $relationship->type()->isAdminOf()
+                && $relationship->isActive()
+            ) {
                 return true;
             }
         }
@@ -90,11 +77,16 @@ class InMemoryPartyRelationshipRepository implements PartyRelationshipRepository
         return false;
     }
 
-    /**
-     * Clear all relationships (for testing)
-     */
     public function clear(): void
     {
         $this->relationships = [];
+    }
+
+    /**
+     * @return PartyRelationship[]
+     */
+    private function filter(callable $matches): array
+    {
+        return array_values(array_filter($this->relationships, $matches));
     }
 }

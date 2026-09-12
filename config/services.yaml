@@ -77,6 +77,15 @@ services:
     App\Party\Domain\Repository\PartyRelationshipRepositoryInterface:
         class: App\Party\Infrastructure\Persistence\Doctrine\DoctrinePartyRelationshipRepository
 
+    App\Party\Domain\Repository\PartyRoleRepositoryInterface:
+        class: App\Party\Infrastructure\Persistence\Doctrine\DoctrinePartyRoleRepository
+
+    App\Party\Domain\Repository\ResponsibilityRepositoryInterface:
+        class: App\Party\Infrastructure\Persistence\Doctrine\DoctrineResponsibilityRepository
+
+    App\Party\Domain\Repository\SignatureRepositoryInterface:
+        class: App\Party\Infrastructure\Persistence\Doctrine\DoctrineSignatureRepository
+
     # Policy implementations
     App\TaskManagement\Domain\Policy\TaskApprovalPolicyInterface:
         class: App\TaskManagement\Domain\Policy\TeamAdminApprovalPolicy

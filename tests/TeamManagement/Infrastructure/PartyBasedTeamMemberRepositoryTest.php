@@ -6,6 +6,7 @@ namespace App\Tests\TeamManagement\Infrastructure;
 
 use App\Party\Application\Service\PartyAdapter;
 use App\Party\Infrastructure\Persistence\InMemory\InMemoryPartyRelationshipRepository;
+use App\Party\Infrastructure\Persistence\InMemory\InMemoryPartyRoleRepository;
 use App\Party\Infrastructure\Persistence\InMemory\InMemoryPartyRepository;
 use App\Shared\Domain\ValueObject\Uuid;
 use App\TeamManagement\Domain\Entity\Team;
@@ -29,17 +30,20 @@ class PartyBasedTeamMemberRepositoryTest extends TestCase
     private PartyAdapter $partyAdapter;
     private InMemoryPartyRepository $partyRepository;
     private InMemoryPartyRelationshipRepository $relationshipRepository;
+    private InMemoryPartyRoleRepository $roleRepository;
 
     protected function setUp(): void
     {
         $this->partyRepository = new InMemoryPartyRepository();
         $this->relationshipRepository = new InMemoryPartyRelationshipRepository();
+        $this->roleRepository = new InMemoryPartyRoleRepository();
         $this->partyAdapter = new PartyAdapter(
             $this->partyRepository,
-            $this->relationshipRepository
+            $this->roleRepository
         );
         $this->repository = new PartyBasedTeamMemberRepository(
             $this->relationshipRepository,
+            $this->partyRepository,
             $this->partyAdapter
         );
     }

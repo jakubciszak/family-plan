@@ -5,8 +5,11 @@ declare(strict_types=1);
 namespace App\TeamManagement\Infrastructure\Persistence;
 
 use App\Party\Application\Service\PartyAdapter;
+use App\Party\Domain\Entity\Organization;
 use App\Party\Domain\Entity\PartyRelationship;
+use App\Party\Domain\Entity\Person;
 use App\Party\Domain\Repository\PartyRelationshipRepositoryInterface;
+use App\Party\Domain\Repository\PartyRepositoryInterface;
 use App\Party\Domain\ValueObject\PartyRelationshipType;
 use App\Shared\Domain\ValueObject\Uuid;
 use App\TeamManagement\Domain\Entity\TeamMember;
@@ -31,38 +34,34 @@ class PartyBasedTeamMemberRepository implements TeamMemberRepositoryInterface
 
     public function __construct(
         private PartyRelationshipRepositoryInterface $relationshipRepository,
+        private PartyRepositoryInterface $partyRepository,
         private PartyAdapter $partyAdapter
     ) {
     }
 
     public function save(TeamMember $member): void
     {
-        // Cache the TeamMember
         $this->membersCache[$member->id()->value()] = $member;
 
-        // Check if PartyRelationship already exists
-        $existing = $this->relationshipRepository->findById($member->id());
-
-        if ($existing === null) {
-            // Create new PartyRelationship
-            $relationship = PartyRelationship::create(
-                $member->id(),
-                // Note: In real implementation, we'd get Person and Organization from PartyAdapter
-                // For now, we create minimal Party entities
-                \App\Party\Domain\Entity\Person::create(
-                    $member->userId(),
-                    'User ' . $member->userId()->value(),
-                    \App\UserManagement\Domain\ValueObject\Email::fromString('user@temp.com')
-                ),
-                \App\Party\Domain\Entity\Organization::create(
-                    $member->teamId(),
-                    'Team ' . $member->teamId()->value(),
-                    null
-                ),
-                $this->teamRoleToPartyRelationshipType($member->role())
-            );
-            $this->relationshipRepository->save($relationship);
+        if ($this->relationshipRepository->findById($member->id()) !== null) {
+            return;
         }
+
+        $person = $this->partyRepository->findById($member->userId());
+        $organization = $this->partyRepository->findById($member->teamId());
+
+        if (!$person instanceof Person || !$organization instanceof Organization) {
+            return;
+        }
+
+        $type = $this->teamRoleToPartyRelationshipType($member->role());
+
+        $this->relationshipRepository->save(PartyRelationship::create(
+            $member->id(),
+            $this->partyAdapter->getOrStartRole($person, $type->fromRoleType()),
+            $this->partyAdapter->getOrStartRole($organization, $type->toRoleType()),
+            $type
+        ));
     }
 
     public function findById(Uuid $id): ?TeamMember

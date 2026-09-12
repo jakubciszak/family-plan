@@ -5,10 +5,11 @@ declare(strict_types=1);
 namespace App\Tests\Party\Infrastructure;
 
 use App\Party\Domain\Entity\Organization;
-use App\Party\Domain\Entity\PartyRelationship;
 use App\Party\Domain\Entity\Person;
 use App\Party\Domain\ValueObject\PartyRelationshipType;
 use App\Party\Infrastructure\Persistence\InMemory\InMemoryPartyRelationshipRepository;
+use App\Party\Infrastructure\Persistence\InMemory\InMemoryPartyRoleRepository;
+use App\Tests\Party\Mother\PartyRelationshipMother;
 use App\Shared\Domain\ValueObject\Uuid;
 use App\UserManagement\Domain\ValueObject\Email;
 use PHPUnit\Framework\TestCase;
@@ -20,9 +21,12 @@ class InMemoryPartyRelationshipRepositoryTest extends TestCase
 {
     private InMemoryPartyRelationshipRepository $repository;
 
+    private InMemoryPartyRoleRepository $roles;
+
     protected function setUp(): void
     {
         $this->repository = new InMemoryPartyRelationshipRepository();
+        $this->roles = new InMemoryPartyRoleRepository();
     }
 
     public function testCanSaveAndFindRelationship(): void
@@ -30,11 +34,12 @@ class InMemoryPartyRelationshipRepositoryTest extends TestCase
         // Given
         $person = Person::create(Uuid::generate(), 'Alice', Email::fromString('alice@example.com'));
         $organization = Organization::create(Uuid::generate(), 'Smith Family', null);
-        $relationship = PartyRelationship::create(
+        $relationship = PartyRelationshipMother::create(
             Uuid::generate(),
             $person,
             $organization,
-            PartyRelationshipType::memberOf()
+            PartyRelationshipType::memberOf(),
+            $this->roles
         );
 
         // When
@@ -53,9 +58,9 @@ class InMemoryPartyRelationshipRepositoryTest extends TestCase
         $person2 = Person::create(Uuid::generate(), 'Charlie', Email::fromString('charlie@example.com'));
         $organization = Organization::create(Uuid::generate(), 'Jones Family', null);
 
-        $rel1 = PartyRelationship::create(Uuid::generate(), $person1, $organization, PartyRelationshipType::memberOf());
-        $rel2 = PartyRelationship::create(Uuid::generate(), $person1, $organization, PartyRelationshipType::adminOf());
-        $rel3 = PartyRelationship::create(Uuid::generate(), $person2, $organization, PartyRelationshipType::memberOf());
+        $rel1 = PartyRelationshipMother::create(Uuid::generate(), $person1, $organization, PartyRelationshipType::memberOf());
+        $rel2 = PartyRelationshipMother::create(Uuid::generate(), $person1, $organization, PartyRelationshipType::adminOf());
+        $rel3 = PartyRelationshipMother::create(Uuid::generate(), $person2, $organization, PartyRelationshipType::memberOf());
 
         // When
         $this->repository->save($rel1);
@@ -75,9 +80,9 @@ class InMemoryPartyRelationshipRepositoryTest extends TestCase
         $organization1 = Organization::create(Uuid::generate(), 'Brown Family', null);
         $organization2 = Organization::create(Uuid::generate(), 'Davis Family', null);
 
-        $rel1 = PartyRelationship::create(Uuid::generate(), $person1, $organization1, PartyRelationshipType::memberOf());
-        $rel2 = PartyRelationship::create(Uuid::generate(), $person2, $organization1, PartyRelationshipType::memberOf());
-        $rel3 = PartyRelationship::create(Uuid::generate(), $person1, $organization2, PartyRelationshipType::adminOf());
+        $rel1 = PartyRelationshipMother::create(Uuid::generate(), $person1, $organization1, PartyRelationshipType::memberOf());
+        $rel2 = PartyRelationshipMother::create(Uuid::generate(), $person2, $organization1, PartyRelationshipType::memberOf());
+        $rel3 = PartyRelationshipMother::create(Uuid::generate(), $person1, $organization2, PartyRelationshipType::adminOf());
 
         // When
         $this->repository->save($rel1);
@@ -95,8 +100,8 @@ class InMemoryPartyRelationshipRepositoryTest extends TestCase
         $person = Person::create(Uuid::generate(), 'Frank', Email::fromString('frank@example.com'));
         $organization = Organization::create(Uuid::generate(), 'Evans Family', null);
 
-        $activeRel = PartyRelationship::create(Uuid::generate(), $person, $organization, PartyRelationshipType::memberOf());
-        $endedRel = PartyRelationship::create(Uuid::generate(), $person, $organization, PartyRelationshipType::adminOf());
+        $activeRel = PartyRelationshipMother::create(Uuid::generate(), $person, $organization, PartyRelationshipType::memberOf());
+        $endedRel = PartyRelationshipMother::create(Uuid::generate(), $person, $organization, PartyRelationshipType::adminOf());
         $endedRel->end(new \DateTimeImmutable());
 
         // When
@@ -115,8 +120,8 @@ class InMemoryPartyRelationshipRepositoryTest extends TestCase
         $person = Person::create(Uuid::generate(), 'Grace', Email::fromString('grace@example.com'));
         $organization = Organization::create(Uuid::generate(), 'Grace Family', null);
 
-        $memberRel = PartyRelationship::create(Uuid::generate(), $person, $organization, PartyRelationshipType::memberOf());
-        $adminRel = PartyRelationship::create(Uuid::generate(), $person, $organization, PartyRelationshipType::adminOf());
+        $memberRel = PartyRelationshipMother::create(Uuid::generate(), $person, $organization, PartyRelationshipType::memberOf());
+        $adminRel = PartyRelationshipMother::create(Uuid::generate(), $person, $organization, PartyRelationshipType::adminOf());
 
         // When
         $this->repository->save($memberRel);
@@ -134,7 +139,7 @@ class InMemoryPartyRelationshipRepositoryTest extends TestCase
         $person = Person::create(Uuid::generate(), 'Henry', Email::fromString('henry@example.com'));
         $organization = Organization::create(Uuid::generate(), 'Henry Family', null);
 
-        $adminRel = PartyRelationship::create(Uuid::generate(), $person, $organization, PartyRelationshipType::adminOf());
+        $adminRel = PartyRelationshipMother::create(Uuid::generate(), $person, $organization, PartyRelationshipType::adminOf());
 
         // When
         $this->repository->save($adminRel);
@@ -150,7 +155,7 @@ class InMemoryPartyRelationshipRepositoryTest extends TestCase
         $person = Person::create(Uuid::generate(), 'Iris', Email::fromString('iris@example.com'));
         $organization = Organization::create(Uuid::generate(), 'Iris Family', null);
 
-        $memberRel = PartyRelationship::create(Uuid::generate(), $person, $organization, PartyRelationshipType::memberOf());
+        $memberRel = PartyRelationshipMother::create(Uuid::generate(), $person, $organization, PartyRelationshipType::memberOf());
 
         // When
         $this->repository->save($memberRel);

@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\TaskManagement\Application;
 
 use App\Party\Domain\Entity\Organization;
-use App\Party\Domain\Entity\PartyRelationship;
+use App\Tests\Party\Mother\PartyRelationshipMother;
 use App\Party\Domain\Entity\Person;
 use App\Party\Domain\ValueObject\PartyRelationshipType;
 use App\Party\Infrastructure\Persistence\InMemory\InMemoryPartyRelationshipRepository;
@@ -82,7 +82,7 @@ class TaskManagementUseCasesTest extends TestCase
         $this->partyRepository->save($organization);
 
         // Create ADMIN_OF relationship
-        $relationship = PartyRelationship::create(
+        $relationship = PartyRelationshipMother::create(
             UuidMother::random(),
             $person,
             $organization,

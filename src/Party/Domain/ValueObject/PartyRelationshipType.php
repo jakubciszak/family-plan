@@ -26,6 +26,11 @@ final readonly class PartyRelationshipType
         self::ADMIN_OF,
     ];
 
+    private const CONNECTS = [
+        self::MEMBER_OF => ['TEAM_MEMBER', 'TEAM'],
+        self::ADMIN_OF => ['TEAM_ADMIN', 'TEAM'],
+    ];
+
     private function __construct(
         private string $value
     ) {
@@ -56,6 +61,23 @@ final readonly class PartyRelationshipType
     public static function fromString(string $value): self
     {
         return new self($value);
+    }
+
+    public function connects(PartyRoleType $from, PartyRoleType $to): bool
+    {
+        [$expectedFrom, $expectedTo] = self::CONNECTS[$this->value];
+
+        return $from->value() === $expectedFrom && $to->value() === $expectedTo;
+    }
+
+    public function fromRoleType(): PartyRoleType
+    {
+        return PartyRoleType::fromString(self::CONNECTS[$this->value][0]);
+    }
+
+    public function toRoleType(): PartyRoleType
+    {
+        return PartyRoleType::fromString(self::CONNECTS[$this->value][1]);
     }
 
     /**

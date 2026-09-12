@@ -8,22 +8,14 @@ use App\Party\Domain\Event\PartyRelationshipCreated;
 use App\Party\Domain\ValueObject\PartyRelationshipType;
 use App\Shared\Domain\ValueObject\Uuid;
 use DateTimeImmutable;
+use DomainException;
 use Doctrine\ORM\Mapping as ORM;
 
-/**
- * PartyRelationship Entity
- *
- * Represents a relationship between two parties.
- * Based on Party archetype pattern.
- *
- * Examples:
- * - Person is MEMBER_OF Organization (e.g., Alice is member of Smith Family)
- * - Person is ADMIN_OF Organization (e.g., Bob is admin of Smith Family)
- *
- * @see https://www.softwarearchetypes.com/archetypes/party/
- */
 #[ORM\Entity]
 #[ORM\Table(name: 'party_relationships')]
+#[ORM\Index(columns: ['from_party_role_id'])]
+#[ORM\Index(columns: ['to_party_role_id'])]
+#[ORM\Index(columns: ['type'])]
 class PartyRelationship
 {
     #[ORM\Transient]
@@ -34,13 +26,13 @@ class PartyRelationship
         #[ORM\Column(type: 'uuid')]
         private Uuid $id,
 
-        #[ORM\ManyToOne(targetEntity: Party::class)]
-        #[ORM\JoinColumn(name: 'from_party_id', nullable: false)]
-        private Party $from,
+        #[ORM\ManyToOne(targetEntity: PartyRole::class)]
+        #[ORM\JoinColumn(name: 'from_party_role_id', nullable: false)]
+        private PartyRole $from,
 
-        #[ORM\ManyToOne(targetEntity: Party::class)]
-        #[ORM\JoinColumn(name: 'to_party_id', nullable: false)]
-        private Party $to,
+        #[ORM\ManyToOne(targetEntity: PartyRole::class)]
+        #[ORM\JoinColumn(name: 'to_party_role_id', nullable: false)]
+        private PartyRole $to,
 
         #[ORM\Column(type: 'party_relationship_type')]
         private PartyRelationshipType $type,
@@ -53,127 +45,108 @@ class PartyRelationship
     ) {
     }
 
-    /**
-     * Factory method to create a new PartyRelationship
-     */
     public static function create(
         Uuid $id,
-        Party $from,
-        Party $to,
+        PartyRole $from,
+        PartyRole $to,
         PartyRelationshipType $type
     ): self {
-        $relationship = new self(
-            $id,
-            $from,
-            $to,
-            $type,
-            new DateTimeImmutable(),
-            null
-        );
+        if (!$type->connects($from->type(), $to->type())) {
+            throw new DomainException(sprintf(
+                '%s connects %s to %s, not %s to %s',
+                $type->value(),
+                $type->fromRoleType()->value(),
+                $type->toRoleType()->value(),
+                $from->type()->value(),
+                $to->type()->value()
+            ));
+        }
 
-        $relationship->record(new PartyRelationshipCreated(
-            $id,
-            $from->id(),
-            $to->id(),
-            $type
-        ));
+        $relationship = new self($id, $from, $to, $type, new DateTimeImmutable());
+
+        $relationship->record(new PartyRelationshipCreated($id, $from->id(), $to->id(), $type));
 
         return $relationship;
     }
 
-    /**
-     * Get relationship ID
-     */
     public function id(): Uuid
     {
         return $this->id;
     }
 
-    /**
-     * Get the party that the relationship is from (the source)
-     */
-    public function from(): Party
+    public function from(): PartyRole
     {
         return $this->from;
     }
 
-    /**
-     * Get the party that the relationship is to (the target)
-     */
-    public function to(): Party
+    public function to(): PartyRole
     {
         return $this->to;
     }
 
-    /**
-     * Get relationship type
-     */
+    public function fromParty(): Party
+    {
+        return $this->from->party();
+    }
+
+    public function toParty(): Party
+    {
+        return $this->to->party();
+    }
+
     public function type(): PartyRelationshipType
     {
         return $this->type;
     }
 
-    /**
-     * Get creation date
-     */
     public function createdAt(): DateTimeImmutable
     {
         return $this->createdAt;
     }
 
-    /**
-     * Get end date (null if active)
-     */
     public function endedAt(): ?DateTimeImmutable
     {
         return $this->endedAt;
     }
 
-    /**
-     * Check if relationship is active
-     */
     public function isActive(): bool
     {
         return $this->endedAt === null;
     }
 
-    /**
-     * End the relationship
-     */
     public function end(DateTimeImmutable $endDate): void
     {
         $this->endedAt = $endDate;
     }
 
-    /**
-     * Check if the given party ID is the "from" party
-     */
-    public function isFrom(Uuid $partyId): bool
+    public function isFrom(Uuid $partyRoleId): bool
     {
-        return $this->from->id()->equals($partyId);
+        return $this->from->id()->equals($partyRoleId);
     }
 
-    /**
-     * Check if the given party ID is the "to" party
-     */
-    public function isTo(Uuid $partyId): bool
+    public function isTo(Uuid $partyRoleId): bool
     {
-        return $this->to->id()->equals($partyId);
+        return $this->to->id()->equals($partyRoleId);
     }
 
-    /**
-     * Pull domain events (clears after pulling)
-     */
+    public function isPlayedFrom(Uuid $partyId): bool
+    {
+        return $this->from->partyId()->equals($partyId);
+    }
+
+    public function isPlayedTo(Uuid $partyId): bool
+    {
+        return $this->to->partyId()->equals($partyId);
+    }
+
     public function pullDomainEvents(): array
     {
         $events = $this->domainEvents;
         $this->domainEvents = [];
+
         return $events;
     }
 
-    /**
-     * Record a domain event
-     */
     private function record(object $event): void
     {
         $this->domainEvents[] = $event;

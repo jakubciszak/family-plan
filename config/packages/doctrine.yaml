@@ -25,6 +25,8 @@ doctrine:
             invitation_status: App\TeamManagement\Infrastructure\Persistence\Doctrine\Type\InvitationStatusType
             party_type: App\Party\Infrastructure\Persistence\Doctrine\Type\PartyTypeType
             party_relationship_type: App\Party\Infrastructure\Persistence\Doctrine\Type\PartyRelationshipTypeType
+            party_role_type: App\Party\Infrastructure\Persistence\Doctrine\Type\PartyRoleTypeType
+            responsibility_type: App\Party\Infrastructure\Persistence\Doctrine\Type\ResponsibilityTypeType
     orm:
         validate_xml_mapping: true
         naming_strategy: doctrine.orm.naming_strategy.underscore_number_aware

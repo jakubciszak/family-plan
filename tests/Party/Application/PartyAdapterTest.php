@@ -8,6 +8,7 @@ use App\Party\Application\Service\PartyAdapter;
 use App\Party\Domain\Entity\Organization;
 use App\Party\Domain\Entity\Person;
 use App\Party\Infrastructure\Persistence\InMemory\InMemoryPartyRelationshipRepository;
+use App\Party\Infrastructure\Persistence\InMemory\InMemoryPartyRoleRepository;
 use App\Party\Infrastructure\Persistence\InMemory\InMemoryPartyRepository;
 use App\Shared\Domain\ValueObject\Uuid;
 use App\TeamManagement\Domain\Entity\Team;
@@ -27,14 +28,16 @@ class PartyAdapterTest extends TestCase
     private PartyAdapter $adapter;
     private InMemoryPartyRepository $partyRepository;
     private InMemoryPartyRelationshipRepository $relationshipRepository;
+    private InMemoryPartyRoleRepository $roleRepository;
 
     protected function setUp(): void
     {
         $this->partyRepository = new InMemoryPartyRepository();
         $this->relationshipRepository = new InMemoryPartyRelationshipRepository();
+        $this->roleRepository = new InMemoryPartyRoleRepository();
         $this->adapter = new PartyAdapter(
             $this->partyRepository,
-            $this->relationshipRepository
+            $this->roleRepository
         );
     }
 

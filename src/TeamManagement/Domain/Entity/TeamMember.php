@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\TeamManagement\Domain\Entity;
 
 use App\Shared\Domain\ValueObject\Uuid;
+use App\TeamManagement\Domain\Event\MemberAdded;
 use App\TeamManagement\Domain\ValueObject\TeamRole;
 use DateTimeImmutable;
 use Doctrine\ORM\Mapping as ORM;
@@ -15,6 +16,9 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Index(columns: ['user_id'])]
 class TeamMember
 {
+    #[ORM\Transient]
+    private array $domainEvents = [];
+
     private function __construct(
         #[ORM\Id]
         #[ORM\Column(type: 'uuid')]
@@ -40,13 +44,25 @@ class TeamMember
         Uuid $userId,
         TeamRole $role
     ): self {
-        return new self(
+        $member = new self(
             $id,
             $teamId,
             $userId,
             $role,
             new DateTimeImmutable()
         );
+
+        $member->domainEvents[] = new MemberAdded($teamId, $userId, $role, $member->joinedAt);
+
+        return $member;
+    }
+
+    public function pullDomainEvents(): array
+    {
+        $events = $this->domainEvents;
+        $this->domainEvents = [];
+
+        return $events;
     }
 
     public function id(): Uuid
