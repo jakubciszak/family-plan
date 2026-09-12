@@ -39,25 +39,48 @@ wcześniejszym wariancie deployu — aplikacja pobiera obrazy z `ghcr.io`.
 
 ## Jak działa deployment
 
-Deployment jest w pełni automatyczny — sterowany przez `.github/workflows/deploy-hostinger.yml`,
-uruchamiany przy każdym pushu na `main` oraz ręcznie przez `workflow_dispatch`.
+Deployment jest sterowany przez `.github/workflows/deploy-hostinger.yml` i rusza **wyłącznie po
+opublikowaniu wydania** (GitHub release, zdarzenie `release: published`). Push na `main` niczego nie
+wdraża. Pre-release nie idzie automatycznie na produkcję.
 
-1. **`build-and-push`** buduje trzy obrazy i pushuje je do `ghcr.io` z tagami `latest` i `<sha>`:
+1. **`resolve-release`** ustala, co wdrażamy: tag wydania i commit, na który wskazuje. Szkic
+   wydania albo tag bez wydania kończy się błędem — na produkcję trafia tylko opublikowany release.
+
+2. **`build-and-push`** buduje trzy obrazy z commita wydania i pushuje je do `ghcr.io` z tagami
+   `latest`, `<tag wydania>` i `<sha>`:
    - `ghcr.io/jakubciszak/family-plan-php` — Symfony + PHP-FPM
    - `ghcr.io/jakubciszak/family-plan-nginx` — nginx z plikami z `public/` obrazu PHP
    - `ghcr.io/jakubciszak/family-plan-frontend` — zbudowany React SPA
 
-2. **`deploy`** woła Hostinger API:
+3. **`deploy`** woła Hostinger API:
    ```
    POST https://developers.hostinger.com/api/vps/v1/virtual-machines/{VPS_ID}/docker/family-plan-project/update
    ```
    Endpoint pobiera nowe obrazy i odtwarza kontenery, zachowując wolumeny danych.
 
-3. Workflow odpytuje produkcję aż `/` zwróci 200, a `/api/auth/me` zwróci 401 (maks. 5 minut).
+4. Workflow odpytuje produkcję aż `/` zwróci 200, a `/api/auth/me` zwróci 401 (maks. 5 minut).
    Brak zdrowej odpowiedzi w tym czasie oznacza czerwony build.
 
 Migracje bazy i utworzenie super admina uruchamia `docker/php/docker-entrypoint.sh` przy starcie
 kontenera PHP — nie ma osobnego kroku migracyjnego w CI.
+
+### Jak wydać wersję
+
+```bash
+# z lokalnego repo, na aktualnym mainie
+gh release create v1.2.3 --generate-notes
+```
+
+Albo w UI: GitHub → Releases → Draft a new release → tag `v1.2.3` → Publish release. Publikacja
+uruchamia deployment; zapisanie szkicu nie.
+
+Ręczne wdrożenie (`Actions → Deploy to Hostinger → Run workflow`) przyjmuje opcjonalny tag:
+
+| Wejście `tag` | Co się wdroży |
+|---------------|---------------|
+| puste | ostatnie opublikowane wydanie |
+| `v1.2.3` | to konkretne wydanie (także pre-release) |
+| tag bez wydania / szkic | workflow kończy się błędem |
 
 ### Wymagane sekrety w GitHub Actions
 
@@ -125,9 +148,13 @@ curl -sL -o /dev/null -w '%{http_code}\n' https://family-plan.srv1201847.hstgr.c
 
 ## Rollback
 
-Obrazy są tagowane również sha commita, więc wycofanie sprowadza się do wskazania poprzedniego
-taga. W zmiennych projektu na serwerze ustaw `IMAGE_TAG` na sha działającej wersji i uruchom
-`update`. Compose domyślnie używa `latest`, gdy `IMAGE_TAG` nie jest ustawiony.
+Obrazy są tagowane także tagiem wydania i sha commita, więc wycofanie sprowadza się do wskazania
+poprzedniej wersji. W zmiennych projektu na serwerze ustaw `IMAGE_TAG` na tag działającego wydania
+(np. `v1.2.2`) albo na jego sha i uruchom `update`. Compose domyślnie używa `latest`, gdy
+`IMAGE_TAG` nie jest ustawiony.
+
+Drugą drogą jest wydanie poprawki: `gh release create v1.2.4` na commicie, który działa — wtedy
+`latest` znów wskazuje zdrową wersję i nie trzeba trzymać `IMAGE_TAG` na sztywno.
 
 Pełny snapshot maszyny (`POST $BASE/virtual-machines/$VPS_ID/snapshot`) obejmuje także wolumen
 bazy i jest najszybszą drogą powrotu po nieudanej migracji. Hostinger trzyma jeden snapshot na

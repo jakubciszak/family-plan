@@ -1,9 +1,14 @@
 name: Deploy to Hostinger
 
 on:
-  push:
-    branches: [main]
+  release:
+    types: [published]
   workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag wydania do wdrożenia (np. v1.2.3). Puste = ostatnie opublikowane wydanie."
+        required: false
+        type: string
 
 permissions:
   contents: read
@@ -21,12 +26,71 @@ env:
   APP_HEALTH_URL: https://family-plan.srv1201847.hstgr.cloud
 
 jobs:
+  resolve-release:
+    name: Resolve release
+    runs-on: ubuntu-latest
+    # Automatycznie wdrażamy tylko pełne wydania. Pre-release da się wypchnąć ręcznie
+    # przez workflow_dispatch z podanym tagiem.
+    if: github.event_name != 'release' || github.event.release.prerelease == false
+
+    outputs:
+      tag: ${{ steps.release.outputs.tag }}
+      sha: ${{ steps.release.outputs.sha }}
+      version: ${{ steps.release.outputs.version }}
+
+    steps:
+      - name: Pick the release to deploy
+        id: release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          EVENT_TAG: ${{ github.event.release.tag_name }}
+          INPUT_TAG: ${{ inputs.tag }}
+        run: |
+          set -euo pipefail
+
+          tag="${EVENT_TAG:-${INPUT_TAG:-}}"
+          if [ -z "$tag" ]; then
+            tag=$(gh release view --json tagName --jq .tagName)
+            echo "Nie podano tagu — wdrażam ostatnie wydanie: ${tag}"
+          fi
+
+          # Wdrażamy wyłącznie opublikowane wydania — nigdy szkicu ani gołej gałęzi.
+          if ! state=$(gh release view "$tag" --json isDraft --jq .isDraft); then
+            echo "Nie ma wydania o tagu ${tag}. Najpierw utwórz release."
+            exit 1
+          fi
+          if [ "$state" != "false" ]; then
+            echo "Wydanie ${tag} jest szkicem — opublikuj je przed wdrożeniem."
+            exit 1
+          fi
+
+          sha=$(gh api "repos/${GH_REPO}/commits/${tag}" --jq .sha)
+
+          # Tag obrazu Dockera dopuszcza tylko [A-Za-z0-9_.-] i nie zaczyna się od . ani -
+          version=$(printf '%s' "$tag" | tr -c 'A-Za-z0-9_.-' '-')
+          case "$version" in
+            [.-]*) version="v${version}" ;;
+          esac
+
+          {
+            echo "tag=${tag}"
+            echo "sha=${sha}"
+            echo "version=${version}"
+          } >> "$GITHUB_OUTPUT"
+
+          echo "Wydanie ${tag} (${sha}) → obrazy z tagiem ${version}" >> "$GITHUB_STEP_SUMMARY"
+
   build-and-push:
+    name: Build and push images
+    needs: resolve-release
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
+      - name: Checkout the released commit
         uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.resolve-release.outputs.sha }}
 
       - name: Log in to Container Registry
         uses: docker/login-action@v3
@@ -44,7 +108,10 @@ jobs:
           context: .
           file: docker/php/Dockerfile.prod
           push: true
-          tags: ${{ env.PHP_IMAGE }}:latest,${{ env.PHP_IMAGE }}:${{ github.sha }}
+          tags: |
+            ${{ env.PHP_IMAGE }}:latest
+            ${{ env.PHP_IMAGE }}:${{ needs.resolve-release.outputs.version }}
+            ${{ env.PHP_IMAGE }}:${{ needs.resolve-release.outputs.sha }}
           platforms: linux/amd64
           cache-from: type=gha
           cache-to: type=gha,mode=max
@@ -55,7 +122,10 @@ jobs:
           context: ./frontend
           file: frontend/Dockerfile.prod
           push: true
-          tags: ${{ env.FRONTEND_IMAGE }}:latest,${{ env.FRONTEND_IMAGE }}:${{ github.sha }}
+          tags: |
+            ${{ env.FRONTEND_IMAGE }}:latest
+            ${{ env.FRONTEND_IMAGE }}:${{ needs.resolve-release.outputs.version }}
+            ${{ env.FRONTEND_IMAGE }}:${{ needs.resolve-release.outputs.sha }}
           platforms: linux/amd64
           cache-from: type=gha
           cache-to: type=gha,mode=max
@@ -66,15 +136,19 @@ jobs:
           context: ./docker/nginx
           file: docker/nginx/Dockerfile.prod
           push: true
-          tags: ${{ env.NGINX_IMAGE }}:latest,${{ env.NGINX_IMAGE }}:${{ github.sha }}
+          tags: |
+            ${{ env.NGINX_IMAGE }}:latest
+            ${{ env.NGINX_IMAGE }}:${{ needs.resolve-release.outputs.version }}
+            ${{ env.NGINX_IMAGE }}:${{ needs.resolve-release.outputs.sha }}
           platforms: linux/amd64
           cache-from: type=gha
           cache-to: type=gha,mode=max
           build-args: |
-            PHP_IMAGE=${{ env.PHP_IMAGE }}:${{ github.sha }}
+            PHP_IMAGE=${{ env.PHP_IMAGE }}:${{ needs.resolve-release.outputs.sha }}
 
   deploy:
-    needs: build-and-push
+    name: Deploy ${{ needs.resolve-release.outputs.tag }}
+    needs: [resolve-release, build-and-push]
     runs-on: ubuntu-latest
 
     steps:
@@ -121,3 +195,8 @@ jobs:
           done
           echo "Application did not become healthy within 5 minutes."
           exit 1
+
+      - name: Record what went live
+        run: |
+          echo "Wdrożone wydanie: ${{ needs.resolve-release.outputs.tag }} (${{ needs.resolve-release.outputs.sha }})" >> "$GITHUB_STEP_SUMMARY"
+          echo "${APP_HEALTH_URL}" >> "$GITHUB_STEP_SUMMARY"
