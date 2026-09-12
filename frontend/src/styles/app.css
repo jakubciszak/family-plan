@@ -1,3 +1,9 @@
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
 body {
     margin: 0;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
@@ -540,6 +546,22 @@ button:hover {
 }
 
 /* Mobile Responsive Styles */
+@media screen and (max-width: 768px) {
+    button,
+    select,
+    input:not([type="checkbox"]):not([type="radio"]),
+    a.btn-primary,
+    a.btn-secondary {
+        min-height: 44px;
+    }
+
+    .hamburger-menu,
+    .language-switcher button {
+        min-width: 44px;
+        min-height: 44px;
+    }
+}
+
 @media screen and (max-width: 768px) {
     /* Header */
     .app-header {
