@@ -67,8 +67,13 @@ test.describe('C. Zespoly i zaproszenia', () => {
       await loginThroughUi(page, invitedEmail);
     }
 
-    const members = await owner.session.get(`/api/teams/${owner.teamId}/members`);
-    expect(members.body.members.map((m) => m.userEmail)).toContain(invitedEmail);
+    await expect.poll(
+      async () => {
+        const members = await owner.session.get(`/api/teams/${owner.teamId}/members`);
+        return members.body.members.map((m) => m.userEmail);
+      },
+      { timeout: 15000 }
+    ).toContain(invitedEmail);
   });
 
   test('C4 osoba z kontem loguje sie z linku i dolacza do zespolu', async ({ page }) => {
@@ -88,8 +93,13 @@ test.describe('C. Zespoly i zaproszenia', () => {
     await page.waitForSelector('.app-header', { timeout: 15000 });
     await page.waitForTimeout(1500);
 
-    const members = await owner.session.get(`/api/teams/${owner.teamId}/members`);
-    expect(members.body.members.map((m) => m.userEmail)).toContain(invited.email);
+    await expect.poll(
+      async () => {
+        const members = await owner.session.get(`/api/teams/${owner.teamId}/members`);
+        return members.body.members.map((m) => m.userEmail);
+      },
+      { timeout: 15000 }
+    ).toContain(invited.email);
   });
 
   test('C5 czlonek widoczny na liscie i mozna go usunac', async ({ page }) => {

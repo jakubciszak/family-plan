@@ -888,7 +888,7 @@ test.describe('Complete User Workflow E2E', () => {
             const taskCard = page.locator(`.task-card:has-text("${testTask.name}")`);
 
             // Should see Assign button (task is not assigned)
-            const assignButton = taskCard.locator('button:has-text("Assign")');
+            const assignButton = taskCard.locator('button:has-text("Take this task")');
             await expect(assignButton).toBeVisible();
 
             // Click assign

@@ -303,14 +303,14 @@ test.describe.serial('Complete User Workflow E2E - Real Backend', () => {
         await expect(taskCard).toBeVisible({ timeout: 15000 });
 
         // Click assign button
-        const assignButton = taskCard.locator('button:has-text("Assign")');
+        const assignButton = taskCard.locator('button:has-text("Take this task")');
         if (await assignButton.isVisible()) {
             await assignButton.click();
             await page.waitForLoadState('networkidle');
         }
 
         // Verify assignment - should show assigned user name
-        const assignment = taskCard.locator('.task-assignment');
+        const assignment = taskCard.locator('.task-assignee');
         await expect(assignment).toBeVisible({ timeout: 10000 });
         await expect(assignment).toContainText(invitedUser.name);
     });

@@ -786,3 +786,83 @@ button:hover {
         font-size: 0.75rem;
     }
 }
+
+.task-card {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px 14px;
+}
+
+.task-row {
+    display: grid;
+    grid-template-columns: 1fr auto auto auto;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+}
+
+.task-row .task-name {
+    font-weight: 600;
+    color: #2c3e50;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+}
+
+.task-row .task-points,
+.task-row .task-frequency {
+    font-size: 0.85rem;
+    color: #6c757d;
+    white-space: nowrap;
+}
+
+.task-row .task-points {
+    font-weight: 600;
+    color: #b8860b;
+}
+
+.task-assignee {
+    display: flex;
+    gap: 6px;
+    font-size: 0.85rem;
+    color: #6c757d;
+}
+
+.task-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.task-actions button,
+.task-actions .task-assign-select {
+    font-size: 0.9rem;
+    padding: 8px 12px;
+}
+
+@media screen and (max-width: 560px) {
+    .task-row {
+        grid-template-columns: 1fr auto;
+        row-gap: 4px;
+    }
+
+    .task-row .task-name {
+        grid-column: 1 / -1;
+        white-space: normal;
+    }
+
+    .task-row .task-status {
+        justify-self: end;
+    }
+}
+
+.task-description {
+    margin: 0;
+    font-size: 0.85rem;
+    color: #6c757d;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}

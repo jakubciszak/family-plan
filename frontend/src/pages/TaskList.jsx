@@ -47,6 +47,12 @@ function TaskList({ user }) {
         return selectedTeam.role === 'admin';
     };
 
+    const isDoableNow = (task) => task.status === 'new' || task.status === 'pending';
+
+    const visibleTasks = isTeamAdmin()
+        ? tasks
+        : tasks.filter((task) => isDoableNow(task) || task.assignedUserId === user.id);
+
     const loadTasks = async () => {
         try {
             const data = await apiClient.get('/api/tasks');
@@ -158,10 +164,10 @@ function TaskList({ user }) {
             )}
 
             <div className="tasks">
-                {tasks.length === 0 ? (
+                {visibleTasks.length === 0 ? (
                     <p>{t('tasks.noTasks')}</p>
                 ) : (
-                    tasks.map(task => (
+                    visibleTasks.map(task => (
                         <TaskCard
                             key={task.id}
                             task={task}
@@ -188,8 +194,8 @@ function TaskCard({ task, user, members, isTeamAdmin, onComplete, onApprove, onA
     const canComplete = isOpen && isAssignedToCurrentUser;
     const canApprove = task.status === 'completed' && isTeamAdmin;
     const canTakeIt = isOpen && !isAssigned;
-    const canGiveItBack = isOpen && (isAssignedToCurrentUser || isTeamAdmin);
-    const canAssignSomebody = isOpen && isTeamAdmin && members.length > 0;
+    const canGiveItBack = isOpen && isAssigned && (isAssignedToCurrentUser || isTeamAdmin);
+    const canAssignSomebody = isOpen && !isAssigned && isTeamAdmin && members.length > 0;
 
     const getFrequencyTranslation = (frequency) => {
         const frequencyMap = {
@@ -203,25 +209,21 @@ function TaskCard({ task, user, members, isTeamAdmin, onComplete, onApprove, onA
 
     return (
         <div className="task-card">
-            <div className="task-header">
-                <h3>{task.name}</h3>
-                <span className={`task-status status-${task.status}`}>
-                    {task.status}
-                </span>
+            <div className="task-row">
+                <span className="task-name" title={task.description || task.name}>{task.name}</span>
+                <span className="task-points">{t('user.points', { points: task.points })}</span>
+                <span className="task-frequency">{getFrequencyTranslation(task.frequency)}</span>
+                <span className={`task-status status-${task.status}`}>{task.status}</span>
             </div>
-            <div className="task-body">
-                <p>{task.description}</p>
-                <div className="task-meta">
-                    <span className="task-points">{t('user.points', { points: task.points })}</span>
-                    <span className="task-frequency">{getFrequencyTranslation(task.frequency)}</span>
+            {task.description && (
+                <p className="task-description">{task.description}</p>
+            )}
+            {isAssigned && (
+                <div className="task-assignee">
+                    <span className="assignment-label">{t('tasks.assignedTo')}:</span>
+                    <span className="assignment-user">{task.assignedUserName}</span>
                 </div>
-                {isAssigned && (
-                    <div className="task-assignment">
-                        <span className="assignment-label">{t('tasks.assignedTo')}:</span>
-                        <span className="assignment-user">{task.assignedUserName}</span>
-                    </div>
-                )}
-            </div>
+            )}
             <div className="task-actions">
                 {canTakeIt && (
                     <button

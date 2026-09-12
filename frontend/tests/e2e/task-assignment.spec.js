@@ -100,7 +100,7 @@ test.describe('Task Assignment Display', () => {
     await page.waitForSelector('.task-card');
     
     // Check for assignment display
-    const assignmentInfo = page.locator('.task-assignment');
+    const assignmentInfo = page.locator('.task-assignee');
     await expect(assignmentInfo).toBeVisible();
     await expect(assignmentInfo).toContainText('Assigned to:');
     await expect(assignmentInfo).toContainText('Test User');
@@ -114,7 +114,7 @@ test.describe('Task Assignment Display', () => {
     const unassignedTask = page.locator('.task-card').filter({ hasText: 'Clean the kitchen' });
     
     // Assignment info should not be visible
-    const assignmentInfo = unassignedTask.locator('.task-assignment');
+    const assignmentInfo = unassignedTask.locator('.task-assignee');
     await expect(assignmentInfo).not.toBeVisible();
   });
 
@@ -125,8 +125,8 @@ test.describe('Task Assignment Display', () => {
     // Find an unassigned task
     const unassignedTask = page.locator('.task-card').filter({ hasText: 'Clean the kitchen' });
     
-    // Check for assign button (translated text)
-    const assignButton = unassignedTask.locator('button').filter({ hasText: 'Assign' });
+    // Taking a task is the self-assignment action available to any member
+    const assignButton = unassignedTask.locator('button').filter({ hasText: 'Take this task' });
     await expect(assignButton).toBeVisible();
   });
 
@@ -158,7 +158,7 @@ test.describe('Task Assignment Display', () => {
     await page.waitForSelector('.task-card');
     
     // Assign button should not be visible (translated text)
-    const assignButton = page.locator('button').filter({ hasText: 'Assign' });
+    const assignButton = page.locator('button').filter({ hasText: 'Take this task' });
     await expect(assignButton).not.toBeVisible();
   });
 
@@ -189,7 +189,7 @@ test.describe('Task Assignment Display', () => {
     await page.waitForSelector('.task-card');
     
     // Click assign button (translated text)
-    const assignButton = page.locator('button').filter({ hasText: 'Assign' }).first();
+    const assignButton = page.locator('button').filter({ hasText: 'Take this task' }).first();
     await assignButton.click();
     
     // Wait a bit for the API call

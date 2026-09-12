@@ -206,6 +206,25 @@ test.describe('Task Actions - Approve (Admin)', () => {
       });
     });
     
+    // Approval is a team permission, so the session needs a team the user administers
+    await page.route('**/api/teams', async route => {
+      if (route.request().method() === 'GET') {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify(mockApiResponses.userTeams)
+        });
+      }
+    });
+
+    await page.route('**/api/teams/*/members', async route => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ members: [] })
+      });
+    });
+
     // Mock the tasks API to return sample tasks
     await page.route('**/api/tasks', async route => {
       if (route.request().method() === 'GET') {
