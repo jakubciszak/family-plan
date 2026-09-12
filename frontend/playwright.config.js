@@ -65,7 +65,7 @@ module.exports = defineConfig({
     screenshot: 'only-on-failure',
     
     // Record video only on failure
-    video: 'retain-on-failure',
+    video: process.env.CI ? 'retain-on-failure' : 'off',
   },
 
   // Configure projects for major browsers
@@ -73,7 +73,7 @@ module.exports = defineConfig({
   projects: [
     {
       name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
+      use: { ...devices['Desktop Chrome'], ...(process.env.PW_CHANNEL ? { channel: process.env.PW_CHANNEL } : {}) },
     },
 
     // Uncomment to test on other browsers

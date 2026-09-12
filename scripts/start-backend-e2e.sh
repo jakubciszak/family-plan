@@ -9,6 +9,7 @@ PORT="$(printf '%s' "$API_BASE_URL" | awk -F: '{print $NF}' | sed 's#/.*##')"
 PORT="${PORT:-8080}"
 
 export APP_ENV=test
+export REQUIRE_EMAIL_ACTIVATION=false
 export APP_DEBUG=0
 export DATABASE_URL="sqlite:///${DB_PATH}"
 export SUPER_ADMIN_EMAIL="${SUPER_ADMIN_EMAIL:-admin@familyplan.local}"
