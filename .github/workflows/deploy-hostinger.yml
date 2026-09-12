@@ -9,10 +9,16 @@ on:
         description: "Tag wydania do wdrożenia (np. v1.2.3). Puste = ostatnie opublikowane wydanie."
         required: false
         type: string
+      skip_checks:
+        description: "Wdroż mimo braku zielonych testów (rollback starego wydania, gdy przepadły logi runów)."
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: read
   packages: write
+  actions: read
 
 concurrency:
   group: deploy-hostinger
@@ -24,6 +30,13 @@ env:
   NGINX_IMAGE: ghcr.io/${{ github.repository_owner }}/family-plan-nginx
   FRONTEND_IMAGE: ghcr.io/${{ github.repository_owner }}/family-plan-frontend
   APP_HEALTH_URL: https://family-plan.srv1201847.hstgr.cloud
+  # Workflowy, które muszą być zielone na commicie wydania, zanim cokolwiek pójdzie na produkcję.
+  # Nazwy z pola `name:` w .github/workflows/*.yml.
+  REQUIRED_CHECKS: |
+    PHPUnit Tests
+    Playwright Tests
+    Mobile App Tests
+  CHECKS_TIMEOUT_MINUTES: "60"
 
 jobs:
   resolve-release:
@@ -80,6 +93,91 @@ jobs:
           } >> "$GITHUB_OUTPUT"
 
           echo "Wydanie ${tag} (${sha}) → obrazy z tagiem ${version}" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Require green checks on the released commit
+        if: ${{ !inputs.skip_checks }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          SHA: ${{ steps.release.outputs.sha }}
+          TAG: ${{ steps.release.outputs.tag }}
+        run: |
+          set -euo pipefail
+
+          required=()
+          while IFS= read -r name; do
+            if [ -n "$name" ]; then
+              required+=("$name")
+            fi
+          done <<< "${REQUIRED_CHECKS}"
+
+          deadline=$(( $(date +%s) + CHECKS_TIMEOUT_MINUTES * 60 ))
+          runs=$(mktemp)
+
+          while :; do
+            gh api "repos/${GH_REPO}/actions/runs?head_sha=${SHA}&per_page=100" > "$runs"
+
+            pending=()
+            failed=()
+            for name in "${required[@]}"; do
+              entry=$(jq -r --arg n "$name" '
+                [.workflow_runs[] | select(.name == $n)]
+                | sort_by(.run_started_at) | last // empty
+                | "\(.status)|\(.conclusion // "")|\(.html_url)"' "$runs")
+
+              if [ -z "$entry" ]; then
+                pending+=("${name}: brak runu na tym commicie")
+                continue
+              fi
+
+              status=${entry%%|*}
+              rest=${entry#*|}
+              conclusion=${rest%%|*}
+              url=${rest#*|}
+
+              if [ "$status" != "completed" ]; then
+                pending+=("${name}: ${status}")
+              elif [ "$conclusion" = "success" ]; then
+                echo "✓ ${name}"
+              else
+                failed+=("${name}: ${conclusion} — ${url}")
+              fi
+            done
+
+            if [ ${#failed[@]} -gt 0 ]; then
+              echo "Testy na commicie wydania ${TAG} (${SHA}) nie są zielone:"
+              printf '  - %s\n' "${failed[@]}"
+              {
+                echo "### Deployment zatrzymany — czerwone testy"
+                printf '%s\n' "${failed[@]/#/- }"
+              } >> "$GITHUB_STEP_SUMMARY"
+              exit 1
+            fi
+
+            if [ ${#pending[@]} -eq 0 ]; then
+              echo "Wszystkie wymagane testy przeszły na ${SHA}."
+              exit 0
+            fi
+
+            if [ "$(date +%s)" -ge "$deadline" ]; then
+              echo "Po ${CHECKS_TIMEOUT_MINUTES} min nadal czekam na:"
+              printf '  - %s\n' "${pending[@]}"
+              {
+                echo "### Deployment zatrzymany — testy nie skończyły się w czasie"
+                printf '%s\n' "${pending[@]/#/- }"
+              } >> "$GITHUB_STEP_SUMMARY"
+              exit 1
+            fi
+
+            echo "Czekam na: ${pending[*]}"
+            sleep 30
+          done
+
+      - name: Note the skipped gate
+        if: ${{ inputs.skip_checks }}
+        run: |
+          echo "⚠️ Bramka testów pominięta ręcznie (skip_checks) dla ${{ steps.release.outputs.tag }}." \
+            >> "$GITHUB_STEP_SUMMARY"
 
   build-and-push:
     name: Build and push images
