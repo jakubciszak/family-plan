@@ -158,47 +158,25 @@ test.describe.serial('Complete User Workflow E2E - Real Backend', () => {
         await expect(teamCard).toBeVisible({ timeout: 10000 });
     });
 
-    test('3. Main user creates a new task', async ({ page }) => {
+    test('3. Main user defines a task type', async ({ page }) => {
         await loginUser(page, mainUser);
 
-        // Should be on tasks page by default
+        await page.click('.app-nav button:has-text("Task types")');
         await page.waitForSelector('.task-list-container', { timeout: 10000 });
-
-        // Wait for teams to load (needed for task creation)
         await page.waitForLoadState('networkidle');
 
-        // Team admin should see "Create Task" button
-        const createButton = page.locator('button:has-text("Create Task")');
-
-        // If create button is not visible, team might not be selected
-        if (!await createButton.isVisible()) {
-            // Select the team from dropdown if available
-            const teamSelector = page.locator('.team-selector');
-            if (await teamSelector.isVisible()) {
-                await teamSelector.selectOption({ label: new RegExp(testTeam.name) });
-                await page.waitForLoadState('networkidle');
-            }
-        }
-
-        await expect(createButton).toBeVisible({ timeout: 10000 });
-        await createButton.click();
-
-        // Fill task form
+        await page.click('button:has-text("Add a task type")');
         await page.waitForSelector('.task-create-form', { timeout: 5000 });
+
         await page.fill('input#name', testTask.name);
         await page.fill('textarea#description', testTask.description);
         await page.fill('input#points', testTask.points.toString());
         await page.selectOption('select#frequency', testTask.frequency);
 
-        // Submit
         await page.click('.task-create-form button[type="submit"]');
-
-        // Wait for task to appear in list
         await page.waitForLoadState('networkidle');
 
-        // Verify task was created
-        const taskCard = page.locator(`.task-card:has-text("${testTask.name}")`);
-        await expect(taskCard).toBeVisible({ timeout: 10000 });
+        await expect(page.locator(`.task-card:has-text("${testTask.name}")`)).toBeVisible({ timeout: 10000 });
     });
 
     test('4. Main user invites new user to the team', async ({ page }) => {
@@ -275,118 +253,68 @@ test.describe.serial('Complete User Workflow E2E - Real Backend', () => {
         await expect(teamCard).toBeVisible({ timeout: 15000 });
     });
 
-    test('7. New user can see the task', async ({ page }) => {
-        await loginUser(page, invitedUser);
-
-        // Should be on tasks page by default
-        await page.waitForSelector('.task-list-container', { timeout: 10000 });
-
-        // Wait for tasks to load
-        await page.waitForLoadState('networkidle');
-
-        // Task should be visible
-        const taskCard = page.locator(`.task-card:has-text("${testTask.name}")`);
-        await expect(taskCard).toBeVisible({ timeout: 15000 });
-
-        // Verify task details
-        await expect(taskCard.locator('.task-status')).toContainText('pending');
-    });
-
-    test('8. New user assigns themselves to the task', async ({ page }) => {
+    test('7. New user sees the task type among available tasks', async ({ page }) => {
         await loginUser(page, invitedUser);
 
         await page.waitForSelector('.task-list-container', { timeout: 10000 });
         await page.waitForLoadState('networkidle');
 
-        // Find task card
-        const taskCard = page.locator(`.task-card:has-text("${testTask.name}")`);
-        await expect(taskCard).toBeVisible({ timeout: 15000 });
-
-        // Click assign button
-        const assignButton = taskCard.locator('button:has-text("Take this task")');
-        if (await assignButton.isVisible()) {
-            await assignButton.click();
-            await page.waitForLoadState('networkidle');
-        }
-
-        // Verify assignment - should show assigned user name
-        const assignment = taskCard.locator('.task-assignee');
-        await expect(assignment).toBeVisible({ timeout: 10000 });
-        await expect(assignment).toContainText(invitedUser.name);
+        await expect(
+            page.getByTestId('available-tasks').locator(`.task-card:has-text("${testTask.name}")`)
+        ).toBeVisible({ timeout: 15000 });
     });
 
-    test('9. New user marks task as completed', async ({ page }) => {
+    test('8. New user takes the task', async ({ page }) => {
         await loginUser(page, invitedUser);
 
         await page.waitForSelector('.task-list-container', { timeout: 10000 });
         await page.waitForLoadState('networkidle');
 
-        // Find task card
-        const taskCard = page.locator(`.task-card:has-text("${testTask.name}")`);
-        await expect(taskCard).toBeVisible({ timeout: 15000 });
+        await page.getByTestId('available-tasks')
+            .locator(`.task-card:has-text("${testTask.name}")`)
+            .locator('button:has-text("Take this task")')
+            .click();
 
-        // Click complete button
-        const completeButton = taskCard.locator('button.btn-success:has-text("Complete")');
-        await expect(completeButton).toBeVisible({ timeout: 10000 });
-        await completeButton.click();
-
-        await page.waitForLoadState('networkidle');
-
-        // Verify task is now completed
-        await expect(taskCard.locator('.status-completed')).toBeVisible({ timeout: 10000 });
+        await expect(
+            page.getByTestId('my-tasks').locator(`.task-card:has-text("${testTask.name}")`)
+        ).toBeVisible({ timeout: 15000 });
     });
 
-    test('10. New user cannot approve their own completed task', async ({ page }) => {
+    test('9. New user marks the task as done', async ({ page }) => {
         await loginUser(page, invitedUser);
 
         await page.waitForSelector('.task-list-container', { timeout: 10000 });
         await page.waitForLoadState('networkidle');
 
-        // Find task card
-        const taskCard = page.locator(`.task-card:has-text("${testTask.name}")`);
-        await expect(taskCard).toBeVisible({ timeout: 15000 });
+        const mine = page.getByTestId('my-tasks').locator(`.task-card:has-text("${testTask.name}")`);
+        await mine.locator('button:has-text("Complete")').click();
 
-        // Verify task is completed
-        await expect(taskCard.locator('.status-completed')).toBeVisible();
-
-        // Approve button should NOT be visible for regular user
-        const approveButton = taskCard.locator('button:has-text("Approve")');
-        await expect(approveButton).not.toBeVisible();
-
-        // Complete button should also not be visible (already completed)
-        const completeButton = taskCard.locator('button:has-text("Complete")');
-        await expect(completeButton).not.toBeVisible();
+        await expect(mine).toContainText('Waiting for approval', { timeout: 15000 });
     });
 
-    test('11. Main user approves the completed task', async ({ page }) => {
+    test('10. New user cannot approve their own task', async ({ page }) => {
+        await loginUser(page, invitedUser);
+
+        await page.waitForSelector('.task-list-container', { timeout: 10000 });
+        await page.waitForLoadState('networkidle');
+
+        await expect(page.getByTestId('approval-queue')).toHaveCount(0);
+        await expect(page.locator('button:has-text("Approve")')).toHaveCount(0);
+    });
+
+    test('11. Main user approves the finished task', async ({ page }) => {
         await loginUser(page, mainUser);
 
         await page.waitForSelector('.task-list-container', { timeout: 10000 });
         await page.waitForLoadState('networkidle');
 
-        // Find task card
-        const taskCard = page.locator(`.task-card:has-text("${testTask.name}")`);
-        await expect(taskCard).toBeVisible({ timeout: 15000 });
+        const queued = page.getByTestId('approval-queue').locator(`.task-card:has-text("${testTask.name}")`);
+        await expect(queued).toBeVisible({ timeout: 15000 });
+        await expect(queued).toContainText(invitedUser.name);
 
-        // Verify task is completed
-        await expect(taskCard.locator('.status-completed')).toBeVisible({ timeout: 10000 });
+        await queued.locator('button:has-text("Approve")').click();
 
-        // Main user (team admin) might need ROLE_ADMIN to approve
-        // Check if approve button is visible
-        const approveButton = taskCard.locator('button.btn-primary:has-text("Approve")');
-
-        if (await approveButton.isVisible()) {
-            await approveButton.click();
-            await page.waitForLoadState('networkidle');
-
-            // Verify task is now approved
-            await expect(taskCard.locator('.status-approved')).toBeVisible({ timeout: 10000 });
-        } else {
-            // If approve button is not visible, it means the main user doesn't have ROLE_ADMIN
-            // This is expected behavior - only system admins can approve tasks
-            console.log('Note: Approve button not visible - main user may not have ROLE_ADMIN');
-            // Test passes - we verified the user doesn't have unauthorized access
-        }
+        await expect(page.getByTestId('approval-queue')).not.toContainText(testTask.name, { timeout: 15000 });
     });
 });
 

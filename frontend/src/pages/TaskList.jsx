@@ -1,127 +1,108 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import apiClient from '../services/apiClient';
+import taskService from '../services/taskService';
 import teamService from '../services/teamService';
 
-function TaskList({ user }) {
+function useLimitLabel() {
     const { t } = useTranslation();
-    const [tasks, setTasks] = React.useState([]);
+
+    return (limit) => {
+        if (!limit || limit.type === 'unlimited') {
+            return t('taskTypes.limitUnlimited');
+        }
+        if (limit.type === 'once') {
+            return t('taskTypes.limitOnce');
+        }
+        return t(`taskTypes.limit${limit.type === 'per_day' ? 'PerDay' : limit.type === 'per_week' ? 'PerWeek' : 'PerMonth'}`, {
+            count: limit.count,
+        });
+    };
+}
+
+function TaskList() {
+    const { t } = useTranslation();
+    const [taskTypes, setTaskTypes] = React.useState([]);
+    const [myTasks, setMyTasks] = React.useState([]);
+    const [awaitingApproval, setAwaitingApproval] = React.useState([]);
     const [teams, setTeams] = React.useState([]);
-    const [loading, setLoading] = React.useState(true);
-    const [showCreateForm, setShowCreateForm] = React.useState(false);
     const [selectedTeam, setSelectedTeam] = React.useState(null);
-    const [members, setMembers] = React.useState([]);
+    const [loading, setLoading] = React.useState(true);
+    const [error, setError] = React.useState(null);
+    const limitLabel = useLimitLabel();
 
-    React.useEffect(() => {
-        loadTasks();
-        loadTeams();
-    }, []);
+    const isTeamAdmin = selectedTeam?.role === 'admin';
 
-    const loadTeams = async () => {
+    const loadTeams = React.useCallback(async () => {
         try {
             const data = await teamService.getTeams();
-            setTeams(data.teams || []);
-            // Select first team by default
-            if (data.teams && data.teams.length > 0) {
-                setSelectedTeam(data.teams[0]);
-            }
-        } catch (error) {
-            console.error('Error loading teams:', error);
+            const loaded = data.teams || [];
+            setTeams(loaded);
+            setSelectedTeam((current) => current || loaded[0] || null);
+        } catch {
+            setTeams([]);
         }
-    };
+    }, []);
 
-    React.useEffect(() => {
-        if (!selectedTeam) {
-            setMembers([]);
-            return;
-        }
-
-        teamService.getTeamMembers(selectedTeam.id)
-            .then((data) => setMembers(data.members || []))
-            .catch(() => setMembers([]));
-    }, [selectedTeam]);
-
-    const isTeamAdmin = () => {
-        if (!selectedTeam) return false;
-        // Check if user is admin of selected team
-        return selectedTeam.role === 'admin';
-    };
-
-    const isDoableNow = (task) => task.status === 'new' || task.status === 'pending';
-
-    const visibleTasks = isTeamAdmin()
-        ? tasks
-        : tasks.filter((task) => isDoableNow(task) || task.assignedUserId === user.id);
-
-    const loadTasks = async () => {
+    const loadTasks = React.useCallback(async () => {
         try {
-            const data = await apiClient.get('/api/tasks');
-            setTasks(data.tasks);
-        } catch (error) {
-            console.error('Error loading tasks:', error);
+            const [types, mine] = await Promise.all([
+                taskService.getTaskTypes(),
+                taskService.getMyTasks(),
+            ]);
+            setTaskTypes(types.templates || []);
+            setMyTasks(mine.executions || []);
+        } catch {
+            setError(t('tasks.loadFailed'));
         } finally {
             setLoading(false);
         }
+    }, [t]);
+
+    const loadAwaitingApproval = React.useCallback(async () => {
+        try {
+            const data = await taskService.getAwaitingApproval();
+            setAwaitingApproval(data.executions || []);
+        } catch {
+            setAwaitingApproval([]);
+        }
+    }, []);
+
+    React.useEffect(() => {
+        loadTeams();
+        loadTasks();
+        loadAwaitingApproval();
+    }, [loadTeams, loadTasks, loadAwaitingApproval]);
+
+    const refresh = async () => {
+        await Promise.all([loadTasks(), loadAwaitingApproval()]);
     };
 
-    const handleCompleteTask = async (taskId) => {
+    const run = async (action) => {
+        setError(null);
         try {
-            await apiClient.post(`/api/tasks/${taskId}/complete`, {
-                userId: user.id,
-            });
-            loadTasks();
-        } catch (error) {
-            console.error('Error completing task:', error);
+            await action();
+            await refresh();
+        } catch (err) {
+            setError(err?.response?.data?.error || t('tasks.actionFailed'));
         }
     };
 
-    const handleApproveTask = async (taskId) => {
-        try {
-            await apiClient.post(`/api/tasks/${taskId}/approve`, {
-                adminId: user.id,
-            });
-            loadTasks();
-        } catch (error) {
-            console.error('Error approving task:', error);
-        }
-    };
+    const teamOfType = (taskTemplateId) =>
+        taskTypes.find((type) => type.id === taskTemplateId)?.teamId || null;
 
-    const handleCreateTask = async (taskData) => {
-        try {
-            // Add teamId and createdBy to task data
-            const taskWithTeam = {
-                ...taskData,
-                teamId: selectedTeam.id,
-                createdBy: user.id,
-            };
-            await apiClient.post('/api/tasks', taskWithTeam);
-            setShowCreateForm(false);
-            loadTasks();
-        } catch (error) {
-            console.error('Error creating task:', error);
-            alert(error.response?.data?.error || 'Failed to create task');
-        }
-    };
+    const belongsToSelectedTeam = (teamId) => !selectedTeam || teamId === selectedTeam.id;
 
-    const handleUnassignTask = async (taskId) => {
-        try {
-            await apiClient.post(`/api/tasks/${taskId}/unassign`, {});
-            loadTasks();
-        } catch (error) {
-            console.error('Error unassigning task:', error);
-        }
-    };
+    const availableTypes = taskTypes.filter((type) =>
+        belongsToSelectedTeam(type.teamId) && type.isActive && type.remaining !== 0
+    );
 
-    const handleAssignTask = async (taskId, userId) => {
-        try {
-            await apiClient.post(`/api/tasks/${taskId}/assign`, {
-                userId: userId,
-            });
-            loadTasks();
-        } catch (error) {
-            console.error('Error assigning task:', error);
-        }
-    };
+    const openStatuses = ['new', 'pending'];
+    const myOpenTasks = myTasks.filter(
+        (task) => openStatuses.includes(task.status) && belongsToSelectedTeam(teamOfType(task.taskTemplateId))
+    );
+    const myFinishedTasks = myTasks.filter(
+        (task) => task.status === 'completed' && belongsToSelectedTeam(teamOfType(task.taskTemplateId))
+    );
 
     if (loading) {
         return <div className="loading">{t('common.loading')}</div>;
@@ -131,227 +112,110 @@ function TaskList({ user }) {
         <div className="task-list-container">
             <div className="task-list-header">
                 <h2>{t('tasks.title')}</h2>
-                <div className="header-controls">
-                    {teams.length > 0 && (
-                        <select
-                            value={selectedTeam?.id || ''}
-                            onChange={(e) => {
-                                const team = teams.find(t => t.id === e.target.value);
-                                setSelectedTeam(team);
-                            }}
-                            className="team-selector"
-                        >
-                            {teams.map(team => (
-                                <option key={team.id} value={team.id}>
-                                    {team.name} {team.role === 'admin' ? '(Admin)' : ''}
-                                </option>
-                            ))}
-                        </select>
-                    )}
-                    {isTeamAdmin() && (
-                        <button
-                            onClick={() => setShowCreateForm(!showCreateForm)}
-                            className="btn-primary"
-                        >
-                            {showCreateForm ? t('common.cancel') : t('tasks.create')}
-                        </button>
-                    )}
-                </div>
-            </div>
-
-            {showCreateForm && isTeamAdmin() && (
-                <TaskCreateForm onSubmit={handleCreateTask} />
-            )}
-
-            <div className="tasks">
-                {visibleTasks.length === 0 ? (
-                    <p>{t('tasks.noTasks')}</p>
-                ) : (
-                    visibleTasks.map(task => (
-                        <TaskCard
-                            key={task.id}
-                            task={task}
-                            user={user}
-                            onComplete={handleCompleteTask}
-                            onApprove={handleApproveTask}
-                            members={members}
-                            isTeamAdmin={isTeamAdmin()}
-                            onAssign={handleAssignTask}
-                            onUnassign={handleUnassignTask}
-                        />
-                    ))
-                )}
-            </div>
-        </div>
-    );
-}
-
-function TaskCard({ task, user, members, isTeamAdmin, onComplete, onApprove, onAssign, onUnassign }) {
-    const { t } = useTranslation();
-    const isAssigned = task.assignedUserId !== null;
-    const isAssignedToCurrentUser = task.assignedUserId === user.id;
-    const isOpen = task.status === 'new' || task.status === 'pending';
-    const canComplete = isOpen && isAssignedToCurrentUser;
-    const canApprove = task.status === 'completed' && isTeamAdmin;
-    const canTakeIt = isOpen && !isAssigned;
-    const canGiveItBack = isOpen && isAssigned && (isAssignedToCurrentUser || isTeamAdmin);
-    const canAssignSomebody = isOpen && !isAssigned && isTeamAdmin && members.length > 0;
-
-    const getFrequencyTranslation = (frequency) => {
-        const frequencyMap = {
-            'once': 'tasks.frequencyOnce',
-            'daily': 'tasks.frequencyDaily',
-            'weekly': 'tasks.frequencyWeekly',
-            'monthly': 'tasks.frequencyMonthly'
-        };
-        return t(frequencyMap[frequency] || 'tasks.frequencyOnce');
-    };
-
-    return (
-        <div className="task-card">
-            <div className="task-row">
-                <span className="task-name" title={task.description || task.name}>{task.name}</span>
-                <span className="task-points">{t('user.points', { points: task.points })}</span>
-                <span className="task-frequency">{getFrequencyTranslation(task.frequency)}</span>
-                <span className={`task-status status-${task.status}`}>{task.status}</span>
-            </div>
-            {task.description && (
-                <p className="task-description">{task.description}</p>
-            )}
-            {isAssigned && (
-                <div className="task-assignee">
-                    <span className="assignment-label">{t('tasks.assignedTo')}:</span>
-                    <span className="assignment-user">{task.assignedUserName}</span>
-                </div>
-            )}
-            <div className="task-actions">
-                {canTakeIt && (
-                    <button
-                        onClick={() => onAssign(task.id, user.id)}
-                        className="btn-primary"
-                    >
-                        {t('tasks.takeIt')}
-                    </button>
-                )}
-                {canGiveItBack && (
-                    <button
-                        onClick={() => onUnassign(task.id)}
-                        className="btn-secondary"
-                    >
-                        {t('tasks.unassign')}
-                    </button>
-                )}
-                {canAssignSomebody && (
+                {teams.length > 1 && (
                     <select
-                        className="task-assign-select"
-                        value=""
-                        onChange={(e) => e.target.value && onAssign(task.id, e.target.value)}
-                        aria-label={t('tasks.assignTo')}
+                        value={selectedTeam?.id || ''}
+                        onChange={(e) => setSelectedTeam(teams.find((team) => team.id === e.target.value))}
+                        className="team-selector"
+                        aria-label={t('teams.title')}
                     >
-                        <option value="">{t('tasks.assignTo')}</option>
-                        {members.map((member) => (
-                            <option key={member.userId} value={member.userId}>{member.userName}</option>
+                        {teams.map((team) => (
+                            <option key={team.id} value={team.id}>{team.name}</option>
                         ))}
                     </select>
                 )}
-                {canComplete && (
-                    <button
-                        onClick={() => onComplete(task.id)}
-                        className="btn-success"
-                    >
-                        {t('tasks.complete')}
-                    </button>
-                )}
-                {canApprove && (
-                    <button
-                        onClick={() => onApprove(task.id)}
-                        className="btn-primary"
-                    >
-                        {t('tasks.approve')}
-                    </button>
-                )}
             </div>
+
+            {error && <div className="error-message">{error}</div>}
+
+            <section className="task-section" data-testid="my-tasks">
+                <h3>{t('tasks.mySection')}</h3>
+                {myOpenTasks.length === 0 && myFinishedTasks.length === 0 ? (
+                    <p className="empty-hint">{t('tasks.noneTaken')}</p>
+                ) : (
+                    <div className="tasks">
+                        {myOpenTasks.map((task) => (
+                            <div className="task-card" key={task.id}>
+                                <div className="task-row">
+                                    <span className="task-name">{task.name}</span>
+                                    <span className="task-points">{t('user.points', { points: task.points })}</span>
+                                </div>
+                                <div className="task-actions">
+                                    <button className="btn-success" onClick={() => run(() => taskService.complete(task.id))}>
+                                        {t('tasks.complete')}
+                                    </button>
+                                    <button className="btn-secondary" onClick={() => run(() => taskService.abandon(task.id))}>
+                                        {t('tasks.giveBack')}
+                                    </button>
+                                </div>
+                            </div>
+                        ))}
+                        {myFinishedTasks.map((task) => (
+                            <div className="task-card" key={task.id}>
+                                <div className="task-row">
+                                    <span className="task-name">{task.name}</span>
+                                    <span className="task-points">{t('user.points', { points: task.points })}</span>
+                                    <span className="task-status status-completed">{t('tasks.awaitingApproval')}</span>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </section>
+
+            <section className="task-section" data-testid="available-tasks">
+                <h3>{t('tasks.availableSection')}</h3>
+                {availableTypes.length === 0 ? (
+                    <p className="empty-hint">{t('tasks.noTasks')}</p>
+                ) : (
+                    <div className="tasks">
+                        {availableTypes.map((type) => (
+                            <div className="task-card" key={type.id}>
+                                <div className="task-row">
+                                    <span className="task-name" title={type.description}>{type.name}</span>
+                                    <span className="task-points">{t('user.points', { points: type.points })}</span>
+                                    <span className="task-frequency">{limitLabel(type.executionLimit)}</span>
+                                    {type.remaining !== null && (
+                                        <span className="task-remaining">{t('taskTypes.remaining', { count: type.remaining })}</span>
+                                    )}
+                                </div>
+                                <div className="task-actions">
+                                    <button className="btn-primary" onClick={() => run(() => taskService.take(type.id))}>
+                                        {t('tasks.takeIt')}
+                                    </button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </section>
+
+            {isTeamAdmin && (
+                <section className="task-section" data-testid="approval-queue">
+                    <h3>{t('tasks.approvalSection')}</h3>
+                    {awaitingApproval.length === 0 ? (
+                        <p className="empty-hint">{t('tasks.nothingToApprove')}</p>
+                    ) : (
+                        <div className="tasks">
+                            {awaitingApproval.map((task) => (
+                                <div className="task-card" key={task.id}>
+                                    <div className="task-row">
+                                        <span className="task-name">{task.name}</span>
+                                        <span className="task-points">{t('user.points', { points: task.points })}</span>
+                                        <span className="task-assignee">{task.assignedUserName}</span>
+                                    </div>
+                                    <div className="task-actions">
+                                        <button className="btn-primary" onClick={() => run(() => taskService.approve(task.id))}>
+                                            {t('tasks.approve')}
+                                        </button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </section>
+            )}
         </div>
-    );
-}
-
-function TaskCreateForm({ onSubmit }) {
-    const { t } = useTranslation();
-    const [formData, setFormData] = React.useState({
-        name: '',
-        description: '',
-        points: 0,
-        frequency: 'once',
-    });
-
-    const handleSubmit = (e) => {
-        e.preventDefault();
-        onSubmit(formData);
-    };
-
-    const handleChange = (e) => {
-        const { name, value } = e.target;
-        setFormData(prev => ({
-            ...prev,
-            [name]: name === 'points' ? parseInt(value, 10) : value,
-        }));
-    };
-
-    return (
-        <form className="task-create-form" onSubmit={handleSubmit}>
-            <div className="form-group">
-                <label htmlFor="name">{t('tasks.name')}</label>
-                <input
-                    type="text"
-                    id="name"
-                    name="name"
-                    value={formData.name}
-                    onChange={handleChange}
-                    required
-                />
-            </div>
-            <div className="form-group">
-                <label htmlFor="description">{t('tasks.description')}</label>
-                <textarea
-                    id="description"
-                    name="description"
-                    value={formData.description}
-                    onChange={handleChange}
-                    rows="3"
-                />
-            </div>
-            <div className="form-row">
-                <div className="form-group">
-                    <label htmlFor="points">{t('tasks.points')}</label>
-                    <input
-                        type="number"
-                        id="points"
-                        name="points"
-                        value={formData.points}
-                        onChange={handleChange}
-                        min="0"
-                        max="1000"
-                        required
-                    />
-                </div>
-                <div className="form-group">
-                    <label htmlFor="frequency">{t('tasks.frequency')}</label>
-                    <select
-                        id="frequency"
-                        name="frequency"
-                        value={formData.frequency}
-                        onChange={handleChange}
-                        required
-                    >
-                        <option value="once">{t('tasks.frequencyOnce')}</option>
-                        <option value="daily">{t('tasks.frequencyDaily')}</option>
-                        <option value="weekly">{t('tasks.frequencyWeekly')}</option>
-                        <option value="monthly">{t('tasks.frequencyMonthly')}</option>
-                    </select>
-                </div>
-            </div>
-            <button type="submit" className="btn-primary">{t('tasks.create')}</button>
-        </form>
     );
 }
 

@@ -108,6 +108,41 @@ class TaskExecution
         return $execution;
     }
 
+    public static function takeFromTemplate(
+        Uuid $id,
+        Uuid $taskTemplateId,
+        TaskName $name,
+        string $description,
+        Points $points,
+        Uuid $assignedUserId,
+        DateTimeImmutable $scheduledFor
+    ): self {
+        $execution = new self(
+            $id,
+            $taskTemplateId,
+            $name,
+            $description,
+            $points,
+            $scheduledFor,
+            ExecutionStatus::NEW,
+            $assignedUserId,
+            null,
+            null,
+            null,
+            null,
+            new DateTimeImmutable()
+        );
+
+        $execution->record(new TaskExecutionCreated(
+            $id,
+            $taskTemplateId,
+            $scheduledFor,
+            new DateTimeImmutable()
+        ));
+
+        return $execution;
+    }
+
     public static function createOneTime(
         Uuid $id,
         TaskName $name,
@@ -211,6 +246,11 @@ class TaskExecution
     {
         $this->assignedUserId = $userId;
         $this->updatedAt = new DateTimeImmutable();
+    }
+
+    public function isOpen(): bool
+    {
+        return $this->status === ExecutionStatus::NEW || $this->status === ExecutionStatus::PENDING;
     }
 
     public function complete(Uuid $userId): void

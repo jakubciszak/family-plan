@@ -7,6 +7,7 @@ import BonusRulesManagement from './pages/BonusRulesManagement';
 import StatusChangeRulesManagement from './pages/StatusChangeRulesManagement';
 import UserSettings from './pages/UserSettings';
 import TeamManagement from './pages/TeamManagement';
+import TaskTypeManagement from './pages/TaskTypeManagement';
 import Account from './pages/Account';
 import InstallPrompt from './components/InstallPrompt';
 import LanguageSwitcher from './components/LanguageSwitcher';
@@ -221,6 +222,12 @@ function App() {
                     {(user?.role === 'ROLE_ADMIN' || administersTeam) && (
                         <>
                             <button
+                                onClick={() => handlePageChange('task-types')}
+                                className={currentPage === 'task-types' ? 'nav-active' : ''}
+                            >
+                                {t('nav.taskTypes')}
+                            </button>
+                            <button
                                 onClick={() => handlePageChange('bonus-rules')}
                                 className={currentPage === 'bonus-rules' ? 'nav-active' : ''}
                             >
@@ -255,8 +262,9 @@ function App() {
                 </div>
             </header>
             <main className="app-main">
-                {currentPage === 'tasks' && <TaskList user={user} />}
+                {currentPage === 'tasks' && <TaskList />}
                 {currentPage === 'teams' && <TeamManagement user={user} />}
+                {currentPage === 'task-types' && <TaskTypeManagement />}
                 {currentPage === 'bonus-rules' && <BonusRulesManagement user={user} />}
                 {currentPage === 'status-change-rules' && <StatusChangeRulesManagement user={user} />}
                 {currentPage === 'account' && <Account user={user} points={userPoints} />}

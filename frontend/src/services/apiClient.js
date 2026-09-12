@@ -1,88 +1,64 @@
 const API_BASE_URL = process.env.REACT_APP_API_URL ?? '';
 
+const fullUrlFor = (url) => (url.startsWith('http') ? url : `${API_BASE_URL}${url}`);
+
+const readBody = async (response) => {
+    if (response.status === 204 || response.headers.get('content-length') === '0') {
+        return null;
+    }
+
+    const text = await response.text();
+
+    if (!text) {
+        return null;
+    }
+
+    try {
+        return JSON.parse(text);
+    } catch {
+        return null;
+    }
+};
+
+const failOn = async (response) => {
+    const error = new Error(`HTTP error! status: ${response.status}`);
+    error.response = { status: response.status, data: await readBody(response) };
+    throw error;
+};
+
+const request = async (url, options) => {
+    const response = await fetch(fullUrlFor(url), {
+        credentials: 'include',
+        ...options,
+        headers: {
+            Accept: 'application/json',
+            ...(options.body ? { 'Content-Type': 'application/json' } : {}),
+            ...(options.headers || {}),
+        },
+    });
+
+    if (!response.ok) {
+        await failOn(response);
+    }
+
+    return readBody(response);
+};
+
 const apiClient = {
-    async get(url) {
-        const fullUrl = url.startsWith('http') ? url : `${API_BASE_URL}${url}`;
-        const response = await fetch(fullUrl, {
-            credentials: 'include',
-            headers: {
-                'Accept': 'application/json',
-            },
-        });
-
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        return await response.json();
+    get(url) {
+        return request(url, { method: 'GET' });
     },
 
-    async post(url, data) {
-        const fullUrl = url.startsWith('http') ? url : `${API_BASE_URL}${url}`;
-        const response = await fetch(fullUrl, {
-            method: 'POST',
-            credentials: 'include',
-            headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json',
-            },
-            body: JSON.stringify(data),
-        });
-
-        if (!response.ok) {
-            let errorData = null;
-            try {
-                errorData = await response.json();
-            } catch {
-                // If response is not JSON, ignore
-            }
-            const error = new Error(`HTTP error! status: ${response.status}`);
-            error.response = { status: response.status, data: errorData };
-            throw error;
-        }
-
-        return await response.json();
+    post(url, data) {
+        return request(url, { method: 'POST', body: JSON.stringify(data ?? {}) });
     },
 
-    async put(url, data) {
-        const fullUrl = url.startsWith('http') ? url : `${API_BASE_URL}${url}`;
-        const response = await fetch(fullUrl, {
-            method: 'PUT',
-            credentials: 'include',
-            headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json',
-            },
-            body: JSON.stringify(data),
-        });
-
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        return await response.json();
+    put(url, data) {
+        return request(url, { method: 'PUT', body: JSON.stringify(data ?? {}) });
     },
 
-    async delete(url) {
-        const fullUrl = url.startsWith('http') ? url : `${API_BASE_URL}${url}`;
-        const response = await fetch(fullUrl, {
-            method: 'DELETE',
-            credentials: 'include',
-            headers: {
-                'Accept': 'application/json',
-            },
-        });
-
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        // Handle empty response body (204 No Content)
-        if (response.status === 204 || response.headers.get('content-length') === '0') {
-            return null;
-        }
-
-        return await response.json();
+    delete(url) {
+        return request(url, { method: 'DELETE' });
     },
 };
 

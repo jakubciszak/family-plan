@@ -125,6 +125,77 @@ const mockApiResponses = {
     assignedUserName: null
   },
   
+  emptyTaskTypes: {
+    templates: []
+  },
+
+  sampleTaskTypes: {
+    templates: [
+      {
+        id: 'type-1',
+        teamId: 'team-1',
+        name: 'Clean the kitchen',
+        description: 'Wash dishes and clean counters',
+        points: 10,
+        frequency: 'daily',
+        executionLimit: { type: 'per_day', count: 2 },
+        remaining: 2,
+        isActive: true
+      },
+      {
+        id: 'type-2',
+        teamId: 'team-1',
+        name: 'Take out trash',
+        description: 'Empty all trash bins',
+        points: 5,
+        frequency: 'weekly',
+        executionLimit: { type: 'unlimited' },
+        remaining: null,
+        isActive: true
+      }
+    ]
+  },
+
+  emptyExecutions: {
+    executions: []
+  },
+
+  myExecutions: {
+    executions: [
+      {
+        id: 'exec-1',
+        taskTemplateId: 'type-2',
+        name: 'Take out trash',
+        description: 'Empty all trash bins',
+        points: 5,
+        status: 'new',
+        assignedUserId: 1,
+        assignedUserName: 'Test User',
+        completedAt: null,
+        approvedAt: null,
+        createdAt: '2024-01-01T00:00:00Z'
+      }
+    ]
+  },
+
+  awaitingApproval: {
+    executions: [
+      {
+        id: 'exec-2',
+        taskTemplateId: 'type-1',
+        name: 'Clean the kitchen',
+        description: 'Wash dishes and clean counters',
+        points: 10,
+        status: 'completed',
+        assignedUserId: 1,
+        assignedUserName: 'Test User',
+        completedAt: '2024-01-02T00:00:00Z',
+        approvedAt: null,
+        createdAt: '2024-01-01T00:00:00Z'
+      }
+    ]
+  },
+
   // Bonus rules responses
   emptyBonusRules: {
     rules: []
@@ -236,6 +307,32 @@ async function setupAuthenticatedSession(page, role = 'user') {
         body: JSON.stringify(teamsData)
       });
     }
+  });
+
+  await page.route('**/api/task-templates', async route => {
+    if (route.request().method() === 'GET') {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(mockApiResponses.sampleTaskTypes)
+      });
+    }
+  });
+
+  await page.route('**/api/task-executions/mine', async route => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(mockApiResponses.emptyExecutions)
+    });
+  });
+
+  await page.route('**/api/task-executions/awaiting-approval', async route => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(role === 'admin' ? mockApiResponses.awaitingApproval : mockApiResponses.emptyExecutions)
+    });
   });
 
   // Mock the /api/tasks endpoint

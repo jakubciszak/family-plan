@@ -75,12 +75,26 @@ async function createTask(owner, { name = 'Zadanie testowe', points = 30, freque
   return task.body;
 }
 
+async function createTaskType(owner, { name = 'Typ testowy', points = 30, frequency = 'daily', executionLimit = { type: 'unlimited' }, description = 'opis' } = {}) {
+  const response = await owner.session.post('/api/task-templates', {
+    teamId: owner.teamId,
+    name,
+    description,
+    points,
+    frequency,
+    executionLimit,
+  });
+  return response.body;
+}
+
 async function loginThroughUi(page, email, password = PASSWORD) {
+  await page.context().clearCookies();
   await page.goto(APP, { waitUntil: 'domcontentloaded' });
   await page.locator('input[type="email"]').first().fill(email);
   await page.locator('input[type="password"]').first().fill(password);
   await page.locator('button[type="submit"]').first().click();
   await page.waitForSelector('.app-header', { timeout: 15000 });
+  await page.locator('.loading').waitFor({ state: 'detached', timeout: 20000 }).catch(() => {});
 }
 
 async function openTab(page, pattern) {
@@ -92,7 +106,8 @@ async function openTab(page, pattern) {
 
   const button = page.getByRole('button', { name: pattern }).first();
   await button.click();
-  await page.waitForTimeout(600);
+  await page.waitForTimeout(300);
+  await page.locator('.loading').waitFor({ state: 'detached', timeout: 20000 }).catch(() => {});
 }
 
 async function horizontalOverflow(page) {
@@ -111,6 +126,7 @@ module.exports = {
   createTeamOwner,
   addTeamMember,
   createTask,
+  createTaskType,
   loginThroughUi,
   openTab,
   horizontalOverflow,

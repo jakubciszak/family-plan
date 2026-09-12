@@ -22,7 +22,7 @@ if (realApiEnabled) {
   webServers.unshift({
     command: `API_BASE_URL=${apiBaseUrl} bash "${path.join(__dirname, '../scripts/start-backend-e2e.sh')}"`,
     url: `${apiBaseUrl}/api/auth/me`,
-    reuseExistingServer: false,
+    reuseExistingServer: !process.env.CI,
     timeout: 120 * 1000,
   });
 }
@@ -32,7 +32,7 @@ module.exports = defineConfig({
   testIgnore: realApiEnabled ? [] : ['**/*-real.spec.js', '**/real-api/**'],
   
   // Maximum time one test can run
-  timeout: 30 * 1000,
+  timeout: (realApiEnabled ? 120 : 30) * 1000,
   
   expect: {
     // Maximum time expect() should wait for the condition to be met

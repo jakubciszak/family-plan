@@ -7,7 +7,7 @@ namespace App\Presentation\Api;
 use App\Presentation\Api\Dto\TaskType\CreateTaskTypeRequest;
 use App\Shared\Domain\ValueObject\Uuid;
 use App\TaskManagement\Domain\Entity\TaskTemplate;
-use App\TaskManagement\Domain\Repository\TaskExecutionRepositoryInterface;
+use App\TaskManagement\Application\Service\TaskTypePool;
 use App\TaskManagement\Domain\Repository\TaskTemplateRepositoryInterface;
 use App\TaskManagement\Domain\ValueObject\ExecutionLimit;
 use App\TaskManagement\Domain\ValueObject\Frequency;
@@ -18,7 +18,6 @@ use App\TeamManagement\Domain\Exception\UnauthorizedTeamActionException;
 use App\TeamManagement\Domain\Repository\TeamMemberRepositoryInterface;
 use App\UserManagement\Domain\Repository\UserRepositoryInterface;
 use App\UserManagement\Domain\ValueObject\Email;
-use DateTimeImmutable;
 use OpenApi\Attributes as OA;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -34,7 +33,7 @@ class TaskTemplateApiController extends AbstractController
 {
     public function __construct(
         private readonly TaskTemplateRepositoryInterface $taskTemplateRepository,
-        private readonly TaskExecutionRepositoryInterface $executionRepository,
+        private readonly TaskTypePool $pool,
         private readonly TeamMemberRepositoryInterface $teamMemberRepository,
         private readonly UserRepositoryInterface $userRepository
     ) {
@@ -185,21 +184,6 @@ class TaskTemplateApiController extends AbstractController
         };
     }
 
-    private function takenInCurrentWindow(TaskTemplate $template): int
-    {
-        $windowStart = $template->executionLimit()->windowStart(new DateTimeImmutable());
-        $executions = $this->executionRepository->findByRoutineTask($template->id());
-
-        if ($windowStart === null) {
-            return count($executions);
-        }
-
-        return count(array_filter(
-            $executions,
-            fn ($execution) => $execution->createdAt() >= $windowStart
-        ));
-    }
-
     private function serialize(TaskTemplate $template): array
     {
         return [
@@ -210,7 +194,7 @@ class TaskTemplateApiController extends AbstractController
             'points' => $template->points()->value(),
             'frequency' => $template->frequency()->value,
             'executionLimit' => $template->executionLimit()->toArray(),
-            'remaining' => $template->executionLimit()->remaining($this->takenInCurrentWindow($template)),
+            'remaining' => $this->pool->remaining($template),
             'isActive' => $template->isActive(),
         ];
     }

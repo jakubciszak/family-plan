@@ -9,7 +9,8 @@
     "bonusRules": "Zasady bonusowe",
     "statusChangeRules": "Reguły Zmian Statusów",
     "settings": "Ustawienia",
-    "account": "Moje Konto"
+    "account": "Moje Konto",
+    "taskTypes": "Typy zadań"
   },
   "auth": {
     "login": "Zaloguj",
@@ -67,7 +68,16 @@
     "frequencyDaily": "Codziennie",
     "frequencyWeekly": "Co tydzień",
     "frequencyMonthly": "Co miesiąc",
-    "takeIt": "Weź to zadanie"
+    "takeIt": "Weź to zadanie",
+    "mySection": "Moje zadania",
+    "availableSection": "Dostępne zadania",
+    "approvalSection": "Do zatwierdzenia",
+    "noneTaken": "Nie masz wziętych zadań",
+    "nothingToApprove": "Nic nie czeka na zatwierdzenie",
+    "awaitingApproval": "Czeka na zatwierdzenie",
+    "giveBack": "Oddaj do puli",
+    "loadFailed": "Nie udało się wczytać zadań",
+    "actionFailed": "Nie udało się wykonać akcji"
   },
   "bonusRules": {
     "title": "Zasady bonusowe",
@@ -212,5 +222,30 @@
     "description": "Dodaj aplikację do ekranu głównego i otwieraj ją jak zwykłą apkę.",
     "action": "Zainstaluj",
     "dismiss": "Nie teraz"
+  },
+  "taskTypes": {
+    "title": "Typy zadań",
+    "create": "Dodaj typ zadania",
+    "none": "Nie ma jeszcze żadnych typów zadań",
+    "adminOnly": "Typy zadań definiuje administrator zespołu",
+    "delete": "Usuń",
+    "activate": "Przywróć",
+    "deactivate": "Wycofaj",
+    "inactive": "Wycofany",
+    "limit": "Ile razy można wykonać",
+    "limitCount": "Liczba wykonań",
+    "limitUnlimited": "Bez ograniczeń",
+    "limitOnce": "Jednorazowo",
+    "limitPerDay": "{{count}}× dziennie",
+    "limitPerWeek": "{{count}}× tygodniowo",
+    "limitPerMonth": "{{count}}× miesięcznie",
+    "remaining": "Zostało: {{count}}",
+    "limitOption": {
+      "unlimited": "Bez ograniczeń",
+      "once": "Jednorazowo",
+      "per_day": "Określona liczba dziennie",
+      "per_week": "Określona liczba tygodniowo",
+      "per_month": "Określona liczba miesięcznie"
+    }
   }
 }

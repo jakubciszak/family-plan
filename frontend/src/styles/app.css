@@ -306,6 +306,11 @@ button:hover {
     color: white;
 }
 
+.btn-danger {
+    background-color: #ef4444;
+    color: white;
+}
+
 /* Bonus Rules */
 .bonus-rules-container {
     width: 100%;
@@ -865,4 +870,30 @@ button:hover {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+
+.task-section {
+    margin-bottom: 24px;
+}
+
+.task-section h3 {
+    margin: 0 0 10px;
+    font-size: 1rem;
+    color: #2c3e50;
+}
+
+.task-row .task-remaining {
+    font-size: 0.85rem;
+    color: #6c757d;
+    white-space: nowrap;
+}
+
+.task-row .task-status.status-inactive {
+    color: #6b7280;
+}
+
+.empty-hint {
+    margin: 0;
+    font-size: 0.9rem;
+    color: #6c757d;
 }

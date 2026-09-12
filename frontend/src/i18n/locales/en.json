@@ -9,7 +9,8 @@
     "bonusRules": "Bonus Rules",
     "statusChangeRules": "Status Change Rules",
     "settings": "Settings",
-    "account": "My Account"
+    "account": "My Account",
+    "taskTypes": "Task types"
   },
   "auth": {
     "login": "Login",
@@ -67,7 +68,16 @@
     "frequencyDaily": "Daily",
     "frequencyWeekly": "Weekly",
     "frequencyMonthly": "Monthly",
-    "takeIt": "Take this task"
+    "takeIt": "Take this task",
+    "mySection": "My tasks",
+    "availableSection": "Available tasks",
+    "approvalSection": "Waiting for approval",
+    "noneTaken": "You have not taken any task",
+    "nothingToApprove": "Nothing is waiting for approval",
+    "awaitingApproval": "Waiting for approval",
+    "giveBack": "Give it back",
+    "loadFailed": "Could not load the tasks",
+    "actionFailed": "The action did not go through"
   },
   "bonusRules": {
     "title": "Bonus Rules",
@@ -212,5 +222,30 @@
     "description": "Add the app to your home screen and open it like a native one.",
     "action": "Install",
     "dismiss": "Not now"
+  },
+  "taskTypes": {
+    "title": "Task types",
+    "create": "Add a task type",
+    "none": "No task types yet",
+    "adminOnly": "Task types are defined by a team admin",
+    "delete": "Delete",
+    "activate": "Bring back",
+    "deactivate": "Retire",
+    "inactive": "Retired",
+    "limit": "How many times it can be done",
+    "limitCount": "Number of runs",
+    "limitUnlimited": "Unlimited",
+    "limitOnce": "Once",
+    "limitPerDay": "{{count}}x a day",
+    "limitPerWeek": "{{count}}x a week",
+    "limitPerMonth": "{{count}}x a month",
+    "remaining": "Left: {{count}}",
+    "limitOption": {
+      "unlimited": "Unlimited",
+      "once": "Once",
+      "per_day": "A set number per day",
+      "per_week": "A set number per week",
+      "per_month": "A set number per month"
+    }
   }
 }

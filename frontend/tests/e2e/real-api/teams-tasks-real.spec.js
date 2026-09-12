@@ -6,7 +6,7 @@ const {
   createAccount,
   createTeamOwner,
   addTeamMember,
-  createTask,
+  createTaskType,
   loginThroughUi,
   openTab,
 } = require('./helpers');
@@ -127,59 +127,60 @@ test.describe('C. Zespoly i zaproszenia', () => {
   });
 });
 
-test.describe('D. Zadania i punkty', () => {
+test.describe('D. Typy zadan, zadania i punkty', () => {
   test.skip(!process.env.REAL_API, 'REAL_API not enabled');
 
-  test('D1 admin zespolu widzi przycisk tworzenia zadania', async ({ page }) => {
+  test('D1 admin zespolu ma ekran typow zadan', async ({ page }) => {
     const owner = await createTeamOwner();
     await loginThroughUi(page, owner.email);
-    await openTab(page, /^tasks|^zadani/i);
+    await openTab(page, /task types|typy zada[nń]/i);
 
-    await expect(page.getByRole('button', { name: /create task|utw[oó]rz zadanie/i })).toBeVisible();
+    await expect(page.getByRole('button', { name: /add a task type|dodaj typ zadania/i })).toBeVisible();
   });
 
-  test('D2 zwykly czlonek nie widzi przycisku tworzenia zadania', async ({ page }) => {
+  test('D2 zwykly czlonek nie ma dostepu do typow zadan', async ({ page }) => {
     const owner = await createTeamOwner();
     const member = await addTeamMember(owner);
 
     await loginThroughUi(page, member.email);
-    await openTab(page, /^tasks|^zadani/i);
 
-    await expect(page.getByRole('button', { name: /create task|utw[oó]rz zadanie/i })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: /task types|typy zada[nń]/i })).toHaveCount(0);
   });
 
-  test('D3 zadanie utworzone z formularza pojawia sie na liscie', async ({ page }) => {
+  test('D3 typ utworzony z formularza pojawia sie na liscie dostepnych zadan', async ({ page }) => {
     const owner = await createTeamOwner();
     await loginThroughUi(page, owner.email);
-    await openTab(page, /^tasks|^zadani/i);
+    await openTab(page, /task types|typy zada[nń]/i);
 
-    await page.getByRole('button', { name: /create task|utw[oó]rz zadanie/i }).first().click();
+    await page.getByRole('button', { name: /add a task type|dodaj typ zadania/i }).first().click();
     const form = page.locator('.task-create-form');
     await form.locator('input[type="text"]').first().fill('Odkurzyc salon');
-    const points = form.locator('input[type="number"]').first();
-    if (await points.count()) await points.fill('30');
+    await form.locator('input[type="number"]').first().fill('30');
     await form.locator('button[type="submit"]').first().click();
 
     await expect(page.locator('.tasks')).toContainText('Odkurzyc salon');
+
+    await openTab(page, /^tasks$|^zadania$/i);
+    await expect(page.getByTestId('available-tasks')).toContainText('Odkurzyc salon');
   });
 
-  test('D4 zadania sa widoczne na ekranie glownym po zalogowaniu', async ({ page }) => {
+  test('D4 dostepne zadania sa widoczne na ekranie glownym po zalogowaniu', async ({ page }) => {
     const owner = await createTeamOwner();
-    await createTask(owner, { name: 'Wyniesc smieci' });
+    await createTaskType(owner, { name: 'Wyniesc smieci' });
 
     await loginThroughUi(page, owner.email);
 
-    await expect(page.locator('.tasks')).toContainText('Wyniesc smieci');
+    await expect(page.getByTestId('available-tasks')).toContainText('Wyniesc smieci');
   });
 
-  test('D5 zatwierdzenie zadania nalicza punkty wykonawcy', async ({ page }) => {
+  test('D5 zatwierdzenie wykonania nalicza punkty wykonawcy', async ({ page }) => {
     const owner = await createTeamOwner();
     const member = await addTeamMember(owner);
-    const task = await createTask(owner, { name: 'Umyc naczynia', points: 30 });
+    const type = await createTaskType(owner, { name: 'Umyc naczynia', points: 30 });
 
-    await owner.session.post(`/api/tasks/${task.id}/assign`, { userId: member.id });
-    await member.session.post(`/api/tasks/${task.id}/complete`);
-    await owner.session.post(`/api/tasks/${task.id}/approve`);
+    const taken = await member.session.post(`/api/task-templates/${type.id}/take`);
+    await member.session.post(`/api/task-executions/${taken.body.id}/complete`);
+    await owner.session.post(`/api/task-executions/${taken.body.id}/approve`);
 
     await loginThroughUi(page, member.email);
     await expect(page.locator('.user-points')).toContainText('30');
@@ -188,11 +189,11 @@ test.describe('D. Zadania i punkty', () => {
   test('D6 punkty widoczne na ekranie konta', async ({ page }) => {
     const owner = await createTeamOwner();
     const member = await addTeamMember(owner);
-    const task = await createTask(owner, { points: 25 });
+    const type = await createTaskType(owner, { points: 25 });
 
-    await owner.session.post(`/api/tasks/${task.id}/assign`, { userId: member.id });
-    await member.session.post(`/api/tasks/${task.id}/complete`);
-    await owner.session.post(`/api/tasks/${task.id}/approve`);
+    const taken = await member.session.post(`/api/task-templates/${type.id}/take`);
+    await member.session.post(`/api/task-executions/${taken.body.id}/complete`);
+    await owner.session.post(`/api/task-executions/${taken.body.id}/approve`);
 
     await loginThroughUi(page, member.email);
     await openTab(page, /my account|moje konto/i);
@@ -200,14 +201,14 @@ test.describe('D. Zadania i punkty', () => {
     await expect(page.locator('.account-details')).toContainText('25');
   });
 
-  test('D7 zwykly czlonek nie moze zatwierdzic wlasnego zadania', async ({ page }) => {
+  test('D7 zwykly czlonek nie moze zatwierdzic wlasnego wykonania', async ({ page }) => {
     const owner = await createTeamOwner();
     const member = await addTeamMember(owner);
-    const task = await createTask(owner);
+    const type = await createTaskType(owner);
 
-    await owner.session.post(`/api/tasks/${task.id}/assign`, { userId: member.id });
-    await member.session.post(`/api/tasks/${task.id}/complete`);
-    const refused = await member.session.post(`/api/tasks/${task.id}/approve`);
+    const taken = await member.session.post(`/api/task-templates/${type.id}/take`);
+    await member.session.post(`/api/task-executions/${taken.body.id}/complete`);
+    const refused = await member.session.post(`/api/task-executions/${taken.body.id}/approve`);
 
     expect(refused.status).toBe(403);
   });
