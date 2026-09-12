@@ -45,6 +45,10 @@ wdraża. Pre-release nie idzie automatycznie na produkcję.
 
 1. **`resolve-release`** ustala, co wdrażamy: tag wydania i commit, na który wskazuje. Szkic
    wydania albo tag bez wydania kończy się błędem — na produkcję trafia tylko opublikowany release.
+   Ten sam job trzyma **bramkę testów**: zanim cokolwiek się zbuduje, sprawdza na commicie wydania
+   workflowy `PHPUnit Tests`, `Playwright Tests` i `Mobile App Tests`. Czerwony albo brakujący run
+   zatrzymuje deployment; run w trakcie jest odpytywany do 60 minut. Listę wymaganych workflowów i
+   limit czasu trzyma `REQUIRED_CHECKS` i `CHECKS_TIMEOUT_MINUTES` na górze pliku workflow.
 
 2. **`build-and-push`** buduje trzy obrazy z commita wydania i pushuje je do `ghcr.io` z tagami
    `latest`, `<tag wydania>` i `<sha>`:
@@ -81,6 +85,10 @@ Ręczne wdrożenie (`Actions → Deploy to Hostinger → Run workflow`) przyjmuj
 | puste | ostatnie opublikowane wydanie |
 | `v1.2.3` | to konkretne wydanie (także pre-release) |
 | tag bez wydania / szkic | workflow kończy się błędem |
+
+Bramka testów obowiązuje także przy ręcznym uruchomieniu. Jedyne obejście to zaznaczenie
+`skip_checks` — potrzebne wyłącznie przy wycofywaniu starego wydania, któremu GitHub skasował już
+runy (retencja logów Actions to 90 dni). Pominięcie bramki ląduje w podsumowaniu runu.
 
 ### Wymagane sekrety w GitHub Actions
 
@@ -154,7 +162,9 @@ poprzedniej wersji. W zmiennych projektu na serwerze ustaw `IMAGE_TAG` na tag dz
 `IMAGE_TAG` nie jest ustawiony.
 
 Drugą drogą jest wydanie poprawki: `gh release create v1.2.4` na commicie, który działa — wtedy
-`latest` znów wskazuje zdrową wersję i nie trzeba trzymać `IMAGE_TAG` na sztywno.
+`latest` znów wskazuje zdrową wersję i nie trzeba trzymać `IMAGE_TAG` na sztywno. Ta droga wymaga
+zielonych testów na commicie poprawki; ustawienie `IMAGE_TAG` nie wymaga niczego, bo dzieje się
+poza CI.
 
 Pełny snapshot maszyny (`POST $BASE/virtual-machines/$VPS_ID/snapshot`) obejmuje także wolumen
 bazy i jest najszybszą drogą powrotu po nieudanej migracji. Hostinger trzyma jeden snapshot na
