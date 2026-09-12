@@ -19,6 +19,11 @@ final readonly class Uuid
         return new self(self::generateV4());
     }
 
+    public static function isValid(string $value): bool
+    {
+        return (bool) preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i', $value);
+    }
+
     public static function fromString(string $value): self
     {
         return new self($value);

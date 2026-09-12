@@ -43,8 +43,8 @@
     "approve": "Zatwierdź",
     "reject": "Odrzuć",
     "assign": "Przypisz",
-    "assignTo": "Przypisz do",
-    "unassign": "Usuń przypisanie",
+    "assignTo": "Przypisz osobę",
+    "unassign": "Odepnij mnie",
     "noTasks": "Brak dostępnych zadań",
     "name": "Nazwa zadania",
     "description": "Opis",
@@ -66,7 +66,8 @@
     "frequencyOnce": "Jednorazowo",
     "frequencyDaily": "Codziennie",
     "frequencyWeekly": "Co tydzień",
-    "frequencyMonthly": "Co miesiąc"
+    "frequencyMonthly": "Co miesiąc",
+    "takeIt": "Weź to zadanie"
   },
   "bonusRules": {
     "title": "Zasady bonusowe",
@@ -79,7 +80,11 @@
     "value": "Wartość",
     "createdSuccess": "Zasada bonusowa utworzona pomyślnie",
     "updatedSuccess": "Zasada bonusowa zaktualizowana pomyślnie",
-    "deletedSuccess": "Zasada bonusowa usunięta pomyślnie"
+    "deletedSuccess": "Zasada bonusowa usunięta pomyślnie",
+    "team": "Zespół",
+    "noAdminTeam": "Brak zespołu, w którym jesteś adminem",
+    "accessDeniedTitle": "Brak dostępu",
+    "accessDeniedBody": "Zasadami bonusowymi zarządza admin zespołu."
   },
   "user": {
     "points": "{{points}} punktów",

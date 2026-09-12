@@ -15,6 +15,8 @@ use App\TaskManagement\Application\Query\GetTasksByUserTeamsQuery;
 use App\TaskManagement\Domain\Entity\Task;
 use App\TaskManagement\Domain\Repository\TaskRepositoryInterface;
 use App\UserManagement\Application\Query\FindUserByIdQuery;
+use App\TaskManagement\Domain\Exception\UnauthorizedTaskActionException;
+use App\TeamManagement\Domain\Repository\TeamMemberRepositoryInterface;
 use App\UserManagement\Domain\Repository\UserRepositoryInterface;
 use App\UserManagement\Domain\ValueObject\Email;
 use OpenApi\Attributes as OA;
@@ -34,7 +36,8 @@ class TaskApiController extends AbstractController
         private readonly MessageBusInterface $commandBus,
         private readonly MessageBusInterface $queryBus,
         private readonly UserRepositoryInterface $userRepository,
-        private readonly TaskRepositoryInterface $taskRepository
+        private readonly TaskRepositoryInterface $taskRepository,
+        private readonly TeamMemberRepositoryInterface $teamMemberRepository
     ) {
     }
 
@@ -422,12 +425,73 @@ class TaskApiController extends AbstractController
         }
 
         // Execute command
+        $this->assertMayAssign($this->taskEntity($id), Uuid::fromString($userId));
+
         $this->commandBus->dispatch(new AssignTaskCommand($id, $userId));
 
         // Fetch updated task
         $task = $this->queryBus->dispatch(new FindTaskByIdQuery($id))->last(HandledStamp::class)->getResult();
 
         return $this->json($this->serializeTask($task));
+    }
+
+    private function taskEntity(string $id): \App\TaskManagement\Domain\Entity\Task
+    {
+        $task = $this->taskRepository->findById(Uuid::fromString($id));
+
+        if ($task === null) {
+            throw $this->createNotFoundException('Task not found');
+        }
+
+        return $task;
+    }
+
+    private function assertMayAssign(\App\TaskManagement\Domain\Entity\Task $task, Uuid $assignee): void
+    {
+        $actor = Uuid::fromString($this->currentUserId());
+        $teamId = $task->teamId();
+
+        if ($teamId === null || !$this->teamMemberRepository->findByTeamIdAndUserId($teamId, $actor)) {
+            throw new UnauthorizedTaskActionException('Only team members can assign tasks in this team');
+        }
+
+        if ($this->teamMemberRepository->isUserAdminOfTeam($actor, $teamId)) {
+            if (!$this->teamMemberRepository->findByTeamIdAndUserId($teamId, $assignee)) {
+                throw new UnauthorizedTaskActionException('The person must belong to the team');
+            }
+
+            return;
+        }
+
+        if (!$assignee->equals($actor)) {
+            throw new UnauthorizedTaskActionException('Only team admins can assign a task to somebody else');
+        }
+    }
+
+    #[Route('/{id}/unassign', name: 'unassign', methods: ['POST'])]
+    #[OA\Post(path: '/api/tasks/{id}/unassign', summary: 'Step away from a task', tags: ['Tasks'])]
+    #[OA\Response(response: 200, description: 'Task unassigned')]
+    #[OA\Response(response: 400, description: 'Task is already finished')]
+    #[OA\Response(response: 403, description: 'Not allowed to unassign this task')]
+    public function unassign(string $id): JsonResponse
+    {
+        $task = $this->taskEntity($id);
+        $actor = Uuid::fromString($this->currentUserId());
+        $teamId = $task->teamId();
+
+        $isTeamAdmin = $teamId !== null && $this->teamMemberRepository->isUserAdminOfTeam($actor, $teamId);
+        $isAssignee = $task->assignedUserId() !== null && $task->assignedUserId()->equals($actor);
+
+        if (!$isTeamAdmin && !$isAssignee) {
+            throw new UnauthorizedTaskActionException('Only the assignee or a team admin can unassign a task');
+        }
+
+        $task->unassign();
+        $this->taskRepository->save($task);
+
+        return $this->json($this->serializeTask(
+            $this->queryBus->dispatch(new FindTaskByIdQuery($id))->last(HandledStamp::class)->getResult()
+        ));
     }
 
     private function currentUserId(): string

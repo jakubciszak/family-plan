@@ -97,16 +97,8 @@ class TaskApiTest extends ApiTestCase
     {
         $context = $this->createTeamAndAdmin();
 
-        // Create a regular user to assign the task to
-        $userData = [
-            'name' => 'Task User',
-            'email' => 'taskuser_' . uniqid() . '@example.com',
-            'password' => 'userpass123',
-            'role' => 'ROLE_USER',
-        ];
-        $userResponse = $this->postJson('/api/users', $userData);
-        $user = $this->assertJsonResponse($userResponse, 201);
-        $userId = $user['id'];
+        // Assignment is limited to members of the task's team
+        $userId = $context['adminId'];
 
         // Create a task
         $taskData = [

@@ -4,6 +4,44 @@
     box-sizing: border-box;
 }
 
+select,
+.task-assign-select,
+.team-selector {
+    appearance: none;
+    -webkit-appearance: none;
+    padding: 10px 36px 10px 12px;
+    font: inherit;
+    font-size: 0.95rem;
+    color: #2c3e50;
+    background-color: #fff;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%236c757d' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpath d='M4 6l4 4 4-4'/%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    background-size: 16px 16px;
+    border: 1px solid #ced4da;
+    border-radius: 6px;
+    cursor: pointer;
+    max-width: 100%;
+}
+
+select:hover,
+.team-selector:hover {
+    border-color: #adb5bd;
+}
+
+select:focus-visible,
+.team-selector:focus-visible {
+    outline: none;
+    border-color: #4a90d9;
+    box-shadow: 0 0 0 3px rgba(74, 144, 217, 0.25);
+}
+
+select:disabled {
+    background-color: #f1f3f5;
+    color: #adb5bd;
+    cursor: not-allowed;
+}
+
 body {
     margin: 0;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',

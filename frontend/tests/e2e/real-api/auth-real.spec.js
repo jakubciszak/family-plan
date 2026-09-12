@@ -14,7 +14,7 @@ test.describe('A. Uwierzytelnianie', () => {
 
   test('A1 rejestracja zaklada konto', async ({ page }) => {
     await page.goto(APP);
-    await page.getByText(/register|zarejestruj/i).last().click();
+    await page.locator('.auth-switch a').click();
     await page.locator('input[type="text"]').first().fill('Nowy');
     await page.locator('input[type="email"]').first().fill(unique('a1'));
     await page.locator('input[type="password"]').first().fill(PASSWORD);
@@ -27,7 +27,7 @@ test.describe('A. Uwierzytelnianie', () => {
     const existing = await createAccount();
 
     await page.goto(APP);
-    await page.getByText(/register|zarejestruj/i).last().click();
+    await page.locator('.auth-switch a').click();
     await page.locator('input[type="text"]').first().fill('Duplikat');
     await page.locator('input[type="email"]').first().fill(existing.email);
     await page.locator('input[type="password"]').first().fill(PASSWORD);
@@ -38,7 +38,7 @@ test.describe('A. Uwierzytelnianie', () => {
 
   test('A3 rejestracja odrzuca za krotkie haslo', async ({ page }) => {
     await page.goto(APP);
-    await page.getByText(/register|zarejestruj/i).last().click();
+    await page.locator('.auth-switch a').click();
     await page.locator('input[type="text"]').first().fill('Krotkie');
     await page.locator('input[type="email"]').first().fill(unique('a3'));
     await page.locator('input[type="password"]').first().fill('abc');

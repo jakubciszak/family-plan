@@ -14,6 +14,11 @@ use App\TaskManagement\Application\BonusRule\Query\GetAllBonusPointsRulesQuery;
 use App\TaskManagement\Domain\Entity\BonusPointsRule;
 use App\Presentation\Api\Dto\BonusRule\CreateBonusRuleRequest;
 use App\Presentation\Api\Dto\BonusRule\UpdateBonusRuleRequest;
+use App\TaskManagement\Domain\Repository\BonusPointsRuleRepositoryInterface;
+use App\TeamManagement\Domain\Exception\UnauthorizedTeamActionException;
+use App\TeamManagement\Domain\Repository\TeamMemberRepositoryInterface;
+use App\UserManagement\Domain\Repository\UserRepositoryInterface;
+use App\UserManagement\Domain\ValueObject\Email;
 use OpenApi\Attributes as OA;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -27,13 +32,30 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 #[Route('/api/bonus-rules', name: 'api_bonus_rule_')]
 #[OA\Tag(name: 'Bonus Points Rules')]
-#[IsGranted('ROLE_ADMIN')]
+#[IsGranted('ROLE_USER')]
 class BonusPointsRuleApiController extends AbstractController
 {
     public function __construct(
         private readonly MessageBusInterface $commandBus,
-        private readonly MessageBusInterface $queryBus
+        private readonly MessageBusInterface $queryBus,
+        private readonly UserRepositoryInterface $userRepository,
+        private readonly TeamMemberRepositoryInterface $teamMemberRepository,
+        private readonly BonusPointsRuleRepositoryInterface $ruleRepository
     ) {
+    }
+
+    private function currentUserId(): Uuid
+    {
+        return $this->userRepository
+            ->findByEmail(Email::fromString($this->getUser()->getUserIdentifier()))
+            ->id();
+    }
+
+    private function assertTeamAdmin(Uuid $teamId): void
+    {
+        if (!$this->teamMemberRepository->isUserAdminOfTeam($this->currentUserId(), $teamId)) {
+            throw new UnauthorizedTeamActionException('Only team admins manage bonus rules');
+        }
     }
 
     #[Route('', name: 'list', methods: ['GET'])]
@@ -75,11 +97,19 @@ class BonusPointsRuleApiController extends AbstractController
     public function list(Request $request): JsonResponse
     {
         $activeOnly = $request->query->getBoolean('active', false);
-        $rules = $this->queryBus->dispatch(new GetAllBonusPointsRulesQuery($activeOnly))
-            ->last(HandledStamp::class)->getResult();
+        $userId = $this->currentUserId();
+
+        $rules = [];
+        foreach ($this->teamMemberRepository->findByUserId($userId) as $membership) {
+            foreach ($this->ruleRepository->findByTeamId($membership->teamId()) as $rule) {
+                if (!$activeOnly || $rule->isActive()) {
+                    $rules[] = $rule;
+                }
+            }
+        }
 
         return $this->json([
-            'rules' => array_map(fn(BonusPointsRule $rule) => $this->serializeRule($rule), $rules),
+            'rules' => array_map(fn (BonusPointsRule $rule) => $this->serializeRule($rule), $rules),
         ]);
     }
 
@@ -149,8 +179,22 @@ class BonusPointsRuleApiController extends AbstractController
     public function create(
         #[MapRequestPayload] CreateBonusRuleRequest $request
     ): JsonResponse {
+        $this->assertTeamAdmin(Uuid::fromString($request->teamId));
+
+        if ($request->ruleType === 'consecutive_days') {
+            $templateId = $request->ruleConfig['taskTemplateId'] ?? null;
+
+            if (!is_string($templateId) || !Uuid::isValid($templateId)) {
+                return $this->json(
+                    ['error' => 'ruleConfig.taskTemplateId must be a valid task template id'],
+                    Response::HTTP_BAD_REQUEST
+                );
+            }
+        }
+
         $command = new CreateBonusPointsRuleCommand(
             Uuid::generate()->value(),
+            $request->teamId,
             $request->name,
             $request->description,
             $request->bonusPoints,
@@ -266,6 +310,7 @@ class BonusPointsRuleApiController extends AbstractController
     {
         return [
             'id' => $rule->id()->value(),
+            'teamId' => $rule->teamId()->value(),
             'name' => $rule->name(),
             'description' => $rule->description(),
             'bonusPoints' => $rule->bonusPoints()->value(),

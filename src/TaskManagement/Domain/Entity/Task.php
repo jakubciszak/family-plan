@@ -144,6 +144,16 @@ class Task
         $this->updatedAt = new DateTimeImmutable();
     }
 
+    public function unassign(): void
+    {
+        if (!in_array($this->status, [TaskStatus::NEW, TaskStatus::PENDING], true)) {
+            throw new \DomainException('Only a task that is not finished can be unassigned');
+        }
+
+        $this->assignedUserId = null;
+        $this->updatedAt = new DateTimeImmutable();
+    }
+
     public function teamId(): ?Uuid
     {
         return $this->teamId;

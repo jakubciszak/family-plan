@@ -26,17 +26,8 @@ class TaskAssignmentApiTest extends ApiTestCase
         $createdTask = $this->assertJsonResponse($response, 201);
         $taskId = $createdTask['id'];
 
-        // Create a user
-        $userData = [
-            'name' => 'Test User',
-            'email' => 'assignee@example.com',
-            'password' => 'password123',
-            'role' => 'ROLE_USER',
-        ];
-
-        $response = $this->postJson('/api/users', $userData);
-        $createdUser = $this->assertJsonResponse($response, 201);
-        $userId = $createdUser['id'];
+        // Assignment is limited to members of the task's team
+        $userId = $context['adminId'];
 
         // Assign task to user
         $response = $this->postJson("/api/tasks/{$taskId}/assign", [
@@ -47,7 +38,7 @@ class TaskAssignmentApiTest extends ApiTestCase
         $this->assertArrayHasKey('assignedUserId', $data);
         $this->assertArrayHasKey('assignedUserName', $data);
         $this->assertSame($userId, $data['assignedUserId']);
-        $this->assertSame('Test User', $data['assignedUserName']);
+        $this->assertSame('Admin User', $data['assignedUserName']);
     }
 
     public function testAssignTaskReturns404ForNonexistentTask(): void
@@ -109,17 +100,8 @@ class TaskAssignmentApiTest extends ApiTestCase
         $createdTask = $this->assertJsonResponse($response, 201);
         $taskId = $createdTask['id'];
 
-        // Create a user
-        $userData = [
-            'name' => 'Assigned User',
-            'email' => 'assigned@example.com',
-            'password' => 'password123',
-            'role' => 'ROLE_USER',
-        ];
-
-        $response = $this->postJson('/api/users', $userData);
-        $createdUser = $this->assertJsonResponse($response, 201);
-        $userId = $createdUser['id'];
+        // Assignment is limited to members of the task's team
+        $userId = $context['adminId'];
 
         // Assign task
         $this->postJson("/api/tasks/{$taskId}/assign", ['userId' => $userId]);
@@ -143,6 +125,6 @@ class TaskAssignmentApiTest extends ApiTestCase
         $this->assertArrayHasKey('assignedUserId', $assignedTask);
         $this->assertArrayHasKey('assignedUserName', $assignedTask);
         $this->assertSame($userId, $assignedTask['assignedUserId']);
-        $this->assertSame('Assigned User', $assignedTask['assignedUserName']);
+        $this->assertSame('Admin User', $assignedTask['assignedUserName']);
     }
 }

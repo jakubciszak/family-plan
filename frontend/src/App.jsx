@@ -80,6 +80,7 @@ function App() {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
     const [showRegister, setShowRegister] = React.useState(false);
     const [inviteToken, setInviteToken] = React.useState(null);
+    const [administersTeam, setAdministersTeam] = React.useState(false);
 
     // Check for invite token in URL on mount
     React.useEffect(() => {
@@ -113,6 +114,12 @@ function App() {
         }
     }, [inviteToken]);
 
+    const refreshTeamAdminFlag = React.useCallback(() => {
+        teamService.getTeams()
+            .then((data) => setAdministersTeam((data.teams || []).some((team) => team.role === 'admin')))
+            .catch(() => setAdministersTeam(false));
+    }, []);
+
     React.useEffect(() => {
         // Check if user is authenticated
         apiClient.get('/api/auth/me')
@@ -124,11 +131,12 @@ function App() {
             })
             .then(pointsData => {
                 setUserPoints(pointsData.balance);
+                refreshTeamAdminFlag();
             })
             .catch(() => {
                 setIsAuthenticated(false);
             });
-    }, []);
+    }, [refreshTeamAdminFlag]);
 
     // Process invitation when user becomes authenticated
     React.useEffect(() => {
@@ -148,6 +156,7 @@ function App() {
             .catch(() => {
                 setUserPoints(0);
             });
+        refreshTeamAdminFlag();
     };
 
     const handleLogout = () => {
@@ -209,7 +218,7 @@ function App() {
                     >
                         {t('nav.teams')}
                     </button>
-                    {user?.role === 'ROLE_ADMIN' && (
+                    {(user?.role === 'ROLE_ADMIN' || administersTeam) && (
                         <>
                             <button
                                 onClick={() => handlePageChange('bonus-rules')}

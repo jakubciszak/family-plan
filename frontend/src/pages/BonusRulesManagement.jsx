@@ -1,6 +1,7 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import apiClient from '../services/apiClient';
+import teamService from '../services/teamService';
 
 function BonusRulesManagement({ user }) {
     const { t } = useTranslation();
@@ -8,10 +9,24 @@ function BonusRulesManagement({ user }) {
     const [loading, setLoading] = React.useState(true);
     const [showCreateForm, setShowCreateForm] = React.useState(false);
     const [error, setError] = React.useState(null);
+    const [adminTeams, setAdminTeams] = React.useState([]);
+    const [teamsLoading, setTeamsLoading] = React.useState(true);
 
     React.useEffect(() => {
         loadRules();
+        loadAdminTeams();
     }, []);
+
+    const loadAdminTeams = async () => {
+        try {
+            const data = await teamService.getTeams();
+            setAdminTeams((data.teams || []).filter((team) => team.role === 'admin'));
+        } catch (err) {
+            console.error('Error loading teams:', err);
+        } finally {
+            setTeamsLoading(false);
+        }
+    };
 
     const loadRules = async () => {
         try {
@@ -72,11 +87,15 @@ function BonusRulesManagement({ user }) {
         }
     };
 
-    if (user.role !== 'ROLE_ADMIN') {
+    if (loading || teamsLoading) {
+        return <div className="loading">{t('common.loading')}</div>;
+    }
+
+    if (user.role !== 'ROLE_ADMIN' && adminTeams.length === 0) {
         return (
             <div className="access-denied">
-                <h2>Access Denied</h2>
-                <p>Only administrators can manage bonus rules.</p>
+                <h2>{t('bonusRules.accessDeniedTitle')}</h2>
+                <p>{t('bonusRules.accessDeniedBody')}</p>
             </div>
         );
     }
@@ -104,7 +123,7 @@ function BonusRulesManagement({ user }) {
             )}
 
             {showCreateForm && (
-                <BonusRuleForm onSubmit={handleCreateRule} />
+                <BonusRuleForm teams={adminTeams} onSubmit={handleCreateRule} />
             )}
 
             <div className="bonus-rules-list">
@@ -214,7 +233,7 @@ function BonusRuleCard({ rule, onUpdate, onActivate, onDeactivate }) {
     );
 }
 
-function BonusRuleForm({ rule, onSubmit, onCancel }) {
+function BonusRuleForm({ rule, teams = [], onSubmit, onCancel }) {
     const { t } = useTranslation();
     const isEditing = !!rule;
     
@@ -226,7 +245,14 @@ function BonusRuleForm({ rule, onSubmit, onCancel }) {
         requiredDays: rule?.config?.requiredDays || 5,
         requiredCount: rule?.config?.requiredCount || 20,
         taskTemplateId: rule?.config?.taskTemplateId || '',
+        teamId: rule?.teamId || teams[0]?.id || '',
     });
+
+    React.useEffect(() => {
+        if (!isEditing && !formData.teamId && teams.length > 0) {
+            setFormData((prev) => ({ ...prev, teamId: teams[0].id }));
+        }
+    }, [teams, isEditing, formData.teamId]);
 
     const handleSubmit = (e) => {
         e.preventDefault();
@@ -245,6 +271,7 @@ function BonusRuleForm({ rule, onSubmit, onCancel }) {
                 bonusPoints: formData.bonusPoints,
               }
             : {
+                teamId: formData.teamId,
                 name: formData.name,
                 description: formData.description,
                 bonusPoints: formData.bonusPoints,
@@ -269,6 +296,24 @@ function BonusRuleForm({ rule, onSubmit, onCancel }) {
         <form className="bonus-rule-form" onSubmit={handleSubmit}>
             <h3>{isEditing ? t('bonusRules.edit') : t('bonusRules.create')}</h3>
             
+            {!isEditing && (
+                <div className="form-group">
+                    <label htmlFor="teamId">{t('bonusRules.team')}</label>
+                    <select
+                        id="teamId"
+                        name="teamId"
+                        value={formData.teamId}
+                        onChange={handleChange}
+                        required
+                    >
+                        {teams.length === 0 && <option value="">{t('bonusRules.noAdminTeam')}</option>}
+                        {teams.map((team) => (
+                            <option key={team.id} value={team.id}>{team.name}</option>
+                        ))}
+                    </select>
+                </div>
+            )}
+
             <div className="form-group">
                 <label htmlFor="name">{t('bonusRules.name')}</label>
                 <input

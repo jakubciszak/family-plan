@@ -9,6 +9,10 @@ use Symfony\Component\Validator\Constraints as Assert;
 final readonly class CreateBonusRuleRequest
 {
     public function __construct(
+        #[Assert\NotBlank(message: 'Team is required')]
+        #[Assert\Uuid(message: 'Team id must be a valid UUID')]
+        public string $teamId,
+
         #[Assert\NotBlank(message: 'Name is required')]
         #[Assert\Length(
             min: 1,

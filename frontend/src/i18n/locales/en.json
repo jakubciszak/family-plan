@@ -43,8 +43,8 @@
     "approve": "Approve",
     "reject": "Reject",
     "assign": "Assign",
-    "assignTo": "Assign to",
-    "unassign": "Unassign",
+    "assignTo": "Assign someone",
+    "unassign": "Step away",
     "noTasks": "No tasks available",
     "name": "Task Name",
     "description": "Description",
@@ -66,7 +66,8 @@
     "frequencyOnce": "Once",
     "frequencyDaily": "Daily",
     "frequencyWeekly": "Weekly",
-    "frequencyMonthly": "Monthly"
+    "frequencyMonthly": "Monthly",
+    "takeIt": "Take this task"
   },
   "bonusRules": {
     "title": "Bonus Rules",
@@ -79,7 +80,11 @@
     "value": "Value",
     "createdSuccess": "Bonus rule created successfully",
     "updatedSuccess": "Bonus rule updated successfully",
-    "deletedSuccess": "Bonus rule deleted successfully"
+    "deletedSuccess": "Bonus rule deleted successfully",
+    "team": "Team",
+    "noAdminTeam": "You are not an admin of any team",
+    "accessDeniedTitle": "Access denied",
+    "accessDeniedBody": "Bonus rules are managed by a team admin."
   },
   "user": {
     "points": "{{points}} points",

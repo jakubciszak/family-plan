@@ -10,6 +10,7 @@ function TaskList({ user }) {
     const [loading, setLoading] = React.useState(true);
     const [showCreateForm, setShowCreateForm] = React.useState(false);
     const [selectedTeam, setSelectedTeam] = React.useState(null);
+    const [members, setMembers] = React.useState([]);
 
     React.useEffect(() => {
         loadTasks();
@@ -28,6 +29,17 @@ function TaskList({ user }) {
             console.error('Error loading teams:', error);
         }
     };
+
+    React.useEffect(() => {
+        if (!selectedTeam) {
+            setMembers([]);
+            return;
+        }
+
+        teamService.getTeamMembers(selectedTeam.id)
+            .then((data) => setMembers(data.members || []))
+            .catch(() => setMembers([]));
+    }, [selectedTeam]);
 
     const isTeamAdmin = () => {
         if (!selectedTeam) return false;
@@ -82,6 +94,15 @@ function TaskList({ user }) {
         } catch (error) {
             console.error('Error creating task:', error);
             alert(error.response?.data?.error || 'Failed to create task');
+        }
+    };
+
+    const handleUnassignTask = async (taskId) => {
+        try {
+            await apiClient.post(`/api/tasks/${taskId}/unassign`, {});
+            loadTasks();
+        } catch (error) {
+            console.error('Error unassigning task:', error);
         }
     };
 
@@ -147,7 +168,10 @@ function TaskList({ user }) {
                             user={user}
                             onComplete={handleCompleteTask}
                             onApprove={handleApproveTask}
+                            members={members}
+                            isTeamAdmin={isTeamAdmin()}
                             onAssign={handleAssignTask}
+                            onUnassign={handleUnassignTask}
                         />
                     ))
                 )}
@@ -156,14 +180,16 @@ function TaskList({ user }) {
     );
 }
 
-function TaskCard({ task, user, onComplete, onApprove, onAssign }) {
+function TaskCard({ task, user, members, isTeamAdmin, onComplete, onApprove, onAssign, onUnassign }) {
     const { t } = useTranslation();
-    const isAdmin = user.role === 'ROLE_ADMIN';
     const isAssigned = task.assignedUserId !== null;
     const isAssignedToCurrentUser = task.assignedUserId === user.id;
-    const canComplete = task.status === 'pending' && isAssignedToCurrentUser;
-    const canApprove = task.status === 'completed' && isAdmin;
-    const canAssign = task.status === 'pending' && !isAssigned;
+    const isOpen = task.status === 'new' || task.status === 'pending';
+    const canComplete = isOpen && isAssignedToCurrentUser;
+    const canApprove = task.status === 'completed' && isTeamAdmin;
+    const canTakeIt = isOpen && !isAssigned;
+    const canGiveItBack = isOpen && (isAssignedToCurrentUser || isTeamAdmin);
+    const canAssignSomebody = isOpen && isTeamAdmin && members.length > 0;
 
     const getFrequencyTranslation = (frequency) => {
         const frequencyMap = {
@@ -197,13 +223,34 @@ function TaskCard({ task, user, onComplete, onApprove, onAssign }) {
                 )}
             </div>
             <div className="task-actions">
-                {canAssign && (
+                {canTakeIt && (
                     <button
                         onClick={() => onAssign(task.id, user.id)}
                         className="btn-primary"
                     >
-                        {t('tasks.assign')}
+                        {t('tasks.takeIt')}
                     </button>
+                )}
+                {canGiveItBack && (
+                    <button
+                        onClick={() => onUnassign(task.id)}
+                        className="btn-secondary"
+                    >
+                        {t('tasks.unassign')}
+                    </button>
+                )}
+                {canAssignSomebody && (
+                    <select
+                        className="task-assign-select"
+                        value=""
+                        onChange={(e) => e.target.value && onAssign(task.id, e.target.value)}
+                        aria-label={t('tasks.assignTo')}
+                    >
+                        <option value="">{t('tasks.assignTo')}</option>
+                        {members.map((member) => (
+                            <option key={member.userId} value={member.userId}>{member.userName}</option>
+                        ))}
+                    </select>
                 )}
                 {canComplete && (
                     <button
