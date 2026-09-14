@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 namespace App\Tests\Api;
 
+use App\Shared\Domain\ValueObject\Uuid;
+use App\UserManagement\Domain\Entity\User;
+use App\UserManagement\Domain\Repository\UserRepositoryInterface;
+use App\UserManagement\Domain\ValueObject\Email;
 use App\UserManagement\Domain\ValueObject\Role;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -99,8 +103,90 @@ class TeamApiTest extends ApiTestCase
             Response::HTTP_CREATED
         );
 
-        $this->loginAs($this->authenticate(Role::USER));
+        $this->joinTeam($team['id']);
 
         $this->assertArrayNotHasKey('invitations', $this->getJson("/api/teams/{$team['id']}/members"));
+    }
+
+    public function testRosterIsClosedToOutsiders(): void
+    {
+        $team = $this->assertJsonResponse(
+            $this->postJson('/api/teams', ['name' => 'Rodzina', 'description' => null]),
+            Response::HTTP_CREATED
+        );
+
+        $this->loginAs($this->authenticate(Role::USER));
+
+        $this->client->request('GET', "/api/teams/{$team['id']}/members");
+
+        $this->assertSame(Response::HTTP_FORBIDDEN, $this->client->getResponse()->getStatusCode());
+    }
+
+    public function testAPlainMemberCannotInviteOrRemove(): void
+    {
+        $team = $this->assertJsonResponse(
+            $this->postJson('/api/teams', ['name' => 'Rodzina', 'description' => null]),
+            Response::HTTP_CREATED
+        );
+
+        $admin = $this->currentUser;
+        $member = $this->joinTeam($team['id']);
+
+        $this->assertSame(
+            Response::HTTP_FORBIDDEN,
+            $this->postJson("/api/teams/{$team['id']}/invite", [
+                'email' => 'ktokolwiek@example.com',
+                'role' => 'member',
+            ])->getStatusCode()
+        );
+
+        $this->assertSame(
+            Response::HTTP_FORBIDDEN,
+            $this->deleteJson("/api/teams/{$team['id']}/members/{$admin->id()->value()}")->getStatusCode()
+        );
+
+        $this->assertSame(
+            Response::HTTP_FORBIDDEN,
+            $this->putJson("/api/teams/{$team['id']}", [
+                'name' => 'Przejete',
+                'description' => null,
+            ])->getStatusCode()
+        );
+
+        $this->loginAs($admin);
+        $roster = $this->getJson("/api/teams/{$team['id']}/members")['members'];
+
+        $this->assertCount(2, $roster);
+        $this->assertContains(
+            $member->id()->value(),
+            array_column($roster, 'userId')
+        );
+    }
+
+    private function joinTeam(string $teamId): User
+    {
+        $user = User::create(
+            Uuid::generate(),
+            'Plain Member',
+            Email::fromString(sprintf('member-%s@example.com', uniqid())),
+            password_hash('password123', PASSWORD_BCRYPT),
+            Role::USER
+        );
+        static::getContainer()->get(UserRepositoryInterface::class)->save($user);
+
+        $invite = $this->assertJsonResponse(
+            $this->postJson("/api/teams/{$teamId}/invite", [
+                'email' => $user->email()->value(),
+                'role' => 'member',
+            ]),
+            Response::HTTP_CREATED
+        );
+
+        $this->loginAs($user);
+        $this->assertJsonResponse(
+            $this->postJson("/api/teams/invitations/{$invite['invitation']['token']}/accept", [])
+        );
+
+        return $user;
     }
 }

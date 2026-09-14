@@ -145,9 +145,8 @@ const TeamManagement = ({ user, onMembershipChanged, onInspectMember }) => {
         }
     };
 
-    const iAdministerThisTeam = members.some(
-        (entry) => entry.userId === user?.id && entry.role === 'admin'
-    );
+    const iAdministerThisTeam = selectedTeam?.role === 'admin'
+        || members.some((entry) => entry.userId === user?.id && entry.role === 'admin');
 
     const roleLabel = (role) =>
         t(`teams.role${role.charAt(0).toUpperCase()}${role.slice(1)}`);
@@ -242,17 +241,19 @@ const TeamManagement = ({ user, onMembershipChanged, onInspectMember }) => {
                 <div className="team-details">
                     <h2>{selectedTeam.name}</h2>
 
-                    <div className="team-actions">
-                        <Button
-                            variant={showInviteForm ? 'text' : 'tonal'}
-                            icon={showInviteForm ? 'close' : 'teamAdd'}
-                            onClick={() => setShowInviteForm(!showInviteForm)}
-                        >
-                            {showInviteForm ? t('common.cancel') : t('teams.inviteMember')}
-                        </Button>
-                    </div>
+                    {iAdministerThisTeam && (
+                        <div className="team-actions">
+                            <Button
+                                variant={showInviteForm ? 'text' : 'tonal'}
+                                icon={showInviteForm ? 'close' : 'teamAdd'}
+                                onClick={() => setShowInviteForm(!showInviteForm)}
+                            >
+                                {showInviteForm ? t('common.cancel') : t('teams.inviteMember')}
+                            </Button>
+                        </div>
+                    )}
 
-                    {showInviteForm && (
+                    {iAdministerThisTeam && showInviteForm && (
                         <form onSubmit={handleInviteMember} className="invite-form">
                             <TextField
                                 id="invite-email"
@@ -305,7 +306,7 @@ const TeamManagement = ({ user, onMembershipChanged, onInspectMember }) => {
                                         {roleLabel(member.role)}
                                     </span>
                                 </div>
-                                {member.role !== 'admin' && (
+                                {iAdministerThisTeam && member.role !== 'admin' && (
                                     <Button
                                         variant="text"
                                         tone="danger"

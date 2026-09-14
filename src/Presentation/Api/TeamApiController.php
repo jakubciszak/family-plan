@@ -225,6 +225,15 @@ class TeamApiController extends AbstractController
     )]
     public function members(string $id): JsonResponse
     {
+        $teamId = Uuid::fromString($id);
+
+        if (!$this->memberships->isMember($this->currentUserId(), $teamId)) {
+            return $this->json(
+                ['error' => 'Only team members can read the roster'],
+                Response::HTTP_FORBIDDEN
+            );
+        }
+
         $members = $this->queryBus->dispatch(new GetTeamMembersQuery($id))
             ->last(HandledStamp::class)->getResult();
 
@@ -232,7 +241,7 @@ class TeamApiController extends AbstractController
             'members' => array_map(fn (TeamMembership $member) => $this->serializeMember($member), $members),
         ];
 
-        if ($this->memberships->isAdmin($this->currentUserId(), Uuid::fromString($id))) {
+        if ($this->memberships->isAdmin($this->currentUserId(), $teamId)) {
             $invitations = $this->queryBus->dispatch(new GetTeamInvitationsQuery($id))
                 ->last(HandledStamp::class)->getResult();
 
