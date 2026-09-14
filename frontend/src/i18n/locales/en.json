@@ -142,7 +142,11 @@
   "user": {
     "points": "{{points}} points",
     "role": "Role",
-    "name": "Name"
+    "name": "Name",
+    "pointsWeek": "this week",
+    "pointsTotal": "in total",
+    "pointsWeekHint": "Points since Monday — click for the total of all of them",
+    "pointsTotalHint": "All points — click to go back to this week"
   },
   "settings": {
     "title": "Notification Settings",
@@ -267,7 +271,8 @@
     "passwordsDoNotMatch": "The passwords do not match.",
     "passwordTooShort": "The password must be at least 8 characters long.",
     "currentPasswordIncorrect": "The current password is incorrect.",
-    "passwordChangeError": "Could not change the password. Please try again."
+    "passwordChangeError": "Could not change the password. Please try again.",
+    "pointsThisWeek": "Points this week"
   },
   "install": {
     "title": "Install Family Plan",

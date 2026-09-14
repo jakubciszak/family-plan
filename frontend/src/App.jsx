@@ -20,6 +20,7 @@ import { useWindowClass } from './hooks/useMediaQuery';
 import { CircularProgress } from './components/md3';
 import apiClient from './services/apiClient';
 import teamService from './services/teamService';
+import taskService from './services/taskService';
 import './styles/app.css';
 
 const getInviteTokenFromUrl = () => {
@@ -84,6 +85,7 @@ function App() {
     const [isAuthenticated, setIsAuthenticated] = React.useState(null);
     const [user, setUser] = React.useState(null);
     const [userPoints, setUserPoints] = React.useState(0);
+    const [weekPoints, setWeekPoints] = React.useState(0);
     const [currentPage, setCurrentPage] = React.useState('tasks');
     const [showRegister, setShowRegister] = React.useState(false);
     const [inviteToken, setInviteToken] = React.useState(null);
@@ -130,6 +132,10 @@ function App() {
         apiClient.get(`/api/users/${userId}/points`)
             .then((pointsData) => setUserPoints(pointsData.balance))
             .catch(() => setUserPoints(0));
+
+        taskService.getWeek()
+            .then((week) => setWeekPoints(week.total))
+            .catch(() => setWeekPoints(0));
     }, []);
 
     const refreshTeamAdminFlag = React.useCallback(() => {
@@ -170,6 +176,7 @@ function App() {
             .then(() => {
                 setUser(null);
                 setUserPoints(0);
+                setWeekPoints(0);
                 setIsAuthenticated(false);
                 setCurrentPage('tasks');
             });
@@ -221,7 +228,8 @@ function App() {
 
                 <AppBarActions
                     user={user}
-                    points={userPoints}
+                    points={weekPoints}
+                    totalPoints={userPoints}
                     themeMode={themeMode}
                     onThemeModeChange={setThemeMode}
                     onLogout={handleLogout}
@@ -262,7 +270,7 @@ function App() {
                 {currentPage === 'bonus-rules' && <BonusRulesManagement user={user} />}
                 {currentPage === 'status-change-rules' && <StatusChangeRulesManagement user={user} />}
                 {currentPage === 'notification-events' && <NotificationEvents user={user} />}
-                {currentPage === 'account' && <Account user={user} points={userPoints} />}
+                {currentPage === 'account' && <Account user={user} points={weekPoints} />}
                 {currentPage === 'settings' && <UserSettings user={user} />}
             </main>
 

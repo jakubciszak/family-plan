@@ -66,6 +66,15 @@ test.describe('User Points on Login', () => {
       });
     });
 
+    // Mock this week
+    await page.route('**/api/points/week*', async route => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ weekStart: '2026-03-02', total: 40, bonusTotal: 0, days: [], streak: null })
+      });
+    });
+
     await page.goto('/');
     
     // Wait for login form to be visible
@@ -79,9 +88,14 @@ test.describe('User Points on Login', () => {
     // Wait for redirect and points to load
     await page.waitForSelector('.user-points');
     
-    // Check points display
+    // The badge counts this week first, the whole wallet only on demand
     const pointsDisplay = page.locator('.user-points');
+    await expect(pointsDisplay).toContainText('40 points');
+    await expect(pointsDisplay).toContainText('this week');
+
+    await pointsDisplay.click();
     await expect(pointsDisplay).toContainText('250 points');
+    await expect(pointsDisplay).toContainText('in total');
   });
 
   test('should clear points on logout', async ({ page }) => {
@@ -112,6 +126,9 @@ test.describe('User Points on Login', () => {
     await page.waitForSelector('.user-points');
     
     // Verify points are displayed
+    await expect(page.locator('.user-points')).toContainText('55 points');
+
+    await page.locator('.user-points').click();
     await expect(page.locator('.user-points')).toContainText('100 points');
     
     // Logout

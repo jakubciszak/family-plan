@@ -72,6 +72,18 @@
   height: 18px;
 }
 
+button.user-points {
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.user-points__scope {
+  opacity: 0.8;
+  font-size: var(--md-sys-typescale-label-small-size);
+  font-weight: 400;
+}
+
 /* Account menu */
 .account-menu {
   position: relative;

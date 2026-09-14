@@ -9,9 +9,10 @@ import { THEME_MODES } from '../hooks/useThemeMode';
 
 const THEME_ICONS = { light: 'lightMode', dark: 'darkMode', system: 'systemMode' };
 
-function AppBarActions({ user, points, themeMode, onThemeModeChange, onLogout, onOpenAccount }) {
+function AppBarActions({ user, points, totalPoints, themeMode, onThemeModeChange, onLogout, onOpenAccount }) {
     const { t } = useTranslation();
     const [menuOpen, setMenuOpen] = React.useState(false);
+    const [showTotal, setShowTotal] = React.useState(false);
     const containerRef = React.useRef(null);
 
     React.useEffect(() => {
@@ -41,10 +42,19 @@ function AppBarActions({ user, points, themeMode, onThemeModeChange, onLogout, o
         <div className="user-info" ref={containerRef}>
             <span className="user-welcome">{t('app.welcome', { name: user?.name })}</span>
 
-            <span className="user-points" title={t('account.points')}>
+            <button
+                type="button"
+                className="user-points"
+                aria-pressed={showTotal}
+                title={showTotal ? t('user.pointsTotalHint') : t('user.pointsWeekHint')}
+                onClick={() => setShowTotal((current) => !current)}
+            >
                 <Icon name="stars" size={18} />
-                {t('user.points', { points })}
-            </span>
+                {t('user.points', { points: showTotal ? totalPoints ?? 0 : points ?? 0 })}
+                <span className="user-points__scope">
+                    {showTotal ? t('user.pointsTotal') : t('user.pointsWeek')}
+                </span>
+            </button>
 
             <Button
                 variant="text"

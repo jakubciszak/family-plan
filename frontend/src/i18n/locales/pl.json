@@ -142,7 +142,11 @@
   "user": {
     "points": "{{points}} punktów",
     "role": "Rola",
-    "name": "Imię"
+    "name": "Imię",
+    "pointsWeek": "w tym tygodniu",
+    "pointsTotal": "łącznie",
+    "pointsWeekHint": "Punkty od poniedziałku — kliknij, żeby zobaczyć sumę wszystkich",
+    "pointsTotalHint": "Wszystkie punkty — kliknij, żeby wrócić do tego tygodnia"
   },
   "settings": {
     "title": "Ustawienia powiadomień",
@@ -267,7 +271,8 @@
     "passwordsDoNotMatch": "Hasła nie są takie same.",
     "passwordTooShort": "Hasło musi mieć co najmniej 8 znaków.",
     "currentPasswordIncorrect": "Obecne hasło jest nieprawidłowe.",
-    "passwordChangeError": "Nie udało się zmienić hasła. Spróbuj ponownie."
+    "passwordChangeError": "Nie udało się zmienić hasła. Spróbuj ponownie.",
+    "pointsThisWeek": "Punkty w tym tygodniu"
   },
   "install": {
     "title": "Zainstaluj Family Plan",

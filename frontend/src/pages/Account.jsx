@@ -77,7 +77,7 @@ function Account({ user, points }) {
                             {roleLabel}
                         </Chip>
                     </dd>
-                    <dt>{t('account.points')}</dt>
+                    <dt>{t('account.pointsThisWeek')}</dt>
                     <dd>
                         <Chip icon="stars" tone="success">{points ?? 0}</Chip>
                     </dd>
