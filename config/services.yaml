@@ -72,6 +72,9 @@ services:
     App\Notifications\Domain\Repository\InAppNotificationRepositoryInterface:
         class: App\Notifications\Infrastructure\Persistence\DoctrineInAppNotificationRepository
 
+    App\Notifications\Communication\Domain\Repository\NotificationPolicyRepositoryInterface:
+        class: App\Notifications\Communication\Infrastructure\Persistence\DoctrineNotificationPolicyRepository
+
     App\UserSettings\Domain\Repository\UserSettingsRepositoryInterface:
         class: App\UserSettings\Infrastructure\Persistence\DoctrineUserSettingsRepository
 
@@ -134,6 +137,10 @@ services:
         arguments:
             $commandBus: '@command.bus'
             $queryBus: '@query.bus'
+
+    App\Presentation\Api\NotificationPolicyApiController:
+        arguments:
+            $commandBus: '@command.bus'
 
     # Locale Listener
     App\Shared\Infrastructure\EventListener\LocaleListener:

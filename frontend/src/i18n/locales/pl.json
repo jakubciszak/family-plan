@@ -14,7 +14,9 @@
     "taskTypesShort": "Typy",
     "bonusRulesShort": "Bonusy",
     "statusChangeRulesShort": "Reguły",
-    "accountShort": "Konto"
+    "accountShort": "Konto",
+    "notificationEvents": "Powiadomienia",
+    "notificationEventsShort": "Powiad."
   },
   "auth": {
     "login": "Zaloguj",
@@ -148,7 +150,9 @@
     "channel_email": "Email",
     "channel_email_desc": "Otrzymuj powiadomienia przez email",
     "channel_sms": "SMS",
-    "channel_sms_desc": "Otrzymuj powiadomienia przez wiadomości tekstowe"
+    "channel_sms_desc": "Otrzymuj powiadomienia przez wiadomości tekstowe",
+    "channel_in_app": "W aplikacji",
+    "channel_in_app_desc": "Dymki pokazywane w aplikacji, gdy z niej korzystasz"
   },
   "common": {
     "save": "Zapisz",
@@ -335,5 +339,35 @@
   },
   "notifications": {
     "dismiss": "Zamknij"
+  },
+  "notificationEvents": {
+    "title": "Powiadomienia o zdarzeniach",
+    "description": "Wybierz, o czym informujemy użytkowników i którym kanałem. Każdy może potem wyłączyć u siebie kanał, który tu dopuścisz.",
+    "event": "Zdarzenie",
+    "save": "Zapisz",
+    "saving": "Zapisywanie…",
+    "saveSuccess": "Ustawienia zapisane",
+    "saveError": "Nie udało się zapisać ustawień",
+    "loadError": "Nie udało się wczytać ustawień",
+    "transactional": "Wiadomość niezbędna do działania konta — zawsze wysyłana mailem",
+    "accessDeniedTitle": "Brak dostępu",
+    "accessDeniedBody": "Tę stronę widzi tylko administrator aplikacji.",
+    "channels": {
+      "email": "E-mail",
+      "sms": "SMS",
+      "in_app": "W aplikacji"
+    },
+    "events": {
+      "task_completed": "Zadanie zgłoszone do akceptacji",
+      "task_approved": "Zadanie zaakceptowane",
+      "user_welcome": "Powitanie nowego użytkownika",
+      "account_activation": "Aktywacja konta"
+    },
+    "hints": {
+      "task_completed": "Trafia do administratorów, gdy ktoś zgłosi wykonane zadanie",
+      "task_approved": "Trafia do wykonawcy razem z liczbą przyznanych punktów",
+      "user_welcome": "Pierwsza wiadomość po założeniu konta",
+      "account_activation": "Link aktywacyjny wysyłany po rejestracji"
+    }
   }
 }

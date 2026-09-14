@@ -5,6 +5,12 @@ declare(strict_types=1);
 namespace App\Tests\Integration;
 
 use App\Notifications\Application\Service\NotificationFacade;
+use App\Notifications\Communication\Application\Service\NotificationPolicyProvider;
+use App\Notifications\Communication\Domain\Service\ChannelResolver;
+use App\Notifications\Communication\Domain\Entity\NotificationPolicy;
+use App\Notifications\Communication\Domain\ValueObject\NotificationChannels;
+use App\Notifications\Communication\Domain\ValueObject\NotificationEvent;
+use App\Notifications\Communication\Infrastructure\Persistence\InMemoryNotificationPolicyRepository;
 use App\Notifications\Communication\EventSubscriber\TaskApprovedEventSubscriber;
 use App\Notifications\Communication\EventSubscriber\TaskCompletedEventSubscriber;
 use App\Notifications\Communication\Service\NotificationOrchestrator;
@@ -34,16 +40,21 @@ class TaskExecutionNotificationTest extends IntegrationTestCase
 
     private TaskExecutionRepositoryInterface $executions;
 
+    private InMemoryNotificationPolicyRepository $policies;
+
     protected function setUp(): void
     {
         parent::setUp();
 
         $this->sentMail = new InMemoryNotificationAdapter();
         $this->executions = $this->service(TaskExecutionRepositoryInterface::class);
+        $this->policies = new InMemoryNotificationPolicyRepository();
         $this->orchestrator = new NotificationOrchestrator(
             new NotificationFacade([$this->sentMail]),
             $this->service(UserRepositoryInterface::class),
-            $this->service(UserSettingsRepositoryInterface::class)
+            $this->service(UserSettingsRepositoryInterface::class),
+            new NotificationPolicyProvider($this->policies),
+            new ChannelResolver()
         );
     }
 
@@ -91,6 +102,26 @@ class TaskExecutionNotificationTest extends IntegrationTestCase
 
         $subscriber->onTaskApproved(
             new TaskExecutionApproved(Uuid::generate(), Uuid::generate(), new DateTimeImmutable())
+        );
+
+        $this->assertCount(0, $this->sentMail->getSentNotifications());
+    }
+
+    public function testAnEventTheAdminSwitchedOffIsNotSent(): void
+    {
+        $doer = $this->user('Dziecko');
+        $execution = $this->takenTask($doer);
+
+        $this->policies->save(NotificationPolicy::create(
+            Uuid::generate(),
+            NotificationEvent::taskApproved(),
+            NotificationChannels::none()
+        ));
+
+        $subscriber = new TaskApprovedEventSubscriber($this->orchestrator, $this->executions);
+
+        $subscriber->onTaskApproved(
+            new TaskExecutionApproved($execution->id(), Uuid::generate(), new DateTimeImmutable())
         );
 
         $this->assertCount(0, $this->sentMail->getSentNotifications());

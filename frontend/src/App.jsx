@@ -7,6 +7,7 @@ import Register from './pages/Register';
 import BonusRulesManagement from './pages/BonusRulesManagement';
 import StatusChangeRulesManagement from './pages/StatusChangeRulesManagement';
 import UserSettings from './pages/UserSettings';
+import NotificationEvents from './pages/NotificationEvents';
 import TeamManagement from './pages/TeamManagement';
 import TaskTypeManagement from './pages/TaskTypeManagement';
 import Account from './pages/Account';
@@ -205,6 +206,7 @@ function App() {
         ] : []),
         ...(isSuperAdmin ? [
             { id: 'status-change-rules', icon: 'rule', label: t('nav.statusChangeRules'), shortLabel: t('nav.statusChangeRulesShort') },
+            { id: 'notification-events', icon: 'notifications', label: t('nav.notificationEvents'), shortLabel: t('nav.notificationEventsShort') },
         ] : []),
         { id: 'account', icon: 'account', label: t('nav.account'), shortLabel: t('nav.accountShort') },
         { id: 'settings', icon: 'settings', label: t('nav.settings') },
@@ -259,6 +261,7 @@ function App() {
                 {currentPage === 'task-types' && <TaskTypeManagement />}
                 {currentPage === 'bonus-rules' && <BonusRulesManagement user={user} />}
                 {currentPage === 'status-change-rules' && <StatusChangeRulesManagement user={user} />}
+                {currentPage === 'notification-events' && <NotificationEvents user={user} />}
                 {currentPage === 'account' && <Account user={user} points={userPoints} />}
                 {currentPage === 'settings' && <UserSettings user={user} />}
             </main>

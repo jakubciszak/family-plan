@@ -5,84 +5,92 @@ declare(strict_types=1);
 namespace App\Notifications\Communication\Service;
 
 use App\Notifications\Application\Service\NotificationFacade;
+use App\Notifications\Communication\Application\Service\NotificationPolicyProvider;
+use App\Notifications\Communication\Domain\Service\ChannelResolver;
+use App\Notifications\Communication\Domain\ValueObject\NotificationChannels;
+use App\Notifications\Communication\Domain\ValueObject\NotificationEvent;
 use App\Shared\Domain\ValueObject\Uuid;
 use App\UserManagement\Domain\Repository\UserRepositoryInterface;
 use App\UserSettings\Domain\Repository\UserSettingsRepositoryInterface;
+use App\UserSettings\Domain\ValueObject\PreferenceOption;
+use App\UserSettings\Domain\ValueObject\PreferenceType;
 use Psr\Log\LoggerInterface;
 
-/**
- * Service responsible for orchestrating notification sending based on user preferences
- */
 final readonly class NotificationOrchestrator
 {
     public function __construct(
         private NotificationFacade $notificationFacade,
         private UserRepositoryInterface $userRepository,
         private UserSettingsRepositoryInterface $userSettingsRepository,
+        private NotificationPolicyProvider $policyProvider,
+        private ChannelResolver $channelResolver,
         private ?LoggerInterface $logger = null
     ) {
     }
 
-    /**
-     * Send notification to a user based on their preferences
-     */
     public function notifyUser(
+        NotificationEvent $event,
         Uuid $userId,
         string $message,
         ?string $subject = null,
         array $additionalParameters = []
     ): void {
+        $policyChannels = $this->policyProvider->channelsFor($event);
+
+        if ($policyChannels->isEmpty()) {
+            $this->logger?->info('Notification event is switched off', ['event' => $event->value()]);
+
+            return;
+        }
+
         $user = $this->userRepository->findById($userId);
         if ($user === null) {
             $this->logger?->warning('User not found for notification', ['user_id' => $userId->value()]);
+
             return;
         }
 
-        $settings = $this->userSettingsRepository->findByUserId($userId);
-        
-        // Get notification preferences
-        $notificationPreference = $settings?->getPreferenceByType(\App\UserSettings\Domain\ValueObject\PreferenceType::notifications());
-        $enabledOptions = $notificationPreference?->getEnabledOptions() ?? [];
-        
-        // Default to email if no settings found
-        if (empty($enabledOptions) && $settings === null) {
-            $enabledOptions = [\App\UserSettings\Domain\ValueObject\PreferenceOption::create('email', true)];
-        }
+        $channels = $this->channelResolver->resolve($policyChannels, $this->userChannelSettings($userId));
 
-        if (empty($enabledOptions)) {
-            $this->logger?->info('No notification channels enabled for user', ['user_id' => $userId->value()]);
+        if ($channels->isEmpty()) {
+            $this->logger?->info('No notification channels enabled for user', [
+                'user_id' => $userId->value(),
+                'event' => $event->value(),
+            ]);
+
             return;
         }
 
-        foreach ($enabledOptions as $option) {
+        foreach ($channels->toArray() as $channel) {
             try {
-                if ($option->name() === 'email' && $option->isEnabled()) {
-                    $this->notificationFacade->sendEmail(
+                match ($channel) {
+                    NotificationChannels::EMAIL => $this->notificationFacade->sendEmail(
                         $user->email()->value(),
                         $message,
                         $subject,
                         $additionalParameters
-                    );
-                } elseif ($option->name() === 'sms' && $option->isEnabled()) {
-                    // For SMS, we would need a phone number field on the user
-                    // For now, we'll log this as not implemented
-                    $this->logger?->info('SMS notifications not fully implemented', [
-                        'user_id' => $userId->value()
-                    ]);
-                }
-            } catch (\Exception $e) {
+                    ),
+                    NotificationChannels::IN_APP => $this->notificationFacade->sendInApp(
+                        $userId->value(),
+                        $message,
+                        $subject,
+                        $additionalParameters
+                    ),
+                    NotificationChannels::SMS => $this->logger?->info('SMS notifications not fully implemented', [
+                        'user_id' => $userId->value(),
+                    ]),
+                };
+            } catch (\Throwable $e) {
                 $this->logger?->error('Failed to send notification', [
                     'user_id' => $userId->value(),
-                    'channel' => $option->name(),
-                    'error' => $e->getMessage()
+                    'event' => $event->value(),
+                    'channel' => $channel,
+                    'error' => $e->getMessage(),
                 ]);
             }
         }
     }
 
-    /**
-     * Send email notification directly to an email address
-     */
     public function notifyEmail(
         string $email,
         string $message,
@@ -96,11 +104,30 @@ final readonly class NotificationOrchestrator
                 $subject,
                 $additionalParameters
             );
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             $this->logger?->error('Failed to send email notification', [
                 'email' => $email,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
         }
+    }
+
+    /**
+     * @return array<string, bool>
+     */
+    private function userChannelSettings(Uuid $userId): array
+    {
+        $preference = $this->userSettingsRepository
+            ->findByUserId($userId)
+            ?->getPreferenceByType(PreferenceType::notifications());
+
+        $settings = [];
+
+        foreach ($preference?->options() ?? [] as $option) {
+            /** @var PreferenceOption $option */
+            $settings[$option->name()] = $option->isEnabled();
+        }
+
+        return $settings;
     }
 }

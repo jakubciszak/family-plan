@@ -11,7 +11,13 @@ const THEME_ICONS = { light: 'lightMode', dark: 'darkMode', system: 'systemMode'
 const DEFAULT_PREFERENCES = [
     { name: 'email', enabled: true },
     { name: 'sms', enabled: false },
+    { name: 'in_app', enabled: true },
 ];
+
+const withEveryChannel = (options) =>
+    DEFAULT_PREFERENCES.map((fallback) =>
+        options?.find((option) => option.name === fallback.name) ?? fallback
+    );
 
 function UserSettings({ user }) {
     const { t } = useTranslation();
@@ -33,7 +39,7 @@ function UserSettings({ user }) {
                 setError(null);
                 const data = await userSettingsService.getUserSettings(user.id);
                 const notificationPrefs = data.preferences?.find(p => p.type === 'notifications');
-                setPreferences(notificationPrefs ? notificationPrefs.options : DEFAULT_PREFERENCES);
+                setPreferences(withEveryChannel(notificationPrefs?.options));
             } catch (err) {
                 console.error('Failed to load settings:', err);
                 setPreferences(DEFAULT_PREFERENCES);

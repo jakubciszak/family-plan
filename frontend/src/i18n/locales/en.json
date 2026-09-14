@@ -14,7 +14,9 @@
     "taskTypesShort": "Types",
     "bonusRulesShort": "Bonuses",
     "statusChangeRulesShort": "Rules",
-    "accountShort": "Account"
+    "accountShort": "Account",
+    "notificationEvents": "Notifications",
+    "notificationEventsShort": "Notifs"
   },
   "auth": {
     "login": "Login",
@@ -148,7 +150,9 @@
     "channel_email": "Email",
     "channel_email_desc": "Receive notifications via email",
     "channel_sms": "SMS",
-    "channel_sms_desc": "Receive notifications via text message"
+    "channel_sms_desc": "Receive notifications via text message",
+    "channel_in_app": "In app",
+    "channel_in_app_desc": "Bubbles shown inside the app while you use it"
   },
   "common": {
     "save": "Save",
@@ -335,5 +339,35 @@
   },
   "notifications": {
     "dismiss": "Dismiss"
+  },
+  "notificationEvents": {
+    "title": "Event notifications",
+    "description": "Choose what users are told about and through which channel. Everyone can still switch off a channel you allow here.",
+    "event": "Event",
+    "save": "Save",
+    "saving": "Saving…",
+    "saveSuccess": "Settings saved",
+    "saveError": "Could not save the settings",
+    "loadError": "Could not load the settings",
+    "transactional": "Needed to run the account — always sent by email",
+    "accessDeniedTitle": "No access",
+    "accessDeniedBody": "Only an application administrator sees this page.",
+    "channels": {
+      "email": "Email",
+      "sms": "SMS",
+      "in_app": "In app"
+    },
+    "events": {
+      "task_completed": "Task submitted for approval",
+      "task_approved": "Task approved",
+      "user_welcome": "Welcome for a new user",
+      "account_activation": "Account activation"
+    },
+    "hints": {
+      "task_completed": "Goes to the admins when somebody submits a finished task",
+      "task_approved": "Goes to the doer along with the points awarded",
+      "user_welcome": "The first message after an account is created",
+      "account_activation": "The activation link sent after registration"
+    }
   }
 }

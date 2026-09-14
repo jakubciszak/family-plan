@@ -7,6 +7,9 @@ namespace App\Tests\Notifications\Communication\EventSubscriber;
 use App\Notifications\Communication\EventSubscriber\UserRegisteredEventSubscriber;
 use App\Notifications\Infrastructure\Adapter\InMemoryNotificationAdapter;
 use App\Notifications\Application\Service\NotificationFacade;
+use App\Notifications\Communication\Application\Service\NotificationPolicyProvider;
+use App\Notifications\Communication\Domain\Service\ChannelResolver;
+use App\Notifications\Communication\Infrastructure\Persistence\InMemoryNotificationPolicyRepository;
 use App\Notifications\Communication\Service\NotificationOrchestrator;
 use App\Shared\Domain\ValueObject\Uuid;
 use App\UserManagement\Domain\Event\UserRegistered;
@@ -45,7 +48,13 @@ class UserRegisteredEventSubscriberTest extends TestCase
         $appUrl = 'http://localhost:8080';
         $userRepo = new InMemoryUserRepository();
         $settingsRepo = new InMemoryUserSettingsRepository();
-        $orchestrator = new NotificationOrchestrator($this->facade, $userRepo, $settingsRepo);
+        $orchestrator = new NotificationOrchestrator(
+            $this->facade,
+            $userRepo,
+            $settingsRepo,
+            new NotificationPolicyProvider(new InMemoryNotificationPolicyRepository()),
+            new ChannelResolver()
+        );
         
         $event = new UserRegistered(
             Uuid::generate(),
@@ -75,7 +84,13 @@ class UserRegisteredEventSubscriberTest extends TestCase
         
         $userRepo = new InMemoryUserRepository();
         $settingsRepo = new InMemoryUserSettingsRepository();
-        $orchestrator = new NotificationOrchestrator($this->facade, $userRepo, $settingsRepo);
+        $orchestrator = new NotificationOrchestrator(
+            $this->facade,
+            $userRepo,
+            $settingsRepo,
+            new NotificationPolicyProvider(new InMemoryNotificationPolicyRepository()),
+            new ChannelResolver()
+        );
         
         $activationToken = 'my-unique-token-456';
         $event = new UserRegistered(
@@ -107,7 +122,13 @@ class UserRegisteredEventSubscriberTest extends TestCase
         $appUrl = 'http://localhost:8080';
         $userRepo = new InMemoryUserRepository();
         $settingsRepo = new InMemoryUserSettingsRepository();
-        $orchestrator = new NotificationOrchestrator($this->facade, $userRepo, $settingsRepo);
+        $orchestrator = new NotificationOrchestrator(
+            $this->facade,
+            $userRepo,
+            $settingsRepo,
+            new NotificationPolicyProvider(new InMemoryNotificationPolicyRepository()),
+            new ChannelResolver()
+        );
         
         $recipientEmail = 'recipient@example.com';
         $event = new UserRegistered(

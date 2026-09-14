@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Notifications\Communication\EventSubscriber;
 
+use App\Notifications\Communication\Domain\ValueObject\NotificationEvent;
 use App\Notifications\Communication\Service\NotificationOrchestrator;
 use App\TaskManagement\Domain\Event\TaskExecutionApproved;
 use App\TaskManagement\Domain\Repository\TaskExecutionRepositoryInterface;
@@ -45,6 +46,7 @@ final readonly class TaskApprovedEventSubscriber implements EventSubscriberInter
         );
 
         $this->notificationOrchestrator->notifyUser(
+            NotificationEvent::taskApproved(),
             $assignedUserId,
             $message,
             'Task Approved',

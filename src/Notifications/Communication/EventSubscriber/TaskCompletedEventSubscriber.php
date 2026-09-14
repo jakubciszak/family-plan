@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Notifications\Communication\EventSubscriber;
 
+use App\Notifications\Communication\Domain\ValueObject\NotificationEvent;
 use App\Notifications\Communication\Service\NotificationOrchestrator;
 use App\TaskManagement\Domain\Event\TaskExecutionCompleted;
 use App\TaskManagement\Domain\Repository\TaskExecutionRepositoryInterface;
@@ -48,6 +49,7 @@ final readonly class TaskCompletedEventSubscriber implements EventSubscriberInte
 
         foreach ($this->userRepository->findAdmins() as $admin) {
             $this->notificationOrchestrator->notifyUser(
+                NotificationEvent::taskCompleted(),
                 $admin->id(),
                 $message,
                 'Task Completed',
