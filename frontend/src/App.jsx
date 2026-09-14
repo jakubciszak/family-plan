@@ -1,6 +1,7 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import TaskList from './pages/TaskList';
+import MemberView from './pages/MemberView';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import BonusRulesManagement from './pages/BonusRulesManagement';
@@ -85,6 +86,7 @@ function App() {
     const [inviteToken, setInviteToken] = React.useState(null);
     const [administersTeam, setAdministersTeam] = React.useState(false);
     const [scrolled, setScrolled] = React.useState(false);
+    const [inspectedMember, setInspectedMember] = React.useState(null);
 
     React.useEffect(() => {
         const onScroll = () => setScrolled(window.scrollY > 4);
@@ -224,8 +226,26 @@ function App() {
             />
 
             <main className="app-main">
-                {currentPage === 'tasks' && <TaskList onNavigate={setCurrentPage} user={user} />}
-                {currentPage === 'teams' && <TeamManagement user={user} onMembershipChanged={refreshTeamAdminFlag} />}
+                {currentPage === 'tasks' && (
+                    <TaskList
+                        onNavigate={setCurrentPage}
+                        user={user}
+                        onInspectMember={(member) => { setInspectedMember(member); setCurrentPage('member'); }}
+                    />
+                )}
+                {currentPage === 'member' && inspectedMember && (
+                    <MemberView
+                        member={inspectedMember}
+                        onBack={() => { setInspectedMember(null); setCurrentPage('tasks'); }}
+                    />
+                )}
+                {currentPage === 'teams' && (
+                    <TeamManagement
+                        user={user}
+                        onMembershipChanged={refreshTeamAdminFlag}
+                        onInspectMember={(member) => { setInspectedMember(member); setCurrentPage('member'); }}
+                    />
+                )}
                 {currentPage === 'task-types' && <TaskTypeManagement />}
                 {currentPage === 'bonus-rules' && <BonusRulesManagement user={user} />}
                 {currentPage === 'status-change-rules' && <StatusChangeRulesManagement user={user} />}

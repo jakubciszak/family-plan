@@ -300,7 +300,9 @@
       "sat": "So",
       "sun": "Nd"
     },
-    "bonus": "(+{{points}})"
+    "bonus": "(+{{points}})",
+    "nothingThatDay": "Tego dnia nic nie zostało zaliczone.",
+    "bonusLabel": "Punkty bonusowe"
   },
   "theme": {
     "appearance": "Wygląd",
@@ -317,5 +319,12 @@
     "member": "Członek",
     "total": "Razem",
     "you": "Ty"
+  },
+  "member": {
+    "backToTasks": "Wróć",
+    "tasksOf": "Zadania: {{name}}",
+    "reject": "Odrzuć",
+    "noTasks": "Ten członek nie ma żadnych zadań.",
+    "tasksSection": "Zadania"
   }
 }

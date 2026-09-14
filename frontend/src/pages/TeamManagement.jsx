@@ -12,7 +12,7 @@ import {
 } from '../components/md3';
 import '../styles/TeamManagement.css';
 
-const TeamManagement = ({ onMembershipChanged }) => {
+const TeamManagement = ({ user, onMembershipChanged, onInspectMember }) => {
     const { t } = useTranslation();
     const [teams, setTeams] = useState([]);
     const [selectedTeam, setSelectedTeam] = useState(null);
@@ -144,6 +144,10 @@ const TeamManagement = ({ onMembershipChanged }) => {
             setMemberToRemove(null);
         }
     };
+
+    const iAdministerThisTeam = members.some(
+        (entry) => entry.userId === user?.id && entry.role === 'admin'
+    );
 
     const roleLabel = (role) =>
         t(`teams.role${role.charAt(0).toUpperCase()}${role.slice(1)}`);
@@ -284,7 +288,17 @@ const TeamManagement = ({ onMembershipChanged }) => {
                                     {member.userName?.trim()?.charAt(0) || '?'}
                                 </span>
                                 <div className="member-info">
-                                    <strong>{member.userName}</strong>
+                                    {onInspectMember && iAdministerThisTeam && member.role !== 'admin' ? (
+                                        <button
+                                            type="button"
+                                            className="leaderboard-link member-link"
+                                            onClick={() => onInspectMember({ id: member.userId, name: member.userName })}
+                                        >
+                                            {member.userName}
+                                        </button>
+                                    ) : (
+                                        <strong>{member.userName}</strong>
+                                    )}
                                     <span className="member-email">{member.userEmail}</span>
                                     <span className={`member-role role-${member.role}`}>
                                         <Icon name={member.role === 'admin' ? 'admin' : 'person'} size={14} />

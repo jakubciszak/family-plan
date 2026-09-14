@@ -496,3 +496,57 @@
 .week-bonus {
   margin-left: 4px;
 }
+
+.week-days li > .week-day {
+  width: 100%;
+  border: none;
+  font: inherit;
+  cursor: pointer;
+  text-align: center;
+}
+
+.week-day.is-open {
+  outline: 2px solid var(--md-sys-color-primary);
+  outline-offset: -2px;
+}
+
+.week-day-detail {
+  margin-top: 12px;
+}
+
+.week-day-tasks {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.week-day-tasks li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 12px;
+  border-radius: var(--md-sys-shape-corner-medium);
+  background: var(--md-sys-color-surface);
+}
+
+.week-day-task-points {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.week-day-task--bonus .week-day-task-points {
+  color: var(--md-sys-color-primary);
+}
+
+.leaderboard-link {
+  border: none;
+  background: none;
+  padding: 0;
+  font: inherit;
+  font-weight: 500;
+  color: var(--md-sys-color-primary);
+  text-decoration: underline;
+  cursor: pointer;
+}

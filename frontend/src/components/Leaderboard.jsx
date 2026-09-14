@@ -5,7 +5,7 @@ import Icon from './md3/Icon';
 
 const DAY_KEYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
 
-function Leaderboard({ teamId, currentUserId, refreshToken }) {
+function Leaderboard({ teamId, currentUserId, refreshToken, onSelectMember }) {
     const { t } = useTranslation();
     const [board, setBoard] = React.useState(null);
 
@@ -70,7 +70,15 @@ function Leaderboard({ teamId, currentUserId, refreshToken }) {
                                 >
                                     <td className="leaderboard-rank">{index + 1}</td>
                                     <th scope="row" className="leaderboard-name">
-                                        {row.name}
+                                        {onSelectMember ? (
+                                            <button
+                                                type="button"
+                                                className="leaderboard-link"
+                                                onClick={() => onSelectMember({ id: row.userId, name: row.name })}
+                                            >
+                                                {row.name}
+                                            </button>
+                                        ) : row.name}
                                         {row.userId === currentUserId && (
                                             <span className="leaderboard-you">{t('leaderboard.you')}</span>
                                         )}

@@ -15,6 +15,7 @@ use App\TaskManagement\Domain\Exception\UnauthorizedTaskActionException;
 use App\TaskManagement\Domain\Repository\TaskExecutionRepositoryInterface;
 use App\TaskManagement\Domain\Repository\TaskTemplateRepositoryInterface;
 use App\TaskManagement\Domain\Service\BonusSettlementInterface;
+use App\TeamManagement\Domain\Repository\TeamMembershipRepositoryInterface;
 use App\TaskManagement\Domain\Strategy\ExecutionPointsAwardStrategyInterface;
 use App\UserManagement\Domain\Repository\UserRepositoryInterface;
 use App\UserManagement\Domain\ValueObject\Email;
@@ -39,7 +40,8 @@ class TaskExecutionApiController extends AbstractController
         private readonly TaskTypePool $pool,
         private readonly PartyResponsibilities $responsibilities,
         private readonly ClockInterface $clock,
-        private readonly BonusSettlementInterface $bonusPayout
+        private readonly BonusSettlementInterface $bonusPayout,
+        private readonly TeamMembershipRepositoryInterface $memberships
     ) {
     }
 
@@ -100,6 +102,23 @@ class TaskExecutionApiController extends AbstractController
             'executions' => array_values(array_map(
                 fn (TaskExecution $execution) => $this->serialize($execution),
                 $executions
+            )),
+        ]);
+    }
+
+    #[Route('/task-executions/of/{userId}', name: 'of_member', methods: ['GET'])]
+    #[OA\Get(path: '/api/task-executions/of/{userId}', summary: 'List the tasks a member of my team has taken', tags: ['My tasks'])]
+    #[OA\Response(response: 200, description: 'Tasks of that member')]
+    #[OA\Response(response: 403, description: 'Caller does not administer a team of that member')]
+    public function ofMember(string $userId): JsonResponse
+    {
+        $member = Uuid::fromString($userId);
+        $this->assertAdministersATeamOf($member);
+
+        return $this->json([
+            'executions' => array_values(array_map(
+                fn (TaskExecution $execution) => $this->serialize($execution),
+                $this->executionRepository->findByAssignedUser($member)
             )),
         ]);
     }
@@ -191,6 +210,26 @@ class TaskExecutionApiController extends AbstractController
         return $this->json($this->serialize($execution));
     }
 
+    #[Route('/task-executions/{id}/reject', name: 'reject', methods: ['POST'])]
+    #[OA\Post(path: '/api/task-executions/{id}/reject', summary: 'Send a finished task back as not done', tags: ['My tasks'])]
+    #[OA\Response(response: 200, description: 'Task rejected, no points awarded')]
+    #[OA\Response(response: 403, description: 'Only team admins judge a finished task')]
+    public function reject(string $id): JsonResponse
+    {
+        $execution = $this->execution($id);
+        $teamId = $this->teamOf($this->templateOf($execution));
+        $this->assertCarries(ResponsibilityType::approveTask(), $teamId);
+
+        if ($this->isAssignedToCaller($execution)) {
+            throw new UnauthorizedTaskActionException('Nobody judges their own task');
+        }
+
+        $execution->reject();
+        $this->executionRepository->save($execution);
+
+        return $this->json($this->serialize($execution));
+    }
+
     #[Route('/task-executions/{id}/abandon', name: 'abandon', methods: ['POST'])]
     #[OA\Post(path: '/api/task-executions/{id}/abandon', summary: 'Give a taken task back to the pool', tags: ['My tasks'])]
     #[OA\Response(response: 204, description: 'Task returned to the pool')]
@@ -274,6 +313,17 @@ class TaskExecutionApiController extends AbstractController
     /**
      * @return string[]
      */
+    private function assertAdministersATeamOf(Uuid $member): void
+    {
+        foreach ($this->memberships->ofUser($member) as $membership) {
+            if ($this->memberships->isAdmin($this->callerId(), $membership->teamId())) {
+                return;
+            }
+        }
+
+        throw new UnauthorizedTaskActionException('Only an admin of their team looks at another member');
+    }
+
     private function adminTeamIds(): array
     {
         return $this->responsibilities->organizationsWhereMay(

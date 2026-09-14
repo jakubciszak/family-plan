@@ -114,10 +114,11 @@ class PointsCalendarApiController extends AbstractController
     #[Route('/week', name: 'week', methods: ['GET'])]
     #[OA\Get(path: '/api/points/week', summary: 'Points earned on each day of a week, with the streak so far', tags: ['Points'])]
     #[OA\Parameter(name: 'weekStart', in: 'query', required: false, description: 'Any day of the wanted week (Y-m-d)')]
+    #[OA\Parameter(name: 'userId', in: 'query', required: false, description: 'Member to look at; defaults to the caller')]
     #[OA\Response(response: 200, description: 'Seven days with points and streak marks')]
     public function week(Request $request): JsonResponse
     {
-        $userId = $this->callerId();
+        $userId = $this->inspected($request);
         $monday = $this->mondayOf($request->query->get('weekStart'));
         $rule = $this->streakRule($userId);
         $pointsPerDay = $rule?->config()->pointsPerDay() ?? 1;
@@ -167,6 +168,61 @@ class PointsCalendarApiController extends AbstractController
                 'met' => count($streakDays) >= $rule->config()->requiredDays(),
             ],
         ]);
+    }
+
+    #[Route('/day', name: 'day', methods: ['GET'])]
+    #[OA\Get(path: '/api/points/day', summary: 'What a member did on one day, and what it earned', tags: ['Points'])]
+    #[OA\Parameter(name: 'date', in: 'query', required: true, description: 'The day to open (Y-m-d)')]
+    #[OA\Parameter(name: 'userId', in: 'query', required: false, description: 'Member to look at; defaults to the caller')]
+    #[OA\Response(response: 200, description: 'Tasks approved that day, with their points')]
+    #[OA\Response(response: 403, description: 'Caller may not look at this member')]
+    public function day(Request $request): JsonResponse
+    {
+        $userId = $this->inspected($request);
+        $day = DailyPoints::day((string) $request->query->get('date'));
+        $next = $day->modify('+1 day');
+
+        $done = array_values(array_filter(
+            $this->executionRepository->findApprovedByUserSince($userId, $day),
+            static fn ($execution) => $execution->earnedOn() >= $day && $execution->earnedOn() < $next
+        ));
+
+        usort($done, static fn ($a, $b) => $a->earnedOn() <=> $b->earnedOn());
+
+        $bonus = $this->ledger->perDayBetween($userId, $day, $next, [AccountKind::BONUSES]);
+
+        return $this->json([
+            'date' => $day->format('Y-m-d'),
+            'userId' => $userId->value(),
+            'tasks' => array_map(static fn ($execution) => [
+                'id' => $execution->id()->value(),
+                'name' => $execution->name()?->value(),
+                'points' => $execution->points()?->value() ?? 0,
+                'earnedOn' => $execution->earnedOn()->format('c'),
+            ], $done),
+            'total' => array_sum(array_map(static fn ($e) => $e->points()?->value() ?? 0, $done)),
+            'bonus' => $bonus[$day->format('Y-m-d')] ?? 0,
+        ]);
+    }
+
+    private function inspected(Request $request): Uuid
+    {
+        $wanted = $request->query->get('userId');
+        $caller = $this->callerId();
+
+        if ($wanted === null || $wanted === $caller->value()) {
+            return $caller;
+        }
+
+        $target = Uuid::fromString((string) $wanted);
+
+        foreach ($this->memberships->ofUser($target) as $membership) {
+            if ($this->memberships->isAdmin($caller, $membership->teamId())) {
+                return $target;
+            }
+        }
+
+        throw $this->createAccessDeniedException('Only an admin of their team looks at another member');
     }
 
     private function reach(?BonusPointsRule $rule): int

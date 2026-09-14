@@ -371,6 +371,84 @@ class TaskExecutionApiTest extends ApiTestCase
         $this->assertSame(5, $week['bonusTotal']);
     }
 
+    public function testOpeningADayListsWhatWasDoneAndWhatItEarned(): void
+    {
+        $context = $this->teamWithMember();
+        $type = $this->defineType($context['teamId'], ['type' => 'unlimited'], 7);
+
+        $this->loginAs($context['member']);
+        $taken = $this->assertJsonResponse(
+            $this->postJson("/api/task-templates/{$type['id']}/take", []),
+            Response::HTTP_CREATED
+        );
+        $this->postJson("/api/task-executions/{$taken['id']}/complete", []);
+
+        $this->loginAs($context['admin']);
+        $this->postJson("/api/task-executions/{$taken['id']}/approve", []);
+
+        $this->loginAs($context['member']);
+        $today = (new \DateTimeImmutable())->format('Y-m-d');
+        $day = $this->getJson('/api/points/day?date=' . $today);
+
+        $this->assertSame(7, $day['total']);
+        $this->assertCount(1, $day['tasks']);
+        $this->assertSame($type['name'], $day['tasks'][0]['name']);
+        $this->assertSame(7, $day['tasks'][0]['points']);
+    }
+
+    public function testAdminOpensTheWeekAndTheTasksOfTheirMember(): void
+    {
+        $context = $this->teamWithMember();
+        $type = $this->defineType($context['teamId'], ['type' => 'unlimited'], 9);
+
+        $this->loginAs($context['member']);
+        $this->postJson("/api/task-templates/{$type['id']}/take", []);
+
+        $this->loginAs($context['admin']);
+        $memberId = $context['member']->id()->value();
+
+        $week = $this->getJson('/api/points/week?userId=' . $memberId);
+        $this->assertCount(7, $week['days']);
+
+        $theirs = $this->getJson('/api/task-executions/of/' . $memberId);
+        $this->assertCount(1, $theirs['executions']);
+        $this->assertSame($memberId, $theirs['executions'][0]['assignedUserId']);
+    }
+
+    public function testAMemberCannotOpenAnotherMembersWeek(): void
+    {
+        $context = $this->teamWithMember();
+
+        $this->loginAs($context['member']);
+        $this->client->request('GET', '/api/points/week?userId=' . $context['admin']->id()->value());
+
+        $this->assertResponseStatusCodeSame(Response::HTTP_FORBIDDEN);
+    }
+
+    public function testRejectingAFinishedTaskAwardsNothing(): void
+    {
+        $context = $this->teamWithMember();
+        $type = $this->defineType($context['teamId'], ['type' => 'unlimited'], 30);
+
+        $this->loginAs($context['member']);
+        $taken = $this->assertJsonResponse(
+            $this->postJson("/api/task-templates/{$type['id']}/take", []),
+            Response::HTTP_CREATED
+        );
+        $this->postJson("/api/task-executions/{$taken['id']}/complete", []);
+
+        $this->loginAs($context['admin']);
+        $rejected = $this->assertJsonResponse(
+            $this->postJson("/api/task-executions/{$taken['id']}/reject", []),
+            Response::HTTP_OK
+        );
+
+        $this->assertSame('rejected', $rejected['status']);
+
+        $points = $this->getJson('/api/users/' . $context['member']->id()->value() . '/points');
+        $this->assertSame(0, $points['balance'], 'Odrzucone wykonanie nie daje punktow');
+    }
+
     public function testLeaderboardIsClosedToOutsiders(): void
     {
         $context = $this->teamWithMember();

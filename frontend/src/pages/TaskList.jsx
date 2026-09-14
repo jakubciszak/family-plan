@@ -22,7 +22,7 @@ function useLimitLabel() {
     };
 }
 
-function TaskList({ onNavigate, user }) {
+function TaskList({ onNavigate, user, onInspectMember }) {
     const { t } = useTranslation();
     const [taskTypes, setTaskTypes] = React.useState([]);
     const [myTasks, setMyTasks] = React.useState([]);
@@ -127,6 +127,7 @@ function TaskList({ onNavigate, user }) {
             teamId={selectedTeam?.id}
             currentUserId={user?.id}
             refreshToken={refreshToken}
+            onSelectMember={isTeamAdmin ? onInspectMember : undefined}
         />
     );
 

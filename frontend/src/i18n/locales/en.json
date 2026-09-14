@@ -300,7 +300,9 @@
       "sat": "Sat",
       "sun": "Sun"
     },
-    "bonus": "(+{{points}})"
+    "bonus": "(+{{points}})",
+    "nothingThatDay": "Nothing was credited that day.",
+    "bonusLabel": "Bonus points"
   },
   "theme": {
     "appearance": "Appearance",
@@ -317,5 +319,12 @@
     "member": "Member",
     "total": "Total",
     "you": "You"
+  },
+  "member": {
+    "backToTasks": "Back",
+    "tasksOf": "Tasks: {{name}}",
+    "reject": "Reject",
+    "noTasks": "This member has no tasks.",
+    "tasksSection": "Tasks"
   }
 }

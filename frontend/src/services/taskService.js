@@ -37,9 +37,32 @@ const taskService = {
         return await apiClient.get(`/api/points/leaderboard?${params}`);
     },
 
-    async getWeek(weekStart) {
-        const query = weekStart ? `?weekStart=${weekStart}` : '';
-        return await apiClient.get(`/api/points/week${query}`);
+    async getWeek(weekStart, userId) {
+        const params = new URLSearchParams();
+        if (weekStart) {
+            params.set('weekStart', weekStart);
+        }
+        if (userId) {
+            params.set('userId', userId);
+        }
+        const query = params.toString();
+        return await apiClient.get(`/api/points/week${query ? `?${query}` : ''}`);
+    },
+
+    async getDay(date, userId) {
+        const params = new URLSearchParams({ date });
+        if (userId) {
+            params.set('userId', userId);
+        }
+        return await apiClient.get(`/api/points/day?${params}`);
+    },
+
+    async executionsOf(userId) {
+        return await apiClient.get(`/api/task-executions/of/${userId}`);
+    },
+
+    async rejectExecution(executionId) {
+        return await apiClient.post(`/api/task-executions/${executionId}/reject`, {});
     },
 
     async getAwaitingApproval() {
