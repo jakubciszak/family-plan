@@ -41,6 +41,9 @@ function WeekCalendar({ refreshToken }) {
                 <span className="week-total">
                     <Icon name="stars" size={18} />
                     {t('user.points', { points: week.total })}
+                    {week.bonusTotal > 0 && (
+                        <span className="week-bonus">{t('week.bonus', { points: week.bonusTotal })}</span>
+                    )}
                 </span>
             </div>
 
@@ -58,6 +61,9 @@ function WeekCalendar({ refreshToken }) {
                     >
                         <span className="week-day-name">{t(`week.days.${DAY_KEYS[index]}`)}</span>
                         <span className="week-day-points">{day.points}</span>
+                        {day.bonus > 0 && (
+                            <span className="week-day-bonus">{t('week.bonus', { points: day.bonus })}</span>
+                        )}
                         {day.inStreak && <span className="week-day-flame" aria-hidden="true">🔥</span>}
                     </li>
                 ))}

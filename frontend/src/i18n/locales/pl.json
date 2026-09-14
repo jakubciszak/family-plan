@@ -81,7 +81,8 @@
     "awaitingApproval": "Czeka na zatwierdzenie",
     "giveBack": "Oddaj do puli",
     "loadFailed": "Nie udało się wczytać zadań",
-    "actionFailed": "Nie udało się wykonać akcji"
+    "actionFailed": "Nie udało się wykonać akcji",
+    "availableCollapsed": "Zadania do wzięcia"
   },
   "bonusRules": {
     "title": "Zasady bonusowe",
@@ -298,7 +299,8 @@
       "fri": "Pt",
       "sat": "So",
       "sun": "Nd"
-    }
+    },
+    "bonus": "(+{{points}})"
   },
   "theme": {
     "appearance": "Wygląd",
@@ -308,5 +310,12 @@
     "system": "Systemowy",
     "language": "Język",
     "languageDescription": "Język interfejsu aplikacji."
+  },
+  "leaderboard": {
+    "title": "Tablica wyników",
+    "empty": "Nikt jeszcze nie zdobył punktów w tym tygodniu.",
+    "member": "Członek",
+    "total": "Razem",
+    "you": "Ty"
   }
 }

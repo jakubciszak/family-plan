@@ -310,6 +310,86 @@ class TaskExecutionApiTest extends ApiTestCase
         );
     }
 
+    public function testLeaderboardRanksMembersByThePointsTheyBookedThisWeek(): void
+    {
+        $context = $this->teamWithMember();
+        $type = $this->defineType($context['teamId'], ['type' => 'unlimited'], 12);
+
+        $this->loginAs($context['member']);
+        $taken = $this->assertJsonResponse(
+            $this->postJson("/api/task-templates/{$type['id']}/take", []),
+            Response::HTTP_CREATED
+        );
+        $this->postJson("/api/task-executions/{$taken['id']}/complete", []);
+
+        $this->loginAs($context['admin']);
+        $this->postJson("/api/task-executions/{$taken['id']}/approve", []);
+
+        $board = $this->getJson('/api/points/leaderboard?teamId=' . $context['teamId']);
+
+        $this->assertCount(7, $board['days']);
+        $this->assertCount(1, $board['standings'], 'Admini nie staja w szranki, wiec zostaje sam czlonek');
+        $this->assertSame($context['member']->id()->value(), $board['standings'][0]['userId']);
+        $this->assertSame(12, $board['standings'][0]['total']);
+        $this->assertSame(12, $board['standings'][0]['perDay'][$board['today']]);
+    }
+
+    public function testTheWeekShowsBonusPointsApartFromTaskPoints(): void
+    {
+        $context = $this->teamWithMember();
+        $type = $this->defineType($context['teamId'], ['type' => 'unlimited'], 16);
+
+        $this->assertJsonResponse(
+            $this->postJson('/api/bonus-rules', [
+                'teamId' => $context['teamId'],
+                'name' => 'Minimum 15 punktow w tygodniu',
+                'description' => 'Zbierz 15 punktow za zadania w ciagu tygodnia',
+                'bonusPoints' => 5,
+                'ruleType' => 'weekly_points_sum',
+                'ruleConfig' => ['requiredPoints' => 15, 'accounts' => ['tasks']],
+            ]),
+            Response::HTTP_CREATED
+        );
+
+        $this->loginAs($context['member']);
+        $taken = $this->assertJsonResponse(
+            $this->postJson("/api/task-templates/{$type['id']}/take", []),
+            Response::HTTP_CREATED
+        );
+        $this->postJson("/api/task-executions/{$taken['id']}/complete", []);
+
+        $this->loginAs($context['admin']);
+        $this->postJson("/api/task-executions/{$taken['id']}/approve", []);
+
+        $this->loginAs($context['member']);
+        $week = $this->getJson('/api/points/week');
+
+        $today = array_values(array_filter($week['days'], static fn (array $day) => $day['isToday']))[0];
+
+        $this->assertSame(16, $today['points'], 'Punkty za zadanie zostaja osobno');
+        $this->assertSame(5, $today['bonus'], 'Bonus jest pokazany obok, nie doliczony do punktow za zadanie');
+        $this->assertSame(5, $week['bonusTotal']);
+    }
+
+    public function testLeaderboardIsClosedToOutsiders(): void
+    {
+        $context = $this->teamWithMember();
+
+        $outsider = User::create(
+            Uuid::generate(),
+            'Obcy',
+            Email::fromString(sprintf('obcy-%s@example.com', uniqid())),
+            password_hash('password123', PASSWORD_BCRYPT),
+            Role::USER
+        );
+        static::getContainer()->get(UserRepositoryInterface::class)->save($outsider);
+        $this->loginAs($outsider);
+
+        $this->client->request('GET', '/api/points/leaderboard?teamId=' . $context['teamId']);
+
+        $this->assertResponseStatusCodeSame(Response::HTTP_FORBIDDEN);
+    }
+
     private function defineType(string $teamId, array $limit, int $points = 10): array
     {
         return $this->assertJsonResponse(

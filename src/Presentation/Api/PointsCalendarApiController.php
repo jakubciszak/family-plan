@@ -6,6 +6,7 @@ namespace App\Presentation\Api;
 
 use App\Party\Application\Service\PartyResponsibilities;
 use App\Party\Domain\ValueObject\ResponsibilityType;
+use App\PointsManagement\Domain\Service\PointsLedger;
 use App\PointsManagement\Domain\ValueObject\AccountKind;
 use App\Shared\Domain\ValueObject\Uuid;
 use App\TaskManagement\Domain\Entity\BonusPointsRule;
@@ -14,6 +15,7 @@ use App\TaskManagement\Domain\Repository\TaskExecutionRepositoryInterface;
 use App\TaskManagement\Domain\Service\DailyPoints;
 use App\TaskManagement\Domain\Service\ExecutionStreak;
 use App\TaskManagement\Domain\ValueObject\RuleType;
+use App\TeamManagement\Domain\Repository\TeamMembershipRepositoryInterface;
 use App\UserManagement\Domain\Repository\UserRepositoryInterface;
 use App\UserManagement\Domain\ValueObject\Email;
 use DateTimeImmutable;
@@ -33,7 +35,9 @@ class PointsCalendarApiController extends AbstractController
         private readonly TaskExecutionRepositoryInterface $executionRepository,
         private readonly BonusPointsRuleRepositoryInterface $ruleRepository,
         private readonly PartyResponsibilities $responsibilities,
-        private readonly UserRepositoryInterface $userRepository
+        private readonly UserRepositoryInterface $userRepository,
+        private readonly TeamMembershipRepositoryInterface $memberships,
+        private readonly PointsLedger $ledger
     ) {
     }
 
@@ -47,6 +51,63 @@ class PointsCalendarApiController extends AbstractController
                 static fn (AccountKind $kind) => ['kind' => $kind->value],
                 AccountKind::all()
             ),
+        ]);
+    }
+
+    #[Route('/leaderboard', name: 'leaderboard', methods: ['GET'])]
+    #[OA\Get(path: '/api/points/leaderboard', summary: 'Points every team member earned on each day of a week', tags: ['Points'])]
+    #[OA\Parameter(name: 'teamId', in: 'query', required: true, description: 'Team to rank')]
+    #[OA\Parameter(name: 'weekStart', in: 'query', required: false, description: 'Any day of the wanted week (Y-m-d)')]
+    #[OA\Response(response: 200, description: 'Members ranked by the points they booked that week')]
+    #[OA\Response(response: 403, description: 'Caller is not a member of the team')]
+    public function leaderboard(Request $request): JsonResponse
+    {
+        $teamId = Uuid::fromString((string) $request->query->get('teamId'));
+
+        if (!$this->memberships->isMember($this->callerId(), $teamId)) {
+            throw $this->createAccessDeniedException('Only members see the standings of their team');
+        }
+
+        $monday = $this->mondayOf($request->query->get('weekStart'));
+        $nextMonday = $monday->modify('+7 days');
+
+        $days = [];
+        for ($offset = 0; $offset < 7; $offset++) {
+            $days[] = $monday->modify(sprintf('+%d days', $offset))->format('Y-m-d');
+        }
+
+        $standings = [];
+        foreach ($this->memberships->ofTeam($teamId) as $membership) {
+            if ($membership->isAdmin()) {
+                continue;
+            }
+
+            $user = $this->userRepository->findById($membership->userId());
+
+            if ($user === null) {
+                continue;
+            }
+
+            $perDay = $this->ledger->perDayBetween($membership->userId(), $monday, $nextMonday);
+
+            $standings[] = [
+                'userId' => $membership->userId()->value(),
+                'name' => $user->name(),
+                'total' => array_sum($perDay),
+                'perDay' => array_map(static fn (string $day) => $perDay[$day] ?? 0, array_combine($days, $days)),
+            ];
+        }
+
+        usort(
+            $standings,
+            static fn (array $a, array $b) => [$b['total'], $a['name']] <=> [$a['total'], $b['name']]
+        );
+
+        return $this->json([
+            'weekStart' => $monday->format('Y-m-d'),
+            'days' => $days,
+            'today' => (new DateTimeImmutable())->format('Y-m-d'),
+            'standings' => $standings,
         ]);
     }
 
@@ -68,6 +129,12 @@ class PointsCalendarApiController extends AbstractController
         );
 
         $perDay = DailyPoints::perDay($earned);
+        $bonusPerDay = $this->ledger->perDayBetween(
+            $userId,
+            $monday,
+            $monday->modify('+7 days'),
+            [AccountKind::BONUSES]
+        );
         $streakDays = $rule === null ? [] : ExecutionStreak::current($earned, $pointsPerDay);
         $today = (new DateTimeImmutable())->format('Y-m-d');
 
@@ -79,6 +146,7 @@ class PointsCalendarApiController extends AbstractController
             $days[] = [
                 'date' => $day,
                 'points' => $points,
+                'bonus' => $bonusPerDay[$day] ?? 0,
                 'reachedThreshold' => $rule !== null && $points >= $pointsPerDay,
                 'inStreak' => in_array($day, $streakDays, true),
                 'isToday' => $day === $today,
@@ -88,6 +156,7 @@ class PointsCalendarApiController extends AbstractController
         return $this->json([
             'weekStart' => $monday->format('Y-m-d'),
             'total' => array_sum(array_column($days, 'points')),
+            'bonusTotal' => array_sum(array_column($days, 'bonus')),
             'days' => $days,
             'streak' => $rule === null ? null : [
                 'name' => $rule->name(),

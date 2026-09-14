@@ -29,6 +29,14 @@ const taskService = {
         return await apiClient.get('/api/task-executions/mine');
     },
 
+    async getLeaderboard(teamId, weekStart) {
+        const params = new URLSearchParams({ teamId });
+        if (weekStart) {
+            params.set('weekStart', weekStart);
+        }
+        return await apiClient.get(`/api/points/leaderboard?${params}`);
+    },
+
     async getWeek(weekStart) {
         const query = weekStart ? `?weekStart=${weekStart}` : '';
         return await apiClient.get(`/api/points/week${query}`);

@@ -1,6 +1,7 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import WeekCalendar from '../components/WeekCalendar';
+import Leaderboard from '../components/Leaderboard';
 import taskService from '../services/taskService';
 import teamService from '../services/teamService';
 import { Button, Icon, Select, CircularProgress } from '../components/md3';
@@ -21,7 +22,7 @@ function useLimitLabel() {
     };
 }
 
-function TaskList({ onNavigate }) {
+function TaskList({ onNavigate, user }) {
     const { t } = useTranslation();
     const [taskTypes, setTaskTypes] = React.useState([]);
     const [myTasks, setMyTasks] = React.useState([]);
@@ -119,35 +120,18 @@ function TaskList({ onNavigate }) {
         </span>
     );
 
-    return (
-        <div className="task-list-container">
-            <div className="task-list-header">
-                <h2>{t('tasks.title')}</h2>
-                {teams.length > 1 && (
-                    <Select
-                        id="team-selector"
-                        value={selectedTeam?.id || ''}
-                        onChange={(e) => setSelectedTeam(teams.find((team) => team.id === e.target.value))}
-                        triggerClassName="team-selector"
-                        ariaLabel={t('teams.title')}
-                    >
-                        {teams.map((team) => (
-                            <option key={team.id} value={team.id}>{team.name}</option>
-                        ))}
-                    </Select>
-                )}
-            </div>
+    const myWeek = <WeekCalendar refreshToken={refreshToken} />;
 
-            {error && (
-                <div className="error-message" role="alert">
-                    <Icon name="error" size={20} />
-                    <span>{error}</span>
-                </div>
-            )}
+    const standings = (
+        <Leaderboard
+            teamId={selectedTeam?.id}
+            currentUserId={user?.id}
+            refreshToken={refreshToken}
+        />
+    );
 
-            <WeekCalendar refreshToken={refreshToken} />
-
-            <section className="task-section" data-testid="my-tasks">
+    const myTasksSection = (
+        <section className="task-section" data-testid="my-tasks">
                 <h3><Icon name="person" size={20} />{t('tasks.mySection')}</h3>
                 {myOpenTasks.length === 0 && myFinishedTasks.length === 0 ? (
                     <p className="empty-hint">{t('tasks.noneTaken')}</p>
@@ -192,8 +176,10 @@ function TaskList({ onNavigate }) {
                     </div>
                 )}
             </section>
+    );
 
-            <section className="task-section" data-testid="available-tasks">
+    const available = (
+        <section className="task-section" data-testid="available-tasks">
                 <div className="task-section__header">
                     <h3><Icon name="tasks" size={20} />{t('tasks.availableSection')}</h3>
                     {isTeamAdmin && onNavigate && (
@@ -236,9 +222,10 @@ function TaskList({ onNavigate }) {
                     </div>
                 )}
             </section>
+    );
 
-            {isTeamAdmin && (
-                <section className="task-section" data-testid="approval-queue">
+    const approvalQueue = (
+        <section className="task-section" data-testid="approval-queue">
                     <h3><Icon name="approve" size={20} />{t('tasks.approvalSection')}</h3>
                     {awaitingApproval.length === 0 ? (
                         <p className="empty-hint">{t('tasks.nothingToApprove')}</p>
@@ -267,6 +254,53 @@ function TaskList({ onNavigate }) {
                         </div>
                     )}
                 </section>
+    );
+
+    return (
+        <div className="task-list-container">
+            <div className="task-list-header">
+                <h2>{t('tasks.title')}</h2>
+                {teams.length > 1 && (
+                    <Select
+                        id="team-selector"
+                        value={selectedTeam?.id || ''}
+                        onChange={(e) => setSelectedTeam(teams.find((team) => team.id === e.target.value))}
+                        triggerClassName="team-selector"
+                        ariaLabel={t('teams.title')}
+                    >
+                        {teams.map((team) => (
+                            <option key={team.id} value={team.id}>{team.name}</option>
+                        ))}
+                    </Select>
+                )}
+            </div>
+
+            {error && (
+                <div className="error-message" role="alert">
+                    <Icon name="error" size={20} />
+                    <span>{error}</span>
+                </div>
+            )}
+
+            {isTeamAdmin ? (
+                <>
+                    {standings}
+                    {approvalQueue}
+                    <details className="task-section task-section--collapsible" data-testid="available-tasks-collapsed">
+                        <summary>
+                            <Icon name="tasks" size={20} />
+                            {t('tasks.availableCollapsed')}
+                        </summary>
+                        {available}
+                    </details>
+                </>
+            ) : (
+                <>
+                    {myWeek}
+                    {myTasksSection}
+                    {available}
+                    {standings}
+                </>
             )}
         </div>
     );

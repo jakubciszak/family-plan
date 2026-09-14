@@ -81,7 +81,8 @@
     "awaitingApproval": "Waiting for approval",
     "giveBack": "Give it back",
     "loadFailed": "Could not load the tasks",
-    "actionFailed": "The action did not go through"
+    "actionFailed": "The action did not go through",
+    "availableCollapsed": "Tasks to take"
   },
   "bonusRules": {
     "title": "Bonus Rules",
@@ -298,7 +299,8 @@
       "fri": "Fri",
       "sat": "Sat",
       "sun": "Sun"
-    }
+    },
+    "bonus": "(+{{points}})"
   },
   "theme": {
     "appearance": "Appearance",
@@ -308,5 +310,12 @@
     "system": "System",
     "language": "Language",
     "languageDescription": "Interface language of the app."
+  },
+  "leaderboard": {
+    "title": "Leaderboard",
+    "empty": "Nobody has scored any points this week yet.",
+    "member": "Member",
+    "total": "Total",
+    "you": "You"
   }
 }

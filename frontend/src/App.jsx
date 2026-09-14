@@ -224,7 +224,7 @@ function App() {
             />
 
             <main className="app-main">
-                {currentPage === 'tasks' && <TaskList onNavigate={setCurrentPage} />}
+                {currentPage === 'tasks' && <TaskList onNavigate={setCurrentPage} user={user} />}
                 {currentPage === 'teams' && <TeamManagement user={user} onMembershipChanged={refreshTeamAdminFlag} />}
                 {currentPage === 'task-types' && <TaskTypeManagement />}
                 {currentPage === 'bonus-rules' && <BonusRulesManagement user={user} />}
