@@ -5,7 +5,7 @@
 Full-stack monorepo aplikacji do zarządzania zadaniami rodzinnymi z systemem punktów i nagród.
 
 **Architektura:** Separowana (Frontend + Backend + Mobile)
-- **Backend:** Symfony 7.4, PHP 8.3+, PostgreSQL 16 - Hexagonal Architecture z DDD i CQRS
+- **Backend:** Symfony 7.4 na FrankenPHP (worker mode), PHP 8.4, PostgreSQL 16 - Hexagonal Architecture z DDD i CQRS
 - **Frontend:** React 18.2, Webpack 5
 - **Mobile:** React Native 0.76, TypeScript
 
@@ -29,11 +29,14 @@ make db-reset           # Reset DB (drop + create + migrate)
 make db-diff            # Wygeneruj nową migrację
 
 # Shell
-make shell-php          # Dostęp do kontenera PHP
+make shell              # Dostęp do kontenera aplikacji (FrankenPHP)
 make shell-db           # Dostęp do psql
 
+# Po zmianie kodu PHP na macOS
+make reload             # Przeładuj workery (watcher nie dostaje zdarzeń przez bind mount)
+
 # Logi
-docker compose logs -f php       # Backend logs
+make logs-app           # Backend logs
 docker compose logs -f frontend  # Frontend logs
 ```
 
@@ -162,12 +165,12 @@ export default TaskList;
 
 ```bash
 # PHPUnit
-docker compose exec php vendor/bin/phpunit
-docker compose exec php vendor/bin/phpunit --filter=UserTest
+docker compose exec app vendor/bin/phpunit
+docker compose exec app vendor/bin/phpunit --filter=UserTest
 
 # Behat BDD
-docker compose exec php vendor/bin/behat
-docker compose exec php vendor/bin/behat --suite=task_management
+docker compose exec app vendor/bin/behat
+docker compose exec app vendor/bin/behat --suite=task_management
 ```
 
 Lokalizacja testów:
@@ -229,9 +232,8 @@ Główne endpointy:
 
 | Service | Port | Opis |
 |---------|------|------|
-| frontend | 3000 | React dev server |
-| nginx | 8080 | Backend API gateway |
-| php | - | PHP-FPM |
+| frontend | 3000 | React dev server (webpack, HMR, proxy /api → app) |
+| app | 8080 | FrankenPHP: Caddy + Symfony w worker mode |
 | database | 5432 | PostgreSQL |
 | mailpit | 8025 | Email testing UI |
 
@@ -257,20 +259,31 @@ make create-admin               # Użyje danych z .env
 
 ### Czyszczenie cache
 ```bash
-docker compose exec php php bin/console cache:clear
+docker compose exec app php bin/console cache:clear
 ```
 
 ### Debugowanie
 ```bash
 docker compose logs -f          # Wszystkie logi
-make shell-php                  # Shell PHP
+make shell                      # Shell aplikacji
 make shell-db                   # Shell PostgreSQL
 ```
+
+## Worker mode — o czym pamiętać przy pisaniu kodu
+
+Kernel Symfony bootuje raz i zostaje w pamięci między requestami. W praktyce znaczy to tyle:
+
+- Nie trzymaj stanu requestu w statycznych właściwościach ani w singletonach — przeciekłby
+  do kolejnego użytkownika. Usługi zależne od requestu muszą implementować `ResetInterface`
+  i mieć tag `kernel.reset`.
+- Zmiana kodu PHP nie jest widoczna od razu. Na Linuksie workery przeładowuje watcher
+  (`watch` w `docker/frankenphp/Caddyfile`), na macOS trzeba wołać `make reload`.
+- Szablony Twiga przeładowują się same — Twig sprawdza mtime przy renderowaniu.
 
 ## Important Notes
 
 - Backend API zawsze zwraca JSON
-- Frontend komunikuje się z backendem przez proxy Webpack (dev) lub nginx (prod)
+- Frontend komunikuje się z backendem przez proxy Webpack (dev) lub bezpośrednio, same-origin (prod — FrankenPHP serwuje SPA i API pod jednym hostem)
 - Wszystkie ID są typu UUID
 - State Pattern używany dla statusów zadań (zobacz `docs/STATE_PATTERN.md`)
 - CORS skonfigurowany dla localhost:3000 w dev

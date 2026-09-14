@@ -18,28 +18,24 @@ services:
       # - ./docker/db/data:/var/lib/postgresql/data:rw
 ###< doctrine/doctrine-bundle ###
 
-  php:
+  app:
     build:
       context: .
-      dockerfile: docker/php/Dockerfile
+      dockerfile: docker/frankenphp/Dockerfile
     working_dir: /app
     environment:
       APP_ENV: ${APP_ENV:-dev}
-    volumes:
-      - ./:/app
-    depends_on:
-      database:
-        condition: service_healthy
-
-  nginx:
-    image: nginx:1.27-alpine
-    depends_on:
-      - php
+      SERVER_NAME: ":80"
+      FRANKENPHP_NUM_WORKERS: ${FRANKENPHP_NUM_WORKERS:-2}
     ports:
       - "${APP_PORT:-8080}:80"
     volumes:
-      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
       - ./:/app
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      database:
+        condition: service_healthy
 
   # Frontend React Application (Standalone)
   frontend:
@@ -50,15 +46,16 @@ services:
     environment:
       NODE_ENV: development
       CHOKIDAR_USEPOLLING: "1"
+      WATCHPACK_POLLING: "true"
       FAST_REFRESH: "true"
-      API_URL: "http://nginx:80"
+      API_URL: "http://app:80"
     volumes:
       - ./frontend:/app
       - frontend_node_modules:/app/node_modules
     ports:
       - "${FRONTEND_PORT:-3000}:3000"
     depends_on:
-      - nginx
+      - app
 
   node:
     image: node:20-alpine
@@ -91,3 +88,5 @@ volumes:
 ###< doctrine/doctrine-bundle ###
   node_modules:
   frontend_node_modules:
+  caddy_data:
+  caddy_config:

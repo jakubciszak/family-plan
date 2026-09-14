@@ -13,23 +13,35 @@ Aplikacja stoi na VPS `srv1201847` (Hostinger KVM 1, Ubuntu 24.04 z Dockerem) ja
         │  Caddy :80 :443 (TLS)         │
         └───────────────────────────────┘
                         │  sieć proxy-net
-        ┌───────────────┴───────────────┐
+                        ▼
+        ┌───────────────────────────────┐
+        │  family-plan-app              │
+        │  FrankenPHP (Caddy + PHP 8.4) │
         │                               │
-   /api/*                          wszystko inne
-        │                               │
-        ▼                               ▼
-   family-plan-nginx  ──fastcgi──▶ family-plan-php
-        │                               │
-        │  sieć family-plan-network     │
-        │                               ▼
-        └──────────────────────▶ family-plan-db (PostgreSQL 16)
-                                        │
-   family-plan-frontend ◀────────────────┘
-   (React SPA, serwowany przez nginx)
+        │  /api/*, /_components/*       │
+        │      → Symfony w worker mode  │
+        │  wszystko inne                │
+        │      → public/ (React SPA)    │
+        └───────────────────────────────┘
+                        │  sieć family-plan-network
+                        ▼
+              family-plan-db (PostgreSQL 16)
 ```
 
-Caddy jest jedynym kontenerem publikującym porty na host. Kontenery `family-plan-*` nie mają
-mapowań portów — są osiągalne wyłącznie przez `proxy-net`. Baza nie jest wystawiona na zewnątrz.
+Zewnętrzny Caddy jest jedynym kontenerem publikującym porty na host. `family-plan-app` nie ma
+mapowania portów — jest osiągalny wyłącznie przez `proxy-net`. Baza nie jest wystawiona na zewnątrz.
+
+### Dlaczego jeden kontener
+
+FrankenPHP to Caddy z wbudowanym PHP, więc ten sam proces serwuje API i statyczne pliki SPA.
+Zniknęły przez to dwa kontenery nginx (`family-plan-nginx` i `family-plan-frontend`) oraz komunikacja
+przez FastCGI. SPA i API leżą pod jednym originem, więc przeglądarka nie robi już żadnego
+zapytania cross-origin do API.
+
+Symfony działa w **worker mode**: kernel bootuje raz przy starcie workera i zostaje w pamięci,
+zamiast być budowany od zera przy każdym requeście. Między requestami Symfony resetuje usługi
+oznaczone `kernel.reset` (m.in. połączenie Doctrine), co robi `Kernel::terminate()` wspólnie
+z `services_resetter`. Liczbę workerów ustawia `FRANKENPHP_NUM_WORKERS` (domyślnie 4).
 
 Projekt `registry` pełni podwójną rolę: terminuje TLS dla aplikacji oraz udostępnia prywatny
 rejestr obrazów pod `registry.srv1201847.hstgr.cloud` (basicauth). Rejestr jest pozostałością po
@@ -50,11 +62,10 @@ wdraża. Pre-release nie idzie automatycznie na produkcję.
    zatrzymuje deployment; run w trakcie jest odpytywany do 60 minut. Listę wymaganych workflowów i
    limit czasu trzyma `REQUIRED_CHECKS` i `CHECKS_TIMEOUT_MINUTES` na górze pliku workflow.
 
-2. **`build-and-push`** buduje trzy obrazy z commita wydania i pushuje je do `ghcr.io` z tagami
+2. **`build-and-push`** buduje jeden obraz z commita wydania i pushuje go do `ghcr.io` z tagami
    `latest`, `<tag wydania>` i `<sha>`:
-   - `ghcr.io/jakubciszak/family-plan-php` — Symfony + PHP-FPM
-   - `ghcr.io/jakubciszak/family-plan-nginx` — nginx z plikami z `public/` obrazu PHP
-   - `ghcr.io/jakubciszak/family-plan-frontend` — zbudowany React SPA
+   - `ghcr.io/jakubciszak/family-plan-app` — FrankenPHP z Symfony w worker mode, zbudowanym
+     React SPA w `public/` i assetami Encore w `public/build/`
 
 3. **`deploy`** woła Hostinger API:
    ```
@@ -65,8 +76,8 @@ wdraża. Pre-release nie idzie automatycznie na produkcję.
 4. Workflow odpytuje produkcję aż `/` zwróci 200, a `/api/auth/me` zwróci 401 (maks. 5 minut).
    Brak zdrowej odpowiedzi w tym czasie oznacza czerwony build.
 
-Migracje bazy i utworzenie super admina uruchamia `docker/php/docker-entrypoint.sh` przy starcie
-kontenera PHP — nie ma osobnego kroku migracyjnego w CI.
+Migracje bazy i utworzenie super admina uruchamia `docker/frankenphp/docker-entrypoint.sh` przy
+starcie kontenera aplikacji — nie ma osobnego kroku migracyjnego w CI.
 
 ### Jak wydać wersję
 
@@ -101,9 +112,10 @@ runy (retencja logów Actions to 90 dni). Pominięcie bramki ląduje w podsumowa
 
 ### Widoczność pakietów
 
-Obrazy na `ghcr.io` muszą być **publiczne**, ponieważ VPS pobiera je anonimowo. Ustawia się to raz,
-osobno dla każdego z trzech pakietów: GitHub → Packages → pakiet → Package settings → Change
-visibility → Public. Prywatny pakiet oznacza `denied` przy pullu i nieudany deploy.
+Obraz na `ghcr.io` musi być **publiczny**, ponieważ VPS pobiera go anonimowo: GitHub → Packages →
+`family-plan-app` → Package settings → Change visibility → Public. Prywatny pakiet oznacza `denied`
+przy pullu i nieudany deploy. Stare pakiety `family-plan-php`, `family-plan-nginx` i
+`family-plan-frontend` nie są już budowane i można je usunąć.
 
 ## Konfiguracja na serwerze
 
@@ -122,6 +134,37 @@ Zmienne środowiskowe projektu:
 | `MAILER_DSN` | `sendgrid://KEY@default`; `null://null` wycisza wysyłkę bez błędu |
 | `MAILER_FROM_EMAIL`, `MAILER_FROM_NAME` | Adres nadawcy musi być zweryfikowany w SendGridzie, inaczej wysyłka kończy się odrzuceniem |
 | `APP_URL` | Baza linków w mailach, m.in. w zaproszeniach |
+| `FRANKENPHP_NUM_WORKERS` | Liczba workerów PHP trzymających kernel Symfony w pamięci; domyślnie 4 |
+
+## Migracja na FrankenPHP — kroki jednorazowe na serwerze
+
+Przejście z `php-fpm + nginx` na FrankenPHP zmienia nazwy kontenerów, więc trzeba raz ruszyć
+konfigurację po stronie VPS-a. Bez kroku 2 aplikacja po wdrożeniu zwróci 502 — zewnętrzny Caddy
+będzie szukał kontenerów, których już nie ma.
+
+1. **Compose projektu `family-plan-project`** (Docker Manager → projekt → edycja compose).
+   Wklej treść `docker-compose.hostinger.yml` z repo. Serwisy `php`, `nginx` i `frontend` znikają,
+   zostaje jeden `app`. Wolumen `database_data` nie jest ruszany, więc dane bazy zostają.
+
+2. **Routing w zewnętrznym Caddym** (projekt `registry`). Dotychczas host aplikacji był rozdzielany
+   na dwa upstreamy — `/api/*` szło do `family-plan-nginx`, reszta do `family-plan-frontend`.
+   Teraz cały host idzie do jednego kontenera, bo FrankenPHP sam rozdziela API od SPA:
+
+   ```
+   family-plan.srv1201847.hstgr.cloud {
+       reverse_proxy family-plan-app:80
+   }
+   ```
+
+   Poprzednie bloki `handle /api/*` i `handle` z osobnymi upstreamami należy usunąć.
+
+3. **Widoczność pakietu** `ghcr.io/jakubciszak/family-plan-app` na Public (patrz sekcja wyżej) —
+   inaczej VPS nie pobierze obrazu.
+
+4. **Wydanie**: `gh release create vX.Y.Z --generate-notes`. Po deployu smoke test jak niżej.
+
+Stare kontenery (`family-plan-php`, `family-plan-nginx`, `family-plan-frontend`) znikną przy
+`update` projektu. Gdyby zostały jako osierocone, usuwa je `docker rm -f <nazwa>` na maszynie.
 
 ## Operacje
 

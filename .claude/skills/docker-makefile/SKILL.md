@@ -120,7 +120,7 @@ make lint-fix
 docker compose logs -f
 
 # Specific service logs
-docker compose logs -f php
+docker compose logs -f app
 docker compose logs -f frontend
 docker compose logs -f database
 docker compose logs -f nginx
@@ -215,13 +215,13 @@ docker compose up -d --build
 
 ```bash
 # Run command in PHP container
-docker compose exec php <command>
+docker compose exec app <command>
 
 # Examples:
-docker compose exec php composer install
-docker compose exec php php bin/console cache:clear
-docker compose exec php vendor/bin/phpunit
-docker compose exec php vendor/bin/behat
+docker compose exec app composer install
+docker compose exec app php bin/console cache:clear
+docker compose exec app vendor/bin/phpunit
+docker compose exec app vendor/bin/behat
 
 # Run command in frontend container
 docker compose exec frontend npm install
@@ -245,15 +245,15 @@ docker compose exec database psql -U app -d app -c "SELECT * FROM users;"
 
 ```bash
 # Symfony cache
-docker compose exec php php bin/console cache:clear
+docker compose exec app php bin/console cache:clear
 
 # Clear all caches (dev)
-docker compose exec php php bin/console cache:clear --env=dev
+docker compose exec app php bin/console cache:clear --env=dev
 
 # Clear Doctrine cache
-docker compose exec php php bin/console doctrine:cache:clear-metadata
-docker compose exec php php bin/console doctrine:cache:clear-query
-docker compose exec php php bin/console doctrine:cache:clear-result
+docker compose exec app php bin/console doctrine:cache:clear-metadata
+docker compose exec app php bin/console doctrine:cache:clear-query
+docker compose exec app php bin/console doctrine:cache:clear-result
 ```
 
 ## Troubleshooting
@@ -262,13 +262,13 @@ docker compose exec php php bin/console doctrine:cache:clear-result
 
 ```bash
 # Check logs for errors
-docker compose logs php
+docker compose logs app
 
 # Verify dependencies are healthy
 docker compose ps
 
 # Restart specific service
-docker compose restart php
+docker compose restart app
 ```
 
 ### Database Connection Issues
@@ -293,7 +293,7 @@ make db-migrate
 sudo chown -R $(id -u):$(id -g) .
 
 # In container
-docker compose exec php chown -R www-data:www-data var/
+docker compose exec app chown -R www-data:www-data var/
 ```
 
 ### Port Conflicts

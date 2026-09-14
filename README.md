@@ -178,11 +178,11 @@ docker compose up -d
 # Check logs if needed: docker compose logs -f
 
 # Initialize the database (first time only)
-docker compose exec php php bin/console doctrine:migrations:migrate --no-interaction
-docker compose exec php php bin/console app:create-super-admin
+docker compose exec app php bin/console doctrine:migrations:migrate --no-interaction
+docker compose exec app php bin/console app:create-super-admin
 
 # Install backend dependencies (first time only)
-docker compose exec php composer install
+docker compose exec app composer install
 
 # Install frontend dependencies (first time only, if not already done)
 docker compose exec frontend npm install
@@ -374,11 +374,11 @@ docker compose logs -f
 
 # View logs from specific service
 docker compose logs -f frontend
-docker compose logs -f php
+docker compose logs -f app
 
 # Execute commands in containers
-docker compose exec php php bin/console cache:clear
-docker compose exec php composer install
+docker compose exec app php bin/console cache:clear
+docker compose exec app composer install
 docker compose exec frontend npm install
 
 # Rebuild containers after Dockerfile changes
@@ -416,16 +416,16 @@ When using Docker, the PHP container:
 
 ```bash
 # Run database migrations
-docker compose exec php php bin/console doctrine:migrations:migrate
+docker compose exec app php bin/console doctrine:migrations:migrate
 
 # Clear Symfony cache
-docker compose exec php php bin/console cache:clear
+docker compose exec app php bin/console cache:clear
 
 # Install new composer package
-docker compose exec php composer require <package-name>
+docker compose exec app composer require <package-name>
 
 # Run backend tests
-docker compose exec php php bin/phpunit
+docker compose exec app php bin/phpunit
 ```
 
 ### Standalone Development
@@ -595,7 +595,7 @@ docker compose ps
 
 # Check backend logs
 docker compose logs nginx
-docker compose logs php
+docker compose logs app
 
 # Verify backend is accessible
 curl http://localhost:8080/api
@@ -632,13 +632,13 @@ docker compose up -d --build frontend
 **Backend changes not reflecting:**
 ```bash
 # Clear Symfony cache
-docker compose exec php php bin/console cache:clear
+docker compose exec app php bin/console cache:clear
 
 # Restart PHP service
-docker compose restart php
+docker compose restart app
 
 # Check if files are mounted correctly
-docker compose exec php ls -la /app/src
+docker compose exec app ls -la /app/src
 ```
 
 **"Permission denied" errors:**
@@ -654,7 +654,7 @@ sudo docker compose up -d
 ```bash
 # Check container logs for errors
 docker compose logs frontend
-docker compose logs php
+docker compose logs app
 
 # Common issues:
 # - Missing dependencies: docker compose exec frontend npm install
@@ -683,7 +683,7 @@ docker compose logs php
 **"Composer dependencies not installed":**
 ```bash
 # Docker
-docker compose exec php composer install
+docker compose exec app composer install
 
 # Standalone
 composer install
@@ -707,7 +707,7 @@ npm install
 **Database migrations not applied:**
 ```bash
 # Docker
-docker compose exec php php bin/console doctrine:migrations:migrate
+docker compose exec app php bin/console doctrine:migrations:migrate
 
 # Standalone
 php bin/console doctrine:migrations:migrate
@@ -716,7 +716,7 @@ php bin/console doctrine:migrations:migrate
 **Super admin user not created:**
 ```bash
 # Docker
-docker compose exec php php bin/console app:create-super-admin
+docker compose exec app php bin/console app:create-super-admin
 
 # Standalone
 php bin/console app:create-super-admin

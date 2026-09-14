@@ -14,39 +14,39 @@ This skill provides guidance for managing the PostgreSQL database using Doctrine
 ```bash
 # Generate migration from entity changes
 make db-diff
-# or: docker compose exec php php bin/console doctrine:migrations:diff
+# or: docker compose exec app php bin/console doctrine:migrations:diff
 
 # Run pending migrations
 make db-migrate
-# or: docker compose exec php php bin/console doctrine:migrations:migrate
+# or: docker compose exec app php bin/console doctrine:migrations:migrate
 
 # Reset database (drop + create + migrate)
 make db-reset
 
 # Check migration status
-docker compose exec php php bin/console doctrine:migrations:status
+docker compose exec app php bin/console doctrine:migrations:status
 
 # List all migrations
-docker compose exec php php bin/console doctrine:migrations:list
+docker compose exec app php bin/console doctrine:migrations:list
 ```
 
 ### Migration Management
 
 ```bash
 # Roll back last migration
-docker compose exec php php bin/console doctrine:migrations:migrate prev
+docker compose exec app php bin/console doctrine:migrations:migrate prev
 
 # Roll back to specific version
-docker compose exec php php bin/console doctrine:migrations:migrate 'DoctrineMigrations\Version20240101120000'
+docker compose exec app php bin/console doctrine:migrations:migrate 'DoctrineMigrations\Version20240101120000'
 
 # Execute single migration up
-docker compose exec php php bin/console doctrine:migrations:execute 'DoctrineMigrations\Version20240101120000' --up
+docker compose exec app php bin/console doctrine:migrations:execute 'DoctrineMigrations\Version20240101120000' --up
 
 # Execute single migration down
-docker compose exec php php bin/console doctrine:migrations:execute 'DoctrineMigrations\Version20240101120000' --down
+docker compose exec app php bin/console doctrine:migrations:execute 'DoctrineMigrations\Version20240101120000' --down
 
 # Skip migration (mark as executed without running)
-docker compose exec php php bin/console doctrine:migrations:version 'DoctrineMigrations\Version20240101120000' --add
+docker compose exec app php bin/console doctrine:migrations:version 'DoctrineMigrations\Version20240101120000' --add
 ```
 
 ## Entity Definition
@@ -363,13 +363,13 @@ WHERE tc.constraint_type = 'FOREIGN KEY';
 
 ```bash
 # Validate mapping files
-docker compose exec php php bin/console doctrine:schema:validate
+docker compose exec app php bin/console doctrine:schema:validate
 
 # Show SQL that would be executed
-docker compose exec php php bin/console doctrine:schema:update --dump-sql
+docker compose exec app php bin/console doctrine:schema:update --dump-sql
 
 # Compare current schema with entities (dry run)
-docker compose exec php php bin/console doctrine:migrations:diff --no-interaction
+docker compose exec app php bin/console doctrine:migrations:diff --no-interaction
 ```
 
 ## Best Practices
@@ -388,14 +388,14 @@ docker compose exec php php bin/console doctrine:migrations:diff --no-interactio
 
 ```bash
 # Mark all migrations as executed
-docker compose exec php php bin/console doctrine:migrations:sync-metadata-storage
+docker compose exec app php bin/console doctrine:migrations:sync-metadata-storage
 ```
 
 ### Entity Not Found
 
 ```bash
 # Clear metadata cache
-docker compose exec php php bin/console doctrine:cache:clear-metadata
+docker compose exec app php bin/console doctrine:cache:clear-metadata
 ```
 
 ### Schema Out of Sync

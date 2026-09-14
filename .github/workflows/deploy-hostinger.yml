@@ -26,9 +26,7 @@ concurrency:
 
 env:
   REGISTRY: ghcr.io
-  PHP_IMAGE: ghcr.io/${{ github.repository_owner }}/family-plan-php
-  NGINX_IMAGE: ghcr.io/${{ github.repository_owner }}/family-plan-nginx
-  FRONTEND_IMAGE: ghcr.io/${{ github.repository_owner }}/family-plan-frontend
+  APP_IMAGE: ghcr.io/${{ github.repository_owner }}/family-plan-app
   APP_HEALTH_URL: https://family-plan.srv1201847.hstgr.cloud
   # Workflowy, które muszą być zielone na commicie wydania, zanim cokolwiek pójdzie na produkcję.
   # Nazwy z pola `name:` w .github/workflows/*.yml.
@@ -180,7 +178,7 @@ jobs:
             >> "$GITHUB_STEP_SUMMARY"
 
   build-and-push:
-    name: Build and push images
+    name: Build and push image
     needs: resolve-release
     runs-on: ubuntu-latest
 
@@ -200,49 +198,19 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build and push PHP image
+      - name: Build and push application image
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: docker/php/Dockerfile.prod
+          file: docker/frankenphp/Dockerfile.prod
           push: true
           tags: |
-            ${{ env.PHP_IMAGE }}:latest
-            ${{ env.PHP_IMAGE }}:${{ needs.resolve-release.outputs.version }}
-            ${{ env.PHP_IMAGE }}:${{ needs.resolve-release.outputs.sha }}
+            ${{ env.APP_IMAGE }}:latest
+            ${{ env.APP_IMAGE }}:${{ needs.resolve-release.outputs.version }}
+            ${{ env.APP_IMAGE }}:${{ needs.resolve-release.outputs.sha }}
           platforms: linux/amd64
           cache-from: type=gha
           cache-to: type=gha,mode=max
-
-      - name: Build and push Frontend image
-        uses: docker/build-push-action@v5
-        with:
-          context: ./frontend
-          file: frontend/Dockerfile.prod
-          push: true
-          tags: |
-            ${{ env.FRONTEND_IMAGE }}:latest
-            ${{ env.FRONTEND_IMAGE }}:${{ needs.resolve-release.outputs.version }}
-            ${{ env.FRONTEND_IMAGE }}:${{ needs.resolve-release.outputs.sha }}
-          platforms: linux/amd64
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      - name: Build and push Nginx image
-        uses: docker/build-push-action@v5
-        with:
-          context: ./docker/nginx
-          file: docker/nginx/Dockerfile.prod
-          push: true
-          tags: |
-            ${{ env.NGINX_IMAGE }}:latest
-            ${{ env.NGINX_IMAGE }}:${{ needs.resolve-release.outputs.version }}
-            ${{ env.NGINX_IMAGE }}:${{ needs.resolve-release.outputs.sha }}
-          platforms: linux/amd64
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          build-args: |
-            PHP_IMAGE=${{ env.PHP_IMAGE }}:${{ needs.resolve-release.outputs.sha }}
 
   deploy:
     name: Deploy ${{ needs.resolve-release.outputs.tag }}

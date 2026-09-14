@@ -281,20 +281,20 @@ final class CreateTaskContext implements Context
 ```bash
 # All PHPUnit tests
 make phpunit
-# or: docker compose exec php vendor/bin/phpunit
+# or: docker compose exec app vendor/bin/phpunit
 
 # Specific test file
-docker compose exec php vendor/bin/phpunit --filter=TaskTest
+docker compose exec app vendor/bin/phpunit --filter=TaskTest
 
 # Specific test method
-docker compose exec php vendor/bin/phpunit --filter=testCreateTaskWithValidData
+docker compose exec app vendor/bin/phpunit --filter=testCreateTaskWithValidData
 
 # All Behat tests
 make behat
-# or: docker compose exec php vendor/bin/behat
+# or: docker compose exec app vendor/bin/behat
 
 # Specific Behat suite
-docker compose exec php vendor/bin/behat --suite=task_management
+docker compose exec app vendor/bin/behat --suite=task_management
 
 # All backend tests
 make backend-test

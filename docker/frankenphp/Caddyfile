@@ -1,0 +1,25 @@
+{
+	{$CADDY_GLOBAL_OPTIONS}
+
+	frankenphp {
+		worker {
+			file /app/public/index.php
+			num {$FRANKENPHP_NUM_WORKERS:2}
+			watch /app/src
+			watch /app/config
+			watch /app/templates
+			watch /app/translations
+		}
+	}
+}
+
+{$SERVER_NAME::80} {
+	log {
+		format console
+	}
+
+	root /app/public
+	encode zstd br gzip
+
+	php_server
+}

@@ -18,15 +18,17 @@ services:
     networks:
       - family-plan-network
 
-  php:
-    image: ghcr.io/jakubciszak/family-plan-php:${IMAGE_TAG:-latest}
-    container_name: family-plan-php
+  app:
+    image: ghcr.io/jakubciszak/family-plan-app:${IMAGE_TAG:-latest}
+    container_name: family-plan-app
     restart: unless-stopped
     working_dir: /app
     environment:
       APP_ENV: ${APP_ENV:-prod}
       APP_SECRET: ${APP_SECRET:-CHANGE_ME}
       DATABASE_URL: postgresql://${POSTGRES_USER:-app}:${POSTGRES_PASSWORD:-!ChangeMe!}@database:5432/${POSTGRES_DB:-app}?serverVersion=16&charset=utf8
+      SERVER_NAME: ":80"
+      FRANKENPHP_NUM_WORKERS: ${FRANKENPHP_NUM_WORKERS:-4}
       SUPER_ADMIN_EMAIL: ${SUPER_ADMIN_EMAIL:-admin@familyplan.local}
       SUPER_ADMIN_NAME: ${SUPER_ADMIN_NAME:-Super Admin}
       SUPER_ADMIN_PASSWORD: ${SUPER_ADMIN_PASSWORD:-CHANGE_ME}
@@ -38,25 +40,6 @@ services:
     depends_on:
       database:
         condition: service_healthy
-    networks:
-      - family-plan-network
-
-  nginx:
-    image: ghcr.io/jakubciszak/family-plan-nginx:${IMAGE_TAG:-latest}
-    container_name: family-plan-nginx
-    restart: unless-stopped
-    depends_on:
-      - php
-    networks:
-      - family-plan-network
-      - proxy-net
-
-  frontend:
-    image: ghcr.io/jakubciszak/family-plan-frontend:${IMAGE_TAG:-latest}
-    container_name: family-plan-frontend
-    restart: unless-stopped
-    depends_on:
-      - nginx
     networks:
       - family-plan-network
       - proxy-net
