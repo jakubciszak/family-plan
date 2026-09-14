@@ -316,7 +316,10 @@
     "bonus": "(+{{points}})",
     "nothingThatDay": "Nothing was credited that day.",
     "bonusLabel": "Bonus points",
-    "whoIsShown": "Who is shown"
+    "whoIsShown": "Who is shown",
+    "previous": "Previous week",
+    "next": "Next week",
+    "thisWeek": "This week"
   },
   "theme": {
     "appearance": "Appearance",

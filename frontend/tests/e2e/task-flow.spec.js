@@ -228,6 +228,43 @@ test.describe('Week calendar', () => {
     await expect(streak).toContainText('20');
   });
 
+  test('stepping back asks the api for the week before', async ({ page }) => {
+    const asked = [];
+    await page.route('**/api/points/week*', async route => {
+      asked.push(new URL(route.request().url()).searchParams.get('weekStart'));
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(mockApiResponses.weekWithStreak)
+      });
+    });
+
+    await page.goto('/');
+    await page.waitForSelector('.task-list-container');
+
+    const week = page.getByTestId('week-calendar');
+    await week.getByRole('button', { name: /previous week/i }).click();
+
+    await expect.poll(() => asked.length).toBeGreaterThan(1);
+    const stepped = new Date(asked[asked.length - 1]);
+    const started = new Date(asked[0] ?? new Date());
+    expect(stepped.getTime()).toBeLessThan(started.getTime());
+  });
+
+  test('a week in the past offers the way back to this one', async ({ page }) => {
+    await page.goto('/');
+    await page.waitForSelector('.task-list-container');
+
+    const week = page.getByTestId('week-calendar');
+    await expect(week.locator('.week-back-to-now')).toHaveCount(0);
+
+    await week.getByRole('button', { name: /previous week/i }).click();
+    await expect(week.locator('.week-back-to-now')).toBeVisible();
+
+    await week.locator('.week-back-to-now').click();
+    await expect(week.locator('.week-back-to-now')).toHaveCount(0);
+  });
+
   test('without a streak rule only the days are shown', async ({ page }) => {
     await page.route('**/api/points/week*', async route => {
       await route.fulfill({

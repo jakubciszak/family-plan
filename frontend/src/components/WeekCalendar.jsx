@@ -2,19 +2,43 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import taskService from '../services/taskService';
 import Icon from './md3/Icon';
+import IconButton from './md3/IconButton';
 
 const DAY_KEYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
 
+const SWIPE_THRESHOLD = 50;
+
+const mondayOf = (day) => {
+    const monday = new Date(day);
+    monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7));
+
+    return monday.toLocaleDateString('sv');
+};
+
+const shiftedBy = (day, days) => {
+    const shifted = new Date(day);
+    shifted.setDate(shifted.getDate() + days);
+
+    return shifted.toLocaleDateString('sv');
+};
+
 function WeekCalendar({ refreshToken, userId, title }) {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
     const [week, setWeek] = React.useState(null);
+    const [weekStart, setWeekStart] = React.useState(null);
     const [openDay, setOpenDay] = React.useState(null);
     const [dayDetail, setDayDetail] = React.useState(null);
+    const touchStart = React.useRef(null);
+
+    const goToWeek = (days) => {
+        setOpenDay(null);
+        setWeekStart((current) => shiftedBy(current || new Date(), days));
+    };
 
     React.useEffect(() => {
         let abandoned = false;
 
-        taskService.getWeek(undefined, userId)
+        taskService.getWeek(weekStart, userId)
             .then((data) => {
                 if (!abandoned) {
                     setWeek(data);
@@ -25,7 +49,7 @@ function WeekCalendar({ refreshToken, userId, title }) {
         return () => {
             abandoned = true;
         };
-    }, [refreshToken, userId]);
+    }, [refreshToken, userId, weekStart]);
 
     React.useEffect(() => {
         if (!openDay) {
@@ -54,13 +78,44 @@ function WeekCalendar({ refreshToken, userId, title }) {
     }
 
     const { streak } = week;
+    const isCurrentWeek = mondayOf(weekStart || new Date()) === mondayOf(new Date());
+    const range = [week.weekStart, shiftedBy(week.weekStart, 6)]
+        .map((day) => new Date(day).toLocaleDateString(i18n.language, { day: 'numeric', month: 'short' }))
+        .join(' – ');
+
+    const onTouchStart = (event) => {
+        touchStart.current = event.touches[0]?.clientX ?? null;
+    };
+
+    const onTouchEnd = (event) => {
+        const start = touchStart.current;
+        touchStart.current = null;
+
+        if (start === null) {
+            return;
+        }
+
+        const travelled = (event.changedTouches[0]?.clientX ?? start) - start;
+
+        if (travelled > SWIPE_THRESHOLD) {
+            goToWeek(-7);
+        } else if (travelled < -SWIPE_THRESHOLD && !isCurrentWeek) {
+            goToWeek(7);
+        }
+    };
 
     return (
-        <section className="week-calendar" data-testid="week-calendar">
+        <section
+            className="week-calendar"
+            data-testid="week-calendar"
+            onTouchStart={onTouchStart}
+            onTouchEnd={onTouchEnd}
+        >
             <div className="week-calendar-header">
                 <h3>
                     <Icon name="calendar" size={20} />
                     {title || t('week.title')}
+                    <span className="week-range">{range}</span>
                 </h3>
                 <span className="week-total">
                     <Icon name="stars" size={18} />
@@ -69,6 +124,28 @@ function WeekCalendar({ refreshToken, userId, title }) {
                         <span className="week-bonus">{t('week.bonus', { points: week.bonusTotal })}</span>
                     )}
                 </span>
+            </div>
+
+            <div className="week-steps">
+                <IconButton
+                    icon="back"
+                    variant="text"
+                    label={t('week.previous')}
+                    onClick={() => goToWeek(-7)}
+                />
+                {!isCurrentWeek && (
+                    <button type="button" className="week-back-to-now" onClick={() => setWeekStart(null)}>
+                        {t('week.thisWeek')}
+                    </button>
+                )}
+                <IconButton
+                    icon="back"
+                    variant="text"
+                    className="week-step--next"
+                    label={t('week.next')}
+                    disabled={isCurrentWeek}
+                    onClick={() => goToWeek(7)}
+                />
             </div>
 
             <ol className="week-days">

@@ -603,3 +603,38 @@
   outline: 3px solid var(--md-sys-color-primary);
   outline-offset: 2px;
 }
+
+.week-range {
+  margin-left: 8px;
+  opacity: 0.75;
+  font-size: var(--md-sys-typescale-body-small-size);
+  font-weight: 400;
+}
+
+.week-steps {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: -8px;
+}
+
+.week-step--next svg {
+  transform: rotate(180deg);
+}
+
+.week-steps .md-icon-button[disabled] {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.week-back-to-now {
+  padding: 4px 12px;
+  border: none;
+  border-radius: var(--md-sys-shape-corner-full);
+  background: var(--md-sys-color-surface-container-lowest);
+  color: var(--md-sys-color-on-surface-variant);
+  font-size: var(--md-sys-typescale-label-large-size);
+  font-weight: 500;
+  cursor: pointer;
+}
