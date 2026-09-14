@@ -2,13 +2,15 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import WeekCalendar from '../components/WeekCalendar';
 import taskService from '../services/taskService';
-import { Button, Icon, CircularProgress } from '../components/md3';
+import { Button, Icon, CircularProgress, Dialog, TextField } from '../components/md3';
 
 function MemberView({ member, onBack }) {
     const { t } = useTranslation();
     const [executions, setExecutions] = React.useState(null);
     const [error, setError] = React.useState(null);
     const [refreshToken, setRefreshToken] = React.useState(0);
+    const [toReject, setToReject] = React.useState(null);
+    const [reason, setReason] = React.useState('');
 
     const load = React.useCallback(async () => {
         try {
@@ -91,7 +93,7 @@ function MemberView({ member, onBack }) {
                                 <Button
                                     variant="outlined"
                                     icon="close"
-                                    onClick={() => run(() => taskService.rejectExecution(execution.id))}
+                                    onClick={() => { setToReject(execution); setReason(''); }}
                                 >
                                     {t('member.reject')}
                                 </Button>
@@ -111,6 +113,41 @@ function MemberView({ member, onBack }) {
                     </div>
                 )}
             </section>
+
+            <Dialog
+                open={!!toReject}
+                onClose={() => setToReject(null)}
+                headline={t('member.rejectHeadline', { name: toReject?.name })}
+                actions={
+                    <>
+                        <Button variant="text" onClick={() => setToReject(null)}>
+                            {t('common.cancel')}
+                        </Button>
+                        <Button
+                            tone="danger"
+                            icon="close"
+                            disabled={reason.trim() === ''}
+                            onClick={() => {
+                                const execution = toReject;
+                                setToReject(null);
+                                run(() => taskService.rejectExecution(execution.id, reason.trim()));
+                            }}
+                        >
+                            {t('member.reject')}
+                        </Button>
+                    </>
+                }
+            >
+                <TextField
+                    id="rejection-reason"
+                    as="textarea"
+                    label={t('member.reasonLabel')}
+                    value={reason}
+                    onChange={(e) => setReason(e.target.value)}
+                    supportingText={t('member.reasonHint')}
+                    required
+                />
+            </Dialog>
         </div>
     );
 }

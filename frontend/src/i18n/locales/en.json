@@ -82,7 +82,9 @@
     "giveBack": "Give it back",
     "loadFailed": "Could not load the tasks",
     "actionFailed": "The action did not go through",
-    "availableCollapsed": "Tasks to take"
+    "availableCollapsed": "Tasks to take",
+    "rejectedReason": "Rejected: {{reason}}",
+    "submitAgain": "Submit again"
   },
   "bonusRules": {
     "title": "Bonus Rules",
@@ -325,6 +327,9 @@
     "tasksOf": "Tasks: {{name}}",
     "reject": "Reject",
     "noTasks": "This member has no tasks.",
-    "tasksSection": "Tasks"
+    "tasksSection": "Tasks",
+    "rejectHeadline": "Reject: {{name}}?",
+    "reasonLabel": "Reason for rejection",
+    "reasonHint": "Say what needs fixing — the person who did the task will see this."
   }
 }

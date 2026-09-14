@@ -550,3 +550,16 @@
   text-decoration: underline;
   cursor: pointer;
 }
+
+.task-card--rejected {
+  border-left: 3px solid var(--md-sys-color-error);
+}
+
+.task-rejection-reason {
+  color: var(--md-sys-color-error);
+  font-size: var(--md-sys-typescale-body-small-size);
+}
+
+.task-status.status-rejected {
+  color: var(--md-sys-color-error);
+}

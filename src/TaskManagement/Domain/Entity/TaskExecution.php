@@ -68,12 +68,16 @@ class TaskExecution
         
         #[ORM\Column(type: 'datetime_immutable', nullable: true)]
         private ?DateTimeImmutable $approvedAt,
+
         
         #[ORM\Column(type: 'datetime_immutable')]
         private DateTimeImmutable $createdAt,
         
         #[ORM\Column(type: 'datetime_immutable', nullable: true)]
-        private ?DateTimeImmutable $updatedAt = null
+        private ?DateTimeImmutable $updatedAt = null,
+
+        #[ORM\Column(type: 'string', length: 500, nullable: true)]
+        private ?string $rejectionReason = null
     ) {
     }
 
@@ -269,9 +273,15 @@ class TaskExecution
         $this->getState()->approve($this, $adminId, $clock);
     }
 
-    public function reject(): void
+    public function reject(?string $reason = null): void
     {
         $this->getState()->reject($this);
+        $this->rejectionReason = $reason;
+    }
+
+    public function rejectionReason(): ?string
+    {
+        return $this->rejectionReason;
     }
 
     // Internal method called by state objects to transition to completed state

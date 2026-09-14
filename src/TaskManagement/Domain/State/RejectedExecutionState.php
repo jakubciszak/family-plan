@@ -13,7 +13,7 @@ final readonly class RejectedExecutionState implements ExecutionStateInterface
 {
     public function complete(TaskExecution $execution, Uuid $userId, ClockInterface $clock): void
     {
-        throw new DomainException('Cannot complete a rejected task execution');
+        $execution->transitionToState(new CompletedExecutionState(), $userId, $clock);
     }
 
     public function approve(TaskExecution $execution, Uuid $adminId, ClockInterface $clock): void

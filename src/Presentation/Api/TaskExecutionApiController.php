@@ -23,6 +23,7 @@ use DateTimeImmutable;
 use OpenApi\Attributes as OA;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
@@ -213,9 +214,19 @@ class TaskExecutionApiController extends AbstractController
     #[Route('/task-executions/{id}/reject', name: 'reject', methods: ['POST'])]
     #[OA\Post(path: '/api/task-executions/{id}/reject', summary: 'Send a finished task back as not done', tags: ['My tasks'])]
     #[OA\Response(response: 200, description: 'Task rejected, no points awarded')]
+    #[OA\Response(response: 400, description: 'A rejection needs a reason')]
     #[OA\Response(response: 403, description: 'Only team admins judge a finished task')]
-    public function reject(string $id): JsonResponse
+    public function reject(string $id, Request $request): JsonResponse
     {
+        $reason = trim((string) ($request->toArray()['reason'] ?? ''));
+
+        if ($reason === '') {
+            return $this->json(
+                ['error' => 'A rejection needs a reason the assignee can act on'],
+                Response::HTTP_BAD_REQUEST
+            );
+        }
+
         $execution = $this->execution($id);
         $teamId = $this->teamOf($this->templateOf($execution));
         $this->assertCarries(ResponsibilityType::approveTask(), $teamId);
@@ -224,7 +235,7 @@ class TaskExecutionApiController extends AbstractController
             throw new UnauthorizedTaskActionException('Nobody judges their own task');
         }
 
-        $execution->reject();
+        $execution->reject($reason);
         $this->executionRepository->save($execution);
 
         return $this->json($this->serialize($execution));
@@ -360,6 +371,7 @@ class TaskExecutionApiController extends AbstractController
             'completedAt' => $execution->completedAt()?->format(DATE_ATOM),
             'approvedAt' => $execution->approvedAt()?->format(DATE_ATOM),
             'createdAt' => $execution->createdAt()->format(DATE_ATOM),
+            'rejectionReason' => $execution->rejectionReason(),
         ];
     }
 }

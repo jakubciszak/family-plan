@@ -439,14 +439,67 @@ class TaskExecutionApiTest extends ApiTestCase
 
         $this->loginAs($context['admin']);
         $rejected = $this->assertJsonResponse(
-            $this->postJson("/api/task-executions/{$taken['id']}/reject", []),
+            $this->postJson("/api/task-executions/{$taken['id']}/reject", ['reason' => 'Zlew zostal brudny']),
             Response::HTTP_OK
         );
 
         $this->assertSame('rejected', $rejected['status']);
+        $this->assertSame('Zlew zostal brudny', $rejected['rejectionReason']);
 
         $points = $this->getJson('/api/users/' . $context['member']->id()->value() . '/points');
         $this->assertSame(0, $points['balance'], 'Odrzucone wykonanie nie daje punktow');
+    }
+
+    public function testARejectionWithoutAReasonIsRefused(): void
+    {
+        $context = $this->teamWithMember();
+        $type = $this->defineType($context['teamId'], ['type' => 'unlimited'], 4);
+
+        $this->loginAs($context['member']);
+        $taken = $this->assertJsonResponse(
+            $this->postJson("/api/task-templates/{$type['id']}/take", []),
+            Response::HTTP_CREATED
+        );
+        $this->postJson("/api/task-executions/{$taken['id']}/complete", []);
+
+        $this->loginAs($context['admin']);
+        $this->postJson("/api/task-executions/{$taken['id']}/reject", ['reason' => '   ']);
+
+        $this->assertResponseStatusCodeSame(Response::HTTP_BAD_REQUEST);
+    }
+
+    public function testARejectedTaskGoesBackForApprovalAndCanEarnItsPoints(): void
+    {
+        $context = $this->teamWithMember();
+        $type = $this->defineType($context['teamId'], ['type' => 'unlimited'], 11);
+
+        $this->loginAs($context['member']);
+        $taken = $this->assertJsonResponse(
+            $this->postJson("/api/task-templates/{$type['id']}/take", []),
+            Response::HTTP_CREATED
+        );
+        $this->postJson("/api/task-executions/{$taken['id']}/complete", []);
+
+        $this->loginAs($context['admin']);
+        $this->postJson("/api/task-executions/{$taken['id']}/reject", ['reason' => 'Popraw']);
+
+        $this->loginAs($context['member']);
+        $mine = $this->getJson('/api/task-executions/mine')['executions'];
+        $rejected = array_values(array_filter($mine, static fn (array $e) => $e['id'] === $taken['id']))[0];
+        $this->assertSame('rejected', $rejected['status']);
+        $this->assertSame('Popraw', $rejected['rejectionReason'], 'Czlonek widzi powod przy swoim zadaniu');
+
+        $again = $this->assertJsonResponse(
+            $this->postJson("/api/task-executions/{$taken['id']}/complete", []),
+            Response::HTTP_OK
+        );
+        $this->assertSame('completed', $again['status'], 'Odrzucone zadanie wraca do akceptacji');
+
+        $this->loginAs($context['admin']);
+        $this->postJson("/api/task-executions/{$taken['id']}/approve", []);
+
+        $points = $this->getJson('/api/users/' . $context['member']->id()->value() . '/points');
+        $this->assertSame(11, $points['balance']);
     }
 
     public function testLeaderboardIsClosedToOutsiders(): void

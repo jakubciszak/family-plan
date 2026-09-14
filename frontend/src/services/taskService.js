@@ -61,8 +61,8 @@ const taskService = {
         return await apiClient.get(`/api/task-executions/of/${userId}`);
     },
 
-    async rejectExecution(executionId) {
-        return await apiClient.post(`/api/task-executions/${executionId}/reject`, {});
+    async rejectExecution(executionId, reason) {
+        return await apiClient.post(`/api/task-executions/${executionId}/reject`, { reason });
     },
 
     async getAwaitingApproval() {

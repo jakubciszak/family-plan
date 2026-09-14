@@ -82,7 +82,9 @@
     "giveBack": "Oddaj do puli",
     "loadFailed": "Nie udało się wczytać zadań",
     "actionFailed": "Nie udało się wykonać akcji",
-    "availableCollapsed": "Zadania do wzięcia"
+    "availableCollapsed": "Zadania do wzięcia",
+    "rejectedReason": "Odrzucone: {{reason}}",
+    "submitAgain": "Zgłoś ponownie"
   },
   "bonusRules": {
     "title": "Zasady bonusowe",
@@ -325,6 +327,9 @@
     "tasksOf": "Zadania: {{name}}",
     "reject": "Odrzuć",
     "noTasks": "Ten członek nie ma żadnych zadań.",
-    "tasksSection": "Zadania"
+    "tasksSection": "Zadania",
+    "rejectHeadline": "Odrzucić: {{name}}?",
+    "reasonLabel": "Powód odrzucenia",
+    "reasonHint": "Napisz, co trzeba poprawić — zobaczy to osoba, która wykonała zadanie."
   }
 }

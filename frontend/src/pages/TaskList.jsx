@@ -108,6 +108,9 @@ function TaskList({ onNavigate, user, onInspectMember }) {
     const myFinishedTasks = myTasks.filter(
         (task) => task.status === 'completed' && belongsToSelectedTeam(teamOfType(task.taskTemplateId))
     );
+    const myRejectedTasks = myTasks.filter(
+        (task) => task.status === 'rejected' && belongsToSelectedTeam(teamOfType(task.taskTemplateId))
+    );
 
     if (loading) {
         return <CircularProgress label={t('common.loading')} />;
@@ -134,7 +137,7 @@ function TaskList({ onNavigate, user, onInspectMember }) {
     const myTasksSection = (
         <section className="task-section" data-testid="my-tasks">
                 <h3><Icon name="person" size={20} />{t('tasks.mySection')}</h3>
-                {myOpenTasks.length === 0 && myFinishedTasks.length === 0 ? (
+                {myOpenTasks.length === 0 && myFinishedTasks.length === 0 && myRejectedTasks.length === 0 ? (
                     <p className="empty-hint">{t('tasks.noneTaken')}</p>
                 ) : (
                     <div className="tasks">
@@ -158,6 +161,31 @@ function TaskList({ onNavigate, user, onInspectMember }) {
                                         onClick={() => run(() => taskService.abandon(task.id))}
                                     >
                                         {t('tasks.giveBack')}
+                                    </Button>
+                                </div>
+                            </div>
+                        ))}
+                        {myRejectedTasks.map((task) => (
+                            <div className="task-card task-card--rejected" key={task.id}>
+                                <div className="task-row">
+                                    <span className="task-name">{task.name}</span>
+                                    {points(task.points)}
+                                    <span className="task-status status-rejected">
+                                        <Icon name="error" size={16} />
+                                        {t('tasks.status.rejected', 'rejected')}
+                                    </span>
+                                </div>
+                                {task.rejectionReason && (
+                                    <p className="task-rejection-reason">
+                                        {t('tasks.rejectedReason', { reason: task.rejectionReason })}
+                                    </p>
+                                )}
+                                <div className="task-actions">
+                                    <Button
+                                        icon="check"
+                                        onClick={() => run(() => taskService.complete(task.id))}
+                                    >
+                                        {t('tasks.submitAgain')}
                                     </Button>
                                 </div>
                             </div>
