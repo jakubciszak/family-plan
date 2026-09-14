@@ -4,11 +4,17 @@ declare(strict_types=1);
 
 namespace App\Notifications\Domain\ValueObject;
 
+use App\Shared\Domain\ValueObject\Uuid;
+
 final readonly class Recipient
 {
+    private const EMAIL = 'email';
+    private const PHONE_NUMBER = 'phone_number';
+    private const USER_ID = 'user_id';
+
     private function __construct(
         private string $value,
-        private bool $isEmail
+        private string $type
     ) {
     }
 
@@ -22,7 +28,7 @@ final readonly class Recipient
             throw new \InvalidArgumentException('Invalid email address');
         }
 
-        return new self($email, true);
+        return new self($email, self::EMAIL);
     }
 
     public static function phoneNumber(string $phoneNumber): self
@@ -31,7 +37,20 @@ final readonly class Recipient
             throw new \InvalidArgumentException('Phone number cannot be empty');
         }
 
-        return new self($phoneNumber, false);
+        return new self($phoneNumber, self::PHONE_NUMBER);
+    }
+
+    public static function userId(string $userId): self
+    {
+        if (empty($userId)) {
+            throw new \InvalidArgumentException('User id cannot be empty');
+        }
+
+        if (!Uuid::isValid($userId)) {
+            throw new \InvalidArgumentException('Invalid user id');
+        }
+
+        return new self($userId, self::USER_ID);
     }
 
     public function value(): string
@@ -41,11 +60,16 @@ final readonly class Recipient
 
     public function isEmail(): bool
     {
-        return $this->isEmail;
+        return $this->type === self::EMAIL;
     }
 
     public function isPhoneNumber(): bool
     {
-        return !$this->isEmail;
+        return $this->type === self::PHONE_NUMBER;
+    }
+
+    public function isUserId(): bool
+    {
+        return $this->type === self::USER_ID;
     }
 }

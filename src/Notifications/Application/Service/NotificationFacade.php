@@ -52,11 +52,20 @@ final readonly class NotificationFacade
         $this->send('sms', $recipient, $message, null, $additionalParameters);
     }
 
+    public function sendInApp(
+        string $userId,
+        string $message,
+        ?string $subject = null,
+        array $additionalParameters = []
+    ): void {
+        $this->send('in_app', $userId, $message, $subject, $additionalParameters);
+    }
+
     /**
      * Send a notification using any supported channel
      *
-     * @param string $channel Communication channel (email, sms)
-     * @param string $recipient Recipient address (email or phone number)
+     * @param string $channel Communication channel (email, sms, in_app)
+     * @param string $recipient Recipient address (email, phone number or user id)
      * @param string $message Message content
      * @param string|null $subject Message subject (for email)
      * @param array $additionalParameters Channel-specific parameters

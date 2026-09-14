@@ -332,5 +332,8 @@
     "rejectHeadline": "Odrzucić: {{name}}?",
     "reasonLabel": "Powód odrzucenia",
     "reasonHint": "Napisz, co trzeba poprawić — zobaczy to osoba, która wykonała zadanie."
+  },
+  "notifications": {
+    "dismiss": "Zamknij"
   }
 }

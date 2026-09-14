@@ -11,6 +11,7 @@ import TeamManagement from './pages/TeamManagement';
 import TaskTypeManagement from './pages/TaskTypeManagement';
 import Account from './pages/Account';
 import InstallPrompt from './components/InstallPrompt';
+import NotificationCenter from './components/NotificationCenter';
 import AppNavigation from './components/AppNavigation';
 import AppBarActions from './components/AppBarActions';
 import useThemeMode from './hooks/useThemeMode';
@@ -262,6 +263,7 @@ function App() {
                 {currentPage === 'settings' && <UserSettings user={user} />}
             </main>
 
+            <NotificationCenter />
             <InstallPrompt />
         </div>
     );

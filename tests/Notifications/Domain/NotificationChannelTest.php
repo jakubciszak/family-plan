@@ -23,13 +23,22 @@ class NotificationChannelTest extends TestCase
         $this->assertEquals('sms', $channel->value());
     }
 
+    public function testCanCreateInAppChannel(): void
+    {
+        $channel = NotificationChannel::inApp();
+
+        $this->assertEquals('in_app', $channel->value());
+    }
+
     public function testFromStringCreatesCorrectChannel(): void
     {
         $emailChannel = NotificationChannel::fromString('email');
         $smsChannel = NotificationChannel::fromString('sms');
+        $inAppChannel = NotificationChannel::fromString('in_app');
         
         $this->assertEquals('email', $emailChannel->value());
         $this->assertEquals('sms', $smsChannel->value());
+        $this->assertEquals('in_app', $inAppChannel->value());
     }
 
     public function testThrowsExceptionForInvalidChannel(): void
@@ -46,6 +55,16 @@ class NotificationChannelTest extends TestCase
         
         $this->assertTrue($channel->isEmail());
         $this->assertFalse($channel->isSms());
+        $this->assertFalse($channel->isInApp());
+    }
+
+    public function testInAppChannelIsInApp(): void
+    {
+        $channel = NotificationChannel::inApp();
+        
+        $this->assertTrue($channel->isInApp());
+        $this->assertFalse($channel->isEmail());
+        $this->assertFalse($channel->isSms());
     }
 
     public function testSmsChannelIsSms(): void
@@ -54,5 +73,6 @@ class NotificationChannelTest extends TestCase
         
         $this->assertTrue($channel->isSms());
         $this->assertFalse($channel->isEmail());
+        $this->assertFalse($channel->isInApp());
     }
 }

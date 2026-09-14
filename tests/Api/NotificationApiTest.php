@@ -1,0 +1,144 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Tests\Api;
+
+use App\Notifications\Application\Service\NotificationFacade;
+use App\Notifications\Domain\Repository\InAppNotificationRepositoryInterface;
+use App\Shared\Domain\ValueObject\Uuid;
+use App\UserManagement\Domain\Entity\User;
+use App\UserManagement\Domain\Repository\UserRepositoryInterface;
+use App\UserManagement\Domain\ValueObject\Email;
+use App\UserManagement\Domain\ValueObject\Role;
+use Symfony\Component\HttpFoundation\Response;
+
+class NotificationApiTest extends ApiTestCase
+{
+    public function testItListsTheNotificationsOfTheCaller(): void
+    {
+        $this->sendTo($this->currentUser, 'You earned 10 points', 'Task approved', ['points' => 10]);
+
+        $data = $this->getJson('/api/notifications');
+
+        $this->assertCount(1, $data['notifications']);
+        $this->assertSame(1, $data['unreadCount']);
+        $this->assertSame('You earned 10 points', $data['notifications'][0]['message']);
+        $this->assertSame('Task approved', $data['notifications'][0]['subject']);
+        $this->assertSame(['points' => 10], $data['notifications'][0]['parameters']);
+        $this->assertNull($data['notifications'][0]['readAt']);
+    }
+
+    public function testItNeverListsSomebodyElsesNotifications(): void
+    {
+        $stranger = $this->anotherUser();
+        $this->sendTo($stranger, 'Not for you');
+        $this->sendTo($this->currentUser, 'For you');
+
+        $data = $this->getJson('/api/notifications');
+
+        $this->assertCount(1, $data['notifications']);
+        $this->assertSame('For you', $data['notifications'][0]['message']);
+    }
+
+    public function testItListsOnlyTheUnreadOnesWhenAsked(): void
+    {
+        $this->sendTo($this->currentUser, 'Already seen');
+        $this->sendTo($this->currentUser, 'Still new');
+
+        $seen = $this->getJson('/api/notifications')['notifications'];
+        $alreadySeen = array_values(array_filter(
+            $seen,
+            static fn (array $notification) => $notification['message'] === 'Already seen'
+        ))[0];
+
+        $this->postJson(sprintf('/api/notifications/%s/read', $alreadySeen['id']), []);
+
+        $data = $this->getJson('/api/notifications?unread=1');
+
+        $this->assertCount(1, $data['notifications']);
+        $this->assertSame('Still new', $data['notifications'][0]['message']);
+        $this->assertSame(1, $data['unreadCount']);
+    }
+
+    public function testMarkingOneAsReadStampsItAndDropsTheCount(): void
+    {
+        $this->sendTo($this->currentUser, 'Read me');
+        $id = $this->getJson('/api/notifications')['notifications'][0]['id'];
+
+        $data = $this->assertJsonResponse($this->postJson(sprintf('/api/notifications/%s/read', $id), []));
+
+        $this->assertNotNull($data['notification']['readAt']);
+        $this->assertSame(0, $data['unreadCount']);
+    }
+
+    public function testItRefusesToMarkSomebodyElsesNotification(): void
+    {
+        $stranger = $this->anotherUser();
+        $this->sendTo($stranger, 'Not for you');
+
+        $notification = $this->notifications()->unreadFor($stranger->id(), 10)[0];
+
+        $response = $this->postJson(sprintf('/api/notifications/%s/read', $notification->id()->value()), []);
+
+        $this->assertSame(Response::HTTP_NOT_FOUND, $response->getStatusCode());
+        $this->assertFalse($this->notifications()->findById($notification->id())->isRead());
+    }
+
+    public function testAnUnknownNotificationIsNotFound(): void
+    {
+        $response = $this->postJson(sprintf('/api/notifications/%s/read', Uuid::generate()->value()), []);
+
+        $this->assertSame(Response::HTTP_NOT_FOUND, $response->getStatusCode());
+    }
+
+    public function testMarkingAllAsReadLeavesOtherUsersAlone(): void
+    {
+        $stranger = $this->anotherUser();
+        $this->sendTo($stranger, 'Not for you');
+        $this->sendTo($this->currentUser, 'First');
+        $this->sendTo($this->currentUser, 'Second');
+
+        $data = $this->assertJsonResponse($this->postJson('/api/notifications/read-all', []));
+
+        $this->assertSame(2, $data['marked']);
+        $this->assertSame(0, $data['unreadCount']);
+        $this->assertSame(0, $this->getJson('/api/notifications')['unreadCount']);
+        $this->assertCount(1, $this->notifications()->unreadFor($stranger->id(), 10));
+    }
+
+    public function testItAnswersAnonymousCallersWithUnauthorized(): void
+    {
+        $this->client->request('POST', '/api/auth/logout');
+        $this->client->request('GET', '/api/notifications', [], [], ['HTTP_ACCEPT' => 'application/json']);
+
+        $this->assertSame(Response::HTTP_UNAUTHORIZED, $this->client->getResponse()->getStatusCode());
+    }
+
+    private function sendTo(User $user, string $message, ?string $subject = null, array $parameters = []): void
+    {
+        static::getContainer()
+            ->get(NotificationFacade::class)
+            ->sendInApp($user->id()->value(), $message, $subject, $parameters);
+    }
+
+    private function notifications(): InAppNotificationRepositoryInterface
+    {
+        return static::getContainer()->get(InAppNotificationRepositoryInterface::class);
+    }
+
+    private function anotherUser(): User
+    {
+        $user = User::create(
+            Uuid::generate(),
+            'Someone Else',
+            Email::fromString(sprintf('stranger-%s@example.com', uniqid())),
+            password_hash('password123', PASSWORD_BCRYPT),
+            Role::USER
+        );
+
+        static::getContainer()->get(UserRepositoryInterface::class)->save($user);
+
+        return $user;
+    }
+}

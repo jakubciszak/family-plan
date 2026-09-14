@@ -70,6 +70,12 @@ doctrine:
                 dir: '%kernel.project_dir%/src/Party/Domain/Entity'
                 prefix: 'App\Party\Domain\Entity'
                 alias: Party
+            Notifications:
+                type: attribute
+                is_bundle: false
+                dir: '%kernel.project_dir%/src/Notifications/Domain/Entity'
+                prefix: 'App\Notifications\Domain\Entity'
+                alias: Notifications
         controller_resolver:
             auto_mapping: false
 

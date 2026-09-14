@@ -69,6 +69,9 @@ services:
     App\TaskManagement\Domain\Repository\StatusChangeRuleRepositoryInterface:
         class: App\TaskManagement\Infrastructure\Persistence\DoctrineStatusChangeRuleRepository
 
+    App\Notifications\Domain\Repository\InAppNotificationRepositoryInterface:
+        class: App\Notifications\Infrastructure\Persistence\DoctrineInAppNotificationRepository
+
     App\UserSettings\Domain\Repository\UserSettingsRepositoryInterface:
         class: App\UserSettings\Infrastructure\Persistence\DoctrineUserSettingsRepository
 
@@ -155,6 +158,9 @@ services:
         arguments:
             $apiUrl: '%env(SMS_API_URL)%'
             $apiToken: '%env(SMS_API_TOKEN)%'
+        tags: ['notification.adapter']
+
+    App\Notifications\Infrastructure\Adapter\InAppNotificationAdapter:
         tags: ['notification.adapter']
 
     App\Notifications\Application\Handler\SendNotificationHandler:

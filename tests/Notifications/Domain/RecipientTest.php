@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Notifications\Domain;
 
 use App\Notifications\Domain\ValueObject\Recipient;
+use App\Shared\Domain\ValueObject\Uuid;
 use PHPUnit\Framework\TestCase;
 
 class RecipientTest extends TestCase
@@ -16,6 +17,7 @@ class RecipientTest extends TestCase
         $this->assertEquals('test@example.com', $recipient->value());
         $this->assertTrue($recipient->isEmail());
         $this->assertFalse($recipient->isPhoneNumber());
+        $this->assertFalse($recipient->isUserId());
     }
 
     public function testCanCreatePhoneRecipient(): void
@@ -25,6 +27,35 @@ class RecipientTest extends TestCase
         $this->assertEquals('+48123456789', $recipient->value());
         $this->assertTrue($recipient->isPhoneNumber());
         $this->assertFalse($recipient->isEmail());
+        $this->assertFalse($recipient->isUserId());
+    }
+
+    public function testCanCreateUserIdRecipient(): void
+    {
+        $userId = Uuid::generate()->value();
+
+        $recipient = Recipient::userId($userId);
+
+        $this->assertEquals($userId, $recipient->value());
+        $this->assertTrue($recipient->isUserId());
+        $this->assertFalse($recipient->isEmail());
+        $this->assertFalse($recipient->isPhoneNumber());
+    }
+
+    public function testThrowsExceptionForInvalidUserId(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Invalid user id');
+
+        Recipient::userId('not-a-uuid');
+    }
+
+    public function testThrowsExceptionForEmptyUserId(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('User id cannot be empty');
+
+        Recipient::userId('');
     }
 
     public function testThrowsExceptionForInvalidEmail(): void

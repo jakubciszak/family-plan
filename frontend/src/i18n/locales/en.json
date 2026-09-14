@@ -332,5 +332,8 @@
     "rejectHeadline": "Reject: {{name}}?",
     "reasonLabel": "Reason for rejection",
     "reasonHint": "Say what needs fixing — the person who did the task will see this."
+  },
+  "notifications": {
+    "dismiss": "Dismiss"
   }
 }

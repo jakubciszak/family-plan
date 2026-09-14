@@ -1,0 +1,41 @@
+.notification-center {
+  position: fixed;
+  left: 50%;
+  bottom: calc(16px + env(safe-area-inset-bottom));
+  z-index: 60;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 8px;
+  width: min(560px, calc(100vw - 32px));
+  pointer-events: none;
+}
+
+.notification-center .md-snackbar {
+  position: static;
+  left: auto;
+  bottom: auto;
+  transform: none;
+  width: 100%;
+  pointer-events: auto;
+  animation: notification-center-in var(--md-sys-motion-duration-medium2) var(--md-sys-motion-easing-emphasized-decelerate);
+}
+
+.notification-center__subject {
+  display: block;
+  margin-bottom: 2px;
+  font-weight: 500;
+}
+
+@keyframes notification-center-in {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .notification-center .md-snackbar {
+    animation: none;
+  }
+}
