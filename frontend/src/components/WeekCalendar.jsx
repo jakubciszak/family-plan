@@ -5,7 +5,7 @@ import Icon from './md3/Icon';
 
 const DAY_KEYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
 
-function WeekCalendar({ refreshToken, userId }) {
+function WeekCalendar({ refreshToken, userId, title }) {
     const { t } = useTranslation();
     const [week, setWeek] = React.useState(null);
     const [openDay, setOpenDay] = React.useState(null);
@@ -60,7 +60,7 @@ function WeekCalendar({ refreshToken, userId }) {
             <div className="week-calendar-header">
                 <h3>
                     <Icon name="calendar" size={20} />
-                    {t('week.title')}
+                    {title || t('week.title')}
                 </h3>
                 <span className="week-total">
                     <Icon name="stars" size={18} />

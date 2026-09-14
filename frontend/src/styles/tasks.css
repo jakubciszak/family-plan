@@ -563,3 +563,43 @@
 .task-status.status-rejected {
   color: var(--md-sys-color-error);
 }
+
+.member-weeks {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.member-weeks__who {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.member-chip {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-medium);
+  background: var(--md-sys-color-surface-container-low);
+  color: var(--md-sys-color-on-surface-variant);
+  font-size: var(--md-sys-typescale-title-medium-size);
+  font-weight: 500;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background var(--md-sys-motion-duration-short4) var(--md-sys-motion-easing-standard),
+    color var(--md-sys-motion-duration-short4) var(--md-sys-motion-easing-standard);
+}
+
+.member-chip.is-shown {
+  border-color: transparent;
+  background: var(--md-sys-color-primary-container);
+  color: var(--md-sys-color-on-primary-container);
+}
+
+.member-chip:focus-visible {
+  outline: 3px solid var(--md-sys-color-primary);
+  outline-offset: 2px;
+}

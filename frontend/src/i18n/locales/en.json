@@ -87,7 +87,8 @@
     "actionFailed": "The action did not go through",
     "availableCollapsed": "Tasks to take",
     "rejectedReason": "Rejected: {{reason}}",
-    "submitAgain": "Submit again"
+    "submitAgain": "Submit again",
+    "standingsCollapsed": "Standings"
   },
   "bonusRules": {
     "title": "Bonus Rules",
@@ -310,7 +311,8 @@
     },
     "bonus": "(+{{points}})",
     "nothingThatDay": "Nothing was credited that day.",
-    "bonusLabel": "Bonus points"
+    "bonusLabel": "Bonus points",
+    "whoIsShown": "Who is shown"
   },
   "theme": {
     "appearance": "Appearance",

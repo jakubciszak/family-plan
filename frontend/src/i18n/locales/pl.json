@@ -87,7 +87,8 @@
     "actionFailed": "Nie udało się wykonać akcji",
     "availableCollapsed": "Zadania do wzięcia",
     "rejectedReason": "Odrzucone: {{reason}}",
-    "submitAgain": "Zgłoś ponownie"
+    "submitAgain": "Zgłoś ponownie",
+    "standingsCollapsed": "Tabela wyników"
   },
   "bonusRules": {
     "title": "Zasady bonusowe",
@@ -310,7 +311,8 @@
     },
     "bonus": "(+{{points}})",
     "nothingThatDay": "Tego dnia nic nie zostało zaliczone.",
-    "bonusLabel": "Punkty bonusowe"
+    "bonusLabel": "Punkty bonusowe",
+    "whoIsShown": "Kogo pokazać"
   },
   "theme": {
     "appearance": "Wygląd",

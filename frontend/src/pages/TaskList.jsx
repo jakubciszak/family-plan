@@ -2,6 +2,7 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import WeekCalendar from '../components/WeekCalendar';
 import Leaderboard from '../components/Leaderboard';
+import MemberWeeks from '../components/MemberWeeks';
 import taskService from '../services/taskService';
 import teamService from '../services/teamService';
 import { Button, Icon, Select, CircularProgress } from '../components/md3';
@@ -124,6 +125,8 @@ function TaskList({ onNavigate, user, onInspectMember }) {
     );
 
     const myWeek = <WeekCalendar refreshToken={refreshToken} />;
+
+    const teamWeeks = <MemberWeeks teamId={selectedTeam?.id} refreshToken={refreshToken} />;
 
     const standings = (
         <Leaderboard
@@ -313,7 +316,7 @@ function TaskList({ onNavigate, user, onInspectMember }) {
 
             {isTeamAdmin ? (
                 <>
-                    {standings}
+                    {teamWeeks}
                     {approvalQueue}
                     <details className="task-section task-section--collapsible" data-testid="available-tasks-collapsed">
                         <summary>
@@ -321,6 +324,13 @@ function TaskList({ onNavigate, user, onInspectMember }) {
                             {t('tasks.availableCollapsed')}
                         </summary>
                         {available}
+                    </details>
+                    <details className="task-section task-section--collapsible" data-testid="standings-collapsed">
+                        <summary>
+                            <Icon name="stars" size={20} />
+                            {t('tasks.standingsCollapsed')}
+                        </summary>
+                        {standings}
                     </details>
                 </>
             ) : (
