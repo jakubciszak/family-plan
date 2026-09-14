@@ -197,6 +197,24 @@ curl -o /dev/null -w '%{http_code}\n' https://family-plan.srv1201847.hstgr.cloud
 curl -sL -o /dev/null -w '%{http_code}\n' https://family-plan.srv1201847.hstgr.cloud/api/doc
 ```
 
+## Dostęp do bazy produkcyjnej
+
+Postgres jest opublikowany na VPS-ie **wyłącznie na pętli zwrotnej**
+(`127.0.0.1:5432`), więc z internetu jest niewidoczny. Jedyna droga to tunel SSH:
+
+```bash
+ssh -f -N -L 15432:127.0.0.1:5432 root@72.62.50.155
+```
+
+Potem klient łączy się z `localhost:15432`, baza `familyplan`, użytkownik `familyplan`.
+Hasło jest w zmiennych projektu w Docker Managerze.
+
+Tunel zamyka się przez `pkill -f "15432:127.0.0.1:5432"`. Port po stronie VPS-a zmienia
+zmienna `POSTGRES_HOST_PORT`.
+
+Klienta warto ustawić w trybie **read-only** — to jest żywa baza, bez automatycznych
+backupów. Jedyna kopia to ręczny snapshot maszyny, jeden na maszynę.
+
 ## Rollback
 
 Obrazy są tagowane także tagiem wydania i sha commita, więc wycofanie sprowadza się do wskazania
