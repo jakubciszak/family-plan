@@ -182,6 +182,15 @@ class BonusPointsRuleApiController extends AbstractController
     ): JsonResponse {
         $this->assertTeamAdmin(Uuid::fromString($request->teamId));
 
+        foreach ($request->ruleConfig['accounts'] ?? [] as $account) {
+            if (!is_string($account) || AccountKind::tryFrom($account) === null) {
+                return $this->json(
+                    ['error' => 'ruleConfig.accounts must only hold known account kinds'],
+                    Response::HTTP_BAD_REQUEST
+                );
+            }
+        }
+
         if ($request->ruleType === 'consecutive_days') {
             $templateId = $request->ruleConfig['taskTemplateId'] ?? null;
 
@@ -212,14 +221,6 @@ class BonusPointsRuleApiController extends AbstractController
                 );
             }
 
-            foreach ($request->ruleConfig['accounts'] ?? [] as $account) {
-                if (!is_string($account) || AccountKind::tryFrom($account) === null) {
-                    return $this->json(
-                        ['error' => 'ruleConfig.accounts must only hold known account kinds'],
-                        Response::HTTP_BAD_REQUEST
-                    );
-                }
-            }
         }
 
         $command = new CreateBonusPointsRuleCommand(

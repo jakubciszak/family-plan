@@ -31,7 +31,8 @@ final readonly class CreateBonusPointsRuleHandler
                 (int) ($command->ruleConfig['pointsPerDay'] ?? 1),
                 isset($command->ruleConfig['taskTemplateId'])
                     ? Uuid::fromString($command->ruleConfig['taskTemplateId'])
-                    : null
+                    : null,
+                $command->ruleConfig['accounts'] ?? []
             ),
             RuleType::MONTHLY_TASK_COUNT => RuleConfig::monthlyTaskCount(
                 $command->ruleConfig['requiredCount']

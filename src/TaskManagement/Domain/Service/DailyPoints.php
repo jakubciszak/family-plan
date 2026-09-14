@@ -28,13 +28,13 @@ final class DailyPoints
     }
 
     /**
-     * @param TaskExecution[] $executions
+     * @param array<string, int> $perDay
      * @return string[] days that reached the threshold, oldest first
      */
-    public static function daysReaching(array $executions, int $pointsPerDay): array
+    public static function daysReaching(array $perDay, int $pointsPerDay): array
     {
         return array_keys(array_filter(
-            self::perDay($executions),
+            $perDay,
             static fn (int $points) => $points >= $pointsPerDay
         ));
     }

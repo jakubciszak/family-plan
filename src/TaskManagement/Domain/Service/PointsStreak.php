@@ -4,16 +4,14 @@ declare(strict_types=1);
 
 namespace App\TaskManagement\Domain\Service;
 
-use App\TaskManagement\Domain\Entity\TaskExecution;
-
-final class ExecutionStreak
+final class PointsStreak
 {
     /**
-     * @param TaskExecution[] $executions
+     * @param array<string, int> $perDay
      */
-    public static function longest(array $executions, int $pointsPerDay = 1): int
+    public static function longest(array $perDay, int $pointsPerDay = 1): int
     {
-        $days = DailyPoints::daysReaching($executions, $pointsPerDay);
+        $days = DailyPoints::daysReaching($perDay, $pointsPerDay);
 
         if ($days === []) {
             return 0;
@@ -40,12 +38,12 @@ final class ExecutionStreak
     }
 
     /**
-     * @param TaskExecution[] $executions
+     * @param array<string, int> $perDay
      * @return string[] the days of the run that ends on the most recent qualifying day
      */
-    public static function current(array $executions, int $pointsPerDay = 1): array
+    public static function current(array $perDay, int $pointsPerDay = 1): array
     {
-        $days = DailyPoints::daysReaching($executions, $pointsPerDay);
+        $days = DailyPoints::daysReaching($perDay, $pointsPerDay);
 
         if ($days === []) {
             return [];

@@ -13,7 +13,8 @@ use App\TaskManagement\Domain\Entity\BonusPointsRule;
 use App\TaskManagement\Domain\Repository\BonusPointsRuleRepositoryInterface;
 use App\TaskManagement\Domain\Repository\TaskExecutionRepositoryInterface;
 use App\TaskManagement\Domain\Service\DailyPoints;
-use App\TaskManagement\Domain\Service\ExecutionStreak;
+use App\TaskManagement\Domain\Service\PointsStreak;
+use App\TaskManagement\Domain\Service\StreakDailyPoints;
 use App\TaskManagement\Domain\ValueObject\RuleType;
 use App\TeamManagement\Domain\Repository\TeamMembershipRepositoryInterface;
 use App\UserManagement\Domain\Repository\UserRepositoryInterface;
@@ -37,7 +38,8 @@ class PointsCalendarApiController extends AbstractController
         private readonly PartyResponsibilities $responsibilities,
         private readonly UserRepositoryInterface $userRepository,
         private readonly TeamMembershipRepositoryInterface $memberships,
-        private readonly PointsLedger $ledger
+        private readonly PointsLedger $ledger,
+        private readonly StreakDailyPoints $streakPoints
     ) {
     }
 
@@ -123,9 +125,11 @@ class PointsCalendarApiController extends AbstractController
         $rule = $this->streakRule($userId);
         $pointsPerDay = $rule?->config()->pointsPerDay() ?? 1;
 
+        $since = $monday->modify(sprintf('-%d days', $this->reach($rule)));
+
         $earned = $this->executionRepository->findApprovedByUserSince(
             $userId,
-            $monday->modify(sprintf('-%d days', $this->reach($rule))),
+            $since,
             $rule?->config()->taskTemplateId()
         );
 
@@ -136,7 +140,10 @@ class PointsCalendarApiController extends AbstractController
             $monday->modify('+7 days'),
             [AccountKind::BONUSES]
         );
-        $streakDays = $rule === null ? [] : ExecutionStreak::current($earned, $pointsPerDay);
+        $counted = $rule === null
+            ? []
+            : $this->streakPoints->perDay($rule->config(), $userId, $since, $monday->modify('+7 days'));
+        $streakDays = $rule === null ? [] : PointsStreak::current($counted, $pointsPerDay);
         $today = (new DateTimeImmutable())->format('Y-m-d');
 
         $days = [];
@@ -148,7 +155,7 @@ class PointsCalendarApiController extends AbstractController
                 'date' => $day,
                 'points' => $points,
                 'bonus' => $bonusPerDay[$day] ?? 0,
-                'reachedThreshold' => $rule !== null && $points >= $pointsPerDay,
+                'reachedThreshold' => $rule !== null && ($counted[$day] ?? 0) >= $pointsPerDay,
                 'inStreak' => in_array($day, $streakDays, true),
                 'isToday' => $day === $today,
             ];

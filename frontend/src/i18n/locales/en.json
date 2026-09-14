@@ -109,7 +109,7 @@
     "requiredDaysHint": "How many days in a row must earn points",
     "pointsPerDay": "Points a day",
     "pointsPerDayHint": "How many points a day must be earned for the day to count towards the streak",
-    "consecutiveDaysSummary": "{{days}} days in a row with at least {{points}} points a day",
+    "consecutiveDaysSummary": "{{days}} days in a row with at least {{points}} points a day ({{accounts}})",
     "monthlyCountSummary": "{{count}} tasks in a month",
     "ruleTypes": {
       "consecutive_days": "Consecutive Days",
@@ -131,7 +131,8 @@
       "bonuses": "Bonus"
     },
     "weeklySumSummary": "{{points}} points a week ({{accounts}})",
-    "allAccounts": "all points"
+    "allAccounts": "all points",
+    "streakAccountsHint": "Nothing selected = task points count"
   },
   "user": {
     "points": "{{points}} points",

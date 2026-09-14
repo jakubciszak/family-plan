@@ -48,6 +48,67 @@ class BonusRuleApiTest extends ApiTestCase
         );
     }
 
+    public function testAStreakRuleKeepsTheAccountsItWasGiven(): void
+    {
+        $teamId = $this->createTeam();
+
+        $this->assertSame(
+            Response::HTTP_CREATED,
+            $this->postJson('/api/bonus-rules', [
+                'teamId' => $teamId,
+                'name' => 'Seria za bonusy',
+                'description' => 'Trzy dni z rzedu',
+                'bonusPoints' => 30,
+                'ruleType' => 'consecutive_days',
+                'ruleConfig' => [
+                    'requiredDays' => 3,
+                    'pointsPerDay' => 20,
+                    'accounts' => ['bonuses'],
+                ],
+            ])->getStatusCode()
+        );
+
+        $rules = $this->getJson('/api/bonus-rules')['rules'];
+        $rule = array_values(array_filter($rules, static fn (array $rule) => $rule['name'] === 'Seria za bonusy'))[0];
+
+        $this->assertSame(['bonuses'], $rule['config']['accounts']);
+    }
+
+    public function testAStreakRuleWithoutAccountsCountsTaskPoints(): void
+    {
+        $teamId = $this->createTeam();
+
+        $this->postJson('/api/bonus-rules', [
+            'teamId' => $teamId,
+            'name' => 'Seria domyslna',
+            'description' => 'Trzy dni z rzedu',
+            'bonusPoints' => 30,
+            'ruleType' => 'consecutive_days',
+            'ruleConfig' => ['requiredDays' => 3, 'pointsPerDay' => 20],
+        ]);
+
+        $rules = $this->getJson('/api/bonus-rules')['rules'];
+        $rule = array_values(array_filter($rules, static fn (array $rule) => $rule['name'] === 'Seria domyslna'))[0];
+
+        $this->assertSame(['tasks'], $rule['config']['accounts']);
+    }
+
+    public function testAStreakRuleRefusesAnUnknownAccount(): void
+    {
+        $teamId = $this->createTeam();
+
+        $response = $this->postJson('/api/bonus-rules', [
+            'teamId' => $teamId,
+            'name' => 'Seria z kosmosu',
+            'description' => 'Trzy dni z rzedu',
+            'bonusPoints' => 30,
+            'ruleType' => 'consecutive_days',
+            'ruleConfig' => ['requiredDays' => 3, 'accounts' => ['skarbonka']],
+        ]);
+
+        $this->assertSame(Response::HTTP_BAD_REQUEST, $response->getStatusCode());
+    }
+
     public function testRulesAreScopedToTheCallersTeams(): void
     {
         $ownTeam = $this->createTeam('Moja rodzina');

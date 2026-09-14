@@ -25,14 +25,23 @@ final readonly class RuleConfig
         $this->validate();
     }
 
-    public static function consecutiveDays(int $requiredDays, int $pointsPerDay = 1, ?Uuid $taskTemplateId = null): self
-    {
+    /**
+     * @param string[] $accounts
+     */
+    public static function consecutiveDays(
+        int $requiredDays,
+        int $pointsPerDay = 1,
+        ?Uuid $taskTemplateId = null,
+        array $accounts = []
+    ): self {
         return new self(
             RuleType::CONSECUTIVE_DAYS,
             $taskTemplateId,
             $requiredDays,
             null,
-            $pointsPerDay
+            $pointsPerDay,
+            null,
+            self::countedAccounts($accounts)
         );
     }
 
@@ -130,6 +139,8 @@ final readonly class RuleConfig
     {
         $type = RuleType::from($data['type']);
 
+        $accounts = $data['accounts'] ?? [];
+
         return new self(
             $type,
             isset($data['taskTemplateId']) ? Uuid::fromString($data['taskTemplateId']) : null,
@@ -137,7 +148,7 @@ final readonly class RuleConfig
             $data['requiredCount'] ?? null,
             isset($data['requiredDays']) ? (int) ($data['pointsPerDay'] ?? 1) : null,
             $data['requiredPoints'] ?? null,
-            $data['accounts'] ?? []
+            $type === RuleType::CONSECUTIVE_DAYS ? self::countedAccounts($accounts) : $accounts
         );
     }
 
@@ -159,6 +170,8 @@ final readonly class RuleConfig
         if ($this->pointsPerDay === null || $this->pointsPerDay < 1) {
             throw new InvalidArgumentException('A streak day needs at least 1 point');
         }
+
+        $this->validateAccounts();
     }
 
     private function validateMonthlyTaskCount(): void
@@ -174,10 +187,26 @@ final readonly class RuleConfig
             throw new InvalidArgumentException('Required points must be at least 1');
         }
 
+        $this->validateAccounts();
+    }
+
+    private function validateAccounts(): void
+    {
         foreach ($this->accounts as $account) {
             if (AccountKind::tryFrom($account) === null) {
                 throw new InvalidArgumentException(sprintf('Unknown account "%s"', $account));
             }
         }
+    }
+
+    /**
+     * @param string[] $accounts
+     * @return string[] the task account when nothing is chosen, so a streak keeps meaning what it meant
+     */
+    private static function countedAccounts(array $accounts): array
+    {
+        return $accounts === []
+            ? [AccountKind::TASKS->value]
+            : array_values(array_unique($accounts));
     }
 }

@@ -49,18 +49,18 @@ class DailyPointsTest extends TestCase
 
     public function testOnlyDaysReachingTheThresholdAreListed(): void
     {
-        $days = DailyPoints::daysReaching([
+        $days = DailyPoints::daysReaching(DailyPoints::perDay([
             $this->execution('2026-03-01', 30),
             $this->execution('2026-03-02', 10),
             $this->execution('2026-03-03', 20),
-        ], 20);
+        ]), 20);
 
         $this->assertSame(['2026-03-01', '2026-03-03'], $days);
     }
 
     public function testATasklessDayIsNotListed(): void
     {
-        $this->assertSame([], DailyPoints::daysReaching([], 1));
+        $this->assertSame([], DailyPoints::daysReaching(DailyPoints::perDay([]), 1));
     }
 
     private function execution(string $when, int $points): TaskExecution

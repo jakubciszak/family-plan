@@ -49,14 +49,11 @@ function NotificationEvents({ user }) {
                 return event;
             }
 
-            const enabled = event.channels.includes(channel);
+            const next = event.channels.includes(channel)
+                ? event.channels.filter(name => name !== channel)
+                : [...event.channels, channel];
 
-            return {
-                ...event,
-                channels: enabled
-                    ? event.channels.filter(name => name !== channel)
-                    : channels.filter(name => name === channel || event.channels.includes(name)),
-            };
+            return { ...event, channels: channels.filter(name => next.includes(name)) };
         }));
     };
 

@@ -109,7 +109,7 @@
     "requiredDaysHint": "Liczba kolejnych dni, w których trzeba zebrać punkty",
     "pointsPerDay": "Punktów dziennie",
     "pointsPerDayHint": "Tyle punktów trzeba zebrać w ciągu dnia, żeby dzień liczył się do serii",
-    "consecutiveDaysSummary": "{{days}} dni z rzędu po min. {{points}} pkt dziennie",
+    "consecutiveDaysSummary": "{{days}} dni z rzędu po min. {{points}} pkt dziennie ({{accounts}})",
     "monthlyCountSummary": "{{count}} zadań w miesiącu",
     "ruleTypes": {
       "consecutive_days": "Dni z rzędu",
@@ -131,7 +131,8 @@
       "bonuses": "Bonusowe"
     },
     "weeklySumSummary": "{{points}} pkt w tygodniu ({{accounts}})",
-    "allAccounts": "wszystkie punkty"
+    "allAccounts": "wszystkie punkty",
+    "streakAccountsHint": "Nic nie zaznaczone = liczą się punkty za zadania"
   },
   "user": {
     "points": "{{points}} punktów",

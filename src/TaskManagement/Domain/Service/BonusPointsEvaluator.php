@@ -10,15 +10,19 @@ use App\Shared\Domain\ValueObject\Uuid;
 use DateTimeImmutable;
 use App\TaskManagement\Domain\Entity\BonusPointsRule;
 use App\TaskManagement\Domain\Repository\TaskExecutionRepositoryInterface;
+use App\TaskManagement\Domain\ValueObject\RuleConfig;
 use App\TaskManagement\Domain\ValueObject\RuleType;
 
 class BonusPointsEvaluator
 {
+    private readonly StreakDailyPoints $streakPoints;
+
     public function __construct(
         private readonly TaskExecutionRepositoryInterface $executionRepository,
         private readonly ?PointsLedger $ledger = null,
         private readonly ?ClockInterface $clock = null
     ) {
+        $this->streakPoints = new StreakDailyPoints($executionRepository, $ledger);
     }
 
     public function isRuleMet(BonusPointsRule $rule, Uuid $userId): bool
@@ -57,13 +61,9 @@ class BonusPointsEvaluator
             return false;
         }
 
-        $executions = $this->executionRepository->findApprovedByUserSince(
-            $userId,
-            $this->now()->modify(sprintf('-%d days', $requiredDays * 2)),
-            $config->taskTemplateId()
-        );
+        $perDay = $this->streakDays($config, $userId, $requiredDays);
 
-        return ExecutionStreak::longest($executions, $config->pointsPerDay() ?? 1) >= $requiredDays;
+        return PointsStreak::longest($perDay, $config->pointsPerDay() ?? 1) >= $requiredDays;
     }
 
     private function evaluateMonthlyTaskCount(BonusPointsRule $rule, Uuid $userId): bool
@@ -106,15 +106,27 @@ class BonusPointsEvaluator
         $config = $rule->config();
         $requiredDays = $config->requiredDays() ?? 2;
 
-        $executions = $this->executionRepository->findApprovedByUserSince(
-            $userId,
-            $this->now()->modify(sprintf('-%d days', $requiredDays * 2)),
-            $config->taskTemplateId()
+        $streak = PointsStreak::current(
+            $this->streakDays($config, $userId, $requiredDays),
+            $config->pointsPerDay() ?? 1
         );
 
-        $streak = ExecutionStreak::current($executions, $config->pointsPerDay() ?? 1);
-
         return $streak === [] ? $this->now()->format('Y-m-d') : (string) reset($streak);
+    }
+
+    /**
+     * @return array<string, int>
+     */
+    private function streakDays(RuleConfig $config, Uuid $userId, int $requiredDays): array
+    {
+        $now = $this->now();
+
+        return $this->streakPoints->perDay(
+            $config,
+            $userId,
+            $now->modify(sprintf('-%d days', $requiredDays * 2)),
+            $now->modify('+1 day')
+        );
     }
 
     private function now(): DateTimeImmutable

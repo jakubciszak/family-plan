@@ -149,6 +149,10 @@ function BonusRuleCard({ rule, onUpdate, onActivate, onDeactivate }) {
     const { t } = useTranslation();
     const [isEditing, setIsEditing] = React.useState(false);
 
+    const accountLabels = (accounts) => (accounts?.length
+        ? accounts.map((kind) => t(`bonusRules.accountNames.${kind}`, { defaultValue: kind })).join(', ')
+        : t('bonusRules.allAccounts'));
+
     const getRuleTypeLabel = (type) => t(`bonusRules.ruleTypes.${type}`, { defaultValue: type });
 
     const getRuleDescription = (rule) => {
@@ -156,14 +160,15 @@ function BonusRuleCard({ rule, onUpdate, onActivate, onDeactivate }) {
             return t('bonusRules.consecutiveDaysSummary', {
                 days: rule.config.requiredDays,
                 points: rule.config.pointsPerDay || 1,
+                accounts: accountLabels(rule.config.accounts),
             });
         } else if (rule.type === 'monthly_task_count' && rule.config.requiredCount) {
             return t('bonusRules.monthlyCountSummary', { count: rule.config.requiredCount });
         } else if (rule.type === 'weekly_points_sum' && rule.config.requiredPoints) {
-            const accounts = rule.config.accounts?.length
-                ? rule.config.accounts.map((a) => t(`bonusRules.accountNames.${a}`, { defaultValue: a })).join(', ')
-                : t('bonusRules.allAccounts');
-            return t('bonusRules.weeklySumSummary', { points: rule.config.requiredPoints, accounts });
+            return t('bonusRules.weeklySumSummary', {
+                points: rule.config.requiredPoints,
+                accounts: accountLabels(rule.config.accounts),
+            });
         }
         return rule.description;
     };
@@ -246,7 +251,7 @@ function BonusRuleForm({ rule, teams = [], onSubmit, onCancel }) {
         pointsPerDay: rule?.config?.pointsPerDay || 10,
         requiredCount: rule?.config?.requiredCount || 20,
         requiredPoints: rule?.config?.requiredPoints || 100,
-        accounts: rule?.config?.accounts || [],
+        accounts: rule?.config?.accounts || ['tasks'],
         taskTemplateId: rule?.config?.taskTemplateId || '',
         teamId: rule?.teamId || teams[0]?.id || '',
     });
@@ -264,6 +269,7 @@ function BonusRuleForm({ rule, teams = [], onSubmit, onCancel }) {
             ? {
                 requiredDays: formData.requiredDays,
                 pointsPerDay: formData.pointsPerDay,
+                accounts: formData.accounts,
                 ...(formData.taskTemplateId ? { taskTemplateId: formData.taskTemplateId } : {}),
               }
             : formData.ruleType === 'weekly_points_sum'
@@ -406,6 +412,25 @@ function BonusRuleForm({ rule, teams = [], onSubmit, onCancel }) {
                                 required
                             />
                         </div>
+                    )}
+
+                    {formData.ruleType === 'consecutive_days' && (
+                            <fieldset className="md-choice-group">
+                                <legend>{t('bonusRules.accounts')}</legend>
+                                <div className="md-choice-group__options">
+                                    {accountKinds.map((kind) => (
+                                        <Chip
+                                            key={kind}
+                                            icon={formData.accounts.includes(kind) ? 'check' : 'stars'}
+                                            selected={formData.accounts.includes(kind)}
+                                            onClick={() => toggleAccount(kind)}
+                                        >
+                                            {t(`bonusRules.accountNames.${kind}`, { defaultValue: kind })}
+                                        </Chip>
+                                    ))}
+                                </div>
+                                <small className="md-field__supporting">{t('bonusRules.streakAccountsHint')}</small>
+                            </fieldset>
                     )}
 
                     {formData.ruleType === 'weekly_points_sum' && (
