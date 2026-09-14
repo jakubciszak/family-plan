@@ -33,6 +33,7 @@ use App\Tests\TaskManagement\Mother\PointsMother;
 use App\Tests\TaskManagement\Mother\TaskNameMother;
 use App\Tests\UserManagement\Mother\EmailMother;
 use App\Tests\UserManagement\Mother\UserMother;
+use App\Tests\TaskManagement\Double\SettlesNoBonus;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -81,7 +82,8 @@ class NotificationIntegrationExampleTest extends TestCase
         $this->approveHandler = new ApproveTaskHandler(
             $this->taskRepository,
             $approvalPolicy,
-            $pointsAwardStrategy
+            $pointsAwardStrategy,
+            new SettlesNoBonus()
         );
     }
 

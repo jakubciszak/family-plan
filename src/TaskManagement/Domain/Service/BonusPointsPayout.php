@@ -16,7 +16,7 @@ use App\TeamManagement\Domain\Repository\TeamMembershipRepositoryInterface;
  * The ledger refuses a second entry for the same rule within one period,
  * so calling this after every approval is safe.
  */
-final readonly class BonusPointsPayout
+final readonly class BonusPointsPayout implements BonusSettlementInterface
 {
     public function __construct(
         private BonusPointsRuleRepositoryInterface $rules,

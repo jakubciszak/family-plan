@@ -27,6 +27,7 @@ use App\Tests\TaskManagement\Mother\FrequencyMother;
 use App\Tests\TaskManagement\Mother\PointsMother;
 use App\Tests\TaskManagement\Mother\TaskNameMother;
 use App\Tests\UserManagement\Mother\UserMother;
+use App\Tests\TaskManagement\Double\SettlesNoBonus;
 use App\UserManagement\Domain\ValueObject\Email;
 use App\UserManagement\Infrastructure\Persistence\InMemoryUserRepository;
 use PHPUnit\Framework\TestCase;
@@ -66,7 +67,8 @@ class TaskApprovalWithPointsIntegrationTest extends TestCase
         $this->approveHandler = new ApproveTaskHandler(
             $this->taskRepository,
             $approvalPolicy,
-            $pointsAwardStrategy
+            $pointsAwardStrategy,
+            new SettlesNoBonus()
         );
     }
 

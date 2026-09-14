@@ -29,6 +29,7 @@ use App\Tests\TaskManagement\Mother\FrequencyMother;
 use App\Tests\TaskManagement\Mother\PointsMother;
 use App\Tests\TaskManagement\Mother\TaskNameMother;
 use App\Tests\UserManagement\Mother\UserMother;
+use App\Tests\TaskManagement\Double\SettlesNoBonus;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -65,7 +66,8 @@ class TaskManagementUseCasesTest extends TestCase
         $this->approveHandler = new ApproveTaskHandler(
             $this->taskRepository,
             $approvalPolicy,
-            $pointsAwardStrategy
+            $pointsAwardStrategy,
+            new SettlesNoBonus()
         );
     }
 

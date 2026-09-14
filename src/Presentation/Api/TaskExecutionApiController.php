@@ -14,7 +14,7 @@ use App\TaskManagement\Domain\Entity\TaskTemplate;
 use App\TaskManagement\Domain\Exception\UnauthorizedTaskActionException;
 use App\TaskManagement\Domain\Repository\TaskExecutionRepositoryInterface;
 use App\TaskManagement\Domain\Repository\TaskTemplateRepositoryInterface;
-use App\TaskManagement\Domain\Service\BonusPointsPayout;
+use App\TaskManagement\Domain\Service\BonusSettlementInterface;
 use App\TaskManagement\Domain\Strategy\ExecutionPointsAwardStrategyInterface;
 use App\UserManagement\Domain\Repository\UserRepositoryInterface;
 use App\UserManagement\Domain\ValueObject\Email;
@@ -39,7 +39,7 @@ class TaskExecutionApiController extends AbstractController
         private readonly TaskTypePool $pool,
         private readonly PartyResponsibilities $responsibilities,
         private readonly ClockInterface $clock,
-        private readonly BonusPointsPayout $bonusPayout
+        private readonly BonusSettlementInterface $bonusPayout
     ) {
     }
 

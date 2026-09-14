@@ -29,6 +29,7 @@ use App\TaskManagement\Infrastructure\Persistence\InMemoryTaskRepository;
 use App\UserManagement\Infrastructure\Persistence\InMemoryUserRepository;
 use Behat\Behat\Context\Context;
 use DateTimeImmutable;
+use App\Tests\TaskManagement\Double\SettlesNoBonus;
 
 /**
  * Base context for acceptance tests
@@ -104,7 +105,8 @@ abstract class AcceptanceContext implements Context
         $this->approveTaskHandler = new ApproveTaskHandler(
             $this->taskRepository,
             $approvalPolicy,
-            $pointsAwardStrategy
+            $pointsAwardStrategy,
+            new SettlesNoBonus()
         );
 
         // Bonus Points

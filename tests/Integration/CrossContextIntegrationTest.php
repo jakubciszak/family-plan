@@ -26,6 +26,7 @@ use App\Tests\TaskManagement\Mother\FrequencyMother;
 use App\Tests\TaskManagement\Mother\TaskNameMother;
 use App\UserManagement\Domain\ValueObject\Email;
 use App\Tests\UserManagement\Mother\UserMother;
+use App\Tests\TaskManagement\Double\SettlesNoBonus;
 use App\UserManagement\Infrastructure\Persistence\InMemoryUserRepository;
 use PHPUnit\Framework\TestCase;
 
@@ -69,7 +70,8 @@ class CrossContextIntegrationTest extends TestCase
         $this->approveTaskHandler = new ApproveTaskHandler(
             $this->taskRepository,
             $approvalPolicy,
-            $pointsStrategy
+            $pointsStrategy,
+            new SettlesNoBonus()
         );
     }
 

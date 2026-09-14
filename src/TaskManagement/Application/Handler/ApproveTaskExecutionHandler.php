@@ -10,7 +10,7 @@ use App\TaskManagement\Domain\Exception\UnauthorizedTaskActionException;
 use App\TaskManagement\Application\Command\ApproveTaskExecutionCommand;
 use App\TaskManagement\Domain\Repository\TaskExecutionRepositoryInterface;
 use App\TaskManagement\Domain\Policy\TaskApprovalPolicyInterface;
-use App\TaskManagement\Domain\Service\BonusPointsPayout;
+use App\TaskManagement\Domain\Service\BonusSettlementInterface;
 use App\TaskManagement\Domain\Strategy\ExecutionPointsAwardStrategyInterface;
 
 final readonly class ApproveTaskExecutionHandler
@@ -20,7 +20,7 @@ final readonly class ApproveTaskExecutionHandler
         private TaskExecutionRepositoryInterface $taskExecutionRepository,
         private TaskApprovalPolicyInterface $approvalPolicy,
         private ExecutionPointsAwardStrategyInterface $pointsAwardStrategy,
-        private BonusPointsPayout $bonusPayout
+        private BonusSettlementInterface $bonusPayout
     ) {
     }
 

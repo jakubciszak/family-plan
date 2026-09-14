@@ -134,6 +134,44 @@ class TaskApiTest extends ApiTestCase
         $this->assertSame('approved', $data['status']);
     }
 
+    public function testApprovingATaskPaysOutTheBonusItUnlocks(): void
+    {
+        $context = $this->createTeamAndAdmin();
+        $userId = $context['adminId'];
+
+        $this->assertJsonResponse(
+            $this->postJson('/api/bonus-rules', [
+                'teamId' => $context['teamId'],
+                'name' => 'Minimum 15 punktow w tygodniu',
+                'description' => 'Zbierz 15 punktow za zadania w ciagu tygodnia',
+                'bonusPoints' => 5,
+                'ruleType' => 'weekly_points_sum',
+                'ruleConfig' => ['requiredPoints' => 15, 'accounts' => ['tasks']],
+            ]),
+            201
+        );
+
+        $task = $this->assertJsonResponse(
+            $this->postJson('/api/tasks', [
+                'name' => 'Zadanie za 16 punktow',
+                'description' => 'Opis',
+                'points' => 16,
+                'frequency' => 'monthly',
+                'teamId' => $context['teamId'],
+                'createdBy' => $context['adminId'],
+            ]),
+            201
+        );
+
+        $this->postJson("/api/tasks/{$task['id']}/assign", ['userId' => $userId]);
+        $this->postJson("/api/tasks/{$task['id']}/complete", ['userId' => $userId]);
+        $this->postJson("/api/tasks/{$task['id']}/approve", ['adminId' => $context['adminId']]);
+
+        $points = $this->getJson("/api/users/{$userId}/points");
+
+        $this->assertSame(21, $points['balance'], 'Zadanie daje 16 punktow, regula dokłada 5 bonusowych');
+    }
+
     public function testListTasksFiltersTasksByUserTeamMembership(): void
     {
         // Create team A with admin A
