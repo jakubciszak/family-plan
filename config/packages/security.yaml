@@ -43,6 +43,7 @@ security:
         - { path: ^/api/auth/register, roles: PUBLIC_ACCESS }
         - { path: ^/api/auth/activate, roles: PUBLIC_ACCESS }
         - { path: ^/api/doc, roles: PUBLIC_ACCESS }
+        - { path: '^/api/teams/invitations/[^/]+$', methods: [GET], roles: PUBLIC_ACCESS }
         - { path: ^/api, roles: ROLE_USER }
         - { path: ^/task/approve, roles: ROLE_ADMIN }
         - { path: ^/task, roles: ROLE_USER }

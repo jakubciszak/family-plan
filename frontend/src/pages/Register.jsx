@@ -1,6 +1,7 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import apiClient from '../services/apiClient';
+import teamService from '../services/teamService';
 import { Button, Icon, TextField } from '../components/md3';
 import LanguageSwitcher from '../components/LanguageSwitcher';
 
@@ -14,7 +15,29 @@ function Register({ onBackToLogin, onLogin, inviteToken }) {
     const [success, setSuccess] = React.useState('');
     const [submitting, setSubmitting] = React.useState(false);
 
+    const [emailLocked, setEmailLocked] = React.useState(false);
+
     const isInvitedRegistration = !!inviteToken;
+
+    React.useEffect(() => {
+        if (!inviteToken) {
+            return undefined;
+        }
+
+        let cancelled = false;
+
+        teamService.getInvitation(inviteToken)
+            .then((invitation) => {
+                if (cancelled || !invitation?.email) {
+                    return;
+                }
+                setEmail(invitation.email);
+                setEmailLocked(true);
+            })
+            .catch(() => undefined);
+
+        return () => { cancelled = true; };
+    }, [inviteToken]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -46,7 +69,9 @@ function Register({ onBackToLogin, onLogin, inviteToken }) {
                 : t('auth.registerSuccess'));
 
             setName('');
-            setEmail('');
+            if (!emailLocked) {
+                setEmail('');
+            }
             setPassword('');
             setPhoneNumber('');
         } catch (err) {
@@ -109,6 +134,8 @@ function Register({ onBackToLogin, onLogin, inviteToken }) {
                         onChange={(e) => setEmail(e.target.value)}
                         autoComplete="email"
                         required
+                        readOnly={emailLocked}
+                        aria-readonly={emailLocked || undefined}
                     />
                     <TextField
                         id="password"

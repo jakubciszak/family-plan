@@ -44,6 +44,11 @@ const teamService = {
         return await apiClient.get('/api/teams/invitations');
     },
 
+    // Read the address a pending invitation was issued to
+    async getInvitation(token) {
+        return await apiClient.get(`/api/teams/invitations/${encodeURIComponent(token)}`);
+    },
+
     // Accept invitation
     async acceptInvitation(token) {
         return await apiClient.post(`/api/teams/invitations/${token}/accept`);

@@ -373,6 +373,31 @@ class TeamApiController extends AbstractController
         ]);
     }
 
+    #[Route('/invitations/{token}', name: 'invitation_by_token', methods: ['GET'])]
+    #[OA\Get(
+        path: '/api/teams/invitations/{token}',
+        summary: 'Read the address a pending invitation was issued to',
+        tags: ['Teams']
+    )]
+    #[OA\Parameter(
+        name: 'token',
+        in: 'path',
+        required: true,
+        schema: new OA\Schema(type: 'string')
+    )]
+    #[OA\Response(response: 200, description: 'Pending invitation found')]
+    #[OA\Response(response: 404, description: 'No pending invitation for this token')]
+    public function invitationByToken(string $token): JsonResponse
+    {
+        $invitation = $this->invitationRepository->findByToken($token);
+
+        if ($invitation === null || !$invitation->status()->isPending() || $invitation->isExpired()) {
+            return $this->json(['error' => 'Invitation not found'], Response::HTTP_NOT_FOUND);
+        }
+
+        return $this->json(['email' => $invitation->email()->value()]);
+    }
+
     #[Route('/invitations/{token}/accept', name: 'accept_invitation', methods: ['POST'])]
     #[IsGranted('ROLE_USER')]
     #[OA\Post(
