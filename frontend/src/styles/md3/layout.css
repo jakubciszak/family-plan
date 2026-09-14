@@ -378,6 +378,13 @@
   }
 }
 
+.app-splash {
+  display: grid;
+  place-items: center;
+  min-height: 100dvh;
+  background: var(--md-sys-color-background);
+}
+
 /* Auth screens */
 .login-container {
   display: grid;
@@ -429,6 +436,18 @@
   display: flex;
   flex-direction: column;
   gap: 20px;
+}
+
+.login-remember {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.login-remember__label {
+  color: var(--md-sys-color-on-surface-variant);
+  font-size: var(--md-sys-typescale-body-medium-size);
 }
 
 .auth-switch {

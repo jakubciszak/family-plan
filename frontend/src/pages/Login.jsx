@@ -1,13 +1,14 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import apiClient from '../services/apiClient';
-import { Button, Icon, TextField } from '../components/md3';
+import { Button, Icon, Switch, TextField } from '../components/md3';
 import LanguageSwitcher from '../components/LanguageSwitcher';
 
 function Login({ onLogin, onSwitchToRegister, inviteToken }) {
     const { t } = useTranslation();
     const [email, setEmail] = React.useState('');
     const [password, setPassword] = React.useState('');
+    const [rememberMe, setRememberMe] = React.useState(true);
     const [error, setError] = React.useState('');
     const [submitting, setSubmitting] = React.useState(false);
 
@@ -19,7 +20,7 @@ function Login({ onLogin, onSwitchToRegister, inviteToken }) {
         setSubmitting(true);
 
         try {
-            const data = await apiClient.post('/api/auth/login', { email, password });
+            const data = await apiClient.post('/api/auth/login', { email, password, _remember_me: rememberMe });
             onLogin(data.user);
         } catch (err) {
             setError(t('auth.loginError'));
@@ -71,6 +72,17 @@ function Login({ onLogin, onSwitchToRegister, inviteToken }) {
                         autoComplete="current-password"
                         required
                     />
+                    <div className="login-remember">
+                        <span className="login-remember__label" id="remember-me-label">
+                            {t('auth.rememberMe')}
+                        </span>
+                        <Switch
+                            id="remember-me"
+                            checked={rememberMe}
+                            onChange={setRememberMe}
+                            labelledBy="remember-me-label"
+                        />
+                    </div>
                     <Button type="submit" fullWidth loading={submitting}>
                         {t('auth.login')}
                     </Button>

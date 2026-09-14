@@ -22,6 +22,7 @@ use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInterface;
+use Symfony\Component\Security\Http\RememberMe\RememberMeHandlerInterface;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
 
@@ -49,7 +50,8 @@ class AuthApiController extends AbstractController
             required: ['email', 'password'],
             properties: [
                 new OA\Property(property: 'email', type: 'string', format: 'email', example: 'admin@familyplan.local'),
-                new OA\Property(property: 'password', type: 'string', format: 'password', example: 'admin123')
+                new OA\Property(property: 'password', type: 'string', format: 'password', example: 'admin123'),
+                new OA\Property(property: '_remember_me', type: 'boolean', example: true)
             ]
         )
     )]
@@ -161,9 +163,13 @@ class AuthApiController extends AbstractController
             ]
         )
     )]
-    public function logout(Request $request, TokenStorageInterface $tokenStorage): JsonResponse
-    {
+    public function logout(
+        Request $request,
+        TokenStorageInterface $tokenStorage,
+        RememberMeHandlerInterface $rememberMeHandler
+    ): JsonResponse {
         $tokenStorage->setToken(null);
+        $rememberMeHandler->clearRememberMeCookie();
 
         if ($request->hasSession()) {
             $request->getSession()->invalidate();

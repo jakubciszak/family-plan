@@ -15,6 +15,7 @@ import AppNavigation from './components/AppNavigation';
 import AppBarActions from './components/AppBarActions';
 import useThemeMode from './hooks/useThemeMode';
 import { useWindowClass } from './hooks/useMediaQuery';
+import { CircularProgress } from './components/md3';
 import apiClient from './services/apiClient';
 import teamService from './services/teamService';
 import './styles/app.css';
@@ -78,7 +79,7 @@ function App() {
     const { t } = useTranslation();
     const [themeMode, setThemeMode] = useThemeMode();
     const windowClass = useWindowClass();
-    const [isAuthenticated, setIsAuthenticated] = React.useState(false);
+    const [isAuthenticated, setIsAuthenticated] = React.useState(null);
     const [user, setUser] = React.useState(null);
     const [userPoints, setUserPoints] = React.useState(0);
     const [currentPage, setCurrentPage] = React.useState('tasks');
@@ -171,6 +172,14 @@ function App() {
                 setCurrentPage('tasks');
             });
     };
+
+    if (isAuthenticated === null) {
+        return (
+            <div className="app-splash">
+                <CircularProgress label={t('common.loading')} />
+            </div>
+        );
+    }
 
     if (!isAuthenticated) {
         return (

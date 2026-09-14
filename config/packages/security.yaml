@@ -23,6 +23,12 @@ security:
                 check_path: /api/auth/login
                 username_path: email
                 password_path: password
+            remember_me:
+                secret: '%kernel.secret%'
+                lifetime: 2592000
+                path: /
+                samesite: lax
+                secure: auto
             entry_point: App\Presentation\Api\Security\ApiAuthenticationEntryPoint
             form_login:
                 login_path: app_login
