@@ -15,6 +15,7 @@ use App\TaskManagement\Domain\Event\TaskExecutionApproved;
 use App\TaskManagement\Domain\State\ExecutionStateInterface;
 use App\TaskManagement\Domain\State\ExecutionStateFactory;
 use DateTimeImmutable;
+use DomainException;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity]
@@ -25,6 +26,8 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Index(columns: ['scheduled_for'])]
 class TaskExecution
 {
+    private const BACKLOG_DAYS = 7;
+
     #[ORM\Transient]
     private array $domainEvents = [];
     
@@ -263,9 +266,13 @@ class TaskExecution
         return $this->status === ExecutionStatus::NEW || $this->status === ExecutionStatus::PENDING;
     }
 
-    public function complete(Uuid $userId, ClockInterface $clock): void
+    public function complete(Uuid $userId, ClockInterface $clock, ?DateTimeImmutable $doneOn = null): void
     {
-        $this->getState()->complete($this, $userId, $clock);
+        if ($doneOn !== null) {
+            $this->assertWithinBacklogWindow($doneOn, $clock);
+        }
+
+        $this->getState()->complete($this, $userId, $clock, $doneOn);
     }
 
     public function approve(Uuid $adminId, ClockInterface $clock): void
@@ -285,15 +292,33 @@ class TaskExecution
     }
 
     // Internal method called by state objects to transition to completed state
-    public function transitionToState(ExecutionStateInterface $newState, Uuid $userId, ClockInterface $clock): void
-    {
+    public function transitionToState(
+        ExecutionStateInterface $newState,
+        Uuid $userId,
+        ClockInterface $clock,
+        ?DateTimeImmutable $doneOn = null
+    ): void {
         $this->status = ExecutionStatus::COMPLETED;
         $this->completedByUserId = $userId;
-        $this->completedAt = $clock->now();
+        $this->completedAt = $doneOn ?? $clock->now();
         $this->updatedAt = $clock->now();
         $this->state = $newState;
 
         $this->record(new TaskExecutionCompleted($this->id, $userId, $this->completedAt));
+    }
+
+    private function assertWithinBacklogWindow(DateTimeImmutable $doneOn, ClockInterface $clock): void
+    {
+        $today = $clock->now()->setTime(0, 0);
+        $day = $doneOn->setTime(0, 0);
+
+        if ($day > $today) {
+            throw new DomainException('A task cannot be finished on a day that has not come yet');
+        }
+
+        if ($day < $today->modify(sprintf('-%d days', self::BACKLOG_DAYS))) {
+            throw new DomainException(sprintf('A backlog entry reaches %d days back at most', self::BACKLOG_DAYS));
+        }
     }
 
     // Internal method called by state objects to transition to approved state

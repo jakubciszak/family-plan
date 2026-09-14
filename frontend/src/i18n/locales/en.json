@@ -88,7 +88,11 @@
     "availableCollapsed": "Tasks to take",
     "rejectedReason": "Rejected: {{reason}}",
     "submitAgain": "Submit again",
-    "standingsCollapsed": "Standings"
+    "standingsCollapsed": "Standings",
+    "backlog": "Backlog",
+    "backlogHeadline": "When was it done: {{name}}?",
+    "backlogDate": "Day it was done",
+    "backlogHint": "At most {{days}} days back"
   },
   "bonusRules": {
     "title": "Bonus Rules",

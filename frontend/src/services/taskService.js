@@ -69,8 +69,11 @@ const taskService = {
         return await apiClient.get('/api/task-executions/awaiting-approval');
     },
 
-    async complete(executionId) {
-        return await apiClient.post(`/api/task-executions/${executionId}/complete`, {});
+    async complete(executionId, doneOn = null) {
+        return await apiClient.post(
+            `/api/task-executions/${executionId}/complete`,
+            doneOn ? { doneOn } : {}
+        );
     },
 
     async approve(executionId) {

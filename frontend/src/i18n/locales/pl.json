@@ -88,7 +88,11 @@
     "availableCollapsed": "Zadania do wzięcia",
     "rejectedReason": "Odrzucone: {{reason}}",
     "submitAgain": "Zgłoś ponownie",
-    "standingsCollapsed": "Tabela wyników"
+    "standingsCollapsed": "Tabela wyników",
+    "backlog": "Zaległość",
+    "backlogHeadline": "Kiedy zrobiono: {{name}}?",
+    "backlogDate": "Dzień wykonania",
+    "backlogHint": "Najdalej {{days}} dni wstecz"
   },
   "bonusRules": {
     "title": "Zasady bonusowe",

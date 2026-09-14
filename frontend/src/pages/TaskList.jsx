@@ -5,7 +5,9 @@ import Leaderboard from '../components/Leaderboard';
 import MemberWeeks from '../components/MemberWeeks';
 import taskService from '../services/taskService';
 import teamService from '../services/teamService';
-import { Button, Icon, Select, CircularProgress } from '../components/md3';
+import { Button, Chip, Dialog, Icon, Select, TextField, CircularProgress } from '../components/md3';
+
+const BACKLOG_DAYS = 7;
 
 function useLimitLabel() {
     const { t } = useTranslation();
@@ -33,6 +35,9 @@ function TaskList({ onNavigate, user, onInspectMember }) {
     const [loading, setLoading] = React.useState(true);
     const [error, setError] = React.useState(null);
     const [refreshToken, setRefreshToken] = React.useState(0);
+    const [backlogTasks, setBacklogTasks] = React.useState({});
+    const [backlogTask, setBacklogTask] = React.useState(null);
+    const [backlogDate, setBacklogDate] = React.useState('');
     const limitLabel = useLimitLabel();
 
     const isTeamAdmin = selectedTeam?.role === 'admin';
@@ -91,6 +96,39 @@ function TaskList({ onNavigate, user, onInspectMember }) {
         } catch (err) {
             setError(err?.response?.data?.error || t('tasks.actionFailed'));
         }
+    };
+
+    const dayOffset = (days) => {
+        const day = new Date();
+        day.setDate(day.getDate() + days);
+
+        return day.toLocaleDateString('sv');
+    };
+
+    const backlogWindow = { earliest: dayOffset(-BACKLOG_DAYS), latest: dayOffset(0) };
+
+    const toggleBacklog = (taskId) => setBacklogTasks((current) => ({
+        ...current,
+        [taskId]: !current[taskId],
+    }));
+
+    const startCompleting = (task) => {
+        if (!backlogTasks[task.id]) {
+            run(() => taskService.complete(task.id));
+
+            return;
+        }
+
+        setBacklogDate(dayOffset(-1));
+        setBacklogTask(task);
+    };
+
+    const completeAsBacklog = async () => {
+        const task = backlogTask;
+        setBacklogTask(null);
+
+        await run(() => taskService.complete(task.id, backlogDate));
+        setBacklogTasks((current) => ({ ...current, [task.id]: false }));
     };
 
     const teamOfType = (taskTemplateId) =>
@@ -154,10 +192,17 @@ function TaskList({ onNavigate, user, onInspectMember }) {
                                     <Button
                                         tone="success"
                                         icon="check"
-                                        onClick={() => run(() => taskService.complete(task.id))}
+                                        onClick={() => startCompleting(task)}
                                     >
                                         {t('tasks.complete')}
                                     </Button>
+                                    <Chip
+                                        icon={backlogTasks[task.id] ? 'check' : 'calendar'}
+                                        selected={!!backlogTasks[task.id]}
+                                        onClick={() => toggleBacklog(task.id)}
+                                    >
+                                        {t('tasks.backlog')}
+                                    </Chip>
                                     <Button
                                         variant="outlined"
                                         icon="undo"
@@ -313,6 +358,33 @@ function TaskList({ onNavigate, user, onInspectMember }) {
                     <span>{error}</span>
                 </div>
             )}
+
+            <Dialog
+                open={!!backlogTask}
+                onClose={() => setBacklogTask(null)}
+                headline={t('tasks.backlogHeadline', { name: backlogTask?.name })}
+                actions={
+                    <>
+                        <Button variant="text" onClick={() => setBacklogTask(null)}>
+                            {t('common.cancel')}
+                        </Button>
+                        <Button tone="success" icon="check" onClick={completeAsBacklog} disabled={!backlogDate}>
+                            {t('tasks.complete')}
+                        </Button>
+                    </>
+                }
+            >
+                <TextField
+                    id="backlog-date"
+                    type="date"
+                    label={t('tasks.backlogDate')}
+                    value={backlogDate}
+                    onChange={(e) => setBacklogDate(e.target.value)}
+                    min={backlogWindow.earliest}
+                    max={backlogWindow.latest}
+                    supportingText={t('tasks.backlogHint', { days: BACKLOG_DAYS })}
+                />
+            </Dialog>
 
             {isTeamAdmin ? (
                 <>

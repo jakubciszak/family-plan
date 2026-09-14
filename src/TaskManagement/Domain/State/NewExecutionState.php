@@ -7,14 +7,19 @@ namespace App\TaskManagement\Domain\State;
 use App\Shared\Domain\Clock\ClockInterface;
 use App\Shared\Domain\ValueObject\Uuid;
 use App\TaskManagement\Domain\Entity\TaskExecution;
+use DateTimeImmutable;
 use App\TaskManagement\Domain\ValueObject\ExecutionStatus;
 
 final class NewExecutionState implements ExecutionStateInterface
 {
-    public function complete(TaskExecution $execution, Uuid $userId, ClockInterface $clock): void
-    {
+    public function complete(
+        TaskExecution $execution,
+        Uuid $userId,
+        ClockInterface $clock,
+        ?DateTimeImmutable $doneOn = null
+    ): void {
         // Transition to completed state
-        $execution->transitionToState(new CompletedExecutionState(), $userId, $clock);
+        $execution->transitionToState(new CompletedExecutionState(), $userId, $clock, $doneOn);
     }
     
     public function approve(TaskExecution $execution, Uuid $adminId, ClockInterface $clock): void

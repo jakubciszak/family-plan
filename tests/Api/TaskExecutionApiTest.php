@@ -218,6 +218,84 @@ class TaskExecutionApiTest extends ApiTestCase
         );
     }
 
+    public function testABacklogEntryLandsOnTheDayItWasReallyDone(): void
+    {
+        $context = $this->teamWithMember();
+        $type = $this->defineType($context['teamId'], ['type' => 'unlimited']);
+
+        $this->loginAs($context['member']);
+        $taken = $this->assertJsonResponse(
+            $this->postJson("/api/task-templates/{$type['id']}/take", []),
+            Response::HTTP_CREATED
+        );
+
+        $threeDaysBack = (new \DateTimeImmutable('-3 days'))->format('Y-m-d');
+        $done = $this->assertJsonResponse(
+            $this->postJson("/api/task-executions/{$taken['id']}/complete", ['doneOn' => $threeDaysBack])
+        );
+
+        $this->assertSame($threeDaysBack, substr($done['completedAt'], 0, 10));
+    }
+
+    public function testABacklogEntryReachesSevenDaysBackAtMost(): void
+    {
+        $context = $this->teamWithMember();
+        $type = $this->defineType($context['teamId'], ['type' => 'unlimited']);
+
+        $this->loginAs($context['member']);
+        $taken = $this->assertJsonResponse(
+            $this->postJson("/api/task-templates/{$type['id']}/take", []),
+            Response::HTTP_CREATED
+        );
+
+        $this->assertSame(
+            Response::HTTP_BAD_REQUEST,
+            $this->postJson("/api/task-executions/{$taken['id']}/complete", [
+                'doneOn' => (new \DateTimeImmutable('-8 days'))->format('Y-m-d'),
+            ])->getStatusCode()
+        );
+
+        $this->assertSame('new', $this->getJson('/api/task-executions/mine')['executions'][0]['status']);
+    }
+
+    public function testABacklogEntryCannotBeDatedInTheFuture(): void
+    {
+        $context = $this->teamWithMember();
+        $type = $this->defineType($context['teamId'], ['type' => 'unlimited']);
+
+        $this->loginAs($context['member']);
+        $taken = $this->assertJsonResponse(
+            $this->postJson("/api/task-templates/{$type['id']}/take", []),
+            Response::HTTP_CREATED
+        );
+
+        $this->assertSame(
+            Response::HTTP_BAD_REQUEST,
+            $this->postJson("/api/task-executions/{$taken['id']}/complete", [
+                'doneOn' => (new \DateTimeImmutable('+1 day'))->format('Y-m-d'),
+            ])->getStatusCode()
+        );
+    }
+
+    public function testAMalformedDayIsRefused(): void
+    {
+        $context = $this->teamWithMember();
+        $type = $this->defineType($context['teamId'], ['type' => 'unlimited']);
+
+        $this->loginAs($context['member']);
+        $taken = $this->assertJsonResponse(
+            $this->postJson("/api/task-templates/{$type['id']}/take", []),
+            Response::HTTP_CREATED
+        );
+
+        $this->assertSame(
+            Response::HTTP_BAD_REQUEST,
+            $this->postJson("/api/task-executions/{$taken['id']}/complete", [
+                'doneOn' => 'wczoraj',
+            ])->getStatusCode()
+        );
+    }
+
     public function testTeamAdminSeesFinishedTasksAwaitingApproval(): void
     {
         $context = $this->teamWithMember();

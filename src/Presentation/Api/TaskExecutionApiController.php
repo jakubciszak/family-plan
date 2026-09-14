@@ -152,9 +152,25 @@ class TaskExecutionApiController extends AbstractController
 
     #[Route('/task-executions/{id}/complete', name: 'complete', methods: ['POST'])]
     #[OA\Post(path: '/api/task-executions/{id}/complete', summary: 'Mark my task as done', tags: ['My tasks'])]
+    #[OA\RequestBody(
+        required: false,
+        content: new OA\JsonContent(
+            properties: [
+                new OA\Property(
+                    property: 'doneOn',
+                    type: 'string',
+                    format: 'date',
+                    nullable: true,
+                    description: 'Day the task was really done, at most seven days back',
+                    example: '2026-09-12'
+                ),
+            ]
+        )
+    )]
     #[OA\Response(response: 200, description: 'Task marked as done, awaiting approval')]
+    #[OA\Response(response: 400, description: 'The day is malformed or outside the backlog window')]
     #[OA\Response(response: 403, description: 'Only the assignee marks their task as done')]
-    public function complete(string $id): JsonResponse
+    public function complete(string $id, Request $request): JsonResponse
     {
         $execution = $this->execution($id);
         $teamId = $this->teamOf($this->templateOf($execution));
@@ -165,7 +181,9 @@ class TaskExecutionApiController extends AbstractController
 
         $this->assertCarries(ResponsibilityType::completeTask(), $teamId);
 
-        $execution->complete($this->callerId(), $this->clock);
+        $doneOn = $this->doneOn($request);
+
+        $execution->complete($this->callerId(), $this->clock, $doneOn);
         $this->executionRepository->save($execution);
 
         $this->responsibilities->sign(
@@ -176,6 +194,24 @@ class TaskExecutionApiController extends AbstractController
         );
 
         return $this->json($this->serialize($execution));
+    }
+
+    private function doneOn(Request $request): ?DateTimeImmutable
+    {
+        $payload = json_decode($request->getContent() ?: '{}', true);
+        $day = is_array($payload) ? ($payload['doneOn'] ?? null) : null;
+
+        if ($day === null || $day === '') {
+            return null;
+        }
+
+        $parsed = is_string($day) ? DateTimeImmutable::createFromFormat('!Y-m-d', $day) : false;
+
+        if ($parsed === false) {
+            throw new \DomainException('The day must be given as YYYY-MM-DD');
+        }
+
+        return $parsed;
     }
 
     #[Route('/task-executions/{id}/approve', name: 'approve', methods: ['POST'])]
