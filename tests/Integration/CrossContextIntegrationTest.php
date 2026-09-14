@@ -37,6 +37,8 @@ use PHPUnit\Framework\TestCase;
  */
 class CrossContextIntegrationTest extends TestCase
 {
+    private \App\PointsManagement\Domain\Service\PointsLedger $ledger;
+
     private InMemoryUserRepository $userRepository;
     private InMemoryTaskRepository $taskRepository;
     private InMemoryUserWalletRepository $walletRepository;
@@ -61,7 +63,8 @@ class CrossContextIntegrationTest extends TestCase
         $this->completeTaskHandler = new CompleteTaskHandler($this->taskRepository);
 
         $approvalPolicy = new AdminApprovalPolicy($this->userRepository);
-        $pointsStrategy = new TaskApprovalPointsAwardStrategy($this->walletRepository, $this->clock);
+        $this->ledger = $this->ledger();
+        $pointsStrategy = new TaskApprovalPointsAwardStrategy($this->ledger);
 
         $this->approveTaskHandler = new ApproveTaskHandler(
             $this->taskRepository,
@@ -204,9 +207,14 @@ class CrossContextIntegrationTest extends TestCase
         $this->assertEquals('approved', $this->taskRepository->findById($task2Id)->status()->value);
         $this->assertEquals('approved', $this->taskRepository->findById($task3Id)->status()->value);
         
-        // Phase 6: Points Redemption - User spends points
-        $wallet->deductPoints(100, 'Movie night reward', $this->clock);
-        $this->walletRepository->save($wallet);
+        // Phase 6: Points Redemption - spending is a negative entry in the ledger
+        $this->ledger->post(
+            $userId,
+            \App\PointsManagement\Domain\ValueObject\AccountKind::TASKS,
+            -100,
+            \App\PointsManagement\Domain\ValueObject\EntrySource::ADJUSTMENT,
+            'Movie night reward'
+        );
         
         // Final wallet balance
         $finalWallet = $this->walletRepository->findByUserId($userId);
@@ -311,5 +319,17 @@ class CrossContextIntegrationTest extends TestCase
         
         ($this->completeTaskHandler)(new CompleteTaskCommand($taskId->value(), $userId->value()));
         ($this->approveTaskHandler)(new ApproveTaskCommand($taskId->value(), $adminId->value()));
+    }
+
+    private function ledger(): \App\PointsManagement\Domain\Service\PointsLedger
+    {
+        $accounts = new \App\PointsManagement\Infrastructure\Persistence\InMemoryAccountRepository();
+
+        return new \App\PointsManagement\Domain\Service\PointsLedger(
+            $accounts,
+            new \App\PointsManagement\Infrastructure\Persistence\InMemoryEntryRepository($accounts),
+            $this->walletRepository,
+            $this->clock
+        );
     }
 }

@@ -1,56 +1,54 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import userSettingsService from '../services/userSettingsService';
+import { Button, Chip, Icon, Switch, CircularProgress } from '../components/md3';
+import useThemeMode, { THEME_MODES } from '../hooks/useThemeMode';
+import LanguageSwitcher from '../components/LanguageSwitcher';
 import '../styles/settings.css';
+
+const THEME_ICONS = { light: 'lightMode', dark: 'darkMode', system: 'systemMode' };
+
+const DEFAULT_PREFERENCES = [
+    { name: 'email', enabled: true },
+    { name: 'sms', enabled: false },
+];
 
 function UserSettings({ user }) {
     const { t } = useTranslation();
+    const [themeMode, setThemeMode] = useThemeMode();
     const [preferences, setPreferences] = useState(null);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState(null);
     const [success, setSuccess] = useState(false);
 
-    // Load user settings
     useEffect(() => {
-        if (user?.id) {
-            loadSettings();
+        if (!user?.id) {
+            return;
         }
+
+        const loadSettings = async () => {
+            try {
+                setLoading(true);
+                setError(null);
+                const data = await userSettingsService.getUserSettings(user.id);
+                const notificationPrefs = data.preferences?.find(p => p.type === 'notifications');
+                setPreferences(notificationPrefs ? notificationPrefs.options : DEFAULT_PREFERENCES);
+            } catch (err) {
+                console.error('Failed to load settings:', err);
+                setPreferences(DEFAULT_PREFERENCES);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        loadSettings();
     }, [user]);
 
-    const loadSettings = async () => {
-        try {
-            setLoading(true);
-            setError(null);
-            const data = await userSettingsService.getUserSettings(user.id);
-            
-            // Find notification preferences or use defaults
-            const notificationPrefs = data.preferences?.find(p => p.type === 'notifications');
-            if (notificationPrefs) {
-                setPreferences(notificationPrefs.options);
-            } else {
-                // Default preferences
-                setPreferences([
-                    { name: 'email', enabled: true },
-                    { name: 'sms', enabled: false }
-                ]);
-            }
-        } catch (err) {
-            console.error('Failed to load settings:', err);
-            // Set default preferences on error
-            setPreferences([
-                { name: 'email', enabled: true },
-                { name: 'sms', enabled: false }
-            ]);
-        } finally {
-            setLoading(false);
-        }
-    };
-
     const handleToggle = (optionName) => {
-        setPreferences(prev => 
-            prev.map(opt => 
-                opt.name === optionName 
+        setPreferences(prev =>
+            prev.map(opt =>
+                opt.name === optionName
                     ? { ...opt, enabled: !opt.enabled }
                     : opt
             )
@@ -63,18 +61,14 @@ function UserSettings({ user }) {
             setSaving(true);
             setError(null);
             setSuccess(false);
-            
-            await userSettingsService.updateUserSettings(
-                user.id,
-                'notifications',
-                preferences
-            );
-            
+
+            await userSettingsService.updateUserSettings(user.id, 'notifications', preferences);
+
             setSuccess(true);
             setTimeout(() => setSuccess(false), 3000);
         } catch (err) {
             console.error('Failed to save settings:', err);
-            setError(t('settings.save_error') || 'Failed to save settings');
+            setError(t('settings.save_error'));
         } finally {
             setSaving(false);
         }
@@ -83,69 +77,85 @@ function UserSettings({ user }) {
     if (loading) {
         return (
             <div className="settings-container">
-                <div className="loading">{t('settings.loading') || 'Loading settings...'}</div>
+                <CircularProgress label={t('settings.loading')} />
             </div>
         );
     }
 
     return (
         <div className="settings-container">
-            <h2>{t('settings.title') || 'Notification Settings'}</h2>
-            
+            <h2>{t('nav.settings')}</h2>
+
             {error && (
-                <div className="alert alert-error">
-                    {error}
-                </div>
-            )}
-            
-            {success && (
-                <div className="alert alert-success">
-                    {t('settings.save_success') || 'Settings saved successfully!'}
+                <div className="alert alert-error" role="alert">
+                    <Icon name="error" size={20} />
+                    <span>{error}</span>
                 </div>
             )}
 
-            <div className="settings-section">
-                <h3>{t('settings.notification_channels') || 'Notification Channels'}</h3>
-                <p className="settings-description">
-                    {t('settings.channels_description') || 'Choose how you want to receive notifications'}
-                </p>
+            {success && (
+                <div className="alert alert-success" role="status">
+                    <Icon name="checkCircle" size={20} />
+                    <span>{t('settings.save_success')}</span>
+                </div>
+            )}
+
+            <section className="settings-section">
+                <h3><Icon name="lightMode" size={20} />{t('theme.appearance')}</h3>
+                <p className="settings-description">{t('theme.appearanceDescription')}</p>
+
+                <div className="theme-options" role="group" aria-label={t('theme.appearance')}>
+                    {THEME_MODES.map((mode) => (
+                        <Chip
+                            key={mode}
+                            icon={THEME_ICONS[mode]}
+                            selected={themeMode === mode}
+                            onClick={() => setThemeMode(mode)}
+                        >
+                            {t(`theme.${mode}`)}
+                        </Chip>
+                    ))}
+                </div>
+
+                <div className="setting-item setting-item--last">
+                    <div className="setting-info">
+                        <span className="setting-title">{t('theme.language')}</span>
+                        <span className="setting-description">{t('theme.languageDescription')}</span>
+                    </div>
+                    <LanguageSwitcher />
+                </div>
+            </section>
+
+            <section className="settings-section">
+                <h3><Icon name="notifications" size={20} />{t('settings.notification_channels')}</h3>
+                <p className="settings-description">{t('settings.channels_description')}</p>
 
                 <div className="settings-options">
                     {preferences?.map((option) => (
                         <div key={option.name} className="setting-item">
                             <div className="setting-info">
-                                <label htmlFor={`option-${option.name}`}>
-                                    <strong>
-                                        {t(`settings.channel_${option.name}`) || option.name.toUpperCase()}
-                                    </strong>
-                                </label>
+                                <span className="setting-title" id={`option-${option.name}-label`}>
+                                    {t(`settings.channel_${option.name}`)}
+                                </span>
                                 <span className="setting-description">
-                                    {t(`settings.channel_${option.name}_desc`) || 
-                                        `Receive notifications via ${option.name}`}
+                                    {t(`settings.channel_${option.name}_desc`)}
                                 </span>
                             </div>
-                            <label className="toggle-switch">
-                                <input
-                                    type="checkbox"
-                                    id={`option-${option.name}`}
-                                    checked={option.enabled}
-                                    onChange={() => handleToggle(option.name)}
-                                />
-                                <span className="toggle-slider"></span>
-                            </label>
+                            <Switch
+                                id={`option-${option.name}`}
+                                checked={option.enabled}
+                                onChange={() => handleToggle(option.name)}
+                                labelledBy={`option-${option.name}-label`}
+                            />
                         </div>
                     ))}
                 </div>
-            </div>
+            </section>
 
             <div className="settings-actions">
-                <button 
-                    onClick={handleSave}
-                    disabled={saving}
-                    className="btn btn-primary"
-                >
-                    {saving ? (t('settings.saving') || 'Saving...') : (t('settings.save') || 'Save Settings')}
-                </button>
+                <Button icon="check" onClick={handleSave} loading={saving}>
+                    {saving ? t('settings.saving') : t('settings.save')}
+                </Button>
             </div>
         </div>
     );

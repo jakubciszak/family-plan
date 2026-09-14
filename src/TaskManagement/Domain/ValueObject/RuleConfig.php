@@ -4,17 +4,23 @@ declare(strict_types=1);
 
 namespace App\TaskManagement\Domain\ValueObject;
 
+use App\PointsManagement\Domain\ValueObject\AccountKind;
 use App\Shared\Domain\ValueObject\Uuid;
 use InvalidArgumentException;
 
 final readonly class RuleConfig
 {
+    /**
+     * @param string[] $accounts account kinds the condition counts; empty means every account
+     */
     private function __construct(
         private RuleType $type,
         private ?Uuid $taskTemplateId,
         private ?int $requiredDays,
         private ?int $requiredCount,
-        private ?int $pointsPerDay = null
+        private ?int $pointsPerDay = null,
+        private ?int $requiredPoints = null,
+        private array $accounts = []
     ) {
         $this->validate();
     }
@@ -45,6 +51,22 @@ final readonly class RuleConfig
         );
     }
 
+    /**
+     * @param string[] $accounts
+     */
+    public static function weeklyPointsSum(int $requiredPoints, array $accounts = []): self
+    {
+        return new self(
+            RuleType::WEEKLY_POINTS_SUM,
+            null,
+            null,
+            null,
+            null,
+            $requiredPoints,
+            array_values(array_unique($accounts))
+        );
+    }
+
     public function type(): RuleType
     {
         return $this->type;
@@ -70,6 +92,27 @@ final readonly class RuleConfig
         return $this->pointsPerDay;
     }
 
+    public function requiredPoints(): ?int
+    {
+        return $this->requiredPoints;
+    }
+
+    /**
+     * @return string[] empty means the condition counts every account
+     */
+    public function accounts(): array
+    {
+        return $this->accounts;
+    }
+
+    /**
+     * @return AccountKind[]
+     */
+    public function accountKinds(): array
+    {
+        return $this->accounts === [] ? AccountKind::all() : AccountKind::fromValues($this->accounts);
+    }
+
     public function toArray(): array
     {
         return [
@@ -78,6 +121,8 @@ final readonly class RuleConfig
             'requiredDays' => $this->requiredDays,
             'requiredCount' => $this->requiredCount,
             'pointsPerDay' => $this->pointsPerDay,
+            'requiredPoints' => $this->requiredPoints,
+            'accounts' => $this->accounts,
         ];
     }
 
@@ -90,7 +135,9 @@ final readonly class RuleConfig
             isset($data['taskTemplateId']) ? Uuid::fromString($data['taskTemplateId']) : null,
             $data['requiredDays'] ?? null,
             $data['requiredCount'] ?? null,
-            isset($data['requiredDays']) ? (int) ($data['pointsPerDay'] ?? 1) : null
+            isset($data['requiredDays']) ? (int) ($data['pointsPerDay'] ?? 1) : null,
+            $data['requiredPoints'] ?? null,
+            $data['accounts'] ?? []
         );
     }
 
@@ -99,6 +146,7 @@ final readonly class RuleConfig
         match ($this->type) {
             RuleType::CONSECUTIVE_DAYS => $this->validateConsecutiveDays(),
             RuleType::MONTHLY_TASK_COUNT => $this->validateMonthlyTaskCount(),
+            RuleType::WEEKLY_POINTS_SUM => $this->validateWeeklyPointsSum(),
         };
     }
 
@@ -117,6 +165,19 @@ final readonly class RuleConfig
     {
         if ($this->requiredCount === null || $this->requiredCount < 1) {
             throw new InvalidArgumentException('Required count must be at least 1');
+        }
+    }
+
+    private function validateWeeklyPointsSum(): void
+    {
+        if ($this->requiredPoints === null || $this->requiredPoints < 1) {
+            throw new InvalidArgumentException('Required points must be at least 1');
+        }
+
+        foreach ($this->accounts as $account) {
+            if (AccountKind::tryFrom($account) === null) {
+                throw new InvalidArgumentException(sprintf('Unknown account "%s"', $account));
+            }
         }
     }
 }

@@ -5,11 +5,14 @@
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
-  "background_color": "#f8f9fa",
-  "theme_color": "#2c3e50",
+  "background_color": "#f5fbf5",
+  "theme_color": "#f5fbf5",
   "orientation": "portrait-primary",
   "lang": "pl",
-  "categories": ["productivity", "lifestyle"],
+  "categories": [
+    "productivity",
+    "lifestyle"
+  ],
   "icons": [
     {
       "src": "/favicon.svg",

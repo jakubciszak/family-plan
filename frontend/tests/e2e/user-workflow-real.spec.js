@@ -71,8 +71,8 @@ async function registerUser(page, user) {
     // Submit
     await page.click('button[type="submit"]');
 
-    // Wait for success message
-    await page.waitForSelector('.success-message', { timeout: 10000 });
+    // Bez weryfikacji maila rejestracja loguje od razu
+    await page.waitForSelector('.app-header', { timeout: 15000 });
 }
 
 async function loginUser(page, user) {
@@ -126,10 +126,8 @@ test.describe.serial('Complete User Workflow E2E - Real Backend', () => {
     test('1. Main user creates an account', async ({ page }) => {
         await registerUser(page, mainUser);
 
-        // Verify success message
-        const successMessage = page.locator('.success-message');
-        await expect(successMessage).toBeVisible();
-        await expect(successMessage).toContainText('Registration successful');
+        // Rejestracja bez weryfikacji maila loguje od razu
+        await expect(page.locator('.user-info')).toBeVisible();
     });
 
     test('2. Main user logs in and creates a new team', async ({ page }) => {
@@ -216,10 +214,8 @@ test.describe.serial('Complete User Workflow E2E - Real Backend', () => {
     test('5. New user registers with the invited email', async ({ page }) => {
         await registerUser(page, invitedUser);
 
-        // Verify success message
-        const successMessage = page.locator('.success-message');
-        await expect(successMessage).toBeVisible();
-        await expect(successMessage).toContainText('Registration successful');
+        // Rejestracja bez weryfikacji maila loguje od razu
+        await expect(page.locator('.user-info')).toBeVisible();
     });
 
     test('6. New user logs in and sees/accepts pending invitation', async ({ page }) => {

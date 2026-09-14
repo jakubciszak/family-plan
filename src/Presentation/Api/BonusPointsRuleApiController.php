@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Presentation\Api;
 
+use App\PointsManagement\Domain\ValueObject\AccountKind;
 use App\Shared\Domain\ValueObject\Uuid;
 use App\TaskManagement\Application\BonusRule\Command\ActivateBonusPointsRuleCommand;
 use App\TaskManagement\Application\BonusRule\Command\CreateBonusPointsRuleCommand;
@@ -198,6 +199,26 @@ class BonusPointsRuleApiController extends AbstractController
                     ['error' => 'ruleConfig.pointsPerDay must be at least 1'],
                     Response::HTTP_BAD_REQUEST
                 );
+            }
+        }
+
+        if ($request->ruleType === 'weekly_points_sum') {
+            $requiredPoints = $request->ruleConfig['requiredPoints'] ?? null;
+
+            if (!is_numeric($requiredPoints) || (int) $requiredPoints < 1) {
+                return $this->json(
+                    ['error' => 'ruleConfig.requiredPoints must be at least 1'],
+                    Response::HTTP_BAD_REQUEST
+                );
+            }
+
+            foreach ($request->ruleConfig['accounts'] ?? [] as $account) {
+                if (!is_string($account) || AccountKind::tryFrom($account) === null) {
+                    return $this->json(
+                        ['error' => 'ruleConfig.accounts must only hold known account kinds'],
+                        Response::HTTP_BAD_REQUEST
+                    );
+                }
             }
         }
 

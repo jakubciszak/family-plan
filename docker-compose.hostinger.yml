@@ -37,6 +37,8 @@ services:
       MAILER_FROM_EMAIL: ${MAILER_FROM_EMAIL:-noreply@familyplan.local}
       MAILER_FROM_NAME: ${MAILER_FROM_NAME:-Family Plan}
       APP_URL: ${APP_URL:-https://family-plan.srv1201847.hstgr.cloud}
+      FRONTEND_URL: ${FRONTEND_URL:-https://family-plan.srv1201847.hstgr.cloud}
+      DEFAULT_TEAM_NAME: ${DEFAULT_TEAM_NAME:-Moja rodzina}
     depends_on:
       database:
         condition: service_healthy

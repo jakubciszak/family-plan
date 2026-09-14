@@ -2,6 +2,7 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import taskService from '../services/taskService';
 import teamService from '../services/teamService';
+import { Button, Icon, Select, TextField, CircularProgress } from '../components/md3';
 
 const LIMIT_TYPES = ['unlimited', 'once', 'per_day', 'per_week', 'per_month'];
 
@@ -68,11 +69,16 @@ function TaskTypeManagement() {
     };
 
     if (loading) {
-        return <div className="loading">{t('common.loading')}</div>;
+        return <CircularProgress label={t('common.loading')} />;
     }
 
     if (teams.length === 0) {
-        return <div className="task-list-container"><p className="empty-hint">{t('taskTypes.adminOnly')}</p></div>;
+        return (
+            <div className="access-denied">
+                <Icon name="lock" size={48} />
+                <p>{t('taskTypes.adminOnly')}</p>
+            </div>
+        );
     }
 
     const visibleTypes = taskTypes.filter((type) => !selectedTeam || type.teamId === selectedTeam.id);
@@ -83,24 +89,34 @@ function TaskTypeManagement() {
                 <h2>{t('taskTypes.title')}</h2>
                 <div className="header-controls">
                     {teams.length > 1 && (
-                        <select
+                        <Select
+                            id="team-selector"
                             value={selectedTeam?.id || ''}
                             onChange={(e) => setSelectedTeam(teams.find((team) => team.id === e.target.value))}
-                            className="team-selector"
-                            aria-label={t('teams.title')}
+                            triggerClassName="team-selector"
+                            ariaLabel={t('teams.title')}
                         >
                             {teams.map((team) => (
                                 <option key={team.id} value={team.id}>{team.name}</option>
                             ))}
-                        </select>
+                        </Select>
                     )}
-                    <button className="btn-primary" onClick={() => setShowForm(!showForm)}>
+                    <Button
+                        variant={showForm ? 'text' : 'filled'}
+                        icon={showForm ? 'close' : 'add'}
+                        onClick={() => setShowForm(!showForm)}
+                    >
                         {showForm ? t('common.cancel') : t('taskTypes.create')}
-                    </button>
+                    </Button>
                 </div>
             </div>
 
-            {error && <div className="error-message">{error}</div>}
+            {error && (
+                <div className="error-message" role="alert">
+                    <Icon name="error" size={20} />
+                    <span>{error}</span>
+                </div>
+            )}
 
             {showForm && <TaskTypeForm onSubmit={handleCreate} />}
 
@@ -109,29 +125,56 @@ function TaskTypeManagement() {
                     <p className="empty-hint">{t('taskTypes.none')}</p>
                 ) : (
                     visibleTypes.map((type) => (
-                        <div className="task-card" key={type.id}>
+                        <div className={`task-card${type.isActive ? '' : ' task-card--done'}`} key={type.id}>
                             <div className="task-row">
                                 <span className="task-name" title={type.description}>{type.name}</span>
-                                <span className="task-points">{t('user.points', { points: type.points })}</span>
-                                <span className="task-frequency">{limitLabel(type.executionLimit)}</span>
+                                <span className="task-points">
+                                    <Icon name="stars" size={16} />
+                                    {t('user.points', { points: type.points })}
+                                </span>
+                                <span className="task-frequency">
+                                    <Icon name="calendar" size={16} />
+                                    {limitLabel(type.executionLimit)}
+                                </span>
                                 {type.remaining !== null && (
-                                    <span className="task-remaining">{t('taskTypes.remaining', { count: type.remaining })}</span>
+                                    <span className="task-remaining">
+                                        {t('taskTypes.remaining', { count: type.remaining })}
+                                    </span>
                                 )}
-                                {!type.isActive && <span className="task-status status-inactive">{t('taskTypes.inactive')}</span>}
+                                {!type.isActive && (
+                                    <span className="task-status status-inactive">
+                                        <Icon name="block" size={16} />
+                                        {t('taskTypes.inactive')}
+                                    </span>
+                                )}
                             </div>
+                            {type.description && <p className="task-description">{type.description}</p>}
                             <div className="task-actions">
                                 {type.isActive ? (
-                                    <button className="btn-secondary" onClick={() => run(() => taskService.deactivateTaskType(type.id))}>
+                                    <Button
+                                        variant="outlined"
+                                        icon="pause"
+                                        onClick={() => run(() => taskService.deactivateTaskType(type.id))}
+                                    >
                                         {t('taskTypes.deactivate')}
-                                    </button>
+                                    </Button>
                                 ) : (
-                                    <button className="btn-success" onClick={() => run(() => taskService.activateTaskType(type.id))}>
+                                    <Button
+                                        tone="success"
+                                        icon="restore"
+                                        onClick={() => run(() => taskService.activateTaskType(type.id))}
+                                    >
                                         {t('taskTypes.activate')}
-                                    </button>
+                                    </Button>
                                 )}
-                                <button className="btn-danger" onClick={() => run(() => taskService.deleteTaskType(type.id))}>
+                                <Button
+                                    variant="text"
+                                    tone="danger"
+                                    icon="delete"
+                                    onClick={() => run(() => taskService.deleteTaskType(type.id))}
+                                >
                                     {t('taskTypes.delete')}
-                                </button>
+                                </Button>
                             </div>
                         </div>
                     ))
@@ -170,48 +213,82 @@ function TaskTypeForm({ onSubmit }) {
                 onSubmit(formData);
             }}
         >
-            <div className="form-group">
-                <label htmlFor="name">{t('tasks.name')}</label>
-                <input type="text" id="name" name="name" value={formData.name} onChange={handleChange} required />
+            <TextField
+                id="name"
+                name="name"
+                type="text"
+                label={t('tasks.name')}
+                value={formData.name}
+                onChange={handleChange}
+                required
+            />
+            <TextField
+                as="textarea"
+                id="description"
+                name="description"
+                label={t('tasks.description')}
+                value={formData.description}
+                onChange={handleChange}
+                rows="2"
+            />
+            <div className="md-form__row">
+                <TextField
+                    id="points"
+                    name="points"
+                    type="number"
+                    label={t('tasks.points')}
+                    value={formData.points}
+                    onChange={handleChange}
+                    min="0"
+                    max="1000"
+                    required
+                />
+                <TextField
+                    as="select"
+                    id="frequency"
+                    name="frequency"
+                    label={t('tasks.frequency')}
+                    value={formData.frequency}
+                    onChange={handleChange}
+                >
+                    <option value="once">{t('tasks.frequencyOnce')}</option>
+                    <option value="daily">{t('tasks.frequencyDaily')}</option>
+                    <option value="weekly">{t('tasks.frequencyWeekly')}</option>
+                    <option value="monthly">{t('tasks.frequencyMonthly')}</option>
+                </TextField>
             </div>
-            <div className="form-group">
-                <label htmlFor="description">{t('tasks.description')}</label>
-                <textarea id="description" name="description" value={formData.description} onChange={handleChange} rows="2" />
-            </div>
-            <div className="form-row">
-                <div className="form-group">
-                    <label htmlFor="points">{t('tasks.points')}</label>
-                    <input type="number" id="points" name="points" value={formData.points} onChange={handleChange} min="0" max="1000" required />
-                </div>
-                <div className="form-group">
-                    <label htmlFor="frequency">{t('tasks.frequency')}</label>
-                    <select id="frequency" name="frequency" value={formData.frequency} onChange={handleChange}>
-                        <option value="once">{t('tasks.frequencyOnce')}</option>
-                        <option value="daily">{t('tasks.frequencyDaily')}</option>
-                        <option value="weekly">{t('tasks.frequencyWeekly')}</option>
-                        <option value="monthly">{t('tasks.frequencyMonthly')}</option>
-                    </select>
-                </div>
-            </div>
-            <div className="form-row">
-                <div className="form-group">
-                    <label htmlFor="limitType">{t('taskTypes.limit')}</label>
-                    <select id="limitType" name="limitType" value={formData.limitType} onChange={handleChange}>
-                        {LIMIT_TYPES.map((limitType) => (
-                            <option key={limitType} value={limitType}>
-                                {t(`taskTypes.limitOption.${limitType}`)}
-                            </option>
-                        ))}
-                    </select>
-                </div>
+            <div className="md-form__row">
+                <TextField
+                    as="select"
+                    id="limitType"
+                    name="limitType"
+                    label={t('taskTypes.limit')}
+                    value={formData.limitType}
+                    onChange={handleChange}
+                >
+                    {LIMIT_TYPES.map((limitType) => (
+                        <option key={limitType} value={limitType}>
+                            {t(`taskTypes.limitOption.${limitType}`)}
+                        </option>
+                    ))}
+                </TextField>
                 {needsCount && (
-                    <div className="form-group">
-                        <label htmlFor="limitCount">{t('taskTypes.limitCount')}</label>
-                        <input type="number" id="limitCount" name="limitCount" value={formData.limitCount} onChange={handleChange} min="1" max="100" required />
-                    </div>
+                    <TextField
+                        id="limitCount"
+                        name="limitCount"
+                        type="number"
+                        label={t('taskTypes.limitCount')}
+                        value={formData.limitCount}
+                        onChange={handleChange}
+                        min="1"
+                        max="100"
+                        required
+                    />
                 )}
             </div>
-            <button type="submit" className="btn-primary">{t('taskTypes.create')}</button>
+            <div className="form-actions">
+                <Button type="submit" icon="add">{t('taskTypes.create')}</Button>
+            </div>
         </form>
     );
 }

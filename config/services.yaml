@@ -26,7 +26,11 @@ services:
 
     App\TeamManagement\Application\Service\InvitationLinkGenerator:
         arguments:
-            $appUrl: '%env(APP_URL)%'
+            $frontendUrl: '%env(FRONTEND_URL)%'
+
+    App\TeamManagement\Application\Service\DefaultTeamProvisioner:
+        arguments:
+            $defaultTeamName: '%env(DEFAULT_TEAM_NAME)%'
 
     App\UserManagement\Application\Handler\RegisterUserHandler:
         arguments:
@@ -52,6 +56,12 @@ services:
 
     App\PointsManagement\Domain\Repository\UserWalletRepositoryInterface:
         class: App\PointsManagement\Infrastructure\Persistence\DoctrineUserWalletRepository
+
+    App\PointsManagement\Domain\Repository\AccountRepositoryInterface:
+        class: App\PointsManagement\Infrastructure\Persistence\DoctrineAccountRepository
+
+    App\PointsManagement\Domain\Repository\EntryRepositoryInterface:
+        class: App\PointsManagement\Infrastructure\Persistence\DoctrineEntryRepository
 
     App\TaskManagement\Domain\Repository\BonusPointsRuleRepositoryInterface:
         class: App\TaskManagement\Infrastructure\Persistence\DoctrineBonusPointsRuleRepository

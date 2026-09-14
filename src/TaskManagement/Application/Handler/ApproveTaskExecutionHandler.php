@@ -10,6 +10,7 @@ use App\TaskManagement\Domain\Exception\UnauthorizedTaskActionException;
 use App\TaskManagement\Application\Command\ApproveTaskExecutionCommand;
 use App\TaskManagement\Domain\Repository\TaskExecutionRepositoryInterface;
 use App\TaskManagement\Domain\Policy\TaskApprovalPolicyInterface;
+use App\TaskManagement\Domain\Service\BonusPointsPayout;
 use App\TaskManagement\Domain\Strategy\ExecutionPointsAwardStrategyInterface;
 
 final readonly class ApproveTaskExecutionHandler
@@ -18,7 +19,8 @@ final readonly class ApproveTaskExecutionHandler
         private ClockInterface $clock,
         private TaskExecutionRepositoryInterface $taskExecutionRepository,
         private TaskApprovalPolicyInterface $approvalPolicy,
-        private ExecutionPointsAwardStrategyInterface $pointsAwardStrategy
+        private ExecutionPointsAwardStrategyInterface $pointsAwardStrategy,
+        private BonusPointsPayout $bonusPayout
     ) {
     }
 
@@ -52,5 +54,8 @@ final readonly class ApproveTaskExecutionHandler
         
         // Award points to the user who completed the execution
         $this->pointsAwardStrategy->awardPoints($execution, $completedByUserId);
+
+        // Booking those points may have met a bonus rule
+        $this->bonusPayout->settleFor($completedByUserId);
     }
 }

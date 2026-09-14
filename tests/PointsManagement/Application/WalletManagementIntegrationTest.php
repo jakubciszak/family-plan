@@ -42,7 +42,7 @@ class WalletManagementIntegrationTest extends TestCase
         $this->assertEquals($userId, $savedWallet->userId());
         
         // When - Award points for first task
-        $savedWallet->awardPoints(50, 'Task 1 completed', $this->clock);
+        $savedWallet->summarise(50, $this->clock);
         $this->walletRepository->save($savedWallet);
         
         // Then - Balance is updated
@@ -50,7 +50,7 @@ class WalletManagementIntegrationTest extends TestCase
         $this->assertEquals(50, $updatedWallet->balance()->value());
         
         // When - Award points for second task
-        $updatedWallet->awardPoints(30, 'Task 2 completed', $this->clock);
+        $updatedWallet->summarise(80, $this->clock);
         $this->walletRepository->save($updatedWallet);
         
         // Then - Points accumulate
@@ -106,8 +106,8 @@ class WalletManagementIntegrationTest extends TestCase
         $this->walletRepository->save($wallet2);
         
         // Award different points to each
-        $wallet1->awardPoints(100, 'User 1 task', $this->clock);
-        $wallet2->awardPoints(50, 'User 2 task', $this->clock);
+        $wallet1->summarise(100, $this->clock);
+        $wallet2->summarise(50, $this->clock);
         
         $this->walletRepository->save($wallet1);
         $this->walletRepository->save($wallet2);
@@ -125,12 +125,12 @@ class WalletManagementIntegrationTest extends TestCase
         // Given - Create wallet with initial points
         $userId = UuidMother::random();
         $wallet = UserWallet::create(UuidMother::random(), $userId, $this->clock);
-        $wallet->awardPoints(100, 'Initial award', $this->clock);
+        $wallet->summarise(100, $this->clock);
         $this->walletRepository->save($wallet);
         
         // When - Deduct points
         $savedWallet = $this->walletRepository->findByUserId($userId);
-        $savedWallet->deductPoints(30, 'Redemption', $this->clock);
+        $savedWallet->summarise(70, $this->clock);
         $this->walletRepository->save($savedWallet);
         
         // Then - Balance is reduced
@@ -153,14 +153,14 @@ class WalletManagementIntegrationTest extends TestCase
         $this->assertInstanceOf(\App\PointsManagement\Domain\Event\UserWalletCreated::class, $events[0]);
         
         // When - Award points
-        $wallet->awardPoints(50, 'Task completion', $this->clock);
+        $wallet->summarise(50, $this->clock);
         
         // Then - Points awarded event is recorded
         $events = $wallet->pullDomainEvents();
         $this->assertCount(1, $events);
         $this->assertInstanceOf(\App\PointsManagement\Domain\Event\PointsAwarded::class, $events[0]);
         $this->assertEquals(50, $events[0]->points);
-        $this->assertEquals('Task completion', $events[0]->reason);
+        $this->assertEquals('Points booked in the ledger', $events[0]->reason);
     }
 
     public function testMultipleWalletsForSameUserAreIndependent(): void

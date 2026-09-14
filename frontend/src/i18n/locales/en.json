@@ -10,7 +10,11 @@
     "statusChangeRules": "Status Change Rules",
     "settings": "Settings",
     "account": "My Account",
-    "taskTypes": "Task types"
+    "taskTypes": "Task types",
+    "taskTypesShort": "Types",
+    "bonusRulesShort": "Bonuses",
+    "statusChangeRulesShort": "Rules",
+    "accountShort": "Account"
   },
   "auth": {
     "login": "Login",
@@ -100,7 +104,28 @@
     "pointsPerDay": "Points a day",
     "pointsPerDayHint": "How many points a day must be earned for the day to count towards the streak",
     "consecutiveDaysSummary": "{{days}} days in a row with at least {{points}} points a day",
-    "monthlyCountSummary": "{{count}} tasks in a month"
+    "monthlyCountSummary": "{{count}} tasks in a month",
+    "ruleTypes": {
+      "consecutive_days": "Consecutive Days",
+      "monthly_task_count": "Monthly Task Count",
+      "weekly_points_sum": "Weekly Points Sum"
+    },
+    "ruleType": "Rule Type",
+    "bonusPoints": "Bonus Points",
+    "requiredCount": "Required Task Count",
+    "requiredCountHint": "Number of tasks to complete in a month",
+    "namePlaceholder": "e.g., Dishwasher Streak Bonus",
+    "descriptionPlaceholder": "Describe what users need to do to earn this bonus",
+    "requiredPoints": "Points per week",
+    "requiredPointsHint": "Points to collect between Monday and Sunday",
+    "accounts": "Which points count",
+    "accountsHint": "Nothing selected = every account counts",
+    "accountNames": {
+      "tasks": "From tasks",
+      "bonuses": "Bonus"
+    },
+    "weeklySumSummary": "{{points}} points a week ({{accounts}})",
+    "allAccounts": "all points"
   },
   "user": {
     "points": "{{points}} points",
@@ -136,7 +161,12 @@
     "success": "Operation successful",
     "submit": "Submit",
     "close": "Close",
-    "saving": "Saving..."
+    "saving": "Saving...",
+    "active": "Active",
+    "inactive": "Inactive",
+    "activate": "Activate",
+    "deactivate": "Deactivate",
+    "more": "More"
   },
   "errors": {
     "required": "This field is required",
@@ -170,7 +200,9 @@
     "descriptions": {
       "otherTaskCompletedToday": "Requires {{taskName}} to be completed today",
       "lastExecutionCooldown": "Minimum {{days}} days must pass since last execution"
-    }
+    },
+    "accessDeniedTitle": "Access denied",
+    "accessDeniedBody": "Status change rules are managed by a system administrator."
   },
   "teams": {
     "title": "Team Management",
@@ -267,5 +299,14 @@
       "sat": "Sat",
       "sun": "Sun"
     }
+  },
+  "theme": {
+    "appearance": "Appearance",
+    "appearanceDescription": "Pick a light or dark theme, or follow your system setting.",
+    "light": "Light",
+    "dark": "Dark",
+    "system": "System",
+    "language": "Language",
+    "languageDescription": "Interface language of the app."
   }
 }

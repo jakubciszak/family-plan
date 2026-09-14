@@ -1,9 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import teamService from '../services/teamService';
+import {
+    Button,
+    Dialog,
+    Icon,
+    IconButton,
+    Snackbar,
+    TextField,
+    CircularProgress,
+} from '../components/md3';
 import '../styles/TeamManagement.css';
 
-const TeamManagement = () => {
+const TeamManagement = ({ onMembershipChanged }) => {
     const { t } = useTranslation();
     const [teams, setTeams] = useState([]);
     const [selectedTeam, setSelectedTeam] = useState(null);
@@ -13,10 +22,11 @@ const TeamManagement = () => {
     const [copiedInvitationId, setCopiedInvitationId] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [toast, setToast] = useState(null);
     const [showCreateForm, setShowCreateForm] = useState(false);
     const [showInviteForm, setShowInviteForm] = useState(false);
+    const [memberToRemove, setMemberToRemove] = useState(null);
 
-    // Form states
     const [teamName, setTeamName] = useState('');
     const [teamDescription, setTeamDescription] = useState('');
     const [inviteEmail, setInviteEmail] = useState('');
@@ -69,14 +79,12 @@ const TeamManagement = () => {
     const handleCreateTeam = async (e) => {
         e.preventDefault();
         try {
-            await teamService.createTeam({
-                name: teamName,
-                description: teamDescription
-            });
+            await teamService.createTeam({ name: teamName, description: teamDescription });
             setTeamName('');
             setTeamDescription('');
             setShowCreateForm(false);
             loadTeams();
+            onMembershipChanged?.();
         } catch (err) {
             setError(t('teams.errorCreatingTeam'));
             console.error('Error creating team:', err);
@@ -88,13 +96,11 @@ const TeamManagement = () => {
         if (!selectedTeam) return;
 
         try {
-            await teamService.inviteToTeam(selectedTeam.id, {
-                email: inviteEmail,
-                role: inviteRole
-            });
+            await teamService.inviteToTeam(selectedTeam.id, { email: inviteEmail, role: inviteRole });
             setInviteEmail('');
             setInviteRole('member');
             setShowInviteForm(false);
+            setToast(t('teams.invitationSent'));
             loadTeamMembers(selectedTeam.id);
         } catch (err) {
             setError(t('teams.errorSendingInvitation'));
@@ -117,150 +123,156 @@ const TeamManagement = () => {
             await teamService.acceptInvitation(token);
             loadMyInvitations();
             loadTeams();
-            alert(t('teams.invitationAccepted'));
+            onMembershipChanged?.();
+            setToast(t('teams.invitationAccepted'));
         } catch (err) {
             setError(t('teams.errorAcceptingInvitation'));
             console.error('Error accepting invitation:', err);
         }
     };
 
-    const handleRemoveMember = async (userId) => {
-        if (!selectedTeam) return;
-        if (!window.confirm(t('teams.confirmRemoveMember'))) return;
+    const handleRemoveMember = async () => {
+        if (!selectedTeam || !memberToRemove) return;
 
         try {
-            await teamService.removeMember(selectedTeam.id, userId);
+            await teamService.removeMember(selectedTeam.id, memberToRemove.userId);
             loadTeamMembers(selectedTeam.id);
         } catch (err) {
             setError(t('teams.errorRemovingMember'));
             console.error('Error removing member:', err);
+        } finally {
+            setMemberToRemove(null);
         }
     };
 
+    const roleLabel = (role) =>
+        t(`teams.role${role.charAt(0).toUpperCase()}${role.slice(1)}`);
+
     if (loading) {
-        return <div className="loading">{t('common.loading')}</div>;
+        return <CircularProgress label={t('common.loading')} />;
     }
 
     return (
         <div className="team-management">
             <h1>{t('teams.title')}</h1>
 
-            {error && <div className="error-message">{error}</div>}
+            {error && (
+                <div className="error-message" role="alert">
+                    <Icon name="error" size={20} />
+                    <span>{error}</span>
+                </div>
+            )}
 
-            {/* Pending Invitations */}
             {invitations.length > 0 && (
                 <div className="invitations-section">
                     <h2>{t('teams.pendingInvitations')}</h2>
                     <div className="invitations-list">
                         {invitations.map((invitation) => (
                             <div key={invitation.id} className="invitation-card">
-                                <p>
-                                    {t('teams.invitationText', { 
-                                        role: invitation.role 
-                                    })}
-                                </p>
-                                <button 
-                                    onClick={() => handleAcceptInvitation(invitation.token)}
-                                    className="btn-primary"
-                                >
+                                <p>{t('teams.invitationText', { role: roleLabel(invitation.role) })}</p>
+                                <Button icon="check" onClick={() => handleAcceptInvitation(invitation.token)}>
                                     {t('teams.acceptInvitation')}
-                                </button>
+                                </Button>
                             </div>
                         ))}
                     </div>
                 </div>
             )}
 
-            {/* Teams List */}
             <div className="teams-section">
                 <div className="teams-header">
                     <h2>{t('teams.myTeams')}</h2>
-                    <button 
+                    <Button
+                        variant={showCreateForm ? 'text' : 'filled'}
+                        icon={showCreateForm ? 'close' : 'add'}
                         onClick={() => setShowCreateForm(!showCreateForm)}
-                        className="btn-primary"
                     >
                         {showCreateForm ? t('common.cancel') : t('teams.createTeam')}
-                    </button>
+                    </Button>
                 </div>
 
                 {showCreateForm && (
                     <form onSubmit={handleCreateTeam} className="team-form">
-                        <div className="form-group">
-                            <label>{t('teams.teamName')}</label>
-                            <input
-                                type="text"
-                                value={teamName}
-                                onChange={(e) => setTeamName(e.target.value)}
-                                required
-                                maxLength={255}
-                            />
+                        <TextField
+                            id="team-name"
+                            type="text"
+                            label={t('teams.teamName')}
+                            value={teamName}
+                            onChange={(e) => setTeamName(e.target.value)}
+                            required
+                            maxLength={255}
+                        />
+                        <TextField
+                            as="textarea"
+                            id="team-description"
+                            label={t('teams.teamDescription')}
+                            value={teamDescription}
+                            onChange={(e) => setTeamDescription(e.target.value)}
+                            rows={3}
+                        />
+                        <div className="form-actions">
+                            <Button type="submit" tone="success" icon="check">
+                                {t('teams.create')}
+                            </Button>
                         </div>
-                        <div className="form-group">
-                            <label>{t('teams.teamDescription')}</label>
-                            <textarea
-                                value={teamDescription}
-                                onChange={(e) => setTeamDescription(e.target.value)}
-                                rows={3}
-                            />
-                        </div>
-                        <button type="submit" className="btn-success">
-                            {t('teams.create')}
-                        </button>
                     </form>
                 )}
 
                 <div className="teams-list">
                     {teams.map((team) => (
-                        <div 
-                            key={team.id} 
-                            className={`team-card ${selectedTeam?.id === team.id ? 'active' : ''}`}
+                        <button
+                            type="button"
+                            key={team.id}
+                            className={`team-card md-ripple-host ${selectedTeam?.id === team.id ? 'active' : ''}`}
+                            aria-pressed={selectedTeam?.id === team.id}
                             onClick={() => setSelectedTeam(team)}
                         >
-                            <h3>{team.name}</h3>
-                            {team.description && <p>{team.description}</p>}
-                        </div>
+                            <span className="team-card__name">{team.name}</span>
+                            {team.description && <span className="team-card__description">{team.description}</span>}
+                        </button>
                     ))}
                 </div>
             </div>
 
-            {/* Team Details */}
             {selectedTeam && (
                 <div className="team-details">
                     <h2>{selectedTeam.name}</h2>
-                    
+
                     <div className="team-actions">
-                        <button 
+                        <Button
+                            variant={showInviteForm ? 'text' : 'tonal'}
+                            icon={showInviteForm ? 'close' : 'teamAdd'}
                             onClick={() => setShowInviteForm(!showInviteForm)}
-                            className="btn-primary"
                         >
                             {showInviteForm ? t('common.cancel') : t('teams.inviteMember')}
-                        </button>
+                        </Button>
                     </div>
 
                     {showInviteForm && (
                         <form onSubmit={handleInviteMember} className="invite-form">
-                            <div className="form-group">
-                                <label>{t('teams.email')}</label>
-                                <input
-                                    type="email"
-                                    value={inviteEmail}
-                                    onChange={(e) => setInviteEmail(e.target.value)}
-                                    required
-                                />
+                            <TextField
+                                id="invite-email"
+                                type="email"
+                                label={t('teams.email')}
+                                value={inviteEmail}
+                                onChange={(e) => setInviteEmail(e.target.value)}
+                                required
+                            />
+                            <TextField
+                                as="select"
+                                id="invite-role"
+                                label={t('teams.role')}
+                                value={inviteRole}
+                                onChange={(e) => setInviteRole(e.target.value)}
+                            >
+                                <option value="member">{t('teams.roleMember')}</option>
+                                <option value="admin">{t('teams.roleAdmin')}</option>
+                            </TextField>
+                            <div className="form-actions">
+                                <Button type="submit" tone="success" icon="send">
+                                    {t('teams.sendInvitation')}
+                                </Button>
                             </div>
-                            <div className="form-group">
-                                <label>{t('teams.role')}</label>
-                                <select
-                                    value={inviteRole}
-                                    onChange={(e) => setInviteRole(e.target.value)}
-                                >
-                                    <option value="member">{t('teams.roleMember')}</option>
-                                    <option value="admin">{t('teams.roleAdmin')}</option>
-                                </select>
-                            </div>
-                            <button type="submit" className="btn-success">
-                                {t('teams.sendInvitation')}
-                            </button>
                         </form>
                     )}
 
@@ -268,20 +280,26 @@ const TeamManagement = () => {
                     <div className="members-list">
                         {members.map((member) => (
                             <div key={member.id} className="member-card">
+                                <span className="md-avatar" aria-hidden="true">
+                                    {member.userName?.trim()?.charAt(0) || '?'}
+                                </span>
                                 <div className="member-info">
                                     <strong>{member.userName}</strong>
                                     <span className="member-email">{member.userEmail}</span>
                                     <span className={`member-role role-${member.role}`}>
-                                        {t(`teams.role${member.role.charAt(0).toUpperCase()}${member.role.slice(1)}`)}
+                                        <Icon name={member.role === 'admin' ? 'admin' : 'person'} size={14} />
+                                        {roleLabel(member.role)}
                                     </span>
                                 </div>
                                 {member.role !== 'admin' && (
-                                    <button 
-                                        onClick={() => handleRemoveMember(member.userId)}
-                                        className="btn-danger"
+                                    <Button
+                                        variant="text"
+                                        tone="danger"
+                                        icon="personRemove"
+                                        onClick={() => setMemberToRemove(member)}
                                     >
                                         {t('teams.remove')}
-                                    </button>
+                                    </Button>
                                 )}
                             </div>
                         ))}
@@ -294,10 +312,14 @@ const TeamManagement = () => {
                             <div className="members-list">
                                 {pendingInvitations.map((invitation) => (
                                     <div key={invitation.id} className="member-card invitation-card">
+                                        <span className="md-avatar" aria-hidden="true">
+                                            <Icon name="mail" size={20} />
+                                        </span>
                                         <div className="member-info">
                                             <strong>{invitation.email}</strong>
                                             <span className={`member-role role-${invitation.role}`}>
-                                                {t(`teams.role${invitation.role.charAt(0).toUpperCase()}${invitation.role.slice(1)}`)}
+                                                <Icon name={invitation.role === 'admin' ? 'admin' : 'person'} size={14} />
+                                                {roleLabel(invitation.role)}
                                             </span>
                                             <span className="invitation-status">
                                                 {invitation.accountExists
@@ -313,16 +335,16 @@ const TeamManagement = () => {
                                                     value={invitation.invitationUrl}
                                                     onFocus={(e) => e.target.select()}
                                                     className="invitation-link-input"
+                                                    aria-label={t('teams.copyLink')}
                                                 />
-                                                <button
-                                                    type="button"
-                                                    onClick={() => handleCopyInvitationLink(invitation)}
-                                                    className="btn-secondary"
-                                                >
-                                                    {copiedInvitationId === invitation.id
+                                                <IconButton
+                                                    icon={copiedInvitationId === invitation.id ? 'check' : 'copy'}
+                                                    variant="tonal"
+                                                    label={copiedInvitationId === invitation.id
                                                         ? t('teams.linkCopied')
                                                         : t('teams.copyLink')}
-                                                </button>
+                                                    onClick={() => handleCopyInvitationLink(invitation)}
+                                                />
                                             </div>
                                         )}
                                     </div>
@@ -332,6 +354,26 @@ const TeamManagement = () => {
                     )}
                 </div>
             )}
+
+            <Dialog
+                open={!!memberToRemove}
+                onClose={() => setMemberToRemove(null)}
+                headline={t('teams.confirmRemoveMember')}
+                actions={
+                    <>
+                        <Button variant="text" onClick={() => setMemberToRemove(null)}>
+                            {t('common.cancel')}
+                        </Button>
+                        <Button tone="danger" icon="personRemove" onClick={handleRemoveMember}>
+                            {t('teams.remove')}
+                        </Button>
+                    </>
+                }
+            >
+                <p>{memberToRemove?.userName}</p>
+            </Dialog>
+
+            <Snackbar message={toast} onDismiss={() => setToast(null)} />
         </div>
     );
 };

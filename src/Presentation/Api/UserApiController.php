@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Presentation\Api;
 
 use App\PointsManagement\Domain\Repository\UserWalletRepositoryInterface;
+use App\PointsManagement\Domain\Service\PointsLedger;
 use App\Shared\Domain\ValueObject\Uuid;
 use App\UserManagement\Application\Command\CreateUserCommand;
 use App\UserManagement\Application\Handler\CreateUserHandler;
@@ -24,7 +25,8 @@ class UserApiController extends AbstractController
     public function __construct(
         private readonly UserRepositoryInterface $userRepository,
         private readonly CreateUserHandler $createUserHandler,
-        private readonly UserWalletRepositoryInterface $userWalletRepository
+        private readonly UserWalletRepositoryInterface $userWalletRepository,
+        private readonly PointsLedger $ledger
     ) {
     }
 
@@ -177,7 +179,8 @@ class UserApiController extends AbstractController
         content: new OA\JsonContent(
             properties: [
                 new OA\Property(property: 'userId', type: 'string', format: 'uuid'),
-                new OA\Property(property: 'balance', type: 'integer', example: 150)
+                new OA\Property(property: 'balance', type: 'integer', example: 150),
+                new OA\Property(property: 'accounts', type: 'object', description: 'Balance per account kind')
             ]
         )
     )]
@@ -207,6 +210,7 @@ class UserApiController extends AbstractController
         return $this->json([
             'userId' => $id,
             'balance' => $balance,
+            'accounts' => $this->ledger->balances(Uuid::fromString($id)),
         ]);
     }
 

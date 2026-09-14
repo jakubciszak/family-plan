@@ -62,7 +62,7 @@ class TaskApprovalWithPointsIntegrationTest extends TestCase
         $this->completeHandler = new CompleteTaskHandler($this->taskRepository);
 
         $approvalPolicy = new AdminApprovalPolicy($this->userRepository);
-        $pointsAwardStrategy = new TaskApprovalPointsAwardStrategy($this->walletRepository, $this->clock);
+        $pointsAwardStrategy = new TaskApprovalPointsAwardStrategy($this->ledger());
         $this->approveHandler = new ApproveTaskHandler(
             $this->taskRepository,
             $approvalPolicy,
@@ -296,5 +296,17 @@ class TaskApprovalWithPointsIntegrationTest extends TestCase
 
         ($this->completeHandler)(new CompleteTaskCommand($taskId->value(), $userId->value()));
         ($this->approveHandler)(new ApproveTaskCommand($taskId->value(), $adminId->value()));
+    }
+
+    private function ledger(): \App\PointsManagement\Domain\Service\PointsLedger
+    {
+        $accounts = new \App\PointsManagement\Infrastructure\Persistence\InMemoryAccountRepository();
+
+        return new \App\PointsManagement\Domain\Service\PointsLedger(
+            $accounts,
+            new \App\PointsManagement\Infrastructure\Persistence\InMemoryEntryRepository($accounts),
+            $this->walletRepository,
+            $this->clock
+        );
     }
 }

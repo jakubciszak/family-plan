@@ -7,12 +7,12 @@ namespace App\TeamManagement\Application\Service;
 final readonly class InvitationLinkGenerator
 {
     public function __construct(
-        private string $appUrl
+        private string $frontendUrl
     ) {
     }
 
     public function forToken(string $token): string
     {
-        return sprintf('%s/?invite=%s', rtrim($this->appUrl, '/'), $token);
+        return sprintf('%s/?invite=%s', rtrim($this->frontendUrl, '/'), $token);
     }
 }

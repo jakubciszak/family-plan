@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import WeekCalendar from '../components/WeekCalendar';
 import taskService from '../services/taskService';
 import teamService from '../services/teamService';
+import { Button, Icon, Select, CircularProgress } from '../components/md3';
 
 function useLimitLabel() {
     const { t } = useTranslation();
@@ -20,7 +21,7 @@ function useLimitLabel() {
     };
 }
 
-function TaskList() {
+function TaskList({ onNavigate }) {
     const { t } = useTranslation();
     const [taskTypes, setTaskTypes] = React.useState([]);
     const [myTasks, setMyTasks] = React.useState([]);
@@ -108,33 +109,46 @@ function TaskList() {
     );
 
     if (loading) {
-        return <div className="loading">{t('common.loading')}</div>;
+        return <CircularProgress label={t('common.loading')} />;
     }
+
+    const points = (value) => (
+        <span className="task-points">
+            <Icon name="stars" size={16} />
+            {t('user.points', { points: value })}
+        </span>
+    );
 
     return (
         <div className="task-list-container">
             <div className="task-list-header">
                 <h2>{t('tasks.title')}</h2>
                 {teams.length > 1 && (
-                    <select
+                    <Select
+                        id="team-selector"
                         value={selectedTeam?.id || ''}
                         onChange={(e) => setSelectedTeam(teams.find((team) => team.id === e.target.value))}
-                        className="team-selector"
-                        aria-label={t('teams.title')}
+                        triggerClassName="team-selector"
+                        ariaLabel={t('teams.title')}
                     >
                         {teams.map((team) => (
                             <option key={team.id} value={team.id}>{team.name}</option>
                         ))}
-                    </select>
+                    </Select>
                 )}
             </div>
 
-            {error && <div className="error-message">{error}</div>}
+            {error && (
+                <div className="error-message" role="alert">
+                    <Icon name="error" size={20} />
+                    <span>{error}</span>
+                </div>
+            )}
 
             <WeekCalendar refreshToken={refreshToken} />
 
             <section className="task-section" data-testid="my-tasks">
-                <h3>{t('tasks.mySection')}</h3>
+                <h3><Icon name="person" size={20} />{t('tasks.mySection')}</h3>
                 {myOpenTasks.length === 0 && myFinishedTasks.length === 0 ? (
                     <p className="empty-hint">{t('tasks.noneTaken')}</p>
                 ) : (
@@ -143,24 +157,35 @@ function TaskList() {
                             <div className="task-card" key={task.id}>
                                 <div className="task-row">
                                     <span className="task-name">{task.name}</span>
-                                    <span className="task-points">{t('user.points', { points: task.points })}</span>
+                                    {points(task.points)}
                                 </div>
                                 <div className="task-actions">
-                                    <button className="btn-success" onClick={() => run(() => taskService.complete(task.id))}>
+                                    <Button
+                                        tone="success"
+                                        icon="check"
+                                        onClick={() => run(() => taskService.complete(task.id))}
+                                    >
                                         {t('tasks.complete')}
-                                    </button>
-                                    <button className="btn-secondary" onClick={() => run(() => taskService.abandon(task.id))}>
+                                    </Button>
+                                    <Button
+                                        variant="outlined"
+                                        icon="undo"
+                                        onClick={() => run(() => taskService.abandon(task.id))}
+                                    >
                                         {t('tasks.giveBack')}
-                                    </button>
+                                    </Button>
                                 </div>
                             </div>
                         ))}
                         {myFinishedTasks.map((task) => (
-                            <div className="task-card" key={task.id}>
+                            <div className="task-card task-card--done" key={task.id}>
                                 <div className="task-row">
                                     <span className="task-name">{task.name}</span>
-                                    <span className="task-points">{t('user.points', { points: task.points })}</span>
-                                    <span className="task-status status-completed">{t('tasks.awaitingApproval')}</span>
+                                    {points(task.points)}
+                                    <span className="task-status status-completed">
+                                        <Icon name="schedule" size={16} />
+                                        {t('tasks.awaitingApproval')}
+                                    </span>
                                 </div>
                             </div>
                         ))}
@@ -169,7 +194,18 @@ function TaskList() {
             </section>
 
             <section className="task-section" data-testid="available-tasks">
-                <h3>{t('tasks.availableSection')}</h3>
+                <div className="task-section__header">
+                    <h3><Icon name="tasks" size={20} />{t('tasks.availableSection')}</h3>
+                    {isTeamAdmin && onNavigate && (
+                        <Button
+                            variant="tonal"
+                            icon="add"
+                            onClick={() => onNavigate('task-types')}
+                        >
+                            {t('taskTypes.create')}
+                        </Button>
+                    )}
+                </div>
                 {availableTypes.length === 0 ? (
                     <p className="empty-hint">{t('tasks.noTasks')}</p>
                 ) : (
@@ -178,16 +214,22 @@ function TaskList() {
                             <div className="task-card" key={type.id}>
                                 <div className="task-row">
                                     <span className="task-name" title={type.description}>{type.name}</span>
-                                    <span className="task-points">{t('user.points', { points: type.points })}</span>
-                                    <span className="task-frequency">{limitLabel(type.executionLimit)}</span>
+                                    {points(type.points)}
+                                    <span className="task-frequency">
+                                        <Icon name="calendar" size={16} />
+                                        {limitLabel(type.executionLimit)}
+                                    </span>
                                     {type.remaining !== null && (
-                                        <span className="task-remaining">{t('taskTypes.remaining', { count: type.remaining })}</span>
+                                        <span className="task-remaining">
+                                            {t('taskTypes.remaining', { count: type.remaining })}
+                                        </span>
                                     )}
                                 </div>
+                                {type.description && <p className="task-description">{type.description}</p>}
                                 <div className="task-actions">
-                                    <button className="btn-primary" onClick={() => run(() => taskService.take(type.id))}>
+                                    <Button icon="add" onClick={() => run(() => taskService.take(type.id))}>
                                         {t('tasks.takeIt')}
-                                    </button>
+                                    </Button>
                                 </div>
                             </div>
                         ))}
@@ -197,7 +239,7 @@ function TaskList() {
 
             {isTeamAdmin && (
                 <section className="task-section" data-testid="approval-queue">
-                    <h3>{t('tasks.approvalSection')}</h3>
+                    <h3><Icon name="approve" size={20} />{t('tasks.approvalSection')}</h3>
                     {awaitingApproval.length === 0 ? (
                         <p className="empty-hint">{t('tasks.nothingToApprove')}</p>
                     ) : (
@@ -206,13 +248,19 @@ function TaskList() {
                                 <div className="task-card" key={task.id}>
                                     <div className="task-row">
                                         <span className="task-name">{task.name}</span>
-                                        <span className="task-points">{t('user.points', { points: task.points })}</span>
-                                        <span className="task-assignee">{task.assignedUserName}</span>
+                                        {points(task.points)}
+                                        <span className="task-assignee">
+                                            <Icon name="person" size={16} />
+                                            {task.assignedUserName}
+                                        </span>
                                     </div>
                                     <div className="task-actions">
-                                        <button className="btn-primary" onClick={() => run(() => taskService.approve(task.id))}>
+                                        <Button
+                                            icon="approve"
+                                            onClick={() => run(() => taskService.approve(task.id))}
+                                        >
                                             {t('tasks.approve')}
-                                        </button>
+                                        </Button>
                                     </div>
                                 </div>
                             ))}

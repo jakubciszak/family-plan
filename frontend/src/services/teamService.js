@@ -1,9 +1,17 @@
 import apiClient from './apiClient';
 
+let teamsInFlight = null;
+
 const teamService = {
     // Get all teams for current user
-    async getTeams() {
-        return await apiClient.get('/api/teams');
+    getTeams() {
+        if (!teamsInFlight) {
+            teamsInFlight = apiClient.get('/api/teams').finally(() => {
+                teamsInFlight = null;
+            });
+        }
+
+        return teamsInFlight;
     },
 
     // Create a new team

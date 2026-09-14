@@ -1,6 +1,7 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import taskService from '../services/taskService';
+import Icon from './md3/Icon';
 
 const DAY_KEYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
 
@@ -24,7 +25,7 @@ function WeekCalendar({ refreshToken }) {
         };
     }, [refreshToken]);
 
-    if (!week) {
+    if (!week?.days?.length) {
         return null;
     }
 
@@ -33,8 +34,14 @@ function WeekCalendar({ refreshToken }) {
     return (
         <section className="week-calendar" data-testid="week-calendar">
             <div className="week-calendar-header">
-                <h3>{t('week.title')}</h3>
-                <span className="week-total">{t('user.points', { points: week.total })}</span>
+                <h3>
+                    <Icon name="calendar" size={20} />
+                    {t('week.title')}
+                </h3>
+                <span className="week-total">
+                    <Icon name="stars" size={18} />
+                    {t('user.points', { points: week.total })}
+                </span>
             </div>
 
             <ol className="week-days">
@@ -58,13 +65,16 @@ function WeekCalendar({ refreshToken }) {
 
             {streak && (
                 <p className="week-streak" data-testid="week-streak">
-                    {streak.met
-                        ? t('week.streakMet', { count: streak.length, points: streak.bonusPoints })
-                        : t('week.streakProgress', {
-                            count: streak.length,
-                            required: streak.requiredDays,
-                            pointsPerDay: streak.pointsPerDay,
-                        })}
+                    <Icon name="streak" size={20} />
+                    <span>
+                        {streak.met
+                            ? t('week.streakMet', { count: streak.length, points: streak.bonusPoints })
+                            : t('week.streakProgress', {
+                                count: streak.length,
+                                required: streak.requiredDays,
+                                pointsPerDay: streak.pointsPerDay,
+                            })}
+                    </span>
                 </p>
             )}
         </section>

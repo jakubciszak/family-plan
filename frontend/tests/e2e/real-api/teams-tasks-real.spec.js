@@ -110,8 +110,8 @@ test.describe('C. Zespoly i zaproszenia', () => {
     await openTeamDetails(page);
     await expect(page.locator('.members-list')).toContainText(member.email);
 
-    page.once('dialog', (d) => d.accept());
     await page.getByRole('button', { name: /remove|usu[nń]/i }).first().click();
+    await page.locator('.md-dialog').getByRole('button', { name: /remove|usu[nń]/i }).click();
     await expect(page.locator('.members-list')).not.toContainText(member.email);
   });
 

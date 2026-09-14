@@ -87,10 +87,12 @@ async function loginThroughUi(page, email, password = PASSWORD) {
 }
 
 async function openTab(page, pattern) {
-  const hamburger = page.locator('.hamburger-menu');
-  if (await hamburger.isVisible().catch(() => false)) {
-    await hamburger.click();
-    await page.waitForTimeout(300);
+  if (!(await page.getByRole('button', { name: pattern }).first().isVisible().catch(() => false))) {
+    const more = page.locator('.app-nav__item--more');
+    if (await more.isVisible().catch(() => false)) {
+      await more.click();
+      await page.waitForTimeout(300);
+    }
   }
 
   const button = page.getByRole('button', { name: pattern }).first();

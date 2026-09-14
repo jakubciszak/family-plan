@@ -77,7 +77,7 @@ class NotificationIntegrationExampleTest extends TestCase
         $this->completeHandler = new CompleteTaskHandler($this->taskRepository);
 
         $approvalPolicy = new AdminApprovalPolicy($this->userRepository);
-        $pointsAwardStrategy = new TaskApprovalPointsAwardStrategy($this->walletRepository, $this->clock);
+        $pointsAwardStrategy = new TaskApprovalPointsAwardStrategy($this->ledger());
         $this->approveHandler = new ApproveTaskHandler(
             $this->taskRepository,
             $approvalPolicy,
@@ -222,5 +222,17 @@ class NotificationIntegrationExampleTest extends TestCase
         $this->assertEquals('+48123456789', $notification['recipient']);
         $this->assertStringContainsString('Clean kitchen', $notification['message']);
         $this->assertEquals($taskId->value(), $notification['parameters']['taskId']);
+    }
+
+    private function ledger(): \App\PointsManagement\Domain\Service\PointsLedger
+    {
+        $accounts = new \App\PointsManagement\Infrastructure\Persistence\InMemoryAccountRepository();
+
+        return new \App\PointsManagement\Domain\Service\PointsLedger(
+            $accounts,
+            new \App\PointsManagement\Infrastructure\Persistence\InMemoryEntryRepository($accounts),
+            $this->walletRepository,
+            $this->clock
+        );
     }
 }

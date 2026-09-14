@@ -1,6 +1,7 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import apiClient from '../services/apiClient';
+import { Button, Icon, TextField, CircularProgress } from '../components/md3';
 
 function StatusChangeRulesManagement({ user, taskTemplateId }) {
     const { t } = useTranslation();
@@ -32,7 +33,6 @@ function StatusChangeRulesManagement({ user, taskTemplateId }) {
 
     const loadTaskTemplates = async () => {
         try {
-            // This assumes there's an API endpoint to get task templates
             const data = await apiClient.get('/api/task-templates');
             setTaskTemplates(data.templates || data || []);
         } catch (error) {
@@ -88,36 +88,39 @@ function StatusChangeRulesManagement({ user, taskTemplateId }) {
     if (user.role !== 'ROLE_ADMIN') {
         return (
             <div className="access-denied">
-                <h2>Access Denied</h2>
-                <p>Only administrators can manage status change rules.</p>
+                <Icon name="lock" size={48} />
+                <h2>{t('statusChangeRules.accessDeniedTitle')}</h2>
+                <p>{t('statusChangeRules.accessDeniedBody')}</p>
             </div>
         );
     }
 
     if (loading) {
-        return <div className="loading">{t('common.loading')}</div>;
+        return <CircularProgress label={t('common.loading')} />;
     }
 
     return (
         <div className="status-change-rules-container">
             <div className="status-change-rules-header">
                 <h2>{t('statusChangeRules.title')}</h2>
-                <button 
+                <Button
+                    variant={showCreateForm ? 'text' : 'filled'}
+                    icon={showCreateForm ? 'close' : 'add'}
                     onClick={() => setShowCreateForm(!showCreateForm)}
-                    className="btn-primary"
                 >
                     {showCreateForm ? t('common.cancel') : t('statusChangeRules.create')}
-                </button>
+                </Button>
             </div>
 
             {error && (
-                <div className="error-message">
-                    {error}
+                <div className="error-message" role="alert">
+                    <Icon name="error" size={20} />
+                    <span>{error}</span>
                 </div>
             )}
 
             {showCreateForm && (
-                <StatusChangeRuleForm 
+                <StatusChangeRuleForm
                     onSubmit={handleCreateRule}
                     taskTemplates={taskTemplates}
                     currentTaskTemplateId={taskTemplateId}
@@ -159,6 +162,11 @@ function StatusChangeRuleCard({ rule, taskTemplates, onUpdate, onActivate, onDea
         }
     };
 
+    const findTaskTemplateName = (taskTemplateId) => {
+        const template = taskTemplates.find(t => t.id === taskTemplateId);
+        return template ? template.name : taskTemplateId;
+    };
+
     const getRuleDescription = (rule) => {
         if (rule.conditionType === 'other_task_completed_today' && rule.config.requiredTaskTemplateId) {
             return t('statusChangeRules.descriptions.otherTaskCompletedToday', {
@@ -172,11 +180,6 @@ function StatusChangeRuleCard({ rule, taskTemplates, onUpdate, onActivate, onDea
         return rule.description;
     };
 
-    const findTaskTemplateName = (taskTemplateId) => {
-        const template = taskTemplates.find(t => t.id === taskTemplateId);
-        return template ? template.name : taskTemplateId;
-    };
-
     const handleUpdate = (data) => {
         onUpdate(rule.id, data);
         setIsEditing(false);
@@ -185,7 +188,7 @@ function StatusChangeRuleCard({ rule, taskTemplates, onUpdate, onActivate, onDea
     if (isEditing) {
         return (
             <div className="status-change-rule-card editing">
-                <StatusChangeRuleForm 
+                <StatusChangeRuleForm
                     rule={rule}
                     taskTemplates={taskTemplates}
                     onSubmit={handleUpdate}
@@ -201,9 +204,11 @@ function StatusChangeRuleCard({ rule, taskTemplates, onUpdate, onActivate, onDea
                 <h3>{rule.name}</h3>
                 <div className="rule-status">
                     <span className={`status-badge ${rule.isActive ? 'status-active' : 'status-inactive'}`}>
+                        <Icon name={rule.isActive ? 'checkCircle' : 'block'} size={16} />
                         {rule.isActive ? t('common.active') : t('common.inactive')}
                     </span>
                     <span className="rule-type-badge">
+                        <Icon name="rule" size={16} />
                         {getConditionTypeLabel(rule.conditionType)}
                     </span>
                 </div>
@@ -216,26 +221,17 @@ function StatusChangeRuleCard({ rule, taskTemplates, onUpdate, onActivate, onDea
                 </p>
             </div>
             <div className="rule-actions">
-                <button
-                    onClick={() => setIsEditing(true)}
-                    className="btn-secondary"
-                >
+                <Button variant="outlined" icon="edit" onClick={() => setIsEditing(true)}>
                     {t('common.edit')}
-                </button>
+                </Button>
                 {rule.isActive ? (
-                    <button
-                        onClick={() => onDeactivate(rule.id)}
-                        className="btn-warning"
-                    >
+                    <Button variant="text" icon="pause" onClick={() => onDeactivate(rule.id)}>
                         {t('common.deactivate')}
-                    </button>
+                    </Button>
                 ) : (
-                    <button
-                        onClick={() => onActivate(rule.id)}
-                        className="btn-success"
-                    >
+                    <Button tone="success" icon="restore" onClick={() => onActivate(rule.id)}>
                         {t('common.activate')}
-                    </button>
+                    </Button>
                 )}
             </div>
         </div>
@@ -245,7 +241,7 @@ function StatusChangeRuleCard({ rule, taskTemplates, onUpdate, onActivate, onDea
 function StatusChangeRuleForm({ rule, taskTemplates, currentTaskTemplateId, onSubmit, onCancel }) {
     const { t } = useTranslation();
     const isEditing = !!rule;
-    
+
     const [formData, setFormData] = React.useState({
         taskTemplateId: rule?.taskTemplateId || currentTaskTemplateId || '',
         name: rule?.name || '',
@@ -257,7 +253,7 @@ function StatusChangeRuleForm({ rule, taskTemplates, currentTaskTemplateId, onSu
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        
+
         const conditionConfig = formData.conditionType === 'last_execution_cooldown'
             ? { cooldownDays: formData.cooldownDays }
             : { requiredTaskTemplateId: formData.requiredTaskTemplateId };
@@ -282,8 +278,8 @@ function StatusChangeRuleForm({ rule, taskTemplates, currentTaskTemplateId, onSu
         const { name, value } = e.target;
         setFormData(prev => ({
             ...prev,
-            [name]: ['cooldownDays'].includes(name) 
-                ? parseInt(value, 10) 
+            [name]: ['cooldownDays'].includes(name)
+                ? parseInt(value, 10)
                 : value,
         }));
     };
@@ -291,122 +287,110 @@ function StatusChangeRuleForm({ rule, taskTemplates, currentTaskTemplateId, onSu
     return (
         <form className="status-change-rule-form" onSubmit={handleSubmit}>
             <h3>{isEditing ? t('statusChangeRules.edit') : t('statusChangeRules.create')}</h3>
-            
+
             {!isEditing && (
-                <div className="form-group">
-                    <label htmlFor="taskTemplateId">{t('statusChangeRules.taskTemplate')}</label>
-                    <select
-                        id="taskTemplateId"
-                        name="taskTemplateId"
-                        value={formData.taskTemplateId}
-                        onChange={handleChange}
-                        required
-                        disabled={!!currentTaskTemplateId}
-                    >
-                        <option value="">{t('statusChangeRules.selectTaskTemplate')}</option>
-                        {taskTemplates.map(template => (
-                            <option key={template.id} value={template.id}>
-                                {template.name}
-                            </option>
-                        ))}
-                    </select>
-                </div>
+                <TextField
+                    as="select"
+                    id="taskTemplateId"
+                    name="taskTemplateId"
+                    label={t('statusChangeRules.taskTemplate')}
+                    value={formData.taskTemplateId}
+                    onChange={handleChange}
+                    required
+                    disabled={!!currentTaskTemplateId}
+                >
+                    <option value="">{t('statusChangeRules.selectTaskTemplate')}</option>
+                    {taskTemplates.map(template => (
+                        <option key={template.id} value={template.id}>{template.name}</option>
+                    ))}
+                </TextField>
             )}
 
-            <div className="form-group">
-                <label htmlFor="name">{t('statusChangeRules.name')}</label>
-                <input
-                    type="text"
-                    id="name"
-                    name="name"
-                    value={formData.name}
-                    onChange={handleChange}
-                    placeholder={t('statusChangeRules.namePlaceholder')}
-                    required
-                />
-            </div>
+            <TextField
+                id="name"
+                name="name"
+                type="text"
+                label={t('statusChangeRules.name')}
+                value={formData.name}
+                onChange={handleChange}
+                placeholder={t('statusChangeRules.namePlaceholder')}
+                required
+            />
 
-            <div className="form-group">
-                <label htmlFor="description">{t('tasks.description')}</label>
-                <textarea
-                    id="description"
-                    name="description"
-                    value={formData.description}
-                    onChange={handleChange}
-                    placeholder={t('statusChangeRules.descriptionPlaceholder')}
-                    rows="3"
-                    required
-                />
-            </div>
+            <TextField
+                as="textarea"
+                id="description"
+                name="description"
+                label={t('tasks.description')}
+                value={formData.description}
+                onChange={handleChange}
+                placeholder={t('statusChangeRules.descriptionPlaceholder')}
+                rows="3"
+                required
+            />
 
             {!isEditing && (
                 <>
-                    <div className="form-group">
-                        <label htmlFor="conditionType">{t('statusChangeRules.conditionType')}</label>
-                        <select
-                            id="conditionType"
-                            name="conditionType"
-                            value={formData.conditionType}
-                            onChange={handleChange}
-                            required
-                        >
-                            <option value="last_execution_cooldown">
-                                {t('statusChangeRules.conditionTypes.lastExecutionCooldown')}
-                            </option>
-                            <option value="other_task_completed_today">
-                                {t('statusChangeRules.conditionTypes.otherTaskCompletedToday')}
-                            </option>
-                        </select>
-                    </div>
+                    <TextField
+                        as="select"
+                        id="conditionType"
+                        name="conditionType"
+                        label={t('statusChangeRules.conditionType')}
+                        value={formData.conditionType}
+                        onChange={handleChange}
+                        required
+                    >
+                        <option value="last_execution_cooldown">
+                            {t('statusChangeRules.conditionTypes.lastExecutionCooldown')}
+                        </option>
+                        <option value="other_task_completed_today">
+                            {t('statusChangeRules.conditionTypes.otherTaskCompletedToday')}
+                        </option>
+                    </TextField>
 
                     {formData.conditionType === 'last_execution_cooldown' && (
-                        <div className="form-group">
-                            <label htmlFor="cooldownDays">{t('statusChangeRules.cooldownDays')}</label>
-                            <input
-                                type="number"
-                                id="cooldownDays"
-                                name="cooldownDays"
-                                value={formData.cooldownDays}
-                                onChange={handleChange}
-                                min="1"
-                                max="365"
-                                required
-                            />
-                            <small>{t('statusChangeRules.cooldownDaysHint')}</small>
-                        </div>
+                        <TextField
+                            id="cooldownDays"
+                            name="cooldownDays"
+                            type="number"
+                            label={t('statusChangeRules.cooldownDays')}
+                            value={formData.cooldownDays}
+                            onChange={handleChange}
+                            supportingText={t('statusChangeRules.cooldownDaysHint')}
+                            min="1"
+                            max="365"
+                            required
+                        />
                     )}
 
                     {formData.conditionType === 'other_task_completed_today' && (
-                        <div className="form-group">
-                            <label htmlFor="requiredTaskTemplateId">{t('statusChangeRules.requiredTask')}</label>
-                            <select
-                                id="requiredTaskTemplateId"
-                                name="requiredTaskTemplateId"
-                                value={formData.requiredTaskTemplateId}
-                                onChange={handleChange}
-                                required
-                            >
-                                <option value="">{t('statusChangeRules.selectRequiredTask')}</option>
-                                {taskTemplates.map(template => (
-                                    <option key={template.id} value={template.id}>
-                                        {template.name}
-                                    </option>
-                                ))}
-                            </select>
-                            <small>{t('statusChangeRules.requiredTaskHint')}</small>
-                        </div>
+                        <TextField
+                            as="select"
+                            id="requiredTaskTemplateId"
+                            name="requiredTaskTemplateId"
+                            label={t('statusChangeRules.requiredTask')}
+                            value={formData.requiredTaskTemplateId}
+                            onChange={handleChange}
+                            supportingText={t('statusChangeRules.requiredTaskHint')}
+                            required
+                        >
+                            <option value="">{t('statusChangeRules.selectRequiredTask')}</option>
+                            {taskTemplates.map(template => (
+                                <option key={template.id} value={template.id}>{template.name}</option>
+                            ))}
+                        </TextField>
                     )}
                 </>
             )}
 
             <div className="form-actions">
-                <button type="submit" className="btn-primary">
+                <Button type="submit" icon="check">
                     {isEditing ? t('common.save') : t('common.create')}
-                </button>
+                </Button>
                 {onCancel && (
-                    <button type="button" onClick={onCancel} className="btn-secondary">
+                    <Button type="button" variant="text" onClick={onCancel}>
                         {t('common.cancel')}
-                    </button>
+                    </Button>
                 )}
             </div>
         </form>

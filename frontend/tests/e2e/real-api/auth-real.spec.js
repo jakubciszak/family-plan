@@ -20,7 +20,7 @@ test.describe('A. Uwierzytelnianie', () => {
     await page.locator('input[type="password"]').first().fill(PASSWORD);
     await page.locator('button[type="submit"]').first().click();
 
-    await expect(page.locator('.success-message')).toBeVisible();
+    await expect(page.locator('.user-info')).toBeVisible();
   });
 
   test('A2 rejestracja odrzuca zajety adres', async ({ page }) => {

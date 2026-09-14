@@ -10,7 +10,11 @@
     "statusChangeRules": "Reguły Zmian Statusów",
     "settings": "Ustawienia",
     "account": "Moje Konto",
-    "taskTypes": "Typy zadań"
+    "taskTypes": "Typy zadań",
+    "taskTypesShort": "Typy",
+    "bonusRulesShort": "Bonusy",
+    "statusChangeRulesShort": "Reguły",
+    "accountShort": "Konto"
   },
   "auth": {
     "login": "Zaloguj",
@@ -100,7 +104,28 @@
     "pointsPerDay": "Punktów dziennie",
     "pointsPerDayHint": "Tyle punktów trzeba zebrać w ciągu dnia, żeby dzień liczył się do serii",
     "consecutiveDaysSummary": "{{days}} dni z rzędu po min. {{points}} pkt dziennie",
-    "monthlyCountSummary": "{{count}} zadań w miesiącu"
+    "monthlyCountSummary": "{{count}} zadań w miesiącu",
+    "ruleTypes": {
+      "consecutive_days": "Dni z rzędu",
+      "monthly_task_count": "Liczba zadań w miesiącu",
+      "weekly_points_sum": "Suma punktów w tygodniu"
+    },
+    "ruleType": "Typ zasady",
+    "bonusPoints": "Punkty bonusowe",
+    "requiredCount": "Wymagana liczba zadań",
+    "requiredCountHint": "Ile zadań trzeba wykonać w ciągu miesiąca",
+    "namePlaceholder": "np. Bonus za zmywanie",
+    "descriptionPlaceholder": "Opisz, co trzeba zrobić, żeby zdobyć ten bonus",
+    "requiredPoints": "Ile punktów w tygodniu",
+    "requiredPointsHint": "Tyle punktów trzeba zebrać od poniedziałku do niedzieli",
+    "accounts": "Które punkty się liczą",
+    "accountsHint": "Nic nie zaznaczone = liczą się wszystkie konta",
+    "accountNames": {
+      "tasks": "Za zadania",
+      "bonuses": "Bonusowe"
+    },
+    "weeklySumSummary": "{{points}} pkt w tygodniu ({{accounts}})",
+    "allAccounts": "wszystkie punkty"
   },
   "user": {
     "points": "{{points}} punktów",
@@ -136,7 +161,12 @@
     "success": "Operacja zakończona sukcesem",
     "submit": "Wyślij",
     "close": "Zamknij",
-    "saving": "Zapisywanie..."
+    "saving": "Zapisywanie...",
+    "active": "Aktywna",
+    "inactive": "Nieaktywna",
+    "activate": "Aktywuj",
+    "deactivate": "Dezaktywuj",
+    "more": "Więcej"
   },
   "errors": {
     "required": "To pole jest wymagane",
@@ -170,7 +200,9 @@
     "descriptions": {
       "otherTaskCompletedToday": "Wymaga wykonania zadania {{taskName}} dzisiaj",
       "lastExecutionCooldown": "Minimum {{days}} dni musi upłynąć od ostatniego wykonania"
-    }
+    },
+    "accessDeniedTitle": "Brak dostępu",
+    "accessDeniedBody": "Regułami zmian statusów zarządza administrator systemu."
   },
   "teams": {
     "title": "Zarządzanie Zespołami",
@@ -267,5 +299,14 @@
       "sat": "So",
       "sun": "Nd"
     }
+  },
+  "theme": {
+    "appearance": "Wygląd",
+    "appearanceDescription": "Wybierz motyw jasny, ciemny albo zgodny z ustawieniem systemu.",
+    "light": "Jasny",
+    "dark": "Ciemny",
+    "system": "Systemowy",
+    "language": "Język",
+    "languageDescription": "Język interfejsu aplikacji."
   }
 }

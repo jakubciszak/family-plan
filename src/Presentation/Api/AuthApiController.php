@@ -7,6 +7,7 @@ namespace App\Presentation\Api;
 use App\Presentation\Api\Dto\Auth\RegisterUserRequest;
 use App\Presentation\Api\Dto\Auth\ChangePasswordRequest;
 use App\Shared\Domain\ValueObject\Uuid;
+use App\TeamManagement\Application\Service\DefaultTeamProvisioner;
 use App\UserManagement\Application\Command\RegisterUserCommand;
 use App\UserManagement\Application\Handler\RegisterUserHandler;
 use App\UserManagement\Domain\Entity\User;
@@ -32,6 +33,7 @@ class AuthApiController extends AbstractController
         private readonly RegisterUserHandler $registerUserHandler,
         private readonly UserRepositoryInterface $userRepository,
         private readonly UserPasswordHasherInterface $passwordHasher,
+        private readonly DefaultTeamProvisioner $defaultTeam,
         private readonly bool $requireEmailActivation = true
     ) {
     }
@@ -222,6 +224,11 @@ class AuthApiController extends AbstractController
             );
 
             ($this->registerUserHandler)($command);
+
+            $this->defaultTeam->provisionFor(
+                Uuid::fromString($id),
+                Email::fromString($request->email)
+            );
 
             return $this->json([
                 'message' => $this->requireEmailActivation

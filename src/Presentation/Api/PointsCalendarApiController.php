@@ -6,6 +6,7 @@ namespace App\Presentation\Api;
 
 use App\Party\Application\Service\PartyResponsibilities;
 use App\Party\Domain\ValueObject\ResponsibilityType;
+use App\PointsManagement\Domain\ValueObject\AccountKind;
 use App\Shared\Domain\ValueObject\Uuid;
 use App\TaskManagement\Domain\Entity\BonusPointsRule;
 use App\TaskManagement\Domain\Repository\BonusPointsRuleRepositoryInterface;
@@ -34,6 +35,19 @@ class PointsCalendarApiController extends AbstractController
         private readonly PartyResponsibilities $responsibilities,
         private readonly UserRepositoryInterface $userRepository
     ) {
+    }
+
+    #[Route('/accounts', name: 'accounts', methods: ['GET'])]
+    #[OA\Get(path: '/api/points/accounts', summary: 'Account kinds a bonus rule condition can count', tags: ['Points'])]
+    #[OA\Response(response: 200, description: 'Known account kinds')]
+    public function accounts(): JsonResponse
+    {
+        return $this->json([
+            'accounts' => array_map(
+                static fn (AccountKind $kind) => ['kind' => $kind->value],
+                AccountKind::all()
+            ),
+        ]);
     }
 
     #[Route('/week', name: 'week', methods: ['GET'])]

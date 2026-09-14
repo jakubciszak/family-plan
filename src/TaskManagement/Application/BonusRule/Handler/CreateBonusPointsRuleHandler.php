@@ -36,6 +36,10 @@ final readonly class CreateBonusPointsRuleHandler
             RuleType::MONTHLY_TASK_COUNT => RuleConfig::monthlyTaskCount(
                 $command->ruleConfig['requiredCount']
             ),
+            RuleType::WEEKLY_POINTS_SUM => RuleConfig::weeklyPointsSum(
+                (int) $command->ruleConfig['requiredPoints'],
+                $command->ruleConfig['accounts'] ?? []
+            ),
         };
 
         $rule = BonusPointsRule::create(

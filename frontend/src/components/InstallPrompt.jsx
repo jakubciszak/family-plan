@@ -1,5 +1,7 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
+import Button from './md3/Button';
+import Icon from './md3/Icon';
 import '../styles/InstallPrompt.css';
 
 const DISMISSED_KEY = 'installPromptDismissed';
@@ -60,17 +62,22 @@ function InstallPrompt() {
 
     return (
         <div className="install-prompt" role="region" aria-label={t('install.title')}>
+            <span className="install-prompt__icon" aria-hidden="true">
+                <Icon name="install" size={22} />
+            </span>
+
             <div className="install-prompt-text">
                 <strong>{t('install.title')}</strong>
                 <span>{t('install.description')}</span>
             </div>
+
             <div className="install-prompt-actions">
-                <button type="button" className="btn-primary" onClick={install}>
-                    {t('install.action')}
-                </button>
-                <button type="button" className="install-prompt-dismiss" onClick={dismiss}>
+                <Button variant="text" className="install-prompt-dismiss" onClick={dismiss}>
                     {t('install.dismiss')}
-                </button>
+                </Button>
+                <Button icon="install" onClick={install}>
+                    {t('install.action')}
+                </Button>
             </div>
         </div>
     );

@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Tests\PointsManagement\Domain;
 
+use App\PointsManagement\Domain\Entity\Entry;
 use App\PointsManagement\Domain\Entity\UserWallet;
+use App\PointsManagement\Domain\ValueObject\EntrySource;
 use App\PointsManagement\Domain\ValueObject\PointsBalance;
 use App\Shared\Infrastructure\Clock\FixedClock;
 use App\Tests\Shared\Mother\UuidMother;
@@ -58,7 +60,7 @@ class UserWalletTest extends TestCase
         $wallet = UserWallet::create(UuidMother::random(), UuidMother::random(), $this->clock);
 
         // When
-        $wallet->awardPoints(50, 'Task completion', $this->clock);
+        $wallet->summarise(50, $this->clock);
 
         // Then
         $this->assertEquals(50, $wallet->balance()->value());
@@ -70,9 +72,9 @@ class UserWalletTest extends TestCase
         $wallet = UserWallet::create(UuidMother::random(), UuidMother::random(), $this->clock);
 
         // When
-        $wallet->awardPoints(30, 'First task', $this->clock);
-        $wallet->awardPoints(20, 'Second task', $this->clock);
-        $wallet->awardPoints(10, 'Third task', $this->clock);
+        $wallet->summarise(30, $this->clock);
+        $wallet->summarise(50, $this->clock);
+        $wallet->summarise(60, $this->clock);
 
         // Then
         $this->assertEquals(60, $wallet->balance()->value());
@@ -85,7 +87,7 @@ class UserWalletTest extends TestCase
         $wallet->pullDomainEvents(); // Clear creation event
 
         // When
-        $wallet->awardPoints(100, 'Task approved', $this->clock);
+        $wallet->summarise(100, $this->clock);
         $events = $wallet->pullDomainEvents();
 
         // Then
@@ -94,57 +96,61 @@ class UserWalletTest extends TestCase
         $this->assertEquals(100, $events[0]->points);
     }
 
-    public function testCannotAwardZeroPoints(): void
+    public function testAnEntryCannotBeForZeroPoints(): void
     {
-        // Given
-        $wallet = UserWallet::create(UuidMother::random(), UuidMother::random(), $this->clock);
-
         // Then
         $this->expectException(\DomainException::class);
-        $this->expectExceptionMessage('Points to award must be positive');
+        $this->expectExceptionMessage('An entry cannot be for zero points');
 
         // When
-        $wallet->awardPoints(0, 'Invalid', $this->clock);
+        Entry::record(
+            UuidMother::random(),
+            UuidMother::random(),
+            0,
+            EntrySource::ADJUSTMENT,
+            'Invalid',
+            $this->clock->now()
+        );
     }
 
-    public function testCannotAwardNegativePoints(): void
+    public function testRestatingTheSameTotalRecordsNothing(): void
     {
         // Given
         $wallet = UserWallet::create(UuidMother::random(), UuidMother::random(), $this->clock);
-
-        // Then
-        $this->expectException(\DomainException::class);
-        $this->expectExceptionMessage('Points to award must be positive');
+        $wallet->summarise(40, $this->clock);
+        $wallet->pullDomainEvents();
 
         // When
-        $wallet->awardPoints(-10, 'Invalid', $this->clock);
+        $wallet->summarise(40, $this->clock);
+
+        // Then
+        $this->assertSame([], $wallet->pullDomainEvents());
     }
 
     public function testPointsCanBeDeducted(): void
     {
         // Given
         $wallet = UserWallet::create(UuidMother::random(), UuidMother::random(), $this->clock);
-        $wallet->awardPoints(100, 'Initial points', $this->clock);
+        $wallet->summarise(100, $this->clock);
 
         // When
-        $wallet->deductPoints(30, 'Redemption', $this->clock);
+        $wallet->summarise(70, $this->clock);
 
         // Then
         $this->assertEquals(70, $wallet->balance()->value());
     }
 
-    public function testCannotDeductMoreThanBalance(): void
+    public function testSummaryFollowsTheLedgerDownAsWellAsUp(): void
     {
         // Given
         $wallet = UserWallet::create(UuidMother::random(), UuidMother::random(), $this->clock);
-        $wallet->awardPoints(50, 'Initial points', $this->clock);
-
-        // Then
-        $this->expectException(\DomainException::class);
-        $this->expectExceptionMessage('Insufficient points balance');
+        $wallet->summarise(50, $this->clock);
 
         // When
-        $wallet->deductPoints(100, 'Too much', $this->clock);
+        $wallet->summarise(20, $this->clock);
+
+        // Then
+        $this->assertEquals(20, $wallet->balance()->value());
     }
 
     public function testPointsBalanceValueObject(): void

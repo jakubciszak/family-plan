@@ -19,7 +19,9 @@
     "test:artifacts": "node ./scripts/prepare-playwright-artifacts.js",
     "test:e2e": "playwright test --config=playwright.real.config.js",
     "test:e2e:headed": "playwright test --config=playwright.real.config.js --headed",
-    "test:e2e:debug": "playwright test --config=playwright.real.config.js --debug"
+    "test:e2e:debug": "playwright test --config=playwright.real.config.js --debug",
+    "theme": "node --no-warnings --import \"data:text/javascript,import { register } from 'node:module'; import { pathToFileURL } from 'node:url'; register('./scripts/extensionless-loader.mjs', pathToFileURL('./'));\" scripts/generate-theme.mjs",
+    "icons": "node scripts/generate-icons.mjs"
   },
   "dependencies": {
     "i18next": "^25.7.3",
@@ -33,6 +35,8 @@
     "@babel/core": "^7.17.0",
     "@babel/preset-env": "^7.16.0",
     "@babel/preset-react": "^7.18.0",
+    "@material-symbols/svg-400": "^0.47.2",
+    "@material/material-color-utilities": "^0.4.0",
     "@playwright/test": "^1.57.0",
     "babel-loader": "^9.1.0",
     "copy-webpack-plugin": "^14.0.0",

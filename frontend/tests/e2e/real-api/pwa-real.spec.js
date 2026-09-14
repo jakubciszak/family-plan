@@ -9,7 +9,7 @@ test.describe('P. Instalowalna aplikacja', () => {
 
     await expect(page.locator('link[rel="manifest"]')).toHaveAttribute('href', '/manifest.json');
     await expect(page.locator('link[rel="apple-touch-icon"]')).toHaveAttribute('href', '/apple-touch-icon.png');
-    await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute('content', '#2c3e50');
+    await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute('content', '#f5fbf5');
   });
 
   test('P2 manifest spelnia warunki instalowalnosci', async ({ page }) => {

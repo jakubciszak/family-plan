@@ -98,16 +98,16 @@ test.describe('Bonus Rules Management', () => {
       
       // Initially Tasks tab should be active
       const tasksTab = page.locator('.app-nav button:has-text("Tasks")');
-      await expect(tasksTab).toHaveClass(/nav-active/);
-      
+      await expect(tasksTab).toHaveAttribute('aria-current', 'page');
+
       // Click Bonus Rules tab
       await page.click('.app-nav button:has-text("Bonus Rules")');
       await page.waitForSelector('.bonus-rules-container');
-      
+
       // Now Bonus Rules tab should be active
       const bonusRulesTab = page.locator('.app-nav button:has-text("Bonus Rules")');
-      await expect(bonusRulesTab).toHaveClass(/nav-active/);
-      await expect(tasksTab).not.toHaveClass(/nav-active/);
+      await expect(bonusRulesTab).toHaveAttribute('aria-current', 'page');
+      await expect(tasksTab).not.toHaveAttribute('aria-current', 'page');
     });
     
     test('should navigate back to tasks page', async ({ page }) => {

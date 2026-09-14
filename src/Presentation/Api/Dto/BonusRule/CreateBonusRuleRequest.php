@@ -42,8 +42,8 @@ final readonly class CreateBonusRuleRequest
 
         #[Assert\NotBlank(message: 'Rule type is required')]
         #[Assert\Choice(
-            choices: ['consecutive_days', 'monthly_task_count'],
-            message: 'Rule type must be either "consecutive_days" or "monthly_task_count"'
+            choices: ['consecutive_days', 'monthly_task_count', 'weekly_points_sum'],
+            message: 'Unknown rule type'
         )]
         public string $ruleType,
 

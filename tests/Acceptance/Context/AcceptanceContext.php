@@ -100,7 +100,7 @@ abstract class AcceptanceContext implements Context
         $this->completeTaskHandler = new CompleteTaskHandler($this->taskRepository);
 
         $approvalPolicy = new AdminApprovalPolicy($this->userRepository);
-        $pointsAwardStrategy = new TaskApprovalPointsAwardStrategy($this->walletRepository, $this->clock);
+        $pointsAwardStrategy = new TaskApprovalPointsAwardStrategy($this->ledger());
         $this->approveTaskHandler = new ApproveTaskHandler(
             $this->taskRepository,
             $approvalPolicy,
@@ -145,5 +145,17 @@ abstract class AcceptanceContext implements Context
         $this->initializeRepositories();
         $this->initializeClock();
         $this->initializeHandlers();
+    }
+
+    private function ledger(): \App\PointsManagement\Domain\Service\PointsLedger
+    {
+        $accounts = new \App\PointsManagement\Infrastructure\Persistence\InMemoryAccountRepository();
+
+        return new \App\PointsManagement\Domain\Service\PointsLedger(
+            $accounts,
+            new \App\PointsManagement\Infrastructure\Persistence\InMemoryEntryRepository($accounts),
+            $this->walletRepository,
+            $this->clock
+        );
     }
 }

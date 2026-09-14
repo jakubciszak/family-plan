@@ -13,8 +13,8 @@ use DateTimeImmutable;
 use Doctrine\ORM\Mapping as ORM;
 
 /**
- * UserWallet aggregate - represents a user's points account (Wallet/Account archetypal pattern)
- * This is a separate aggregate from User, following DDD principles
+ * Summary account over the user's detail accounts in PointsManagement.
+ * Its balance is derived - only PointsLedger may set it, by summing the detail accounts.
  */
 #[ORM\Entity]
 #[ORM\Table(name: 'user_wallets')]
@@ -74,40 +74,29 @@ class UserWallet
     }
 
     /**
-     * Award points to the wallet (credit operation)
+     * Restate the summary from the detail accounts.
      */
-    public function awardPoints(int $points, string $reason, ClockInterface $clock): void
+    public function summarise(int $total, ClockInterface $clock): void
     {
-        if ($points <= 0) {
-            throw new \DomainException('Points to award must be positive');
+        if ($total === $this->balance) {
+            return;
         }
 
+        $difference = $total - $this->balance;
         $now = $clock->now();
-        $newBalance = $this->balance()->add($points);
-        $this->balance = $newBalance->value();
+
+        $this->balance = $total;
         $this->updatedAt = $now;
 
-        $this->record(new PointsAwarded(
-            $this->id,
-            $this->userId,
-            $points,
-            $reason,
-            $now
-        ));
-    }
-
-    /**
-     * Deduct points from the wallet (debit operation)
-     */
-    public function deductPoints(int $points, string $reason, ClockInterface $clock): void
-    {
-        if ($points <= 0) {
-            throw new \DomainException('Points to deduct must be positive');
+        if ($difference > 0) {
+            $this->record(new PointsAwarded(
+                $this->id,
+                $this->userId,
+                $difference,
+                'Points booked in the ledger',
+                $now
+            ));
         }
-
-        $newBalance = $this->balance()->subtract($points);
-        $this->balance = $newBalance->value();
-        $this->updatedAt = $clock->now();
     }
 
     public function createdAt(): DateTimeImmutable

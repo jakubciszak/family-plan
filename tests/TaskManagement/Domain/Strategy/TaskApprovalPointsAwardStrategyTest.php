@@ -26,7 +26,7 @@ class TaskApprovalPointsAwardStrategyTest extends TestCase
     {
         $this->walletRepository = new InMemoryUserWalletRepository();
         $this->clock = new FixedClock();
-        $this->strategy = new TaskApprovalPointsAwardStrategy($this->walletRepository, $this->clock);
+        $this->strategy = new TaskApprovalPointsAwardStrategy($this->ledger());
     }
 
     public function testPointsAreAwardedToUserWallet(): void
@@ -92,5 +92,17 @@ class TaskApprovalPointsAwardStrategyTest extends TestCase
         $wallet = $this->walletRepository->findByUserId($userId);
         $this->assertNotNull($wallet);
         $this->assertEquals(100, $wallet->balance()->value());
+    }
+
+    private function ledger(): \App\PointsManagement\Domain\Service\PointsLedger
+    {
+        $accounts = new \App\PointsManagement\Infrastructure\Persistence\InMemoryAccountRepository();
+
+        return new \App\PointsManagement\Domain\Service\PointsLedger(
+            $accounts,
+            new \App\PointsManagement\Infrastructure\Persistence\InMemoryEntryRepository($accounts),
+            $this->walletRepository,
+            $this->clock
+        );
     }
 }
