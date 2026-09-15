@@ -111,6 +111,15 @@ class PushSubscriptionApiTest extends ApiTestCase
         $this->assertSame(Response::HTTP_CONFLICT, $response->getStatusCode());
     }
 
+    public function testTestPushReachesTheSendingPathOnceADeviceIsRegistered(): void
+    {
+        $this->postJson('/api/push/subscriptions', $this->device('alpha'));
+
+        $response = $this->postJson('/api/push/test', []);
+
+        $this->assertSame(Response::HTTP_ACCEPTED, $response->getStatusCode());
+    }
+
     /**
      * @return array<string, string|null>
      */

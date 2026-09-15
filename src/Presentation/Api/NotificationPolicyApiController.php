@@ -43,7 +43,7 @@ class NotificationPolicyApiController extends AbstractController
                 new OA\Property(
                     property: 'channels',
                     type: 'array',
-                    items: new OA\Items(type: 'string', enum: ['email', 'sms', 'in_app'])
+                    items: new OA\Items(type: 'string', enum: ['email', 'sms', 'in_app', 'push'])
                 ),
                 new OA\Property(
                     property: 'events',
@@ -98,7 +98,7 @@ class NotificationPolicyApiController extends AbstractController
                 new OA\Property(
                     property: 'channels',
                     type: 'array',
-                    items: new OA\Items(type: 'string', enum: ['email', 'sms', 'in_app'])
+                    items: new OA\Items(type: 'string', enum: ['email', 'sms', 'in_app', 'push'])
                 ),
             ]
         )

@@ -73,6 +73,23 @@ class SendNotificationHandlerTest extends TestCase
         $this->assertEquals(['priority' => 'high', 'sender' => 'system'], $sent[0]['parameters']);
     }
 
+    public function testCanSendPushNotification(): void
+    {
+        $command = new SendNotificationCommand(
+            channel: 'push',
+            recipient: '0199ab3c-4d5e-7f80-9123-456789abcdef',
+            message: 'Zadanie czeka',
+            subject: 'Family Plan'
+        );
+
+        ($this->handler)($command);
+
+        $sent = $this->adapter->getSentNotifications();
+        $this->assertCount(1, $sent);
+        $this->assertEquals('0199ab3c-4d5e-7f80-9123-456789abcdef', $sent[0]['recipient']);
+        $this->assertEquals('push', $sent[0]['channel']);
+    }
+
     public function testThrowsExceptionForInvalidChannel(): void
     {
         $this->expectException(\InvalidArgumentException::class);
