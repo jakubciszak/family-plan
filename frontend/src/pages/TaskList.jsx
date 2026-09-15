@@ -3,6 +3,8 @@ import { useTranslation } from 'react-i18next';
 import WeekCalendar from '../components/WeekCalendar';
 import Leaderboard from '../components/Leaderboard';
 import MemberWeeks from '../components/MemberWeeks';
+import usePersonalisation from '../hooks/usePersonalisation';
+import celebrate from '../services/celebrate';
 import taskService from '../services/taskService';
 import teamService from '../services/teamService';
 import { Button, Chip, Dialog, Icon, Select, TextField, CircularProgress } from '../components/md3';
@@ -27,6 +29,7 @@ function useLimitLabel() {
 
 function TaskList({ onNavigate, user, onInspectMember }) {
     const { t } = useTranslation();
+    const { own } = usePersonalisation();
     const [taskTypes, setTaskTypes] = React.useState([]);
     const [myTasks, setMyTasks] = React.useState([]);
     const [awaitingApproval, setAwaitingApproval] = React.useState([]);
@@ -103,10 +106,15 @@ function TaskList({ onNavigate, user, onInspectMember }) {
         setRefreshToken((token) => token + 1);
     };
 
-    const run = async (action) => {
+    const run = async (action, { cheer = false } = {}) => {
         setError(null);
         try {
             await action();
+
+            if (cheer && own?.celebrates) {
+                celebrate({ withSound: own.makesSound });
+            }
+
             await refresh();
         } catch (err) {
             setError(err?.response?.data?.error || t('tasks.actionFailed'));
@@ -143,7 +151,7 @@ function TaskList({ onNavigate, user, onInspectMember }) {
 
     const startCompleting = (task) => {
         if (!backlogTasks[task.id]) {
-            run(() => taskService.complete(task.id));
+            run(() => taskService.complete(task.id), { cheer: true });
 
             return;
         }
@@ -156,7 +164,7 @@ function TaskList({ onNavigate, user, onInspectMember }) {
         const task = backlogTask;
         setBacklogTask(null);
 
-        await run(() => taskService.complete(task.id, backlogDate));
+        await run(() => taskService.complete(task.id, backlogDate), { cheer: true });
         setBacklogTasks((current) => ({ ...current, [task.id]: false }));
     };
 
@@ -260,7 +268,7 @@ function TaskList({ onNavigate, user, onInspectMember }) {
                                 <div className="task-actions">
                                     <Button
                                         icon="check"
-                                        onClick={() => run(() => taskService.complete(task.id))}
+                                        onClick={() => run(() => taskService.complete(task.id), { cheer: true })}
                                     >
                                         {t('tasks.submitAgain')}
                                     </Button>
@@ -359,7 +367,7 @@ function TaskList({ onNavigate, user, onInspectMember }) {
                                     <div className="task-actions">
                                         <Button
                                             icon="approve"
-                                            onClick={() => run(() => taskService.approve(task.id))}
+                                            onClick={() => run(() => taskService.approve(task.id), { cheer: true })}
                                         >
                                             {t('tasks.approve')}
                                         </Button>
@@ -370,6 +378,39 @@ function TaskList({ onNavigate, user, onInspectMember }) {
                     )}
                 </section>
     );
+
+    const pieces = isTeamAdmin ? {
+        week: teamWeeks,
+        tasks: (
+            <>
+                {approvalQueue}
+                <details className="task-section task-section--collapsible" data-testid="available-tasks-collapsed">
+                    <summary>
+                        <Icon name="tasks" size={20} />
+                        {t('tasks.availableCollapsed')}
+                    </summary>
+                    {available}
+                </details>
+            </>
+        ),
+        standings: (
+            <details className="task-section task-section--collapsible" data-testid="standings-collapsed">
+                <summary>
+                    <Icon name="stars" size={20} />
+                    {t('tasks.standingsCollapsed')}
+                </summary>
+                {standings}
+            </details>
+        ),
+        members: null,
+    } : {
+        week: myWeek,
+        tasks: <>{myTasksSection}{available}</>,
+        standings,
+        members: teamWeeks,
+    };
+
+    const homeOrder = own?.home?.length ? own.home : ['week', 'tasks', 'standings'];
 
     return (
         <div className="task-list-container">
@@ -466,33 +507,9 @@ function TaskList({ onNavigate, user, onInspectMember }) {
                 />
             </Dialog>
 
-            {isTeamAdmin ? (
-                <>
-                    {teamWeeks}
-                    {approvalQueue}
-                    <details className="task-section task-section--collapsible" data-testid="available-tasks-collapsed">
-                        <summary>
-                            <Icon name="tasks" size={20} />
-                            {t('tasks.availableCollapsed')}
-                        </summary>
-                        {available}
-                    </details>
-                    <details className="task-section task-section--collapsible" data-testid="standings-collapsed">
-                        <summary>
-                            <Icon name="stars" size={20} />
-                            {t('tasks.standingsCollapsed')}
-                        </summary>
-                        {standings}
-                    </details>
-                </>
-            ) : (
-                <>
-                    {myWeek}
-                    {myTasksSection}
-                    {available}
-                    {standings}
-                </>
-            )}
+            {homeOrder.map((place) => (
+                <React.Fragment key={place}>{pieces[place]}</React.Fragment>
+            ))}
         </div>
     );
 }

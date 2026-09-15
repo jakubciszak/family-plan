@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import TaskList from './pages/TaskList';
 import MemberView from './pages/MemberView';
 import Allowance from './pages/Allowance';
+import Personalise from './pages/Personalise';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import BonusRulesManagement from './pages/BonusRulesManagement';
@@ -17,6 +18,7 @@ import NotificationCenter from './components/NotificationCenter';
 import AppNavigation from './components/AppNavigation';
 import AppBarActions from './components/AppBarActions';
 import useThemeMode from './hooks/useThemeMode';
+import { PersonalisationProvider, usePersonalisation } from './hooks/usePersonalisation';
 import { useWindowClass } from './hooks/useMediaQuery';
 import { CircularProgress } from './components/md3';
 import apiClient from './services/apiClient';
@@ -81,6 +83,7 @@ const readPendingInvite = () => {
 
 function App() {
     const { t } = useTranslation();
+    const { own, reload: reloadOwnLook } = usePersonalisation();
     const [themeMode, setThemeMode] = useThemeMode();
     const windowClass = useWindowClass();
     const [isAuthenticated, setIsAuthenticated] = React.useState(null);
@@ -167,6 +170,7 @@ function App() {
     const handleLogin = (userData) => {
         setUser(userData);
         setIsAuthenticated(true);
+        reloadOwnLook();
         refreshTeamAdminFlag();
         refreshPoints(userData.id);
     };
@@ -205,20 +209,27 @@ function App() {
     const isSuperAdmin = user?.role === 'ROLE_ADMIN';
     const manages = isSuperAdmin || administersTeam;
 
+    const allNavItems = {
+        tasks: { id: 'tasks', icon: 'tasks', label: t('nav.tasks') },
+        teams: { id: 'teams', icon: 'teams', label: t('nav.teams') },
+        allowance: { id: 'allowance', icon: 'wallet', label: t('nav.allowance'), shortLabel: t('nav.allowanceShort') },
+        personalise: { id: 'personalise', icon: 'stars', label: t('personalise.title'), shortLabel: t('personalise.short') },
+        'task-types': { id: 'task-types', icon: 'taskTypes', label: t('nav.taskTypes'), shortLabel: t('nav.taskTypesShort'), needsManaging: true },
+        'bonus-rules': { id: 'bonus-rules', icon: 'workspacePremium', label: t('nav.bonusRules'), shortLabel: t('nav.bonusRulesShort'), needsManaging: true },
+        account: { id: 'account', icon: 'account', label: t('nav.account'), shortLabel: t('nav.accountShort') },
+        settings: { id: 'settings', icon: 'settings', label: t('nav.settings') },
+    };
+
+    const chosenNav = own?.navigation?.length ? own.navigation : Object.keys(allNavItems);
+
     const navItems = [
-        { id: 'tasks', icon: 'tasks', label: t('nav.tasks') },
-        { id: 'teams', icon: 'teams', label: t('nav.teams') },
-        { id: 'allowance', icon: 'wallet', label: t('nav.allowance'), shortLabel: t('nav.allowanceShort') },
-        ...(manages ? [
-            { id: 'task-types', icon: 'taskTypes', label: t('nav.taskTypes'), shortLabel: t('nav.taskTypesShort') },
-            { id: 'bonus-rules', icon: 'workspacePremium', label: t('nav.bonusRules'), shortLabel: t('nav.bonusRulesShort') },
-        ] : []),
+        ...chosenNav
+            .map((id) => allNavItems[id])
+            .filter((item) => item && (!item.needsManaging || manages)),
         ...(isSuperAdmin ? [
             { id: 'status-change-rules', icon: 'rule', label: t('nav.statusChangeRules'), shortLabel: t('nav.statusChangeRulesShort') },
             { id: 'notification-events', icon: 'notifications', label: t('nav.notificationEvents'), shortLabel: t('nav.notificationEventsShort') },
         ] : []),
-        { id: 'account', icon: 'account', label: t('nav.account'), shortLabel: t('nav.accountShort') },
-        { id: 'settings', icon: 'settings', label: t('nav.settings') },
     ];
 
     return (
@@ -236,6 +247,7 @@ function App() {
                     onThemeModeChange={setThemeMode}
                     onLogout={handleLogout}
                     onOpenAccount={() => setCurrentPage('account')}
+                    onOpenPersonalise={() => setCurrentPage('personalise')}
                 />
             </header>
 
@@ -269,6 +281,7 @@ function App() {
                     />
                 )}
                 {currentPage === 'allowance' && <Allowance user={user} />}
+                {currentPage === 'personalise' && <Personalise user={user} />}
                 {currentPage === 'task-types' && <TaskTypeManagement />}
                 {currentPage === 'bonus-rules' && <BonusRulesManagement user={user} />}
                 {currentPage === 'status-change-rules' && <StatusChangeRulesManagement user={user} />}
@@ -283,4 +296,12 @@ function App() {
     );
 }
 
-export default App;
+function AppWithOwnLook() {
+    return (
+        <PersonalisationProvider>
+            <App />
+        </PersonalisationProvider>
+    );
+}
+
+export default AppWithOwnLook;

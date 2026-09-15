@@ -231,6 +231,7 @@ Główne endpointy:
 - `GET /api/allowance/weeks` - Tydzień punktów i kwota, jaką daje
 - `POST /api/allowance/weeks/close` - Zamknięcie tygodnia
 - `GET /api/allowance/wallet` - Portfele: oczekujące i dostępne
+- `GET /api/personalisation` - Mój wygląd: avatar, kolor, tło, układ
 
 ## Docker Services
 
@@ -291,4 +292,5 @@ Kernel Symfony bootuje raz i zostaje w pamięci między requestami. W praktyce z
 - Wszystkie ID są typu UUID
 - State Pattern używany dla statusów zadań (zobacz `docs/STATE_PATTERN.md`)
 - Kieszonkowe prowadzi własną księgę podwójnego zapisu (zobacz `docs/ALLOWANCE.md`)
+- Każdy ustawia sobie wygląd aplikacji: avatar, kolor, tło, układ (zobacz `docs/PERSONALISATION.md`)
 - CORS skonfigurowany dla localhost:3000 w dev

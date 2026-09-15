@@ -1,9 +1,9 @@
 import React from 'react';
-import Icon from '../md3/Icon';
+import Icon from './md3/Icon';
 
 const remember = (id, open) => {
     try {
-        localStorage.setItem(`allowanceSection:${id}`, open ? 'open' : 'closed');
+        localStorage.setItem(`section:${id}`, open ? 'open' : 'closed');
     } catch {
         // storage unavailable
     }
@@ -11,7 +11,7 @@ const remember = (id, open) => {
 
 const recall = (id, fallback) => {
     try {
-        const held = localStorage.getItem(`allowanceSection:${id}`);
+        const held = localStorage.getItem(`section:${id}`);
 
         return held === null ? fallback : held === 'open';
     } catch {

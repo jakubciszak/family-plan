@@ -1,0 +1,121 @@
+.avatar-face {
+  display: grid;
+  place-items: center;
+  flex: none;
+  border-radius: var(--md-sys-shape-corner-full);
+  object-fit: cover;
+  background: var(--md-sys-color-surface-container-high);
+}
+
+.avatar-face--initials {
+  background: var(--md-sys-color-primary-container);
+  color: var(--md-sys-color-on-primary-container);
+  font-weight: 500;
+  text-transform: uppercase;
+}
+
+:root[data-backdrop] body,
+:root[data-backdrop] .app {
+  background-attachment: fixed;
+}
+
+:root[data-backdrop='dots'] body {
+  background-image: radial-gradient(
+    color-mix(in srgb, var(--md-sys-color-primary) 22%, transparent) 1.5px,
+    transparent 1.6px
+  );
+  background-size: 18px 18px;
+}
+
+:root[data-backdrop='grid'] body {
+  background-image:
+    linear-gradient(color-mix(in srgb, var(--md-sys-color-primary) 14%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--md-sys-color-primary) 14%, transparent) 1px, transparent 1px);
+  background-size: 28px 28px;
+}
+
+:root[data-backdrop='waves'] body {
+  background-image: repeating-radial-gradient(
+    circle at 50% 120%,
+    color-mix(in srgb, var(--md-sys-color-primary) 12%, transparent) 0 22px,
+    transparent 22px 60px
+  );
+}
+
+:root[data-backdrop='stars'] body {
+  background-image:
+    radial-gradient(color-mix(in srgb, var(--md-sys-color-tertiary) 55%, transparent) 1px, transparent 1.2px),
+    radial-gradient(color-mix(in srgb, var(--md-sys-color-primary) 35%, transparent) 1px, transparent 1.2px);
+  background-size: 90px 90px, 140px 140px;
+  background-position: 0 0, 40px 70px;
+}
+
+:root[data-backdrop='bubbles'] body {
+  background-image:
+    radial-gradient(circle at 15% 25%, color-mix(in srgb, var(--md-sys-color-primary) 16%, transparent) 0 70px, transparent 71px),
+    radial-gradient(circle at 80% 60%, color-mix(in srgb, var(--md-sys-color-tertiary) 16%, transparent) 0 110px, transparent 111px),
+    radial-gradient(circle at 45% 90%, color-mix(in srgb, var(--md-sys-color-secondary) 16%, transparent) 0 90px, transparent 91px);
+}
+
+:root[data-backdrop='confetti'] body {
+  background-image: repeating-linear-gradient(
+    45deg,
+    color-mix(in srgb, var(--md-sys-color-tertiary) 14%, transparent) 0 6px,
+    transparent 6px 22px
+  );
+}
+
+:root[data-backdrop='picture'] body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background-image: var(--own-backdrop-image);
+  background-size: cover;
+  background-position: center;
+}
+
+:root[data-backdrop='picture'] body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background: color-mix(
+    in srgb,
+    var(--md-sys-color-background) calc(var(--own-backdrop-dimming, 0.4) * 100%),
+    transparent
+  );
+}
+
+.celebration {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.celebration i {
+  position: absolute;
+  top: -20px;
+  left: var(--x);
+  width: 9px;
+  height: 14px;
+  background: var(--colour);
+  border-radius: 2px;
+  transform: rotate(var(--tilt));
+  animation: celebration-fall 2.2s var(--delay) cubic-bezier(0.2, 0.6, 0.4, 1) forwards;
+}
+
+@keyframes celebration-fall {
+  to {
+    transform: translate3d(var(--drift), 105vh, 0) rotate(calc(var(--tilt) + 540deg));
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .celebration {
+    display: none;
+  }
+}

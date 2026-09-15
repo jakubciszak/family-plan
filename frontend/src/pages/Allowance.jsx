@@ -7,7 +7,7 @@ import GoalBoard from '../components/allowance/GoalBoard';
 import GoalForm from '../components/allowance/GoalForm';
 import LedgerList from '../components/allowance/LedgerList';
 import PayoutForm from '../components/allowance/PayoutForm';
-import Section from '../components/allowance/Section';
+import Section from '../components/Section';
 import WalletCards from '../components/allowance/WalletCards';
 import Button from '../components/md3/Button';
 import Dialog from '../components/md3/Dialog';

@@ -1,5 +1,6 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
+import Avatar from './Avatar';
 import WeekCalendar from './WeekCalendar';
 import teamService from '../services/teamService';
 
@@ -74,7 +75,7 @@ function MemberWeeks({ teamId, refreshToken }) {
                         title={member.userName}
                         onClick={() => toggle(member.userId)}
                     >
-                        <span aria-hidden="true">{member.userName?.trim()?.charAt(0) || '?'}</span>
+                        <Avatar face={member.face} name={member.userName} size={32} />
                         <span className="md-visually-hidden">{member.userName}</span>
                     </button>
                 ))}

@@ -79,6 +79,12 @@ services:
     App\UserSettings\Domain\Repository\UserSettingsRepositoryInterface:
         class: App\UserSettings\Infrastructure\Persistence\DoctrineUserSettingsRepository
 
+    App\UserSettings\Domain\Repository\PersonalisationRepositoryInterface:
+        class: App\UserSettings\Infrastructure\Persistence\DoctrinePersonalisationRepository
+
+    App\UserSettings\Domain\Repository\OwnPictureRepositoryInterface:
+        class: App\UserSettings\Infrastructure\Persistence\DoctrineOwnPictureRepository
+
     App\TeamManagement\Domain\Repository\TeamRepositoryInterface:
         class: App\TeamManagement\Infrastructure\Persistence\DoctrineTeamRepository
 

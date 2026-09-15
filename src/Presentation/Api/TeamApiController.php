@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Presentation\Api;
 
+use App\Presentation\Api\Dto\Team\CreateTeamRequest;
+use App\Presentation\Api\Dto\Team\InviteToTeamRequest;
+use App\Presentation\Api\Dto\Team\UpdateTeamRequest;
 use App\Shared\Domain\ValueObject\Uuid;
 use App\TeamManagement\Application\Command\AcceptInvitationCommand;
 use App\TeamManagement\Application\Command\CreateTeamCommand;
@@ -14,16 +17,14 @@ use App\TeamManagement\Application\Query\GetTeamInvitationsQuery;
 use App\TeamManagement\Application\Query\GetTeamMembersQuery;
 use App\TeamManagement\Application\Query\GetUserInvitationsQuery;
 use App\TeamManagement\Application\Query\GetUserTeamsQuery;
-use App\TeamManagement\Domain\Entity\Team;
-use App\TeamManagement\Domain\Repository\TeamInvitationRepositoryInterface;
 use App\TeamManagement\Application\Service\InvitationLinkGenerator;
-use App\TeamManagement\Domain\Repository\TeamMembershipRepositoryInterface;
+use App\TeamManagement\Domain\Entity\Team;
 use App\TeamManagement\Domain\Entity\TeamInvitation;
 use App\TeamManagement\Domain\ReadModel\TeamMembership;
+use App\TeamManagement\Domain\Repository\TeamInvitationRepositoryInterface;
+use App\TeamManagement\Domain\Repository\TeamMembershipRepositoryInterface;
 use App\UserManagement\Domain\Repository\UserRepositoryInterface;
-use App\Presentation\Api\Dto\Team\CreateTeamRequest;
-use App\Presentation\Api\Dto\Team\UpdateTeamRequest;
-use App\Presentation\Api\Dto\Team\InviteToTeamRequest;
+use App\UserSettings\Application\Service\Personalisations;
 use OpenApi\Attributes as OA;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -45,7 +46,8 @@ class TeamApiController extends AbstractController
         private readonly UserRepositoryInterface $userRepository,
         private readonly TeamMembershipRepositoryInterface $memberships,
         private readonly InvitationLinkGenerator $invitationLink,
-        private readonly TeamInvitationRepositoryInterface $invitationRepository
+        private readonly TeamInvitationRepositoryInterface $invitationRepository,
+        private readonly Personalisations $personalisations
     ) {
     }
 
@@ -464,14 +466,17 @@ class TeamApiController extends AbstractController
     private function serializeMember(TeamMembership $member): array
     {
         $user = $this->userRepository->findById($member->userId());
-        
+        $own = $this->personalisations->of($member->userId());
+
         return [
             'id' => $member->id()->value(),
             'userId' => $member->userId()->value(),
-            'userName' => $user?->name() ?? 'Unknown',
+            'userName' => $own->nickname() ?? $user?->name() ?? 'Unknown',
+            'givenName' => $user?->name() ?? 'Unknown',
             'userEmail' => $user?->email()->value() ?? 'Unknown',
             'role' => $member->role()->value(),
-            'joinedAt' => $member->joinedAt()->format('c')
+            'joinedAt' => $member->joinedAt()->format('c'),
+            'face' => $this->personalisations->face($own),
         ];
     }
 

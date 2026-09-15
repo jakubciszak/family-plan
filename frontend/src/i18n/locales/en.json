@@ -489,5 +489,61 @@
     "ruleInvalid": "Check the minimum and the rate",
     "ruleSaved": "Saved",
     "removeRule": "Remove the rule"
+  },
+  "personalise": {
+    "title": "My look",
+    "short": "Look",
+    "lead": "Make the app yours — a face, a colour, a backdrop and what you see first.",
+    "meSection": "Me",
+    "colourSection": "Colour",
+    "backdropSection": "Backdrop",
+    "homeSection": "Home page",
+    "navSection": "Bottom bar",
+    "celebrationSection": "Celebration",
+    "nickname": "What to call you",
+    "nicknameHint": "Empty means the name on the account",
+    "avatarStyle": "Avatar style",
+    "ownPicture": "Upload your own picture",
+    "surpriseMe": "Surprise me",
+    "pictureFailed": "That picture could not be kept",
+    "colour": "Main colour",
+    "ownColour": "Your own colour",
+    "backdrop": "Backdrop pattern",
+    "ownBackdrop": "Upload your own backdrop",
+    "dimming": "Dimming: {{percent}}%",
+    "backdrops": {
+      "plain": "Plain",
+      "dots": "Dots",
+      "waves": "Waves",
+      "grid": "Grid",
+      "stars": "Stars",
+      "bubbles": "Bubbles",
+      "confetti": "Confetti"
+    },
+    "moveUp": "Move up",
+    "moveDown": "Move down",
+    "shown": "Show it",
+    "nothingShown": "Nothing is shown here — switch something on below.",
+    "celebrates": "Confetti when a task is approved",
+    "makesSound": "Sound",
+    "tryIt": "Show me what it looks like",
+    "places": {
+      "home": {
+        "week": "My week",
+        "tasks": "Tasks to take",
+        "standings": "Standings",
+        "members": "Everyone’s weeks"
+      },
+      "navigation": {
+        "tasks": "Tasks",
+        "teams": "Teams",
+        "allowance": "Pocket money",
+        "personalise": "My look",
+        "task-types": "Task types",
+        "bonus-rules": "Bonus rules",
+        "account": "My account",
+        "settings": "Settings"
+      }
+    }
   }
 }

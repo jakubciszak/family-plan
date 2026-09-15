@@ -489,5 +489,61 @@
     "ruleInvalid": "Sprawdź próg i przelicznik",
     "ruleSaved": "Zapisano",
     "removeRule": "Usuń zasadę"
+  },
+  "personalise": {
+    "title": "Mój wygląd",
+    "short": "Wygląd",
+    "lead": "Ustaw aplikację po swojemu — twarz, kolor, tło i to, co widzisz na start.",
+    "meSection": "Ja",
+    "colourSection": "Kolor",
+    "backdropSection": "Tło",
+    "homeSection": "Strona główna",
+    "navSection": "Pasek na dole",
+    "celebrationSection": "Świętowanie",
+    "nickname": "Jak mam Cię nazywać",
+    "nicknameHint": "Pusto = imię z konta",
+    "avatarStyle": "Styl avatara",
+    "ownPicture": "Wgraj swoje zdjęcie",
+    "surpriseMe": "Zaskocz mnie",
+    "pictureFailed": "Nie udało się wgrać obrazka",
+    "colour": "Kolor wiodący",
+    "ownColour": "Własny kolor",
+    "backdrop": "Wzór tła",
+    "ownBackdrop": "Wgraj własne tło",
+    "dimming": "Przyciemnienie: {{percent}}%",
+    "backdrops": {
+      "plain": "Gładkie",
+      "dots": "Kropki",
+      "waves": "Fale",
+      "grid": "Kratka",
+      "stars": "Gwiazdki",
+      "bubbles": "Bąbelki",
+      "confetti": "Konfetti"
+    },
+    "moveUp": "Wyżej",
+    "moveDown": "Niżej",
+    "shown": "Pokazuj",
+    "nothingShown": "Nic tu nie pokazujesz — włącz coś poniżej.",
+    "celebrates": "Konfetti po zaliczeniu zadania",
+    "makesSound": "Dźwięk",
+    "tryIt": "Pokaż jak to wygląda",
+    "places": {
+      "home": {
+        "week": "Mój tydzień",
+        "tasks": "Zadania do wzięcia",
+        "standings": "Ranking",
+        "members": "Tygodnie domowników"
+      },
+      "navigation": {
+        "tasks": "Zadania",
+        "teams": "Zespoły",
+        "allowance": "Kieszonkowe",
+        "personalise": "Mój wygląd",
+        "task-types": "Typy zadań",
+        "bonus-rules": "Zasady bonusowe",
+        "account": "Moje konto",
+        "settings": "Ustawienia"
+      }
+    }
   }
 }
