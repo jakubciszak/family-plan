@@ -135,6 +135,12 @@ Zmienne środowiskowe projektu:
 | `MAILER_FROM_EMAIL`, `MAILER_FROM_NAME` | Adres nadawcy musi być zweryfikowany w SendGridzie, inaczej wysyłka kończy się odrzuceniem |
 | `APP_URL` | Baza linków w mailach, m.in. w zaproszeniach |
 | `FRANKENPHP_NUM_WORKERS` | Liczba workerów PHP trzymających kernel Symfony w pamięci; domyślnie 4 |
+| `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` | Para kluczy podpisująca powiadomienia push; puste wyłącza kanał push, nie psując reszty |
+| `VAPID_SUBJECT` | Kontakt dla operatora serwisu push (`mailto:` albo URL) |
+
+Klucze VAPID generuje `php bin/console app:generate-vapid-keys` (szczegóły w
+`docs/PUSH_NOTIFICATIONS.md`). Zmiana klucza publicznego unieważnia subskrypcje, które przeglądarki
+już trzymają — po niej każde urządzenie trzeba zapisać od nowa.
 
 ## Migracja na FrankenPHP — kroki jednorazowe na serwerze
 

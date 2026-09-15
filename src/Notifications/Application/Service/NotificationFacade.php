@@ -61,6 +61,15 @@ final readonly class NotificationFacade
         $this->send('in_app', $userId, $message, $subject, $additionalParameters);
     }
 
+    public function sendPush(
+        string $userId,
+        string $message,
+        ?string $subject = null,
+        array $additionalParameters = []
+    ): void {
+        $this->send('push', $userId, $message, $subject, $additionalParameters);
+    }
+
     /**
      * Send a notification using any supported channel
      *

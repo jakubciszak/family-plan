@@ -4,6 +4,7 @@ import userSettingsService from '../services/userSettingsService';
 import { Button, Chip, Icon, Switch, CircularProgress } from '../components/md3';
 import useThemeMode, { THEME_MODES } from '../hooks/useThemeMode';
 import LanguageSwitcher from '../components/LanguageSwitcher';
+import PushDeviceSetting from '../components/PushDeviceSetting';
 import '../styles/settings.css';
 
 const THEME_ICONS = { light: 'lightMode', dark: 'darkMode', system: 'systemMode' };
@@ -12,6 +13,7 @@ const DEFAULT_PREFERENCES = [
     { name: 'email', enabled: true },
     { name: 'sms', enabled: false },
     { name: 'in_app', enabled: true },
+    { name: 'push', enabled: true },
 ];
 
 const withEveryChannel = (options) =>
@@ -155,6 +157,7 @@ function UserSettings({ user }) {
                             />
                         </div>
                     ))}
+                    <PushDeviceSetting />
                 </div>
             </section>
 

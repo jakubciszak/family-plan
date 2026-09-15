@@ -76,6 +76,12 @@ final readonly class NotificationOrchestrator
                         $subject,
                         $additionalParameters
                     ),
+                    NotificationChannels::PUSH => $this->notificationFacade->sendPush(
+                        $userId->value(),
+                        $message,
+                        $subject,
+                        $additionalParameters
+                    ),
                     NotificationChannels::SMS => $this->logger?->info('SMS notifications not fully implemented', [
                         'user_id' => $userId->value(),
                     ]),
