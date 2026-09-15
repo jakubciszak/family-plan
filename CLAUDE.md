@@ -48,6 +48,7 @@ docker compose logs -f frontend  # Frontend logs
 │   ├── UserManagement/            # Bounded Context: użytkownicy, auth
 │   ├── TaskManagement/            # Bounded Context: zadania
 │   ├── PointsManagement/          # Bounded Context: punkty i nagrody
+│   ├── Allowance/                 # Bounded Context: kieszonkowe (księga pieniędzy, cele)
 │   ├── TeamManagement/            # Bounded Context: zespoły
 │   ├── UserSettings/              # Bounded Context: ustawienia
 │   ├── Shared/                    # Shared kernel
@@ -227,6 +228,9 @@ Główne endpointy:
 - `GET /api/tasks` - Lista zadań
 - `POST /api/tasks` - Utwórz zadanie
 - `GET /api/teams` - Lista zespołów
+- `GET /api/allowance/weeks` - Tydzień punktów i kwota, jaką daje
+- `POST /api/allowance/weeks/close` - Zamknięcie tygodnia
+- `GET /api/allowance/wallet` - Portfele: oczekujące i dostępne
 
 ## Docker Services
 
@@ -286,4 +290,5 @@ Kernel Symfony bootuje raz i zostaje w pamięci między requestami. W praktyce z
 - Frontend komunikuje się z backendem przez proxy Webpack (dev) lub bezpośrednio, same-origin (prod — FrankenPHP serwuje SPA i API pod jednym hostem)
 - Wszystkie ID są typu UUID
 - State Pattern używany dla statusów zadań (zobacz `docs/STATE_PATTERN.md`)
+- Kieszonkowe prowadzi własną księgę podwójnego zapisu (zobacz `docs/ALLOWANCE.md`)
 - CORS skonfigurowany dla localhost:3000 w dev

@@ -1,0 +1,13 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Allowance\Application\Command;
+
+final readonly class CloseGoalCommand
+{
+    public function __construct(
+        public string $goalId
+    ) {
+    }
+}

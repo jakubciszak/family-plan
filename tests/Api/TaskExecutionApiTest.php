@@ -625,6 +625,35 @@ class TaskExecutionApiTest extends ApiTestCase
         $this->fail('Task type not found in the listing');
     }
 
+    public function testNothingIsBookedIntoAWeekThatHasAlreadyBeenSettled(): void
+    {
+        $context = $this->teamWithMember();
+        $type = $this->defineType($context['teamId'], ['type' => 'unlimited']);
+
+        $this->loginAs($context['member']);
+        $taken = $this->assertJsonResponse(
+            $this->postJson("/api/task-templates/{$type['id']}/take", []),
+            Response::HTTP_CREATED
+        );
+
+        $today = (new \DateTimeImmutable())->format('Y-m-d');
+
+        $this->loginAs($context['admin']);
+        $this->assertJsonResponse($this->postJson('/api/allowance/weeks/close', [
+            'userId' => $context['member']->id()->value(),
+            'weekStart' => $today,
+        ]));
+
+        $this->loginAs($context['member']);
+
+        $this->assertSame(
+            Response::HTTP_BAD_REQUEST,
+            $this->postJson("/api/task-executions/{$taken['id']}/complete", ['doneOn' => $today])->getStatusCode()
+        );
+
+        $this->assertSame('new', $this->getJson('/api/task-executions/mine')['executions'][0]['status']);
+    }
+
     private function teamWithMember(): array
     {
         $admin = $this->currentUser;

@@ -4,6 +4,7 @@
 # Put parameters here that don't need to change on each machine where the app is deployed
 # https://symfony.com/doc/current/best_practices.html#use-parameters-for-application-configuration
 parameters:
+    app.allowance_currency: '%env(ALLOWANCE_CURRENCY)%'
 
 services:
     # default configuration for services in *this* file
@@ -87,6 +88,46 @@ services:
     App\TeamManagement\Domain\Repository\TeamInvitationRepositoryInterface:
         class: App\TeamManagement\Infrastructure\Persistence\DoctrineTeamInvitationRepository
 
+    App\Allowance\Domain\Repository\MoneyAccountRepositoryInterface:
+        class: App\Allowance\Infrastructure\Persistence\DoctrineMoneyAccountRepository
+
+    App\Allowance\Domain\Repository\MoneyEntryRepositoryInterface:
+        class: App\Allowance\Infrastructure\Persistence\DoctrineMoneyEntryRepository
+
+    App\Allowance\Domain\Repository\MoneyTransactionRepositoryInterface:
+        class: App\Allowance\Infrastructure\Persistence\DoctrineMoneyTransactionRepository
+
+    App\Allowance\Domain\Repository\AllowanceRuleRepositoryInterface:
+        class: App\Allowance\Infrastructure\Persistence\DoctrineAllowanceRuleRepository
+
+    App\Allowance\Domain\Repository\WeekClosureRepositoryInterface:
+        class: App\Allowance\Infrastructure\Persistence\DoctrineWeekClosureRepository
+
+    App\Allowance\Domain\Repository\PayoutRepositoryInterface:
+        class: App\Allowance\Infrastructure\Persistence\DoctrinePayoutRepository
+
+    App\Allowance\Domain\Repository\SavingsGoalRepositoryInterface:
+        class: App\Allowance\Infrastructure\Persistence\DoctrineSavingsGoalRepository
+
+    App\Shared\Domain\Period\ClosedWeeksInterface:
+        class: App\Allowance\Infrastructure\Persistence\SettledWeeks
+
+    App\Allowance\Application\Service\WalletView:
+        arguments:
+            $currency: '%app.allowance_currency%'
+
+    App\Allowance\Application\Service\AllowanceWeekView:
+        arguments:
+            $currency: '%app.allowance_currency%'
+
+    App\Allowance\Application\Service\LedgerView:
+        arguments:
+            $currency: '%app.allowance_currency%'
+
+    App\Allowance\Application\Service\GoalsView:
+        arguments:
+            $currency: '%app.allowance_currency%'
+
     App\Party\Domain\Repository\PartyRepositoryInterface:
         class: App\Party\Infrastructure\Persistence\Doctrine\DoctrinePartyRepository
 
@@ -139,6 +180,23 @@ services:
             $queryBus: '@query.bus'
 
     App\Presentation\Api\NotificationPolicyApiController:
+        arguments:
+            $commandBus: '@command.bus'
+
+    App\Presentation\Api\AllowanceRuleApiController:
+        arguments:
+            $commandBus: '@command.bus'
+            $currency: '%app.allowance_currency%'
+
+    App\Presentation\Api\AllowanceWeekApiController:
+        arguments:
+            $commandBus: '@command.bus'
+
+    App\Presentation\Api\AllowanceWalletApiController:
+        arguments:
+            $commandBus: '@command.bus'
+
+    App\Presentation\Api\SavingsGoalApiController:
         arguments:
             $commandBus: '@command.bus'
 

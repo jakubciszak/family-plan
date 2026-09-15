@@ -2,6 +2,7 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import TaskList from './pages/TaskList';
 import MemberView from './pages/MemberView';
+import Allowance from './pages/Allowance';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import BonusRulesManagement from './pages/BonusRulesManagement';
@@ -207,6 +208,7 @@ function App() {
     const navItems = [
         { id: 'tasks', icon: 'tasks', label: t('nav.tasks') },
         { id: 'teams', icon: 'teams', label: t('nav.teams') },
+        { id: 'allowance', icon: 'wallet', label: t('nav.allowance'), shortLabel: t('nav.allowanceShort') },
         ...(manages ? [
             { id: 'task-types', icon: 'taskTypes', label: t('nav.taskTypes'), shortLabel: t('nav.taskTypesShort') },
             { id: 'bonus-rules', icon: 'workspacePremium', label: t('nav.bonusRules'), shortLabel: t('nav.bonusRulesShort') },
@@ -266,6 +268,7 @@ function App() {
                         onInspectMember={(member) => { setInspectedMember(member); setCurrentPage('member'); }}
                     />
                 )}
+                {currentPage === 'allowance' && <Allowance user={user} />}
                 {currentPage === 'task-types' && <TaskTypeManagement />}
                 {currentPage === 'bonus-rules' && <BonusRulesManagement user={user} />}
                 {currentPage === 'status-change-rules' && <StatusChangeRulesManagement user={user} />}

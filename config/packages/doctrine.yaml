@@ -34,6 +34,12 @@ doctrine:
             Doctrine\DBAL\Platforms\PostgreSQLPlatform: identity
         auto_mapping: true
         mappings:
+            Allowance:
+                type: attribute
+                is_bundle: false
+                dir: '%kernel.project_dir%/src/Allowance/Domain/Entity'
+                prefix: 'App\Allowance\Domain\Entity'
+                alias: Allowance
             UserManagement:
                 type: attribute
                 is_bundle: false

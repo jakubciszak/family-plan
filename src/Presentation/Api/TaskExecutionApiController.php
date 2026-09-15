@@ -5,8 +5,9 @@ declare(strict_types=1);
 namespace App\Presentation\Api;
 
 use App\Party\Application\Service\PartyResponsibilities;
-use App\Shared\Domain\Clock\ClockInterface;
 use App\Party\Domain\ValueObject\ResponsibilityType;
+use App\Shared\Domain\Clock\ClockInterface;
+use App\Shared\Domain\Period\ClosedWeeksInterface;
 use App\Shared\Domain\ValueObject\Uuid;
 use App\TaskManagement\Application\Service\TaskTypePool;
 use App\TaskManagement\Domain\Entity\TaskExecution;
@@ -15,8 +16,8 @@ use App\TaskManagement\Domain\Exception\UnauthorizedTaskActionException;
 use App\TaskManagement\Domain\Repository\TaskExecutionRepositoryInterface;
 use App\TaskManagement\Domain\Repository\TaskTemplateRepositoryInterface;
 use App\TaskManagement\Domain\Service\BonusSettlementInterface;
-use App\TeamManagement\Domain\Repository\TeamMembershipRepositoryInterface;
 use App\TaskManagement\Domain\Strategy\ExecutionPointsAwardStrategyInterface;
+use App\TeamManagement\Domain\Repository\TeamMembershipRepositoryInterface;
 use App\UserManagement\Domain\Repository\UserRepositoryInterface;
 use App\UserManagement\Domain\ValueObject\Email;
 use DateTimeImmutable;
@@ -42,7 +43,8 @@ class TaskExecutionApiController extends AbstractController
         private readonly PartyResponsibilities $responsibilities,
         private readonly ClockInterface $clock,
         private readonly BonusSettlementInterface $bonusPayout,
-        private readonly TeamMembershipRepositoryInterface $memberships
+        private readonly TeamMembershipRepositoryInterface $memberships,
+        private readonly ClosedWeeksInterface $closedWeeks
     ) {
     }
 
@@ -182,6 +184,10 @@ class TaskExecutionApiController extends AbstractController
         $this->assertCarries(ResponsibilityType::completeTask(), $teamId);
 
         $doneOn = $this->doneOn($request);
+
+        if ($doneOn !== null && $this->closedWeeks->isClosedFor($this->callerId(), $doneOn)) {
+            throw new \DomainException('That week has already been settled, so nothing more can be booked into it');
+        }
 
         $execution->complete($this->callerId(), $this->clock, $doneOn);
         $this->executionRepository->save($execution);

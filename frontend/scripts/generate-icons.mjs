@@ -18,6 +18,7 @@ const ICONS = {
     edit: 'edit',
     error: 'error',
     expand: 'keyboard_arrow_down',
+    goal: 'flag',
     info: 'info',
     install: 'install_desktop',
     key: 'key',
@@ -45,7 +46,9 @@ const ICONS = {
     teamAdd: 'group_add',
     teams: 'groups',
     trophy: 'trophy',
+    savings: 'savings',
     undo: 'undo',
+    wallet: 'wallet',
     workspacePremium: 'workspace_premium',
 };
 
