@@ -404,10 +404,12 @@
     "spentTotal": "Spent in total",
     "payoutOffered": "Payout to confirm",
     "confirmPayout": "Got it",
+    "myWallet": "My wallet",
     "myWeeks": "My weeks",
     "myGoals": "My goals",
     "myMoney": "Income and spending",
     "memberWallet": "Wallet",
+    "memberWeeks": "Weeks",
     "memberGoals": "Goals",
     "accounts": {
       "tasks": "Tasks",

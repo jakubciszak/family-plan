@@ -215,22 +215,108 @@
   gap: 8px;
 }
 
-.booking-form,
-.payout-form,
-.goal-form {
+.payout-form {
   display: flex;
   flex-wrap: wrap;
   align-items: flex-end;
   gap: 12px;
+  margin-top: 16px;
   padding: 16px;
   border: 1px solid var(--md-sys-color-outline-variant);
   border-radius: var(--md-sys-shape-corner-large);
 }
 
-.allowance-page__bookings {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+.booking-form,
+.goal-form {
+  display: flex;
+  flex-direction: column;
   gap: 12px;
+}
+
+.dialog-form__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.panel {
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-large);
+  background: var(--md-sys-color-surface);
+  overflow: hidden;
+}
+
+.panel__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-right: 12px;
+  background: var(--md-sys-color-surface-container-low);
+}
+
+.panel__toggle {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 12px;
+  min-height: 56px;
+  padding: 12px 16px;
+  border: 0;
+  background: transparent;
+  color: var(--md-sys-color-on-surface);
+  font-size: var(--md-sys-typescale-title-medium-size);
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+}
+
+.panel__toggle:focus-visible {
+  outline: 3px solid var(--md-sys-color-primary);
+  outline-offset: -3px;
+}
+
+.panel__icon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--md-sys-shape-corner-full);
+  background: var(--md-sys-color-secondary-container);
+  color: var(--md-sys-color-on-secondary-container);
+}
+
+.panel__title {
+  flex: 1;
+}
+
+.panel__summary {
+  font-size: var(--md-sys-typescale-body-small-size);
+  font-weight: 400;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.panel__chevron {
+  display: grid;
+  place-items: center;
+  color: var(--md-sys-color-on-surface-variant);
+  transition: transform var(--md-sys-motion-duration-short4) var(--md-sys-motion-easing-standard);
+}
+
+.panel.is-open .panel__chevron {
+  transform: rotate(180deg);
+}
+
+.panel__actions {
+  display: flex;
+  flex: none;
+  gap: 4px;
+}
+
+.panel__body {
+  padding: 16px;
+  border-top: 1px solid var(--md-sys-color-outline-variant);
 }
 
 .payout-form__free {

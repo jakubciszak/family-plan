@@ -4,10 +4,14 @@ import AllowanceRulesForm from '../components/allowance/AllowanceRulesForm';
 import AllowanceWeek from '../components/allowance/AllowanceWeek';
 import BookingForm from '../components/allowance/BookingForm';
 import GoalBoard from '../components/allowance/GoalBoard';
+import GoalForm from '../components/allowance/GoalForm';
 import LedgerList from '../components/allowance/LedgerList';
 import PayoutForm from '../components/allowance/PayoutForm';
+import Section from '../components/allowance/Section';
 import WalletCards from '../components/allowance/WalletCards';
 import Button from '../components/md3/Button';
+import Dialog from '../components/md3/Dialog';
+import IconButton from '../components/md3/IconButton';
 import Icon from '../components/md3/Icon';
 import { CircularProgress } from '../components/md3/Progress';
 import allowanceService from '../services/allowanceService';
@@ -29,6 +33,7 @@ function Allowance({ user }) {
     const [rules, setRules] = React.useState(null);
     const [refresh, setRefresh] = React.useState(0);
     const [error, setError] = React.useState(null);
+    const [dialog, setDialog] = React.useState(null);
 
     const reload = () => setRefresh((count) => count + 1);
 
@@ -167,31 +172,97 @@ function Allowance({ user }) {
 
             {tab === 'mine' && (
                 <>
-                    <WalletCards
-                        wallet={wallet}
-                        onConfirmPayout={(payoutId) => quiet(run(allowanceService.confirmPayout(payoutId)))}
-                    />
+                    <Section id="wallet" icon="wallet" title={t('allowance.myWallet')}>
+                        <WalletCards
+                            wallet={wallet}
+                            onConfirmPayout={(payoutId) => quiet(run(allowanceService.confirmPayout(payoutId)))}
+                        />
+                    </Section>
 
-                    <h3 className="allowance-page__section">{t('allowance.myWeeks')}</h3>
-                    <AllowanceWeek userId={user?.id} refreshToken={refresh} />
+                    <Section id="weeks" icon="calendar" title={t('allowance.myWeeks')}>
+                        <AllowanceWeek userId={user?.id} refreshToken={refresh} />
+                    </Section>
 
-                    <h3 className="allowance-page__section">{t('allowance.myGoals')}</h3>
-                    <GoalBoard
-                        goals={goals}
-                        onPlan={(goal) => run(allowanceService.planGoal(goal))}
-                        onPutAside={(goalId, amount) => run(allowanceService.putAside(goalId, amount))}
-                        onTakeBack={(goalId, amount) => run(allowanceService.takeBack(goalId, amount))}
-                        onSpend={(goalId, amount, name) => quiet(run(allowanceService.spendGoal(goalId, amount, name)))}
-                        onClose={(goalId) => quiet(run(allowanceService.closeGoal(goalId)))}
-                    />
+                    <Section
+                        id="goals"
+                        icon="goal"
+                        title={t('allowance.myGoals')}
+                        actions={(
+                            <IconButton
+                                icon="add"
+                                variant="filled"
+                                label={t('allowance.planGoal')}
+                                onClick={() => setDialog('goal')}
+                            />
+                        )}
+                    >
+                        <GoalBoard
+                            goals={goals}
+                            onPutAside={(goalId, amount) => run(allowanceService.putAside(goalId, amount))}
+                            onTakeBack={(goalId, amount) => run(allowanceService.takeBack(goalId, amount))}
+                            onSpend={(goalId, amount, name) => quiet(run(allowanceService.spendGoal(goalId, amount, name)))}
+                            onClose={(goalId) => quiet(run(allowanceService.closeGoal(goalId)))}
+                        />
+                    </Section>
 
-                    <h3 className="allowance-page__section">{t('allowance.myMoney')}</h3>
-                    <div className="allowance-page__bookings">
-                        <BookingForm kind="income" onSubmit={(booking) => run(allowanceService.addIncome(booking))} />
-                        <BookingForm kind="expense" onSubmit={(booking) => run(allowanceService.addExpense(booking))} />
-                    </div>
+                    <Section
+                        id="ledger"
+                        icon="schedule"
+                        title={t('allowance.myMoney')}
+                        actions={(
+                            <>
+                                <IconButton
+                                    icon="add"
+                                    variant="tonal"
+                                    label={t('allowance.addIncome')}
+                                    onClick={() => setDialog('income')}
+                                />
+                                <IconButton
+                                    icon="remove"
+                                    variant="tonal"
+                                    label={t('allowance.addExpense')}
+                                    onClick={() => setDialog('expense')}
+                                />
+                            </>
+                        )}
+                    >
+                        <LedgerList ledger={ledger} />
+                    </Section>
 
-                    <LedgerList ledger={ledger} />
+                    <Dialog
+                        open={dialog === 'income'}
+                        onClose={() => setDialog(null)}
+                        headline={t('allowance.addIncome')}
+                    >
+                        <BookingForm
+                            kind="income"
+                            onSubmit={(booking) => run(allowanceService.addIncome(booking))}
+                            onCancel={() => setDialog(null)}
+                        />
+                    </Dialog>
+
+                    <Dialog
+                        open={dialog === 'expense'}
+                        onClose={() => setDialog(null)}
+                        headline={t('allowance.addExpense')}
+                    >
+                        <BookingForm
+                            kind="expense"
+                            onSubmit={(booking) => run(allowanceService.addExpense(booking))}
+                            onCancel={() => setDialog(null)}
+                        />
+                    </Dialog>
+
+                    <Dialog
+                        open={dialog === 'goal'}
+                        onClose={() => setDialog(null)}
+                        headline={t('allowance.planGoal')}
+                    >
+                        <GoalForm
+                            onPlan={(goal) => run(allowanceService.planGoal(goal))}
+                            onCancel={() => setDialog(null)}
+                        />
+                    </Dialog>
                 </>
             )}
 
@@ -214,6 +285,7 @@ function Allowance({ user }) {
 
                     {memberId && (
                         <>
+                            <Section id="member-weeks" icon="calendar" title={t('allowance.memberWeeks')}>
                             <AllowanceWeek
                                 userId={memberId}
                                 refreshToken={refresh}
@@ -243,17 +315,20 @@ function Allowance({ user }) {
                                     </div>
                                 )}
                             />
+                            </Section>
 
-                            <h3 className="allowance-page__section">{t('allowance.memberWallet')}</h3>
-                            <WalletCards wallet={memberWallet} readOnly />
+                            <Section id="member-wallet" icon="wallet" title={t('allowance.memberWallet')}>
+                                <WalletCards wallet={memberWallet} readOnly />
 
-                            <PayoutForm
-                                wallet={memberWallet}
-                                onOffer={(payout) => run(allowanceService.offerPayout({ ...payout, userId: memberId }))}
-                            />
+                                <PayoutForm
+                                    wallet={memberWallet}
+                                    onOffer={(payout) => run(allowanceService.offerPayout({ ...payout, userId: memberId }))}
+                                />
+                            </Section>
 
-                            <h3 className="allowance-page__section">{t('allowance.memberGoals')}</h3>
-                            <GoalBoard goals={memberGoals} readOnly />
+                            <Section id="member-goals" icon="goal" title={t('allowance.memberGoals')} defaultOpen={false}>
+                                <GoalBoard goals={memberGoals} readOnly />
+                            </Section>
                         </>
                     )}
                 </>

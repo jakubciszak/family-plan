@@ -135,10 +135,12 @@ test.describe('K. Kieszonkowe', () => {
     await page.getByTestId('payouts-awaiting').getByRole('button').first().click();
     await expect(page.getByTestId('payouts-awaiting')).toHaveCount(0);
 
+    await page.getByRole('button', { name: /dopisz wydatek|add expense/i }).first().click();
+
     const expense = page.getByTestId('booking-expense');
     await expense.locator('#booking-expense-amount').fill('2,50');
     await expense.locator('#booking-expense-description').fill('Lody');
-    await expense.getByRole('button').click();
+    await expense.getByRole('button', { name: /dopisz wydatek|add expense/i }).click();
 
     await expect(page.getByTestId('ledger')).toContainText('Lody');
 
@@ -155,10 +157,12 @@ test.describe('K. Kieszonkowe', () => {
     await loginThroughUi(page, member.email);
     await openTab(page, ALLOWANCE_TAB);
 
+    await page.getByRole('button', { name: /dodaj cel|add a goal/i }).first().click();
+
     const form = page.getByTestId('goal-form');
     await form.locator('#goal-name').fill('Hulajnoga');
     await form.locator('#goal-target').fill('40,00');
-    await form.getByRole('button').click();
+    await form.getByRole('button', { name: /dodaj cel|add a goal/i }).click();
 
     const goal = page.getByTestId('goal').first();
     await expect(goal).toContainText('Hulajnoga');
@@ -171,6 +175,23 @@ test.describe('K. Kieszonkowe', () => {
     const wallet = await member.session.get('/api/allowance/wallet');
     expect(wallet.body.available).toBe(1000);
     expect(wallet.body.putAside).toBe(4000);
+  });
+  test('K6 sekcje portfela da sie zwinac', async ({ page }) => {
+    const owner = await createTeamOwner('Rodzina Zwijana');
+    const member = await addTeamMember(owner, 'Dziecko');
+
+    await loginThroughUi(page, member.email);
+    await openTab(page, ALLOWANCE_TAB);
+
+    const goals = page.getByTestId('panel-goals');
+    const header = goals.getByRole('button', { expanded: true });
+
+    await expect(goals.getByTestId('goals')).toBeVisible();
+
+    await header.click();
+
+    await expect(goals.getByTestId('goals')).toBeHidden();
+    await expect(goals.getByRole('button', { expanded: false })).toBeVisible();
   });
 });
 

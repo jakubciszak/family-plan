@@ -7,61 +7,6 @@ import Icon from '../md3/Icon';
 import TextField from '../md3/TextField';
 import { LinearProgress } from '../md3/Progress';
 
-function GoalForm({ onPlan }) {
-    const { t } = useTranslation();
-    const [name, setName] = React.useState('');
-    const [target, setTarget] = React.useState('');
-    const [wantedBy, setWantedBy] = React.useState('');
-    const [error, setError] = React.useState(null);
-
-    const submit = (event) => {
-        event.preventDefault();
-        const minorUnits = toMinorUnits(target);
-
-        if (name.trim() === '' || minorUnits === null || minorUnits === 0) {
-            setError(t('allowance.goalNeedsNameAndTarget'));
-            return;
-        }
-
-        setError(null);
-
-        Promise.resolve(onPlan({ name: name.trim(), target: minorUnits, wantedBy: wantedBy || null }))
-            .then(() => {
-                setName('');
-                setTarget('');
-                setWantedBy('');
-            })
-            .catch((failure) => setError(failure?.response?.data?.error || t('errors.generic')));
-    };
-
-    return (
-        <form className="goal-form" onSubmit={submit} data-testid="goal-form">
-            <TextField
-                id="goal-name"
-                label={t('allowance.goalName')}
-                value={name}
-                onChange={(event) => setName(event.target.value)}
-            />
-            <TextField
-                id="goal-target"
-                label={t('allowance.goalTarget')}
-                inputMode="decimal"
-                value={target}
-                onChange={(event) => setTarget(event.target.value)}
-            />
-            <TextField
-                id="goal-wanted-by"
-                label={t('allowance.goalWantedBy')}
-                type="date"
-                value={wantedBy}
-                onChange={(event) => setWantedBy(event.target.value)}
-            />
-            <Button type="submit" variant="filled" icon="add">{t('allowance.planGoal')}</Button>
-            {error && <p className="form-error" role="alert">{error}</p>}
-        </form>
-    );
-}
-
 function GoalRow({ goal, currency, readOnly, onPutAside, onTakeBack, onSpend, onClose }) {
     const { t, i18n } = useTranslation();
     const [amount, setAmount] = React.useState('');
@@ -135,7 +80,7 @@ function GoalRow({ goal, currency, readOnly, onPutAside, onTakeBack, onSpend, on
     );
 }
 
-function GoalBoard({ goals, readOnly = false, onPlan, onPutAside, onTakeBack, onSpend, onClose }) {
+function GoalBoard({ goals, readOnly = false, onPutAside, onTakeBack, onSpend, onClose }) {
     const { t, i18n } = useTranslation();
 
     if (!goals) {
@@ -166,8 +111,6 @@ function GoalBoard({ goals, readOnly = false, onPlan, onPutAside, onTakeBack, on
                     onClose={onClose}
                 />
             ))}
-
-            {!readOnly && <GoalForm onPlan={onPlan} />}
         </section>
     );
 }

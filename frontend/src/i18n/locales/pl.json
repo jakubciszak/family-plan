@@ -404,10 +404,12 @@
     "spentTotal": "Wydane łącznie",
     "payoutOffered": "Wypłata do potwierdzenia",
     "confirmPayout": "Odebrałem",
+    "myWallet": "Mój portfel",
     "myWeeks": "Moje tygodnie",
     "myGoals": "Moje cele",
     "myMoney": "Dochody i wydatki",
     "memberWallet": "Portfel",
+    "memberWeeks": "Tygodnie",
     "memberGoals": "Cele",
     "accounts": {
       "tasks": "Zadania",

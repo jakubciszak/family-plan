@@ -33,6 +33,7 @@ const ICONS = {
     pause: 'do_not_disturb_on',
     person: 'person',
     personRemove: 'person_remove',
+    remove: 'remove',
     restore: 'restart_alt',
     rule: 'rule',
     schedule: 'schedule',
