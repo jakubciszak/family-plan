@@ -14,9 +14,12 @@
   text-transform: uppercase;
 }
 
-:root[data-backdrop] body,
-:root[data-backdrop] .app {
+:root[data-backdrop] body {
   background-attachment: fixed;
+}
+
+:root[data-backdrop] .app {
+  background: transparent;
 }
 
 :root[data-backdrop='dots'] body {

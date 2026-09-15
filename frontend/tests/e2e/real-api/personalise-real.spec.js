@@ -97,4 +97,27 @@ test.describe('P. Personalizacja', () => {
     await expect(page.getByTestId('week-calendar')).toHaveCount(0);
     await expect(page.locator('.task-list-container .task-section').first()).toBeVisible();
   });
+
+  test('P6 wybrane tlo widac za aplikacja', async ({ page }) => {
+    const owner = await createTeamOwner('Rodzina Tlowa');
+    const member = await addTeamMember(owner, 'Dziecko');
+    await member.session.call('/api/personalisation', {
+      method: 'PUT',
+      body: JSON.stringify({ backdrop: { pattern: 'dots' } }),
+    });
+
+    await loginThroughUi(page, member.email);
+
+    await expect
+      .poll(() => page.evaluate(() => document.documentElement.dataset.backdrop))
+      .toBe('dots');
+
+    const painted = await page.evaluate(() => ({
+      body: getComputedStyle(document.body).backgroundImage,
+      app: getComputedStyle(document.querySelector('.app')).backgroundColor,
+    }));
+
+    expect(painted.body).toContain('radial-gradient');
+    expect(painted.app).toBe('rgba(0, 0, 0, 0)');
+  });
 });
