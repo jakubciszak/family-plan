@@ -42,7 +42,7 @@ final readonly class SendNotificationHandler
         return match (true) {
             $channel->isEmail() => Recipient::email($recipientValue),
             $channel->isSms() => Recipient::phoneNumber($recipientValue),
-            $channel->isInApp() => Recipient::userId($recipientValue),
+            $channel->isInApp(), $channel->isPush() => Recipient::userId($recipientValue),
             default => throw new \InvalidArgumentException("Unsupported channel type: {$channel->value()}")
         };
     }
