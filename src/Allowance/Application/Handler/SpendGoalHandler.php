@@ -35,7 +35,9 @@ final readonly class SpendGoalHandler
             Money::fromMinorUnits($command->amount),
             TransactionType::GOAL_SPENDING,
             $command->description,
-            $goal->id()
+            $goal->id(),
+            null,
+            ['goal' => $goal->name()]
         );
 
         $goal->noteProgress($this->ledger->balance($goal->userId(), AccountRef::goal($goal->id())), $this->clock);

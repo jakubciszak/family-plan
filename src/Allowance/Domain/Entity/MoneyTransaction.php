@@ -41,7 +41,10 @@ class MoneyTransaction
         private DateTimeImmutable $bookedAt,
 
         #[ORM\Column(type: 'string', length: 36, nullable: true)]
-        private ?string $reference
+        private ?string $reference,
+
+        #[ORM\Column(type: 'json', nullable: true)]
+        private ?array $context = null
     ) {
     }
 
@@ -51,9 +54,10 @@ class MoneyTransaction
         TransactionType $type,
         string $description,
         DateTimeImmutable $bookedAt,
-        ?Uuid $reference = null
+        ?Uuid $reference = null,
+        array $context = []
     ): self {
-        return new self($id, $userId, $type, $description, $bookedAt, $reference?->value());
+        return new self($id, $userId, $type, $description, $bookedAt, $reference?->value(), $context ?: null);
     }
 
     public function transfer(MoneyAccount $from, MoneyAccount $to, Money $amount, ClockInterface $clock): void
@@ -121,6 +125,11 @@ class MoneyTransaction
     public function reference(): ?string
     {
         return $this->reference;
+    }
+
+    public function context(): array
+    {
+        return $this->context ?? [];
     }
 
     private function book(MoneyAccount $account, Money $amount, ClockInterface $clock): void

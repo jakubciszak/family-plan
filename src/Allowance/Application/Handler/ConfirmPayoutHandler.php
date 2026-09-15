@@ -37,7 +37,7 @@ final readonly class ConfirmPayoutHandler
             AccountRef::available(),
             $payout->amount(),
             TransactionType::PAYOUT,
-            $payout->note() ?? 'Allowance paid out',
+            $payout->note() ?? '',
             $payout->id()
         );
 

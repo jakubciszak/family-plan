@@ -9,10 +9,17 @@ const {
 
 const ALLOWANCE_TAB = /kieszonkowe|pocket money|kasa|money/i;
 
-async function earnPoints(owner, member, points) {
+const aWeekBack = () => {
+  const day = new Date();
+  day.setDate(day.getDate() - 7);
+
+  return day.toLocaleDateString('sv');
+};
+
+async function earnPointsLastWeek(owner, member, points) {
   const type = await createTaskType(owner, { name: `Zmywanie ${Date.now()}`, points });
   const taken = await member.session.post(`/api/task-templates/${type.id}/take`);
-  await member.session.post(`/api/task-executions/${taken.body.id}/complete`);
+  await member.session.post(`/api/task-executions/${taken.body.id}/complete`, { doneOn: aWeekBack() });
   await owner.session.post(`/api/task-executions/${taken.body.id}/approve`);
 }
 
@@ -31,9 +38,9 @@ async function openTeam(page, teamName) {
   }
 }
 
-const thisMonday = () => {
+const lastMonday = () => {
   const monday = new Date();
-  monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7));
+  monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7) - 7);
 
   return monday.toLocaleDateString('sv');
 };
@@ -84,7 +91,7 @@ test.describe('K. Kieszonkowe', () => {
     const owner = await createTeamOwner('Rodzina Rozliczajaca');
     const member = await addTeamMember(owner, 'Dziecko');
     await setRule(owner, { rateAmount: 10 });
-    await earnPoints(owner, member, 60);
+    await earnPointsLastWeek(owner, member, 60);
 
     await loginThroughUi(page, owner.email);
     await openTab(page, ALLOWANCE_TAB);
@@ -95,6 +102,9 @@ test.describe('K. Kieszonkowe', () => {
     const week = page.getByTestId('allowance-week');
     await expect(week).toBeVisible();
 
+    await expect(week.getByRole('button', { name: /zamknij tydzie|close the week/i })).toBeDisabled();
+
+    await week.getByRole('button', { name: /poprzedni tydzie|previous week/i }).click();
     await week.getByRole('button', { name: /zamknij tydzie|close the week/i }).click();
     await expect(week).toHaveClass(/is-closed/);
 
@@ -112,10 +122,10 @@ test.describe('K. Kieszonkowe', () => {
     const owner = await createTeamOwner('Rodzina Wyplacajaca');
     const member = await addTeamMember(owner, 'Dziecko');
     await setRule(owner, { rateAmount: 10 });
-    await earnPoints(owner, member, 60);
+    await earnPointsLastWeek(owner, member, 60);
     await owner.session.post('/api/allowance/weeks/close', {
       userId: member.id,
-      weekStart: thisMonday(),
+      weekStart: lastMonday(),
     });
     await owner.session.post('/api/allowance/payouts', { userId: member.id, amount: 600 });
 
@@ -161,5 +171,32 @@ test.describe('K. Kieszonkowe', () => {
     const wallet = await member.session.get('/api/allowance/wallet');
     expect(wallet.body.available).toBe(1000);
     expect(wallet.body.putAside).toBe(4000);
+  });
+});
+
+test.describe('K. Kieszonkowe po polsku', () => {
+  test.skip(!process.env.REAL_API, 'REAL_API not enabled');
+  test.use({ locale: 'pl-PL' });
+
+  test('K5 ksiega nazywa operacje systemowe po polsku', async ({ page }) => {
+    const owner = await createTeamOwner('Rodzina Polska');
+    const member = await addTeamMember(owner, 'Dziecko');
+    await setRule(owner, { rateAmount: 10 });
+    await earnPointsLastWeek(owner, member, 60);
+    await owner.session.post('/api/allowance/weeks/close', {
+      userId: member.id,
+      weekStart: lastMonday(),
+    });
+    const offered = await owner.session.post('/api/allowance/payouts', { userId: member.id, amount: 600 });
+    await member.session.post(`/api/allowance/payouts/${offered.body.awaitingConfirmation[0].id}/confirm`);
+
+    await loginThroughUi(page, member.email);
+    await openTab(page, ALLOWANCE_TAB);
+
+    const ledger = page.getByTestId('ledger');
+
+    await expect(ledger).toContainText('Wypłata kieszonkowego');
+    await expect(ledger).toContainText('Rozliczenie tygodnia');
+    await expect(ledger).not.toContainText('Allowance');
   });
 });

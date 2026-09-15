@@ -39,7 +39,10 @@ final readonly class ReopenWeekHandler
                 AccountRef::earnings(),
                 $closure->total(),
                 TransactionType::WEEK_REOPENED,
-                sprintf('The week of %s was opened again', $week->value())
+                '',
+                null,
+                null,
+                ['week' => $week->value()]
             );
         }
 

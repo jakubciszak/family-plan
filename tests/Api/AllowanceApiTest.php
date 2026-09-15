@@ -102,6 +102,16 @@ class AllowanceApiTest extends ApiTestCase
         $this->assertSame(0, $wallet['available']);
     }
 
+    public function testAWeekStillRunningCannotBeClosed(): void
+    {
+        $this->setRule('tasks', 0, 10, 1);
+        $thisMonday = (new DateTimeImmutable())->modify('monday this week')->setTime(0, 0);
+
+        $response = $this->closeWeek($thisMonday);
+
+        $this->assertSame(Response::HTTP_BAD_REQUEST, $response->getStatusCode());
+    }
+
     public function testAWeekIsOnlyClosedOnce(): void
     {
         $this->setRule('tasks', 0, 10, 1);
@@ -333,6 +343,36 @@ class AllowanceApiTest extends ApiTestCase
         ]);
 
         $this->assertSame(Response::HTTP_BAD_REQUEST, $response->getStatusCode());
+    }
+
+    public function testABookingTheSystemMadeCarriesWhatItWasAboutInsteadOfASentence(): void
+    {
+        $this->earnAndClose(600);
+        $this->loginAs($this->child);
+
+        $ledger = $this->getJson('/api/allowance/ledger');
+        $booking = $ledger['bookings'][0];
+
+        $this->assertSame('week_closed', $booking['type']);
+        $this->assertSame('', $booking['description']);
+        $this->assertSame($this->lastMonday()->format('Y-m-d'), $booking['context']['week']);
+    }
+
+    public function testAGoalBookingNamesTheGoalItWasFor(): void
+    {
+        $this->loginAs($this->child);
+        $this->postJson('/api/allowance/income', ['amount' => 5000, 'description' => 'Babcia']);
+        $goalId = $this->assertJsonResponse(
+            $this->postJson('/api/allowance/goals', ['name' => 'Hulajnoga', 'target' => 4000]),
+            Response::HTTP_CREATED
+        )['goals'][0]['id'];
+        $this->postJson('/api/allowance/goals/' . $goalId . '/put-aside', ['amount' => 4000]);
+
+        $booking = $this->getJson('/api/allowance/ledger')['bookings'][0];
+
+        $this->assertSame('goal_allocation', $booking['type']);
+        $this->assertSame('', $booking['description']);
+        $this->assertSame('Hulajnoga', $booking['context']['goal']);
     }
 
     private function earnAndClose(int $expected): void

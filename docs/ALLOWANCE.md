@@ -35,6 +35,11 @@ zakup celu             goal      → expenses
 Kwoty trzymamy w groszach (`bigint`), nigdy w liczbach zmiennoprzecinkowych. Walutę ustawia
 `ALLOWANCE_CURRENCY`.
 
+Transakcja, którą zakłada system, nie trzyma gotowego zdania — `description` zostaje puste,
+a to, czego dotyczyła (tydzień, nazwa celu), ląduje w `context`. Zdanie składa front z klucza
+tłumaczenia, więc księga mówi w języku, który czyta dziecko. `description` wypełnia się tylko
+tym, co wpisał człowiek: opisem wydatku, dochodu albo notatką przy wypłacie.
+
 ## Przelicznik
 
 `AllowanceRule` jest jedna na zespół i typ konta punktowego (`tasks`, `bonuses`). Składa się
@@ -45,9 +50,11 @@ końcu. Punkty poniżej progu nie dają nic; próg jest bramką, nie kwotą woln
 
 ## Zamknięcie tygodnia i wypłata
 
-To dwie osobne decyzje, bo w domu wyglądają inaczej. Zamknięcie tygodnia (`WeekClosure`)
-liczy kwotę, zapisuje rozbicie na typy kont i księguje ją na `pending`; od tej chwili
-w tym tygodniu nie da się już dopisać zadania wstecz (`ClosedWeeksInterface`). Wypłatę
+To dwie osobne decyzje, bo w domu wyglądają inaczej. Zamknąć da się wyłącznie tydzień,
+który się już skończył — zamknięcie odcina dopisywanie zadań wstecz, więc trwający tydzień
+nie może zostać zamknięty. Zamknięcie (`WeekClosure`) liczy kwotę, zapisuje rozbicie na typy
+kont i księguje ją na `pending`; od tej chwili w tym tygodniu nie da się już dopisać zadania
+wstecz (`ClosedWeeksInterface`). Wypłatę
 (`Payout`) proponuje dorosły — całość albo część, bo nie zawsze ma całą gotówkę — a dziecko
 ją potwierdza. Dopiero potwierdzenie przesuwa pieniądze na `available`.
 

@@ -636,19 +636,19 @@ class TaskExecutionApiTest extends ApiTestCase
             Response::HTTP_CREATED
         );
 
-        $today = (new \DateTimeImmutable())->format('Y-m-d');
+        $aWeekBack = (new \DateTimeImmutable('-7 days'))->format('Y-m-d');
 
         $this->loginAs($context['admin']);
         $this->assertJsonResponse($this->postJson('/api/allowance/weeks/close', [
             'userId' => $context['member']->id()->value(),
-            'weekStart' => $today,
+            'weekStart' => $aWeekBack,
         ]));
 
         $this->loginAs($context['member']);
 
         $this->assertSame(
             Response::HTTP_BAD_REQUEST,
-            $this->postJson("/api/task-executions/{$taken['id']}/complete", ['doneOn' => $today])->getStatusCode()
+            $this->postJson("/api/task-executions/{$taken['id']}/complete", ['doneOn' => $aWeekBack])->getStatusCode()
         );
 
         $this->assertSame('new', $this->getJson('/api/task-executions/mine')['executions'][0]['status']);

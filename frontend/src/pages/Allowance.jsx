@@ -220,12 +220,18 @@ function Allowance({ user }) {
                                 renderActions={(week) => (
                                     <div className="allowance-week__actions">
                                         {week.closure === null ? (
-                                            <Button
-                                                variant="filled"
-                                                onClick={() => quiet(run(allowanceService.closeWeek(memberId, week.weekStart)))}
-                                            >
-                                                {t('allowance.closeWeek')}
-                                            </Button>
+                                            <>
+                                                <Button
+                                                    variant="filled"
+                                                    disabled={!week.isOver}
+                                                    onClick={() => quiet(run(allowanceService.closeWeek(memberId, week.weekStart)))}
+                                                >
+                                                    {t('allowance.closeWeek')}
+                                                </Button>
+                                                {!week.isOver && (
+                                                    <p className="empty-hint">{t('allowance.weekNotOverYet')}</p>
+                                                )}
+                                            </>
                                         ) : (
                                             <Button
                                                 variant="outlined"

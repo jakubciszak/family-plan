@@ -417,6 +417,7 @@
     "noRulesYet": "No rule has been set yet.",
     "weekClosedOn": "Week closed on {{when}}",
     "weekStillOpen": "Week still open",
+    "weekNotOverYet": "The week is still running — you can close it once it is over",
     "closeWeek": "Close the week",
     "reopenWeek": "Open it again",
     "whoToSettle": "Who to settle",
@@ -444,6 +445,16 @@
       "goal_allocation": "Put aside for a goal",
       "goal_release": "Taken back off a goal",
       "goal_spending": "Goal bought"
+    },
+    "bookingTitles": {
+      "week_closed": "Allowance for the week of {{week}}",
+      "week_reopened": "Settlement of the week of {{week}} undone",
+      "payout": "Allowance paid out",
+      "income": "Income",
+      "expense": "Expense",
+      "goal_allocation": "Put aside for {{goal}}",
+      "goal_release": "Taken back from {{goal}}",
+      "goal_spending": "Bought with {{goal}}"
     },
     "goalName": "What you are saving for",
     "goalTarget": "How much you need",

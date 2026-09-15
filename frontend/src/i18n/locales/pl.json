@@ -417,6 +417,7 @@
     "noRulesYet": "Nie ustawiono jeszcze żadnej zasady.",
     "weekClosedOn": "Tydzień zamknięty {{when}}",
     "weekStillOpen": "Tydzień jeszcze otwarty",
+    "weekNotOverYet": "Tydzień jeszcze trwa — zamkniesz go po niedzieli",
     "closeWeek": "Zamknij tydzień",
     "reopenWeek": "Otwórz ponownie",
     "whoToSettle": "Kogo rozliczyć",
@@ -444,6 +445,16 @@
       "goal_allocation": "Odłożone na cel",
       "goal_release": "Zdjęte z celu",
       "goal_spending": "Zakup na cel"
+    },
+    "bookingTitles": {
+      "week_closed": "Rozliczenie tygodnia od {{week}}",
+      "week_reopened": "Cofnięte rozliczenie tygodnia od {{week}}",
+      "payout": "Wypłata kieszonkowego",
+      "income": "Dochód",
+      "expense": "Wydatek",
+      "goal_allocation": "Odłożone na: {{goal}}",
+      "goal_release": "Zdjęte z celu: {{goal}}",
+      "goal_spending": "Zakup na cel: {{goal}}"
     },
     "goalName": "Na co zbierasz",
     "goalTarget": "Ile potrzebujesz",

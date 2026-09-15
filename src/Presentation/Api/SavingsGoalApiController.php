@@ -112,13 +112,8 @@ class SavingsGoalApiController extends AbstractController
     public function spend(string $id, #[MapRequestPayload] GoalAmountRequest $request): JsonResponse
     {
         $owner = $this->owner($id);
-        $goal = $this->repository->find(Uuid::fromString($id));
 
-        $this->commandBus->dispatch(new SpendGoalCommand(
-            $id,
-            $request->amount,
-            $request->description ?? sprintf('Bought %s', $goal?->name() ?? 'it')
-        ));
+        $this->commandBus->dispatch(new SpendGoalCommand($id, $request->amount, $request->description ?? ''));
 
         return $this->json($this->goals->of($owner));
     }

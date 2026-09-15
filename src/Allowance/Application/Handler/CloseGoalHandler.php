@@ -35,8 +35,10 @@ final readonly class CloseGoalHandler
                 AccountRef::available(),
                 $putAside,
                 TransactionType::GOAL_RELEASE,
-                sprintf('%s was given up on', $goal->name()),
-                $goal->id()
+                '',
+                $goal->id(),
+                null,
+                ['goal' => $goal->name()]
             );
         }
 

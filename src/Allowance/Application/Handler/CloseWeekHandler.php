@@ -41,8 +41,8 @@ final readonly class CloseWeekHandler
             throw new \DomainException('This week has already been closed');
         }
 
-        if ($week->monday() > $this->clock->now()) {
-            throw new \DomainException('A week that has not started yet cannot be closed');
+        if ($week->nextMonday() > $this->clock->now()) {
+            throw new \DomainException('A week can only be closed once it is over');
         }
 
         $settlement = $this->calculator->settle(
@@ -59,8 +59,10 @@ final readonly class CloseWeekHandler
                 AccountRef::pending(),
                 $settlement->total(),
                 TransactionType::WEEK_CLOSED,
-                sprintf('Allowance for the week of %s', $week->value()),
-                null
+                '',
+                null,
+                null,
+                ['week' => $week->value()]
             )->id();
         }
 

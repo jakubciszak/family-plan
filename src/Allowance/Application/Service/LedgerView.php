@@ -54,6 +54,7 @@ final readonly class LedgerView
                 'bookedAt' => $transaction->bookedAt()->format('c'),
                 'amount' => $this->moved($booked),
                 'reference' => $transaction->reference(),
+                'context' => $transaction->context(),
                 'entries' => array_map(
                     static function (MoneyEntry $entry) use ($kinds): array {
                         $account = $kinds[$entry->accountId()->value()] ?? null;

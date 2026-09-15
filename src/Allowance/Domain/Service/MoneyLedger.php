@@ -35,7 +35,8 @@ final readonly class MoneyLedger
         TransactionType $type,
         string $description,
         ?Uuid $reference = null,
-        ?DateTimeImmutable $on = null
+        ?DateTimeImmutable $on = null,
+        array $context = []
     ): MoneyTransaction {
         $source = $this->accountFor($userId, $from);
         $destination = $this->accountFor($userId, $to);
@@ -46,7 +47,8 @@ final readonly class MoneyLedger
             $type,
             $description,
             $on ?? $this->clock->now(),
-            $reference
+            $reference,
+            $context
         );
 
         $transaction->transfer($source, $destination, $amount, $this->clock);

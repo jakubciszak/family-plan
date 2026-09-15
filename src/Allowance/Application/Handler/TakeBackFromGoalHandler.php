@@ -34,8 +34,10 @@ final readonly class TakeBackFromGoalHandler
             AccountRef::available(),
             Money::fromMinorUnits($command->amount),
             TransactionType::GOAL_RELEASE,
-            sprintf('Taken back from %s', $goal->name()),
-            $goal->id()
+            '',
+            $goal->id(),
+            null,
+            ['goal' => $goal->name()]
         );
 
         $goal->noteProgress($this->ledger->balance($goal->userId(), AccountRef::goal($goal->id())), $this->clock);
