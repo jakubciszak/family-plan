@@ -9,6 +9,10 @@ const taskService = {
         return await apiClient.post('/api/task-templates', taskType);
     },
 
+    async updateTaskType(id, taskType) {
+        return await apiClient.put(`/api/task-templates/${id}`, taskType);
+    },
+
     async activateTaskType(id) {
         return await apiClient.post(`/api/task-templates/${id}/activate`, {});
     },

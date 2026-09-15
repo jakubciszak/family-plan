@@ -14,6 +14,7 @@ function TaskTypeManagement() {
     const [loading, setLoading] = React.useState(true);
     const [error, setError] = React.useState(null);
     const [showForm, setShowForm] = React.useState(false);
+    const [editingId, setEditingId] = React.useState(null);
 
     const loadTaskTypes = React.useCallback(async () => {
         try {
@@ -47,19 +48,37 @@ function TaskTypeManagement() {
         }
     };
 
+    const payload = (formData) => ({
+        name: formData.name,
+        description: formData.description,
+        points: formData.points,
+        frequency: formData.frequency,
+        executionLimit: formData.limitType === 'unlimited' || formData.limitType === 'once'
+            ? { type: formData.limitType }
+            : { type: formData.limitType, count: formData.limitCount },
+    });
+
     const handleCreate = async (formData) => {
         await run(() => taskService.createTaskType({
             teamId: selectedTeam.id,
-            name: formData.name,
-            description: formData.description,
-            points: formData.points,
-            frequency: formData.frequency,
-            executionLimit: formData.limitType === 'unlimited' || formData.limitType === 'once'
-                ? { type: formData.limitType }
-                : { type: formData.limitType, count: formData.limitCount },
+            ...payload(formData),
         }));
         setShowForm(false);
     };
+
+    const handleUpdate = async (id, formData) => {
+        await run(() => taskService.updateTaskType(id, payload(formData)));
+        setEditingId(null);
+    };
+
+    const formValues = (type) => ({
+        name: type.name,
+        description: type.description || '',
+        points: type.points,
+        frequency: type.frequency,
+        limitType: type.executionLimit?.type || 'unlimited',
+        limitCount: type.executionLimit?.count || 1,
+    });
 
     const limitLabel = (limit) => {
         if (!limit || limit.type === 'unlimited') return t('taskTypes.limitUnlimited');
@@ -104,7 +123,10 @@ function TaskTypeManagement() {
                     <Button
                         variant={showForm ? 'text' : 'filled'}
                         icon={showForm ? 'close' : 'add'}
-                        onClick={() => setShowForm(!showForm)}
+                        onClick={() => {
+                            setShowForm(!showForm);
+                            setEditingId(null);
+                        }}
                     >
                         {showForm ? t('common.cancel') : t('taskTypes.create')}
                     </Button>
@@ -118,7 +140,7 @@ function TaskTypeManagement() {
                 </div>
             )}
 
-            {showForm && <TaskTypeForm onSubmit={handleCreate} />}
+            {showForm && <TaskTypeForm onSubmit={handleCreate} submitLabel={t('taskTypes.create')} submitIcon="add" />}
 
             <div className="tasks">
                 {visibleTypes.length === 0 ? (
@@ -150,6 +172,16 @@ function TaskTypeManagement() {
                             </div>
                             {type.description && <p className="task-description">{type.description}</p>}
                             <div className="task-actions">
+                                <Button
+                                    variant="outlined"
+                                    icon="edit"
+                                    onClick={() => {
+                                        setShowForm(false);
+                                        setEditingId(editingId === type.id ? null : type.id);
+                                    }}
+                                >
+                                    {editingId === type.id ? t('common.cancel') : t('common.edit')}
+                                </Button>
                                 {type.isActive ? (
                                     <Button
                                         variant="outlined"
@@ -176,6 +208,14 @@ function TaskTypeManagement() {
                                     {t('taskTypes.delete')}
                                 </Button>
                             </div>
+                            {editingId === type.id && (
+                                <TaskTypeForm
+                                    initial={formValues(type)}
+                                    onSubmit={(formData) => handleUpdate(type.id, formData)}
+                                    submitLabel={t('common.save')}
+                                    submitIcon="check"
+                                />
+                            )}
                         </div>
                     ))
                 )}
@@ -184,9 +224,9 @@ function TaskTypeManagement() {
     );
 }
 
-function TaskTypeForm({ onSubmit }) {
+function TaskTypeForm({ onSubmit, initial, submitLabel, submitIcon }) {
     const { t } = useTranslation();
-    const [formData, setFormData] = React.useState({
+    const [formData, setFormData] = React.useState(initial || {
         name: '',
         description: '',
         points: 10,
@@ -287,7 +327,7 @@ function TaskTypeForm({ onSubmit }) {
                 )}
             </div>
             <div className="form-actions">
-                <Button type="submit" icon="add">{t('taskTypes.create')}</Button>
+                <Button type="submit" icon={submitIcon}>{submitLabel}</Button>
             </div>
         </form>
     );
