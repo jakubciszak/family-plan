@@ -120,4 +120,33 @@ test.describe('T. Lista zadan i moje zadania', () => {
 
     await expect(approvalSection(page)).toHaveCount(0);
   });
+
+  test('T7 szukajka zawęża pulę zadań do wpisanej części nazwy', async ({ page }) => {
+    const owner = await createTeamOwner();
+    const teams = await owner.session.get('/api/teams');
+    const shown = { ...owner, teamId: teams.body.teams[0].id };
+    await createTaskType(shown, { name: 'Odkurzyc salon' });
+    await createTaskType(shown, { name: 'Wyniesc smieci' });
+
+    await loginThroughUi(page, owner.email);
+    await openTasks(page);
+    await page.getByTestId('available-tasks-collapsed').locator('summary').click();
+
+    const search = availableSection(page).locator('#available-search');
+    await expect(availableSection(page).locator('.task-card')).toHaveCount(2);
+
+    await search.fill('kurz');
+
+    await expect(availableSection(page).locator('.task-card')).toHaveCount(1);
+    await expect(availableSection(page).locator('.task-card')).toContainText('Odkurzyc salon');
+
+    await search.fill('nic takiego');
+
+    await expect(availableSection(page).locator('.task-card')).toHaveCount(0);
+    await expect(availableSection(page).locator('.empty-hint')).toBeVisible();
+
+    await search.fill('');
+
+    await expect(availableSection(page).locator('.task-card')).toHaveCount(2);
+  });
 });

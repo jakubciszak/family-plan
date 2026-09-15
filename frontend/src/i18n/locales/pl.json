@@ -56,6 +56,8 @@
     "assignTo": "Przypisz osobę",
     "unassign": "Odepnij mnie",
     "noTasks": "Brak dostępnych zadań",
+    "searchAvailable": "Szukaj zadania",
+    "noMatches": "Nic nie pasuje do wpisanej nazwy",
     "name": "Nazwa zadania",
     "description": "Opis",
     "points": "Punkty",

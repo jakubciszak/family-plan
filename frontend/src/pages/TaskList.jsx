@@ -45,6 +45,7 @@ function TaskList({ onNavigate, user, onInspectMember }) {
     const [handOut, setHandOut] = React.useState(null);
     const [handOutMember, setHandOutMember] = React.useState('');
     const [handOutDate, setHandOutDate] = React.useState('');
+    const [availableSearch, setAvailableSearch] = React.useState('');
     const limitLabel = useLimitLabel();
 
     const isTeamAdmin = selectedTeam?.role === 'admin';
@@ -177,6 +178,11 @@ function TaskList({ onNavigate, user, onInspectMember }) {
         belongsToSelectedTeam(type.teamId) && type.isActive && type.remaining !== 0
     );
 
+    const searchedFor = availableSearch.trim().toLowerCase();
+    const matchingTypes = availableTypes.filter(
+        (type) => type.name.toLowerCase().includes(searchedFor)
+    );
+
     const openStatuses = ['new', 'pending'];
     const myOpenTasks = myTasks.filter(
         (task) => openStatuses.includes(task.status) && belongsToSelectedTeam(teamOfType(task.taskTemplateId))
@@ -306,11 +312,23 @@ function TaskList({ onNavigate, user, onInspectMember }) {
                         </Button>
                     )}
                 </div>
+                {availableTypes.length > 0 && (
+                    <TextField
+                        id="available-search"
+                        className="task-section__search"
+                        type="search"
+                        label={t('tasks.searchAvailable')}
+                        value={availableSearch}
+                        onChange={(event) => setAvailableSearch(event.target.value)}
+                    />
+                )}
                 {availableTypes.length === 0 ? (
                     <p className="empty-hint">{t('tasks.noTasks')}</p>
+                ) : matchingTypes.length === 0 ? (
+                    <p className="empty-hint">{t('tasks.noMatches')}</p>
                 ) : (
                     <div className="tasks">
-                        {availableTypes.map((type) => (
+                        {matchingTypes.map((type) => (
                             <div className="task-card" key={type.id}>
                                 <div className="task-row">
                                     <span className="task-name" title={type.description}>{type.name}</span>

@@ -56,6 +56,8 @@
     "assignTo": "Assign someone",
     "unassign": "Step away",
     "noTasks": "No tasks available",
+    "searchAvailable": "Search tasks",
+    "noMatches": "Nothing matches that name",
     "name": "Task Name",
     "description": "Description",
     "points": "Points",

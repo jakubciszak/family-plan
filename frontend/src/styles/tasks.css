@@ -348,6 +348,10 @@
   flex-wrap: wrap;
 }
 
+.task-section__search {
+  max-width: 320px;
+}
+
 .task-list-header .md-select,
 .header-controls .md-select {
   width: auto;
