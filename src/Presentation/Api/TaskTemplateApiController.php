@@ -7,6 +7,7 @@ namespace App\Presentation\Api;
 use App\Party\Application\Service\PartyResponsibilities;
 use App\Party\Domain\ValueObject\ResponsibilityType;
 use App\Presentation\Api\Dto\TaskType\CreateTaskTypeRequest;
+use App\Presentation\Api\Dto\TaskType\UpdateTaskTypeRequest;
 use App\Shared\Domain\ValueObject\Uuid;
 use App\TaskManagement\Domain\Entity\TaskTemplate;
 use App\TaskManagement\Application\Service\TaskTypePool;
@@ -94,6 +95,38 @@ class TaskTemplateApiController extends AbstractController
         $this->taskTemplateRepository->save($template);
 
         return $this->json($this->serialize($template), Response::HTTP_CREATED);
+    }
+
+    #[Route('/{id}', name: 'update', methods: ['PUT'])]
+    #[OA\Put(path: '/api/task-templates/{id}', summary: 'Change a task type', tags: ['Task types'])]
+    #[OA\Response(response: 200, description: 'Task type changed')]
+    #[OA\Response(response: 400, description: 'Invalid execution limit')]
+    #[OA\Response(response: 403, description: 'Only team admins change task types')]
+    #[OA\Response(response: 404, description: 'Task type not found')]
+    public function update(string $id, #[MapRequestPayload] UpdateTaskTypeRequest $request): JsonResponse
+    {
+        $template = $this->ownedTemplate($id);
+
+        try {
+            $limit = ExecutionLimit::fromArray($request->executionLimit);
+        } catch (\InvalidArgumentException $exception) {
+            return $this->json(['error' => $exception->getMessage()], Response::HTTP_BAD_REQUEST);
+        }
+
+        $frequency = Frequency::fromString($request->frequency);
+
+        $template->update(
+            TaskName::fromString($request->name),
+            $request->description,
+            Points::fromInt($request->points),
+            $frequency,
+            $this->scheduleFor($frequency)
+        );
+        $template->changeExecutionLimit($limit);
+
+        $this->taskTemplateRepository->save($template);
+
+        return $this->json($this->serialize($template));
     }
 
     #[Route('/{id}/activate', name: 'activate', methods: ['POST'])]
