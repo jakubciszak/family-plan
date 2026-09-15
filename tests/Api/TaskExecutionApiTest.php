@@ -715,6 +715,28 @@ class TaskExecutionApiTest extends ApiTestCase
         $this->assertSame(30, $day[0]['points']);
     }
 
+    public function testTheStandingsPutABackloggedTaskOnTheDayItWasDoneNotTheDayItWasWrittenDown(): void
+    {
+        $context = $this->teamWithMember();
+        $type = $this->defineType($context['teamId'], ['type' => 'unlimited'], points: 30);
+        $lastSunday = (new \DateTimeImmutable('monday this week'))->modify('-1 day')->format('Y-m-d');
+
+        $this->assertJsonResponse(
+            $this->postJson("/api/task-templates/{$type['id']}/book", [
+                'userId' => $context['member']->id()->value(),
+                'doneOn' => $lastSunday,
+            ]),
+            Response::HTTP_CREATED
+        );
+
+        $lastWeek = $this->getJson('/api/points/leaderboard?teamId=' . $context['teamId'] . '&weekStart=' . $lastSunday);
+        $thisWeek = $this->getJson('/api/points/leaderboard?teamId=' . $context['teamId']);
+
+        $this->assertSame(30, $lastWeek['standings'][0]['total']);
+        $this->assertSame(30, $lastWeek['standings'][0]['perDay'][$lastSunday]);
+        $this->assertSame(0, $thisWeek['standings'][0]['total']);
+    }
+
     public function testATaskWrittenDownWithoutADayLandsOnToday(): void
     {
         $context = $this->teamWithMember();

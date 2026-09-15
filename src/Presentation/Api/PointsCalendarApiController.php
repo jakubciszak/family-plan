@@ -90,7 +90,7 @@ class PointsCalendarApiController extends AbstractController
                 continue;
             }
 
-            $perDay = $this->ledger->perDayBetween($membership->userId(), $monday, $nextMonday);
+            $perDay = $this->earnedPerDay($membership->userId(), $monday, $nextMonday);
 
             $standings[] = [
                 'userId' => $membership->userId()->value(),
@@ -210,6 +210,24 @@ class PointsCalendarApiController extends AbstractController
             'total' => array_sum(array_map(static fn ($e) => $e->points()?->value() ?? 0, $done)),
             'bonus' => $bonus[$day->format('Y-m-d')] ?? 0,
         ]);
+    }
+
+    /**
+     * @return array<string, int>
+     */
+    private function earnedPerDay(Uuid $userId, DateTimeImmutable $monday, DateTimeImmutable $nextMonday): array
+    {
+        $perDay = array_filter(
+            DailyPoints::perDay($this->executionRepository->findApprovedByUserSince($userId, $monday)),
+            static fn (string $day) => $day < $nextMonday->format('Y-m-d'),
+            ARRAY_FILTER_USE_KEY
+        );
+
+        foreach ($this->ledger->perDayBetween($userId, $monday, $nextMonday, [AccountKind::BONUSES]) as $day => $bonus) {
+            $perDay[$day] = ($perDay[$day] ?? 0) + $bonus;
+        }
+
+        return $perDay;
     }
 
     private function inspected(Request $request): Uuid
