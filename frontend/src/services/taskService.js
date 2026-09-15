@@ -25,6 +25,14 @@ const taskService = {
         return await apiClient.post(`/api/task-templates/${taskTypeId}/take`, {});
     },
 
+    async assignTo(taskTypeId, userId) {
+        return await apiClient.post(`/api/task-templates/${taskTypeId}/assign`, { userId });
+    },
+
+    async bookFor(taskTypeId, userId, doneOn = null) {
+        return await apiClient.post(`/api/task-templates/${taskTypeId}/book`, { userId, doneOn });
+    },
+
     async getMyTasks() {
         return await apiClient.get('/api/task-executions/mine');
     },

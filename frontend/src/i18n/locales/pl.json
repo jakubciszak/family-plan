@@ -94,7 +94,14 @@
     "backlog": "Zaległość",
     "backlogHeadline": "Kiedy zrobiono: {{name}}?",
     "backlogDate": "Dzień wykonania",
-    "backlogHint": "Najdalej {{days}} dni wstecz"
+    "backlogHint": "Najdalej {{days}} dni wstecz",
+    "handOut": "Przydziel",
+    "handOutHeadline": "Przydziel: {{name}}",
+    "handOutMember": "Komu",
+    "handOutDate": "Dzień wykonania",
+    "handOutHint": "Data dotyczy tylko dopisywania zrobionego zadania",
+    "handOutAssign": "Przypisz do zrobienia",
+    "handOutBook": "Dopisz jako zrobione"
   },
   "bonusRules": {
     "title": "Zasady bonusowe",

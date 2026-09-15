@@ -94,7 +94,14 @@
     "backlog": "Backlog",
     "backlogHeadline": "When was it done: {{name}}?",
     "backlogDate": "Day it was done",
-    "backlogHint": "At most {{days}} days back"
+    "backlogHint": "At most {{days}} days back",
+    "handOut": "Hand out",
+    "handOutHeadline": "Hand out: {{name}}",
+    "handOutMember": "To whom",
+    "handOutDate": "Day it was done",
+    "handOutHint": "The day only matters when writing down a task already done",
+    "handOutAssign": "Give it to them",
+    "handOutBook": "Write it down as done"
   },
   "bonusRules": {
     "title": "Bonus Rules",

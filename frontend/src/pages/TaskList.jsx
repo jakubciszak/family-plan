@@ -38,6 +38,10 @@ function TaskList({ onNavigate, user, onInspectMember }) {
     const [backlogTasks, setBacklogTasks] = React.useState({});
     const [backlogTask, setBacklogTask] = React.useState(null);
     const [backlogDate, setBacklogDate] = React.useState('');
+    const [members, setMembers] = React.useState([]);
+    const [handOut, setHandOut] = React.useState(null);
+    const [handOutMember, setHandOutMember] = React.useState('');
+    const [handOutDate, setHandOutDate] = React.useState('');
     const limitLabel = useLimitLabel();
 
     const isTeamAdmin = selectedTeam?.role === 'admin';
@@ -83,6 +87,17 @@ function TaskList({ onNavigate, user, onInspectMember }) {
         loadAwaitingApproval();
     }, [loadTeams, loadTasks, loadAwaitingApproval]);
 
+    React.useEffect(() => {
+        if (!selectedTeam || selectedTeam.role !== 'admin') {
+            setMembers([]);
+            return;
+        }
+
+        teamService.getTeamMembers(selectedTeam.id)
+            .then((data) => setMembers((data.members || []).filter((member) => member.role !== 'admin')))
+            .catch(() => setMembers([]));
+    }, [selectedTeam, refreshToken]);
+
     const refresh = async () => {
         await Promise.all([loadTasks(), loadAwaitingApproval()]);
         setRefreshToken((token) => token + 1);
@@ -111,6 +126,20 @@ function TaskList({ onNavigate, user, onInspectMember }) {
         ...current,
         [taskId]: !current[taskId],
     }));
+
+    const startHandingOut = (type) => {
+        setHandOut(type);
+        setHandOutMember(members[0]?.userId || '');
+        setHandOutDate(dayOffset(0));
+    };
+
+    const handOutTo = (booked) => run(async () => {
+        await (booked
+            ? taskService.bookFor(handOut.id, handOutMember, handOutDate)
+            : taskService.assignTo(handOut.id, handOutMember));
+
+        setHandOut(null);
+    });
 
     const startCompleting = (task) => {
         if (!backlogTasks[task.id]) {
@@ -293,6 +322,15 @@ function TaskList({ onNavigate, user, onInspectMember }) {
                                     <Button icon="add" onClick={() => run(() => taskService.take(type.id))}>
                                         {t('tasks.takeIt')}
                                     </Button>
+                                    {isTeamAdmin && members.length > 0 && (
+                                        <Button
+                                            variant="tonal"
+                                            icon="person"
+                                            onClick={() => startHandingOut(type)}
+                                        >
+                                            {t('tasks.handOut')}
+                                        </Button>
+                                    )}
                                 </div>
                             </div>
                         ))}
@@ -383,6 +421,48 @@ function TaskList({ onNavigate, user, onInspectMember }) {
                     min={backlogWindow.earliest}
                     max={backlogWindow.latest}
                     supportingText={t('tasks.backlogHint', { days: BACKLOG_DAYS })}
+                />
+            </Dialog>
+
+            <Dialog
+                open={!!handOut}
+                onClose={() => setHandOut(null)}
+                headline={t('tasks.handOutHeadline', { name: handOut?.name })}
+                actions={
+                    <>
+                        <Button variant="text" onClick={() => setHandOut(null)}>
+                            {t('common.cancel')}
+                        </Button>
+                        <Button variant="outlined" onClick={() => handOutTo(false)} disabled={!handOutMember}>
+                            {t('tasks.handOutAssign')}
+                        </Button>
+                        <Button tone="success" icon="check" onClick={() => handOutTo(true)} disabled={!handOutMember || !handOutDate}>
+                            {t('tasks.handOutBook')}
+                        </Button>
+                    </>
+                }
+            >
+                <TextField
+                    id="hand-out-member"
+                    as="select"
+                    label={t('tasks.handOutMember')}
+                    value={handOutMember}
+                    onChange={(e) => setHandOutMember(e.target.value)}
+                >
+                    {members.map((member) => (
+                        <option key={member.userId} value={member.userId}>{member.userName}</option>
+                    ))}
+                </TextField>
+
+                <TextField
+                    id="hand-out-date"
+                    type="date"
+                    label={t('tasks.handOutDate')}
+                    value={handOutDate}
+                    onChange={(e) => setHandOutDate(e.target.value)}
+                    min={backlogWindow.earliest}
+                    max={backlogWindow.latest}
+                    supportingText={t('tasks.handOutHint')}
                 />
             </Dialog>
 

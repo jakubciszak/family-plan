@@ -654,6 +654,121 @@ class TaskExecutionApiTest extends ApiTestCase
         $this->assertSame('new', $this->getJson('/api/task-executions/mine')['executions'][0]['status']);
     }
 
+    public function testAnAdminHandsATaskTypeToAMember(): void
+    {
+        $context = $this->teamWithMember();
+        $type = $this->defineType($context['teamId'], ['type' => 'unlimited']);
+
+        $given = $this->assertJsonResponse(
+            $this->postJson("/api/task-templates/{$type['id']}/assign", [
+                'userId' => $context['member']->id()->value(),
+            ]),
+            Response::HTTP_CREATED
+        );
+
+        $this->assertSame($context['member']->id()->value(), $given['assignedUserId']);
+        $this->assertSame('new', $given['status']);
+
+        $this->loginAs($context['member']);
+        $mine = $this->getJson('/api/task-executions/mine')['executions'];
+
+        $this->assertCount(1, $mine);
+        $this->assertSame($given['id'], $mine[0]['id']);
+    }
+
+    public function testOnlyAnAdminOfTheTeamHandsOutItsTasks(): void
+    {
+        $context = $this->teamWithMember();
+        $type = $this->defineType($context['teamId'], ['type' => 'unlimited']);
+
+        $this->loginAs($context['member']);
+
+        $this->assertSame(
+            Response::HTTP_FORBIDDEN,
+            $this->postJson("/api/task-templates/{$type['id']}/assign", [
+                'userId' => $context['member']->id()->value(),
+            ])->getStatusCode()
+        );
+    }
+
+    public function testAnAdminWritesDownATaskAMemberAlreadyDidAndThePointsAreAwarded(): void
+    {
+        $context = $this->teamWithMember();
+        $type = $this->defineType($context['teamId'], ['type' => 'unlimited'], points: 30);
+        $threeDaysBack = (new \DateTimeImmutable('-3 days'))->format('Y-m-d');
+
+        $booked = $this->assertJsonResponse(
+            $this->postJson("/api/task-templates/{$type['id']}/book", [
+                'userId' => $context['member']->id()->value(),
+                'doneOn' => $threeDaysBack,
+            ]),
+            Response::HTTP_CREATED
+        );
+
+        $this->assertSame('approved', $booked['status']);
+        $this->assertSame($threeDaysBack, substr($booked['completedAt'], 0, 10));
+
+        $this->loginAs($context['member']);
+        $week = $this->getJson('/api/points/week?weekStart=' . $threeDaysBack);
+        $day = array_values(array_filter($week['days'], static fn (array $day) => $day['date'] === $threeDaysBack));
+
+        $this->assertSame(30, $day[0]['points']);
+    }
+
+    public function testATaskWrittenDownWithoutADayLandsOnToday(): void
+    {
+        $context = $this->teamWithMember();
+        $type = $this->defineType($context['teamId'], ['type' => 'unlimited']);
+
+        $booked = $this->assertJsonResponse(
+            $this->postJson("/api/task-templates/{$type['id']}/book", [
+                'userId' => $context['member']->id()->value(),
+            ]),
+            Response::HTTP_CREATED
+        );
+
+        $this->assertSame(
+            (new \DateTimeImmutable())->format('Y-m-d'),
+            substr($booked['completedAt'], 0, 10)
+        );
+    }
+
+    public function testATaskCannotBeWrittenDownIntoASettledWeek(): void
+    {
+        $context = $this->teamWithMember();
+        $type = $this->defineType($context['teamId'], ['type' => 'unlimited']);
+        $aWeekBack = (new \DateTimeImmutable('-7 days'))->format('Y-m-d');
+
+        $this->assertJsonResponse($this->postJson('/api/allowance/weeks/close', [
+            'userId' => $context['member']->id()->value(),
+            'weekStart' => $aWeekBack,
+        ]));
+
+        $this->assertSame(
+            Response::HTTP_BAD_REQUEST,
+            $this->postJson("/api/task-templates/{$type['id']}/book", [
+                'userId' => $context['member']->id()->value(),
+                'doneOn' => $aWeekBack,
+            ])->getStatusCode()
+        );
+    }
+
+    public function testATaskIsNotWrittenDownForSomeoneOutsideTheTeam(): void
+    {
+        $context = $this->teamWithMember();
+        $other = $this->teamWithMember();
+        $type = $this->defineType($context['teamId'], ['type' => 'unlimited']);
+
+        $this->loginAs($context['admin']);
+
+        $this->assertSame(
+            Response::HTTP_FORBIDDEN,
+            $this->postJson("/api/task-templates/{$type['id']}/book", [
+                'userId' => $other['member']->id()->value(),
+            ])->getStatusCode()
+        );
+    }
+
     private function teamWithMember(): array
     {
         $admin = $this->currentUser;

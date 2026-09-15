@@ -94,6 +94,82 @@ class TaskExecutionApiController extends AbstractController
         return $this->json($this->serialize($execution), Response::HTTP_CREATED);
     }
 
+    #[Route('/task-templates/{id}/assign', name: 'assign', methods: ['POST'])]
+    #[OA\Post(path: '/api/task-templates/{id}/assign', summary: 'Hand a task type to a member as their own task (Admin only)', tags: ['My tasks'])]
+    #[OA\RequestBody(
+        required: true,
+        content: new OA\JsonContent(
+            required: ['userId'],
+            properties: [
+                new OA\Property(property: 'userId', type: 'string', format: 'uuid', description: 'Member the task is for'),
+            ]
+        )
+    )]
+    #[OA\Response(response: 201, description: 'Task given to the member, waiting for them to do it')]
+    #[OA\Response(response: 403, description: 'Caller does not administer this member')]
+    #[OA\Response(response: 409, description: 'No runs left or the task type is retired')]
+    public function assign(string $id, Request $request): JsonResponse
+    {
+        $template = $this->available($id);
+        $member = $this->memberFrom($request, $this->teamOf($template));
+
+        $execution = $this->handOver($template, $member, $this->clock->now());
+
+        return $this->json($this->serialize($execution), Response::HTTP_CREATED);
+    }
+
+    #[Route('/task-templates/{id}/book', name: 'book', methods: ['POST'])]
+    #[OA\Post(path: '/api/task-templates/{id}/book', summary: 'Write down a task a member already did, on the day they did it (Admin only)', tags: ['My tasks'])]
+    #[OA\RequestBody(
+        required: true,
+        content: new OA\JsonContent(
+            required: ['userId'],
+            properties: [
+                new OA\Property(property: 'userId', type: 'string', format: 'uuid', description: 'Member who did it'),
+                new OA\Property(
+                    property: 'doneOn',
+                    type: 'string',
+                    format: 'date',
+                    nullable: true,
+                    description: 'Day it was done, at most seven days back; today when left out',
+                    example: '2026-09-12'
+                ),
+            ]
+        )
+    )]
+    #[OA\Response(response: 201, description: 'Task written down as done and its points awarded')]
+    #[OA\Response(response: 400, description: 'The day is malformed, outside the backlog window or inside a settled week')]
+    #[OA\Response(response: 403, description: 'Caller does not administer this member')]
+    public function book(string $id, Request $request): JsonResponse
+    {
+        $template = $this->available($id);
+        $teamId = $this->teamOf($template);
+        $member = $this->memberFrom($request, $teamId);
+        $doneOn = $this->doneOn($request);
+
+        if ($doneOn !== null && $this->closedWeeks->isClosedFor($member, $doneOn)) {
+            throw new \DomainException('That week has already been settled, so nothing more can be booked into it');
+        }
+
+        $execution = $this->handOver($template, $member, $doneOn ?? $this->clock->now());
+
+        $execution->complete($member, $this->clock, $doneOn);
+        $execution->approve($this->callerId(), $this->clock);
+        $this->executionRepository->save($execution);
+
+        $this->responsibilities->sign(
+            $this->callerId(),
+            ResponsibilityType::approveTask(),
+            $execution->id(),
+            $teamId
+        );
+
+        $this->pointsAward->awardPoints($execution, $member);
+        $this->bonusPayout->settleFor($member);
+
+        return $this->json($this->serialize($execution), Response::HTTP_CREATED);
+    }
+
     #[Route('/task-executions/mine', name: 'mine', methods: ['GET'])]
     #[OA\Get(path: '/api/task-executions/mine', summary: 'List the tasks I have taken', tags: ['My tasks'])]
     #[OA\Response(response: 200, description: 'My tasks')]
@@ -366,6 +442,71 @@ class TaskExecutionApiController extends AbstractController
     /**
      * @return string[]
      */
+    private function available(string $templateId): TaskTemplate
+    {
+        $template = $this->taskTemplateRepository->findById(Uuid::fromString($templateId));
+
+        if ($template === null) {
+            throw $this->createNotFoundException('Task type not found');
+        }
+
+        if (!$template->isActive()) {
+            throw new \DomainException('This task type is no longer available');
+        }
+
+        if (!$this->pool->hasRoomForAnother($template)) {
+            throw new \DomainException('This task type has no runs left');
+        }
+
+        return $template;
+    }
+
+    private function memberFrom(Request $request, Uuid $teamId): Uuid
+    {
+        $payload = json_decode($request->getContent() ?: '{}', true);
+        $wanted = is_array($payload) ? ($payload['userId'] ?? null) : null;
+
+        if (!is_string($wanted) || !Uuid::isValid($wanted)) {
+            throw new \DomainException('A member is named by their id');
+        }
+
+        $member = Uuid::fromString($wanted);
+
+        if (!$this->memberships->isAdmin($this->callerId(), $teamId)) {
+            throw new UnauthorizedTaskActionException('Only an admin of the team hands out its tasks');
+        }
+
+        if (!$this->memberships->isMember($member, $teamId)) {
+            throw new UnauthorizedTaskActionException('That member does not belong to this team');
+        }
+
+        return $member;
+    }
+
+    private function handOver(TaskTemplate $template, Uuid $member, DateTimeImmutable $scheduledFor): TaskExecution
+    {
+        $execution = TaskExecution::takeFromTemplate(
+            Uuid::generate(),
+            $template->id(),
+            $template->name(),
+            $template->description(),
+            $template->points(),
+            $member,
+            $scheduledFor
+        );
+
+        $this->executionRepository->save($execution);
+
+        $this->responsibilities->sign(
+            $member,
+            ResponsibilityType::takeTask(),
+            $execution->id(),
+            $this->teamOf($template)
+        );
+
+        return $execution;
+    }
+
     private function assertAdministersATeamOf(Uuid $member): void
     {
         foreach ($this->memberships->ofUser($member) as $membership) {
