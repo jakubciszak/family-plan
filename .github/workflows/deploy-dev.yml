@@ -1,0 +1,126 @@
+name: Deploy to dev
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Gałąź, tag albo sha do wdrożenia. Puste = gałąź wybrana powyżej."
+        required: false
+        type: string
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: deploy-dev
+  cancel-in-progress: false
+
+env:
+  REGISTRY: ghcr.io
+  APP_IMAGE: ghcr.io/${{ github.repository_owner }}/family-plan-app
+  APP_HEALTH_URL: https://dev.family-plan.srv1201847.hstgr.cloud
+  PROJECT: family-plan-dev
+
+jobs:
+  deploy:
+    name: Deploy ${{ inputs.ref || github.ref_name }} to dev
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check required secrets are available
+        env:
+          HOSTINGER_API_TOKEN: ${{ secrets.HOSTINGER_API_TOKEN }}
+          VPS_ID: ${{ secrets.HOSTINGER_VPS_ID }}
+          BASIC_USER: ${{ secrets.DEV_BASIC_AUTH_USER }}
+          BASIC_PASSWORD: ${{ secrets.DEV_BASIC_AUTH_PASSWORD }}
+        run: |
+          missing=""
+          [ -n "${HOSTINGER_API_TOKEN}" ] || missing="${missing} HOSTINGER_API_TOKEN"
+          [ -n "${VPS_ID}" ] || missing="${missing} HOSTINGER_VPS_ID"
+          [ -n "${BASIC_USER}" ] || missing="${missing} DEV_BASIC_AUTH_USER"
+          [ -n "${BASIC_PASSWORD}" ] || missing="${missing} DEV_BASIC_AUTH_PASSWORD"
+          if [ -n "$missing" ]; then
+            echo "Brakuje sekretów repozytorium:${missing}"
+            echo "Ustaw je w Settings > Secrets and variables > Actions > Repository secrets."
+            exit 1
+          fi
+
+      - name: Checkout the ref to deploy
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+
+      - name: Describe what goes to dev
+        id: source
+        run: |
+          set -euo pipefail
+          sha=$(git rev-parse HEAD)
+          {
+            echo "sha=${sha}"
+            echo "short=${sha:0:12}"
+          } >> "$GITHUB_OUTPUT"
+          {
+            echo "### Dev ← ${{ inputs.ref || github.ref_name }}"
+            echo "commit \`${sha}\` — $(git log -1 --pretty=%s)"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push application image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: docker/frankenphp/Dockerfile.prod
+          push: true
+          tags: |
+            ${{ env.APP_IMAGE }}:dev
+            ${{ env.APP_IMAGE }}:dev-${{ steps.source.outputs.short }}
+          platforms: linux/amd64
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Trigger project update on Hostinger VPS
+        env:
+          HOSTINGER_API_TOKEN: ${{ secrets.HOSTINGER_API_TOKEN }}
+          VPS_ID: ${{ secrets.HOSTINGER_VPS_ID }}
+        run: |
+          set -euo pipefail
+          curl --fail-with-body -sS -X POST \
+            "https://developers.hostinger.com/api/vps/v1/virtual-machines/${VPS_ID}/docker/${PROJECT}/update" \
+            -H "Authorization: Bearer ${HOSTINGER_API_TOKEN}" \
+            -H "Content-Type: application/json"
+
+      - name: Wait for the application to come back up
+        env:
+          BASIC_USER: ${{ secrets.DEV_BASIC_AUTH_USER }}
+          BASIC_PASSWORD: ${{ secrets.DEV_BASIC_AUTH_PASSWORD }}
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 30); do
+            api=$(curl -s -u "${BASIC_USER}:${BASIC_PASSWORD}" -o /dev/null -w '%{http_code}' "${APP_HEALTH_URL}/api/auth/me" || true)
+            spa=$(curl -s -u "${BASIC_USER}:${BASIC_PASSWORD}" -o /dev/null -w '%{http_code}' "${APP_HEALTH_URL}/" || true)
+            echo "attempt ${attempt}: api=${api} spa=${spa}"
+            if [ "$api" = "401" ] && [ "$spa" = "200" ]; then
+              echo "Dev jest zdrowy."
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "Dev nie wstał w ciągu 5 minut."
+          exit 1
+
+      - name: Record what went live
+        run: |
+          {
+            echo "Wdrożone na dev: \`${{ steps.source.outputs.sha }}\`"
+            echo "${APP_HEALTH_URL}"
+          } >> "$GITHUB_STEP_SUMMARY"

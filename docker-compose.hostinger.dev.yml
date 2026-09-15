@@ -1,0 +1,60 @@
+services:
+  database:
+    image: postgres:16-alpine
+    container_name: family-plan-dev-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-app}
+      POSTGRES_USER: ${POSTGRES_USER:-app}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-!ChangeMe!}
+    ports:
+      - "127.0.0.1:${POSTGRES_HOST_PORT:-5433}:5432"
+    volumes:
+      - database_data_dev:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-d", "${POSTGRES_DB:-app}", "-U", "${POSTGRES_USER:-app}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+    networks:
+      - family-plan-dev-network
+
+  app:
+    image: ghcr.io/jakubciszak/family-plan-app:${IMAGE_TAG:-dev}
+    container_name: family-plan-dev-app
+    restart: unless-stopped
+    working_dir: /app
+    environment:
+      APP_ENV: ${APP_ENV:-prod}
+      APP_SECRET: ${APP_SECRET:-CHANGE_ME}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-app}:${POSTGRES_PASSWORD:-!ChangeMe!}@database:5432/${POSTGRES_DB:-app}?serverVersion=16&charset=utf8
+      SERVER_NAME: ":80"
+      FRANKENPHP_NUM_WORKERS: ${FRANKENPHP_NUM_WORKERS:-1}
+      SUPER_ADMIN_EMAIL: ${SUPER_ADMIN_EMAIL:-admin@familyplan.local}
+      SUPER_ADMIN_NAME: ${SUPER_ADMIN_NAME:-Super Admin}
+      SUPER_ADMIN_PASSWORD: ${SUPER_ADMIN_PASSWORD:-CHANGE_ME}
+      REQUIRE_EMAIL_ACTIVATION: ${REQUIRE_EMAIL_ACTIVATION:-false}
+      MAILER_DSN: ${MAILER_DSN:-null://null}
+      MAILER_FROM_EMAIL: ${MAILER_FROM_EMAIL:-noreply@familyplan.local}
+      MAILER_FROM_NAME: ${MAILER_FROM_NAME:-Family Plan (dev)}
+      APP_URL: ${APP_URL:-https://dev.family-plan.srv1201847.hstgr.cloud}
+      FRONTEND_URL: ${FRONTEND_URL:-https://dev.family-plan.srv1201847.hstgr.cloud}
+      DEFAULT_TEAM_NAME: ${DEFAULT_TEAM_NAME:-Moja rodzina}
+    depends_on:
+      database:
+        condition: service_healthy
+    networks:
+      - family-plan-dev-network
+      - proxy-net
+
+volumes:
+  database_data_dev:
+    driver: local
+
+networks:
+  family-plan-dev-network:
+    driver: bridge
+  proxy-net:
+    external: true
+    name: proxy-net

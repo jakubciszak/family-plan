@@ -237,3 +237,43 @@ maszynę — nowy nadpisuje poprzedni.
 - Aplikacja działa na subdomenie `*.hstgr.cloud`; do konta Hostingera nie jest podpięta żadna
   własna domena.
 - Rejestr `registry.srv1201847.hstgr.cloud` nie ma garbage collection.
+
+## Środowisko dev
+
+Na tej samej maszynie stoi drugi, niezależny stack pod
+**https://dev.family-plan.srv1201847.hstgr.cloud** — projekt Docker Compose `family-plan-dev`,
+którego odpowiednikiem w repo jest `docker-compose.hostinger.dev.yml`.
+
+Dev jest odseparowany od produkcji na każdym poziomie: własne kontenery
+(`family-plan-dev-app`, `family-plan-dev-db`), własny wolumen `database_data_dev`, własna sieć i
+Postgres na `127.0.0.1:5433`. Wspólny jest tylko zewnętrzny Caddy i rejestr obrazów.
+
+Cały host dev jest za basicauth na Caddym, więc bez hasła nie widać nawet ekranu logowania.
+Baza startuje pusta — entrypoint uruchamia migracje i zakłada super admina, żadne dane
+produkcyjne nie są kopiowane. Poczta jest wyciszona (`MAILER_DSN=null://null`), a
+`REQUIRE_EMAIL_ACTIVATION=false`, więc rejestracja kończy się od razu aktywnym kontem.
+
+`APP_ENV` zostaje na `prod`, bo obraz jest budowany bez zależności deweloperskich — dev różni się
+od produkcji zawartością bazy i adresem, nie trybem Symfony. Workerów jest 1 zamiast 4, żeby
+oba stacki zmieściły się na jednym vCPU.
+
+### Jak wydać na dev
+
+`Actions → Deploy to dev → Run workflow`. Lista gałęzi na górze wybiera, co się zbuduje; pole
+`ref` przydaje się tylko wtedy, gdy chcesz wskazać tag albo konkretne sha zamiast gałęzi.
+
+Workflow buduje obraz z tego commita, pushuje go jako `:dev` i `:dev-<sha>`, woła
+`POST /docker/family-plan-dev/update` i czeka, aż środowisko odpowie. Nie ma tu bramki testów ani
+wymogu wydania — dev jest po to, żeby zobaczyć gałąź w robocie.
+
+Rollback jest taki sam jak na produkcji: `IMAGE_TAG` w zmiennych projektu ustawiony na
+`dev-<sha>` działającej wersji i `update`.
+
+### Sekrety w GitHub Actions dla dev
+
+| Sekret | Opis |
+|--------|------|
+| `DEV_BASIC_AUTH_USER` | Login basicauth — ten sam, co w zmiennych projektu `registry` |
+| `DEV_BASIC_AUTH_PASSWORD` | Hasło basicauth; workflow używa go do smoke testu po wdrożeniu |
+
+`HOSTINGER_API_TOKEN` i `HOSTINGER_VPS_ID` są współdzielone z deploymentem produkcyjnym.
