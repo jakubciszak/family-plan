@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Tests\Api;
 
+use App\TeamManagement\Domain\Repository\TeamMembershipRepositoryInterface;
+use App\UserManagement\Domain\Repository\UserRepositoryInterface;
+use App\UserManagement\Domain\ValueObject\Email;
 use Symfony\Component\HttpFoundation\Response;
 
 class AuthRegistrationApiTest extends ApiTestCase
@@ -21,6 +24,56 @@ class AuthRegistrationApiTest extends ApiTestCase
         $payload = json_decode($response->getContent(), true);
         $this->assertArrayHasKey('id', $payload);
         $this->assertArrayHasKey('activationRequired', $payload);
+    }
+
+    public function testPlainRegistrationGetsAFamilyOfItsOwn(): void
+    {
+        $email = sprintf('api-own-team-%s@example.com', uniqid());
+
+        $this->postJson('/api/auth/register', [
+            'name' => 'Sam Solo',
+            'email' => $email,
+            'password' => 'securePassword123',
+        ]);
+
+        $this->assertCount(1, $this->teamsOf($email));
+    }
+
+    public function testRegisteringOnAnInvitationJoinsThatFamilyInsteadOfStartingANewOne(): void
+    {
+        $team = $this->createTeamAndAdmin();
+        $email = sprintf('api-invited-%s@example.com', uniqid());
+
+        $invitation = $this->assertJsonResponse(
+            $this->postJson(sprintf('/api/teams/%s/invite', $team['teamId']), [
+                'email' => $email,
+                'role' => 'member',
+            ]),
+            Response::HTTP_CREATED
+        );
+
+        $this->postJson('/api/auth/register', [
+            'name' => 'Nowe Dziecko',
+            'email' => $email,
+            'password' => 'securePassword123',
+            'inviteToken' => $invitation['invitation']['token'],
+        ]);
+
+        $this->assertSame([], $this->teamsOf($email));
+    }
+
+    public function testAMadeUpInviteTokenStillGetsAFamilyOfItsOwn(): void
+    {
+        $email = sprintf('api-bad-token-%s@example.com', uniqid());
+
+        $this->postJson('/api/auth/register', [
+            'name' => 'Sam Solo',
+            'email' => $email,
+            'password' => 'securePassword123',
+            'inviteToken' => 'nie-ma-takiego-zaproszenia',
+        ]);
+
+        $this->assertCount(1, $this->teamsOf($email));
     }
 
     public function testRegisterRejectsInvalidPayload(): void
@@ -43,5 +96,16 @@ class AuthRegistrationApiTest extends ApiTestCase
 
         $this->assertSame(Response::HTTP_CREATED, $this->postJson('/api/auth/register', $payload)->getStatusCode());
         $this->assertSame(Response::HTTP_BAD_REQUEST, $this->postJson('/api/auth/register', $payload)->getStatusCode());
+    }
+
+    private function teamsOf(string $email): array
+    {
+        $user = static::getContainer()
+            ->get(UserRepositoryInterface::class)
+            ->findByEmail(Email::fromString($email));
+
+        return static::getContainer()
+            ->get(TeamMembershipRepositoryInterface::class)
+            ->ofUser($user->id());
     }
 }

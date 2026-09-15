@@ -19,8 +19,12 @@ final readonly class DefaultTeamProvisioner
     ) {
     }
 
-    public function provisionFor(Uuid $userId, Email $email): void
+    public function provisionFor(Uuid $userId, Email $email, ?string $inviteToken = null): void
     {
+        if ($this->isJoining($inviteToken)) {
+            return;
+        }
+
         if ($this->invitations->findPendingByEmail($email) !== []) {
             return;
         }
@@ -31,5 +35,16 @@ final readonly class DefaultTeamProvisioner
             null,
             $userId->value()
         ));
+    }
+
+    private function isJoining(?string $inviteToken): bool
+    {
+        if ($inviteToken === null || $inviteToken === '') {
+            return false;
+        }
+
+        $invitation = $this->invitations->findByToken($inviteToken);
+
+        return $invitation !== null && $invitation->status()->isPending() && !$invitation->isExpired();
     }
 }

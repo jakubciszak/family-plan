@@ -33,7 +33,10 @@ final readonly class RegisterUserRequest
             max: 20,
             maxMessage: 'Phone number cannot be longer than {{ limit }} characters'
         )]
-        public ?string $phoneNumber = null
+        public ?string $phoneNumber = null,
+
+        #[Assert\Length(max: 255)]
+        public ?string $inviteToken = null
     ) {
     }
 }

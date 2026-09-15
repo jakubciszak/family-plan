@@ -52,6 +52,10 @@ function Register({ onBackToLogin, onLogin, inviteToken }) {
                 payload.phoneNumber = phoneNumber;
             }
 
+            if (inviteToken) {
+                payload.inviteToken = inviteToken;
+            }
+
             const data = await apiClient.post('/api/auth/register', payload);
 
             if (data?.activationRequired === false && onLogin) {

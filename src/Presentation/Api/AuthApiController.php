@@ -194,7 +194,8 @@ class AuthApiController extends AbstractController
                 new OA\Property(property: 'name', type: 'string', example: 'John Doe'),
                 new OA\Property(property: 'email', type: 'string', format: 'email', example: 'john@example.com'),
                 new OA\Property(property: 'password', type: 'string', format: 'password', minLength: 8, example: 'securePassword123'),
-                new OA\Property(property: 'phoneNumber', type: 'string', nullable: true, example: '+48123456789')
+                new OA\Property(property: 'phoneNumber', type: 'string', nullable: true, example: '+48123456789'),
+                new OA\Property(property: 'inviteToken', type: 'string', nullable: true, description: 'Token of the invitation being taken up, if the account is joining a team')
             ]
         )
     )]
@@ -233,7 +234,8 @@ class AuthApiController extends AbstractController
 
             $this->defaultTeam->provisionFor(
                 Uuid::fromString($id),
-                Email::fromString($request->email)
+                Email::fromString($request->email),
+                $request->inviteToken
             );
 
             return $this->json([
