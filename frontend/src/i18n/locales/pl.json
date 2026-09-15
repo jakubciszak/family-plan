@@ -173,7 +173,9 @@
     "channel_sms": "SMS",
     "channel_sms_desc": "Otrzymuj powiadomienia przez wiadomości tekstowe",
     "channel_in_app": "W aplikacji",
-    "channel_in_app_desc": "Dymki pokazywane w aplikacji, gdy z niej korzystasz"
+    "channel_in_app_desc": "Dymki pokazywane w aplikacji, gdy z niej korzystasz",
+    "channel_push": "Na telefon",
+    "channel_push_desc": "Powiadomienia wyskakujące na urządzeniu, nawet gdy aplikacja jest zamknięta"
   },
   "common": {
     "save": "Zapisz",
@@ -547,5 +549,17 @@
         "settings": "Ustawienia"
       }
     }
+  },
+  "push": {
+    "title": "Powiadomienia na tym urządzeniu",
+    "description": "Włącz, żeby dostawać powiadomienia na tym telefonie lub komputerze",
+    "test": "Wyślij próbne powiadomienie",
+    "testSent": "Próbne powiadomienie poszło. Powinno pojawić się za chwilę.",
+    "testFailed": "Nie udało się wysłać próbnego powiadomienia.",
+    "denied": "Przeglądarka ma zablokowane powiadomienia dla tej strony. Odblokuj je w jej ustawieniach.",
+    "unsupported": "Ta przeglądarka nie obsługuje powiadomień push.",
+    "notConfigured": "Serwer nie ma skonfigurowanych powiadomień push.",
+    "iosInstall": "Na iPhonie dodaj najpierw aplikację do ekranu początkowego — bez tego Safari nie pozwala na powiadomienia.",
+    "failed": "Nie udało się zmienić ustawienia powiadomień."
   }
 }

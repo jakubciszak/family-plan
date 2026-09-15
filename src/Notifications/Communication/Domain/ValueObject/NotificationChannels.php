@@ -9,17 +9,20 @@ final readonly class NotificationChannels
     public const EMAIL = 'email';
     public const SMS = 'sms';
     public const IN_APP = 'in_app';
+    public const PUSH = 'push';
 
     private const SUPPORTED = [
         self::EMAIL,
         self::SMS,
         self::IN_APP,
+        self::PUSH,
     ];
 
     private const ENABLED_BY_DEFAULT_FOR_USER = [
         self::EMAIL => true,
         self::SMS => false,
         self::IN_APP => true,
+        self::PUSH => true,
     ];
 
     /**

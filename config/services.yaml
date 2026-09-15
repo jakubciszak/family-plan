@@ -73,6 +73,9 @@ services:
     App\Notifications\Domain\Repository\InAppNotificationRepositoryInterface:
         class: App\Notifications\Infrastructure\Persistence\DoctrineInAppNotificationRepository
 
+    App\Notifications\Domain\Repository\PushSubscriptionRepositoryInterface:
+        class: App\Notifications\Infrastructure\Persistence\DoctrinePushSubscriptionRepository
+
     App\Notifications\Communication\Domain\Repository\NotificationPolicyRepositoryInterface:
         class: App\Notifications\Communication\Infrastructure\Persistence\DoctrineNotificationPolicyRepository
 
@@ -185,6 +188,11 @@ services:
             $commandBus: '@command.bus'
             $queryBus: '@query.bus'
 
+    App\Presentation\Api\PushSubscriptionApiController:
+        arguments:
+            $vapidPublicKey: '%env(VAPID_PUBLIC_KEY)%'
+        tags: ['controller.service_arguments']
+
     App\Presentation\Api\NotificationPolicyApiController:
         arguments:
             $commandBus: '@command.bus'
@@ -233,6 +241,17 @@ services:
 
     App\Notifications\Infrastructure\Adapter\InAppNotificationAdapter:
         tags: ['notification.adapter']
+
+    App\Notifications\Infrastructure\Adapter\PushNotificationAdapter:
+        tags: ['notification.adapter']
+
+    App\Notifications\Domain\Port\PushSenderInterface:
+        class: App\Notifications\Infrastructure\Push\MinishlinkPushSender
+        arguments:
+            $publicKey: '%env(VAPID_PUBLIC_KEY)%'
+            $privateKey: '%env(VAPID_PRIVATE_KEY)%'
+            $subject: '%env(VAPID_SUBJECT)%'
+            $applicationUrl: '%env(APP_URL)%'
 
     App\Notifications\Application\Handler\SendNotificationHandler:
         arguments:

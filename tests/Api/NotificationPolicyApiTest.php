@@ -13,7 +13,7 @@ class NotificationPolicyApiTest extends ApiTestCase
     {
         $matrix = $this->getJson('/api/notification-policies');
 
-        $this->assertSame(['email', 'sms', 'in_app'], $matrix['channels']);
+        $this->assertSame(['email', 'sms', 'in_app', 'push'], $matrix['channels']);
 
         $events = array_column($matrix['events'], null, 'event');
         $this->assertArrayHasKey('task_completed', $events);

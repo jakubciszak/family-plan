@@ -173,7 +173,9 @@
     "channel_sms": "SMS",
     "channel_sms_desc": "Receive notifications via text message",
     "channel_in_app": "In app",
-    "channel_in_app_desc": "Bubbles shown inside the app while you use it"
+    "channel_in_app_desc": "Bubbles shown inside the app while you use it",
+    "channel_push": "On your phone",
+    "channel_push_desc": "Notifications that reach your device even when the app is closed"
   },
   "common": {
     "save": "Save",
@@ -547,5 +549,17 @@
         "settings": "Settings"
       }
     }
+  },
+  "push": {
+    "title": "Notifications on this device",
+    "description": "Turn on to receive notifications on this phone or computer",
+    "test": "Send a test notification",
+    "testSent": "Test notification sent. It should arrive in a moment.",
+    "testFailed": "The test notification could not be sent.",
+    "denied": "Your browser blocks notifications for this site. Allow them in its settings.",
+    "unsupported": "This browser does not support push notifications.",
+    "notConfigured": "Push notifications are not configured on the server.",
+    "iosInstall": "On iPhone, add the app to your home screen first — Safari allows notifications only then.",
+    "failed": "The notification setting could not be changed."
   }
 }
