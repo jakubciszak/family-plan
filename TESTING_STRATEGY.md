@@ -73,6 +73,19 @@ This approach:
 - Verifies data integrity
 - Uses real database (can be configured for test environment)
 
+### The test database belongs to the checkout
+
+Every copy of the repository — the main checkout and each git worktree — gets its own test
+database, named after the checkout: `app_test_<hash of its path>`. The name comes from `TEST_TOKEN`,
+which `tests/bootstrap.php` derives from the project directory and Doctrine appends through
+`dbname_suffix`, the same hook ParaTest uses. `TestDatabase` creates the database on the first run
+and drops the schema before each one, so two checkouts running tests side by side no longer wipe
+each other's schema mid-run.
+
+Setting `TEST_TOKEN` yourself takes precedence, which is how ParaTest keeps its parallel workers
+apart. Running the same checkout from two places — from the host and from inside the container —
+counts as two paths and therefore two databases.
+
 ## Frontend E2E Testing
 
 ### Recommended: Playwright or Cypress

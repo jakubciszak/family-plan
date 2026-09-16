@@ -16,6 +16,7 @@ final class TestDatabase
 
         self::$prepared = true;
 
+        self::console('doctrine:database:create --if-not-exists --no-interaction --quiet');
         self::console('doctrine:schema:drop --full-database --force --no-interaction --quiet');
         self::console('doctrine:migrations:migrate --no-interaction --allow-no-migration --quiet');
     }
@@ -27,7 +28,12 @@ final class TestDatabase
         $status = 0;
 
         exec(
-            sprintf('APP_ENV=test php %s/bin/console %s 2>&1', escapeshellarg($projectDir), $command),
+            sprintf(
+                'APP_ENV=test TEST_TOKEN=%s php %s/bin/console %s 2>&1',
+                escapeshellarg((string) ($_SERVER['TEST_TOKEN'] ?? '')),
+                escapeshellarg($projectDir),
+                $command
+            ),
             $output,
             $status
         );

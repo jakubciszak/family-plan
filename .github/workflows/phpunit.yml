@@ -110,9 +110,6 @@ jobs:
     - name: Install dependencies
       run: composer install --prefer-dist --no-progress --ignore-platform-req=ext-redis
     
-    - name: Create the test database
-      run: PGPASSWORD='!ChangeMe!' psql -h 127.0.0.1 -U app -d app -c 'CREATE DATABASE app_test OWNER app'
-
     - name: Run Integration Tests
       run: |
         mkdir -p test-results
