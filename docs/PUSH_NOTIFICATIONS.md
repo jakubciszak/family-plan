@@ -55,6 +55,19 @@ Sprawdzenie odpala `app:warn-about-streaks-at-risk`. Komenda przyjmuje `--dry-ru
 kogo by ostrzegła, niczego nie wysyłając — to najszybszy sposób, żeby zobaczyć, czy próg jest dobrze
 ustawiony.
 
+## Powiadomienie napisane ręcznie
+
+Poza zdarzeniami aplikacji admin może napisać własną wiadomość i wysłać ją sam — do wszystkich
+albo do jednej osoby. Służy do tego zakładka „Wyślij powiadomienie", widoczna tylko dla admina.
+
+Taka wiadomość omija obie bramki polityk: nie jest zdarzeniem aplikacji, więc nie ma polityki
+kanałów ani przełącznika kanału w ustawieniach użytkownika. Zostaje jedyna bramka, której obejść
+się nie da — zgoda przeglądarki na urządzeniu. Kto nie ma zapisanego żadnego urządzenia, nie
+dostanie nic, a formularz mówi wprost, ilu domowników da się w ogóle dosięgnąć.
+
+Bez wpisanego tytułu powiadomienie pokazuje „Family Plan". Wysyłka idzie tą samą drogą co reszta —
+przez kolejkę i `DeliverPushHandler`.
+
 ## Kolejka i harmonogram
 
 Dotarcie do serwisu push to osobne żądanie HTTP na każde urządzenie, więc wysyłka nie dzieje się
@@ -115,6 +128,8 @@ ten przypadek i zamiast martwego przełącznika pokazuje, co trzeba zrobić.
 | `POST` | `/api/push/subscriptions` | Zapisanie urządzenia; ponowne zapisanie tego samego odświeża je |
 | `DELETE` | `/api/push/subscriptions?endpoint=…` | Wypisanie urządzenia |
 | `POST` | `/api/push/test` | Próbne powiadomienie do siebie; 409, gdy nie ma żadnego urządzenia |
+| `GET` | `/api/push/audience` | Domownicy z liczbą urządzeń — kogo admin może dosięgnąć (tylko admin) |
+| `POST` | `/api/push/announcements` | Wiadomość napisana przez admina; bez `userId` idzie do wszystkich, 409 gdy nikt nie ma urządzenia (tylko admin) |
 
 Endpoint jest unikalny w całej tabeli, nie na użytkownika. To celowe: jeden telefon to jedna
 subskrypcja, a gdy zaloguje się na nim ktoś inny i włączy powiadomienia, urządzenie przechodzi do

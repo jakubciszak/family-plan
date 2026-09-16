@@ -18,7 +18,9 @@
     "notificationEvents": "Powiadomienia",
     "notificationEventsShort": "Powiad.",
     "allowance": "Kieszonkowe",
-    "allowanceShort": "Kasa"
+    "allowanceShort": "Kasa",
+    "pushAnnouncement": "Wyślij powiadomienie",
+    "pushAnnouncementShort": "Wyślij"
   },
   "auth": {
     "login": "Zaloguj",
@@ -565,5 +567,24 @@
     "notConfigured": "Serwer nie ma skonfigurowanych powiadomień push.",
     "iosInstall": "Na iPhonie dodaj najpierw aplikację do ekranu początkowego — bez tego Safari nie pozwala na powiadomienia.",
     "failed": "Nie udało się zmienić ustawienia powiadomień."
+  },
+  "pushAnnouncement": {
+    "title": "Wyślij powiadomienie",
+    "description": "Napisz wiadomość, a trafi jako powiadomienie push na urządzenia domowników.",
+    "recipient": "Do kogo",
+    "everyone": "Do wszystkich",
+    "personWithoutDevice": "{{name}} — bez urządzenia",
+    "reachable": "Powiadomienia włączone: {{count}}",
+    "messageTitle": "Tytuł",
+    "messageTitleHint": "Bez tytułu zobaczą „Family Plan”",
+    "message": "Wiadomość",
+    "send": "Wyślij",
+    "sending": "Wysyłam…",
+    "sent": "Poszło do {{count}} os.",
+    "nobodyReachable": "Nikt z wybranych nie ma włączonych powiadomień na żadnym urządzeniu.",
+    "sendError": "Nie udało się wysłać powiadomienia.",
+    "loadError": "Nie udało się wczytać listy domowników.",
+    "accessDeniedTitle": "Tylko dla administratora",
+    "accessDeniedBody": "Powiadomienia wysyła administrator."
   }
 }

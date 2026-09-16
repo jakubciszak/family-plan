@@ -48,4 +48,15 @@ final class InMemoryPushSubscriptionRepository implements PushSubscriptionReposi
     {
         return count($this->findForUser($userId));
     }
+
+    public function usersReachableByPush(): array
+    {
+        $users = [];
+
+        foreach ($this->subscriptions as $subscription) {
+            $users[$subscription->userId()->value()] = $subscription->userId();
+        }
+
+        return array_values($users);
+    }
 }

@@ -10,6 +10,7 @@ import BonusRulesManagement from './pages/BonusRulesManagement';
 import StatusChangeRulesManagement from './pages/StatusChangeRulesManagement';
 import UserSettings from './pages/UserSettings';
 import NotificationEvents from './pages/NotificationEvents';
+import PushAnnouncement from './pages/PushAnnouncement';
 import TeamManagement from './pages/TeamManagement';
 import TaskTypeManagement from './pages/TaskTypeManagement';
 import Account from './pages/Account';
@@ -229,6 +230,7 @@ function App() {
         ...(isSuperAdmin ? [
             { id: 'status-change-rules', icon: 'rule', label: t('nav.statusChangeRules'), shortLabel: t('nav.statusChangeRulesShort') },
             { id: 'notification-events', icon: 'notifications', label: t('nav.notificationEvents'), shortLabel: t('nav.notificationEventsShort') },
+            { id: 'push-announcement', icon: 'send', label: t('nav.pushAnnouncement'), shortLabel: t('nav.pushAnnouncementShort') },
         ] : []),
     ];
 
@@ -286,6 +288,7 @@ function App() {
                 {currentPage === 'bonus-rules' && <BonusRulesManagement user={user} />}
                 {currentPage === 'status-change-rules' && <StatusChangeRulesManagement user={user} />}
                 {currentPage === 'notification-events' && <NotificationEvents user={user} />}
+                {currentPage === 'push-announcement' && <PushAnnouncement user={user} />}
                 {currentPage === 'account' && <Account user={user} points={weekPoints} />}
                 {currentPage === 'settings' && <UserSettings user={user} />}
             </main>

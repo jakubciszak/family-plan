@@ -110,6 +110,18 @@ const pushService = {
     async sendTest() {
         return apiClient.post('/api/push/test', {});
     },
+
+    async audience() {
+        return apiClient.get('/api/push/audience');
+    },
+
+    async announce({ message, title, userId }) {
+        return apiClient.post('/api/push/announcements', {
+            message,
+            title: title || null,
+            userId: userId || null,
+        });
+    },
 };
 
 export default pushService;
