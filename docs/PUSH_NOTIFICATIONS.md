@@ -29,6 +29,54 @@ Push jest zwykłym kanałem obok `email`, `sms` i `in_app`, więc podlega tym sa
 polityce zdarzenia, którą ustawia admin, i przełącznikowi kanału w ustawieniach użytkownika.
 Trzecią bramką, której pozostałe kanały nie mają, jest zgoda przeglądarki na konkretnym urządzeniu.
 
+## Co wysyła powiadomienie
+
+| Zdarzenie | Kto dostaje | Kiedy | Domyślne kanały |
+|-----------|-------------|-------|-----------------|
+| `task_completed` | admini **tej** rodziny | dziecko zgłosiło zadanie do akceptacji | e-mail |
+| `payout_offered` | dziecko | rodzic zaproponował wypłatę kieszonkowego | w aplikacji, push |
+| `streak_at_risk` | każdy, kogo seria się kończy | codziennie o 18:00, gdy seria trwa, a dziś nie ma jeszcze punktów | push |
+| `task_approved` | wykonawca zadania | admin zatwierdził zadanie | e-mail |
+
+Kanały każdego z tych zdarzeń admin zmienia w ustawieniach powiadomień — push jest tam zwykłą
+pozycją obok e-maila. Domyślne kanały opisuje katalog w `NotificationEvent`.
+
+Powiadomienie o zadaniu do akceptacji trafia do adminów rodziny, do której należy **typ zadania**.
+Gdy typ nie jest przypisany do żadnej rodziny, powiadamiani są admini wszystkich rodzin wykonawcy.
+
+### Seria zagrożona
+
+`StreakAtRisk::days()` odpowiada na jedno pytanie: ile dni przepadnie, jeśli dziś nic się nie wydarzy.
+Warunek jest celowo wąski — seria musiała trwać **do wczoraj włącznie**, a dziś nie osiągnąć progu
+`pointsPerDay` z reguły bonusowej rodziny. Kto serii nie ma, nie dostaje nic; kto dziś już zdobył
+punkty, też nie.
+
+Sprawdzenie odpala `app:warn-about-streaks-at-risk`. Komenda przyjmuje `--dry-run`, który wypisuje
+kogo by ostrzegła, niczego nie wysyłając — to najszybszy sposób, żeby zobaczyć, czy próg jest dobrze
+ustawiony.
+
+## Kolejka i harmonogram
+
+Dotarcie do serwisu push to osobne żądanie HTTP na każde urządzenie, więc wysyłka nie dzieje się
+w trakcie obsługi requestu. `PushNotificationAdapter` oddaje `DeliverPushCommand` na magistralę,
+a `DeliverPushHandler` — już w workerze — wybiera urządzenia, wysyła i sprząta martwe subskrypcje.
+
+Na produkcji odpowiadają za to dwa dodatkowe kontenery, oba z tego samego obrazu co aplikacja:
+
+| Serwis | Polecenie | Rola |
+|--------|-----------|------|
+| `worker` | `messenger:consume async` | wysyła to, co czeka w kolejce |
+| `cron` | `streak-warnings.sh` | codziennie o `STREAK_WARNING_HOUR` uruchamia ostrzeżenia o seriach |
+
+Kolejka leży w Postgresie (transport Doctrine), więc nie ma tu żadnej nowej infrastruktury do
+utrzymania. Tabelę `messenger_messages` transport zakłada sam przy pierwszym uruchomieniu.
+
+Migracje należą wyłącznie do kontenera `app`: worker i cron startują z `RUN_MIGRATIONS=false`, żeby
+trzy kontenery nie migrowały bazy jednocześnie.
+
+W środowisku testowym transport jest synchroniczny (`sync://`), więc testy przechodzą całą drogę
+aż do sendera — łącznie z krokami, które w kolejce byłyby niewidoczne.
+
 ## Klucze VAPID
 
 Serwer podpisuje każde powiadomienie parą kluczy. Bez nich `/api/push/key` zwraca `available: false`,

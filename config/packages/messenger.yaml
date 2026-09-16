@@ -2,7 +2,7 @@ framework:
     messenger:
         # Default bus (required when multiple buses are defined)
         default_bus: command.bus
-        
+
         # Separate buses for commands and queries
         buses:
             command.bus:
@@ -11,3 +11,20 @@ framework:
             query.bus:
                 middleware:
                     - validation
+
+        transports:
+            async:
+                dsn: '%env(MESSENGER_TRANSPORT_DSN)%'
+                retry_strategy:
+                    max_retries: 3
+                    delay: 5000
+                    multiplier: 3
+
+        routing:
+            App\Notifications\Application\Command\DeliverPushCommand: async
+
+when@test:
+    framework:
+        messenger:
+            transports:
+                async: 'sync://'

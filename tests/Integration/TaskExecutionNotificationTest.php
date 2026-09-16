@@ -26,6 +26,11 @@ use App\TaskManagement\Domain\ValueObject\Frequency;
 use App\TaskManagement\Domain\ValueObject\Points;
 use App\TaskManagement\Domain\ValueObject\ScheduleConfig;
 use App\TaskManagement\Domain\ValueObject\TaskName;
+use App\TeamManagement\Domain\Entity\Team;
+use App\TeamManagement\Domain\Repository\TeamMembershipRepositoryInterface;
+use App\TeamManagement\Domain\Repository\TeamRepositoryInterface;
+use App\TeamManagement\Domain\ValueObject\TeamName;
+use App\TeamManagement\Domain\ValueObject\TeamRole;
 use App\UserManagement\Domain\Entity\User;
 use App\UserManagement\Domain\Repository\UserRepositoryInterface;
 use App\UserSettings\Domain\Repository\UserSettingsRepositoryInterface;
@@ -58,19 +63,14 @@ class TaskExecutionNotificationTest extends IntegrationTestCase
         );
     }
 
-    public function testAdminsAreToldWhenSomebodyFinishesTheirTask(): void
+    public function testAdminsOfTheFamilyAreToldWhenSomebodyFinishesTheirTask(): void
     {
         $doer = $this->user('Dziecko');
         $admin = $this->user('Administrator', Role::ADMIN);
-        $execution = $this->takenTask($doer);
+        $teamId = $this->family($admin, $doer);
+        $execution = $this->takenTask($doer, $teamId);
 
-        $subscriber = new TaskCompletedEventSubscriber(
-            $this->orchestrator,
-            $this->executions,
-            $this->service(UserRepositoryInterface::class)
-        );
-
-        $subscriber->onTaskCompleted(
+        $this->completedSubscriber()->onTaskCompleted(
             new TaskExecutionCompleted($execution->id(), $doer->id(), new DateTimeImmutable())
         );
 
@@ -78,6 +78,54 @@ class TaskExecutionNotificationTest extends IntegrationTestCase
         $this->assertNotNull($mail);
         $this->assertStringContainsString('Dziecko', $mail['message']);
         $this->assertStringContainsString('Zmywanie po obiedzie', $mail['message']);
+    }
+
+    public function testAdminOfAnotherFamilyHearsNothing(): void
+    {
+        $doer = $this->user('Dziecko');
+        $ourAdmin = $this->user('Administrator', Role::ADMIN);
+        $teamId = $this->family($ourAdmin, $doer);
+
+        $stranger = $this->user('Obcy', Role::ADMIN);
+        $strangersChild = $this->user('Obcedziecko');
+        $this->family($stranger, $strangersChild, 'Obca rodzina');
+
+        $execution = $this->takenTask($doer, $teamId);
+
+        $this->completedSubscriber()->onTaskCompleted(
+            new TaskExecutionCompleted($execution->id(), $doer->id(), new DateTimeImmutable())
+        );
+
+        $this->assertNotNull($this->mailTo($ourAdmin));
+        $this->assertNull($this->mailTo($stranger));
+    }
+
+    private function completedSubscriber(): TaskCompletedEventSubscriber
+    {
+        return new TaskCompletedEventSubscriber(
+            $this->orchestrator,
+            $this->executions,
+            $this->service(TaskTemplateRepositoryInterface::class),
+            $this->service(TeamMembershipRepositoryInterface::class),
+            $this->service(UserRepositoryInterface::class)
+        );
+    }
+
+    private function family(User $admin, User $child, string $name = 'Nasza rodzina'): Uuid
+    {
+        $team = Team::create(
+            Uuid::generate(),
+            TeamName::fromString($name),
+            null,
+            $admin->id()
+        );
+        $this->service(TeamRepositoryInterface::class)->save($team);
+
+        $memberships = $this->service(TeamMembershipRepositoryInterface::class);
+        $memberships->join($team->id(), $admin->id(), TeamRole::admin());
+        $memberships->join($team->id(), $child->id(), TeamRole::member());
+
+        return $team->id();
     }
 
     public function testTheDoerIsToldWhenTheirTaskIsApproved(): void
@@ -127,7 +175,7 @@ class TaskExecutionNotificationTest extends IntegrationTestCase
         $this->assertCount(0, $this->sentMail->getSentNotifications());
     }
 
-    private function takenTask(User $doer): TaskExecution
+    private function takenTask(User $doer, ?Uuid $teamId = null): TaskExecution
     {
         $template = TaskTemplate::create(
             Uuid::generate(),
@@ -135,7 +183,10 @@ class TaskExecutionNotificationTest extends IntegrationTestCase
             'opis',
             Points::fromInt(40),
             Frequency::fromString('daily'),
-            ScheduleConfig::daily()
+            ScheduleConfig::daily(),
+            null,
+            null,
+            $teamId
         );
         $this->service(TaskTemplateRepositoryInterface::class)->save($template);
 

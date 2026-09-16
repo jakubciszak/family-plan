@@ -67,7 +67,7 @@ class NotificationPolicyProviderTest extends TestCase
         $matrix = $this->provider->matrix();
 
         $this->assertSame(
-            ['task_completed', 'task_approved', 'user_welcome', 'account_activation'],
+            ['task_completed', 'task_approved', 'user_welcome', 'account_activation', 'payout_offered', 'streak_at_risk'],
             array_keys($matrix)
         );
     }

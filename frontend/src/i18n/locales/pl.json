@@ -389,13 +389,17 @@
       "task_completed": "Zadanie zgłoszone do akceptacji",
       "task_approved": "Zadanie zaakceptowane",
       "user_welcome": "Powitanie nowego użytkownika",
-      "account_activation": "Aktywacja konta"
+      "account_activation": "Aktywacja konta",
+      "payout_offered": "Kieszonkowe do odebrania",
+      "streak_at_risk": "Seria zaraz przepadnie"
     },
     "hints": {
       "task_completed": "Trafia do administratorów, gdy ktoś zgłosi wykonane zadanie",
       "task_approved": "Trafia do wykonawcy razem z liczbą przyznanych punktów",
       "user_welcome": "Pierwsza wiadomość po założeniu konta",
-      "account_activation": "Link aktywacyjny wysyłany po rejestracji"
+      "account_activation": "Link aktywacyjny wysyłany po rejestracji",
+      "payout_offered": "Dziecko dowiaduje się, że rodzic odłożył dla niego pieniądze i czeka na potwierdzenie odbioru",
+      "streak_at_risk": "Przypomnienie o 18:00 dla kogoś, kto ma trwającą serię, a tego dnia nie zdobył jeszcze punktów"
     }
   },
   "allowance": {

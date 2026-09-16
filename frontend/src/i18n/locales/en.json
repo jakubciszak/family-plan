@@ -389,13 +389,17 @@
       "task_completed": "Task submitted for approval",
       "task_approved": "Task approved",
       "user_welcome": "Welcome for a new user",
-      "account_activation": "Account activation"
+      "account_activation": "Account activation",
+      "payout_offered": "Allowance waiting",
+      "streak_at_risk": "Streak about to break"
     },
     "hints": {
       "task_completed": "Goes to the admins when somebody submits a finished task",
       "task_approved": "Goes to the doer along with the points awarded",
       "user_welcome": "The first message after an account is created",
-      "account_activation": "The activation link sent after registration"
+      "account_activation": "The activation link sent after registration",
+      "payout_offered": "The child learns a parent set money aside and is waiting for them to confirm they got it",
+      "streak_at_risk": "A 6 pm reminder for someone whose streak is running and who has not earned anything today"
     }
   },
   "allowance": {

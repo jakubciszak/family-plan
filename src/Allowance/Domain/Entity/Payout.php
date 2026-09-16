@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Allowance\Domain\Entity;
 
+use App\Allowance\Domain\Event\PayoutOffered;
 use App\Allowance\Domain\ValueObject\Money;
 use App\Allowance\Domain\ValueObject\PayoutStatus;
 use App\Shared\Domain\Clock\ClockInterface;
@@ -19,6 +20,11 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Index(columns: ['user_id', 'status'])]
 class Payout
 {
+    /**
+     * @var list<object>
+     */
+    private array $domainEvents = [];
+
     private function __construct(
         #[ORM\Id]
         #[ORM\Column(type: 'uuid')]
@@ -60,15 +66,38 @@ class Payout
     ): self {
         $amount->assertPositive('A payout');
 
-        return new self(
+        $offeredAt = $clock->now();
+
+        $payout = new self(
             $id,
             $userId,
             $amount->minorUnits(),
             PayoutStatus::AWAITING_CONFIRMATION,
             $note,
             $offeredBy,
-            $clock->now()
+            $offeredAt
         );
+
+        $payout->domainEvents[] = new PayoutOffered(
+            $id,
+            $userId,
+            $amount->minorUnits(),
+            $offeredBy,
+            $offeredAt
+        );
+
+        return $payout;
+    }
+
+    /**
+     * @return list<object>
+     */
+    public function pullDomainEvents(): array
+    {
+        $events = $this->domainEvents;
+        $this->domainEvents = [];
+
+        return $events;
     }
 
     public function confirm(Uuid $transactionId, ClockInterface $clock): void

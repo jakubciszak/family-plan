@@ -20,11 +20,15 @@ if [ "${RESET_DATABASE:-false}" = "true" ]; then
     fi
 fi
 
-echo "Running database migrations..."
-php bin/console doctrine:migrations:migrate --no-interaction --allow-no-migration
+if [ "${RUN_MIGRATIONS:-true}" = "true" ]; then
+    echo "Running database migrations..."
+    php bin/console doctrine:migrations:migrate --no-interaction --allow-no-migration
 
-echo "Creating/updating super admin user..."
-php bin/console app:create-super-admin
+    echo "Creating/updating super admin user..."
+    php bin/console app:create-super-admin
+else
+    echo "Skipping migrations - another container owns them"
+fi
 
-echo "Starting FrankenPHP..."
+echo "Starting..."
 exec "$@"
