@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Allowance\Domain;
 
 use App\Allowance\Domain\Entity\Payout;
+use App\Allowance\Domain\Event\PayoutOffered;
 use App\Allowance\Domain\ValueObject\Money;
 use App\Allowance\Domain\ValueObject\PayoutStatus;
 use App\Shared\Domain\Clock\ClockInterface;
@@ -60,6 +61,43 @@ class PayoutTest extends TestCase
         $this->expectException(\InvalidArgumentException::class);
 
         $this->offer(0);
+    }
+
+    public function testOfferingAPayoutAnnouncesItSoTheOwnerCanBeTold(): void
+    {
+        $id = Uuid::generate();
+        $userId = Uuid::generate();
+        $offeredBy = Uuid::generate();
+
+        $payout = Payout::offer($id, $userId, Money::fromMinorUnits(2500), $offeredBy, null, $this->clock());
+
+        $events = $payout->pullDomainEvents();
+        $this->assertCount(1, $events);
+
+        $event = $events[0];
+        $this->assertInstanceOf(PayoutOffered::class, $event);
+        $this->assertTrue($userId->equals($event->userId()));
+        $this->assertTrue($id->equals($event->payoutId()));
+        $this->assertSame(2500, $event->amount());
+    }
+
+    public function testTheAnnouncementIsHandedOverOnlyOnce(): void
+    {
+        $payout = $this->offer(2000);
+
+        $payout->pullDomainEvents();
+
+        $this->assertSame([], $payout->pullDomainEvents());
+    }
+
+    public function testConfirmingDoesNotAnnounceAnything(): void
+    {
+        $payout = $this->offer(2000);
+        $payout->pullDomainEvents();
+
+        $payout->confirm(Uuid::generate(), $this->clock());
+
+        $this->assertSame([], $payout->pullDomainEvents());
     }
 
     private function offer(int $amount): Payout

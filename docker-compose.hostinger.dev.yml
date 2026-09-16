@@ -44,12 +44,56 @@ services:
       VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
       VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
       VAPID_SUBJECT: ${VAPID_SUBJECT:-mailto:noreply@familyplan.local}
+      MESSENGER_TRANSPORT_DSN: ${MESSENGER_TRANSPORT_DSN:-doctrine://default?auto_setup=1}
+      TZ: ${TZ:-Europe/Warsaw}
     depends_on:
       database:
         condition: service_healthy
     networks:
       - family-plan-dev-network
       - proxy-net
+
+  worker:
+    image: ghcr.io/jakubciszak/family-plan-app:${IMAGE_TAG:-dev}
+    container_name: family-plan-dev-worker
+    restart: unless-stopped
+    working_dir: /app
+    command: ["php", "bin/console", "messenger:consume", "async", "--time-limit=3600", "--memory-limit=128M"]
+    environment: &dev_app_environment
+      APP_ENV: ${APP_ENV:-prod}
+      APP_SECRET: ${APP_SECRET:-CHANGE_ME}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-app}:${POSTGRES_PASSWORD:-!ChangeMe!}@database:5432/${POSTGRES_DB:-app}?serverVersion=16&charset=utf8
+      MESSENGER_TRANSPORT_DSN: ${MESSENGER_TRANSPORT_DSN:-doctrine://default?auto_setup=1}
+      RUN_MIGRATIONS: "false"
+      MAILER_DSN: ${MAILER_DSN:-null://null}
+      MAILER_FROM_EMAIL: ${MAILER_FROM_EMAIL:-noreply@familyplan.local}
+      MAILER_FROM_NAME: ${MAILER_FROM_NAME:-Family Plan (dev)}
+      APP_URL: ${APP_URL:-https://dev.family-plan.srv1201847.hstgr.cloud}
+      FRONTEND_URL: ${FRONTEND_URL:-https://dev.family-plan.srv1201847.hstgr.cloud}
+      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
+      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
+      VAPID_SUBJECT: ${VAPID_SUBJECT:-mailto:noreply@familyplan.local}
+      TZ: ${TZ:-Europe/Warsaw}
+    depends_on:
+      database:
+        condition: service_healthy
+    networks:
+      - family-plan-dev-network
+
+  cron:
+    image: ghcr.io/jakubciszak/family-plan-app:${IMAGE_TAG:-dev}
+    container_name: family-plan-dev-cron
+    restart: unless-stopped
+    working_dir: /app
+    command: ["/usr/local/bin/streak-warnings.sh"]
+    environment:
+      <<: *dev_app_environment
+      STREAK_WARNING_HOUR: ${STREAK_WARNING_HOUR:-18:00}
+    depends_on:
+      database:
+        condition: service_healthy
+    networks:
+      - family-plan-dev-network
 
 volumes:
   database_data_dev:

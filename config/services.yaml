@@ -243,6 +243,8 @@ services:
         tags: ['notification.adapter']
 
     App\Notifications\Infrastructure\Adapter\PushNotificationAdapter:
+        arguments:
+            $commandBus: '@command.bus'
         tags: ['notification.adapter']
 
     App\Notifications\Domain\Port\PushSenderInterface:

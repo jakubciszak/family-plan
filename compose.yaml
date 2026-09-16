@@ -37,6 +37,22 @@ services:
       database:
         condition: service_healthy
 
+  worker:
+    build:
+      context: .
+      dockerfile: docker/frankenphp/Dockerfile
+    working_dir: /app
+    environment:
+      APP_ENV: ${APP_ENV:-dev}
+      RUN_MIGRATIONS: "false"
+      TZ: ${TZ:-Europe/Warsaw}
+    command: ["php", "bin/console", "messenger:consume", "async", "-vv"]
+    volumes:
+      - ./:/app
+    depends_on:
+      database:
+        condition: service_healthy
+
   # Frontend React Application (Standalone)
   frontend:
     build:
