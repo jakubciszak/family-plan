@@ -227,10 +227,12 @@ function App() {
         ...chosenNav
             .map((id) => allNavItems[id])
             .filter((item) => item && (!item.needsManaging || manages)),
+        ...(manages ? [
+            { id: 'push-announcement', icon: 'send', label: t('nav.pushAnnouncement'), shortLabel: t('nav.pushAnnouncementShort') },
+        ] : []),
         ...(isSuperAdmin ? [
             { id: 'status-change-rules', icon: 'rule', label: t('nav.statusChangeRules'), shortLabel: t('nav.statusChangeRulesShort') },
             { id: 'notification-events', icon: 'notifications', label: t('nav.notificationEvents'), shortLabel: t('nav.notificationEventsShort') },
-            { id: 'push-announcement', icon: 'send', label: t('nav.pushAnnouncement'), shortLabel: t('nav.pushAnnouncementShort') },
         ] : []),
     ];
 
@@ -288,7 +290,7 @@ function App() {
                 {currentPage === 'bonus-rules' && <BonusRulesManagement user={user} />}
                 {currentPage === 'status-change-rules' && <StatusChangeRulesManagement user={user} />}
                 {currentPage === 'notification-events' && <NotificationEvents user={user} />}
-                {currentPage === 'push-announcement' && <PushAnnouncement user={user} />}
+                {currentPage === 'push-announcement' && <PushAnnouncement manages={manages} />}
                 {currentPage === 'account' && <Account user={user} points={weekPoints} />}
                 {currentPage === 'settings' && <UserSettings user={user} />}
             </main>

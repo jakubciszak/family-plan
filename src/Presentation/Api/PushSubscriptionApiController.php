@@ -13,6 +13,7 @@ use App\Presentation\Api\Dto\Push\SendPushAnnouncementRequest;
 use App\Shared\Domain\Clock\ClockInterface;
 use App\Shared\Domain\ValueObject\Uuid;
 use App\UserManagement\Domain\Entity\User;
+use App\TeamManagement\Application\Service\TeamMates;
 use App\UserManagement\Domain\Repository\UserRepositoryInterface;
 use App\UserManagement\Domain\ValueObject\Email;
 use OpenApi\Attributes as OA;
@@ -34,6 +35,7 @@ class PushSubscriptionApiController extends AbstractController
         private readonly UserRepositoryInterface $userRepository,
         private readonly NotificationFacade $notifications,
         private readonly PushAnnouncements $announcements,
+        private readonly TeamMates $teamMates,
         private readonly ClockInterface $clock,
         private readonly string $vapidPublicKey
     ) {
@@ -140,18 +142,24 @@ class PushSubscriptionApiController extends AbstractController
     }
 
     #[Route('/audience', name: 'audience', methods: ['GET'])]
-    #[IsGranted('ROLE_ADMIN')]
-    #[OA\Get(path: '/api/push/audience', summary: 'Who an admin can reach with a push notification', tags: ['Push notifications'])]
-    #[OA\Response(response: 200, description: 'Every user with the number of devices registered for push')]
+    #[OA\Get(path: '/api/push/audience', summary: 'Who the caller can reach with a push notification', tags: ['Push notifications'])]
+    #[OA\Response(response: 200, description: 'People the caller may write to, with the number of devices each has')]
+    #[OA\Response(response: 403, description: 'The caller administers no team')]
     public function audience(): JsonResponse
     {
+        $caller = $this->caller();
+
+        if (!$this->maySendAnnouncements($caller)) {
+            return $this->json(['error' => 'Only a team admin can send notifications'], Response::HTTP_FORBIDDEN);
+        }
+
         $users = array_map(
             fn (User $user) => [
                 'id' => $user->id()->value(),
                 'name' => $user->name(),
                 'devices' => $this->subscriptions->countForUser($user->id()),
             ],
-            $this->userRepository->findAll()
+            $this->audienceOf($caller)
         );
 
         return $this->json([
@@ -161,38 +169,92 @@ class PushSubscriptionApiController extends AbstractController
     }
 
     #[Route('/announcements', name: 'announce', methods: ['POST'])]
-    #[IsGranted('ROLE_ADMIN')]
-    #[OA\Post(path: '/api/push/announcements', summary: 'Send a push notification an admin has written', tags: ['Push notifications'])]
+    #[OA\Post(path: '/api/push/announcements', summary: 'Send a push notification the caller has written', tags: ['Push notifications'])]
     #[OA\Response(response: 202, description: 'Notification handed over to the push service, with the number of people it goes to')]
-    #[OA\Response(response: 404, description: 'No such user')]
+    #[OA\Response(response: 403, description: 'The caller administers no team')]
+    #[OA\Response(response: 404, description: 'Nobody the caller can write to has that id')]
     #[OA\Response(response: 409, description: 'Nobody among the intended recipients has a device registered')]
     public function announce(#[MapRequestPayload] SendPushAnnouncementRequest $request): JsonResponse
     {
-        if ($request->userId === null) {
-            $recipients = $this->announcements->toEveryone($request->message, $request->title);
+        $caller = $this->caller();
 
-            return $recipients === 0
-                ? $this->json(
-                    ['error' => 'No device is registered for push notifications'],
-                    Response::HTTP_CONFLICT
-                )
-                : $this->json(['recipients' => $recipients], Response::HTTP_ACCEPTED);
+        if (!$this->maySendAnnouncements($caller)) {
+            return $this->json(['error' => 'Only a team admin can send notifications'], Response::HTTP_FORBIDDEN);
         }
 
-        $recipient = $this->userRepository->findById(Uuid::fromString($request->userId));
+        $recipients = $this->recipientsOf($caller, $request->userId);
 
-        if ($recipient === null) {
+        if ($recipients === null) {
             return $this->json(['error' => 'User not found'], Response::HTTP_NOT_FOUND);
         }
 
-        if (!$this->announcements->toOne($recipient->id(), $request->message, $request->title)) {
+        $reached = $this->announcements->to($recipients, $request->message, $request->title);
+
+        if ($reached === 0) {
             return $this->json(
                 ['error' => 'No device is registered for push notifications'],
                 Response::HTTP_CONFLICT
             );
         }
 
-        return $this->json(['recipients' => 1], Response::HTTP_ACCEPTED);
+        return $this->json(['recipients' => $reached], Response::HTTP_ACCEPTED);
+    }
+
+    /**
+     * @return Uuid[]|null
+     */
+    private function recipientsOf(User $caller, ?string $userId): ?array
+    {
+        if ($userId === null) {
+            return array_map(static fn (User $user) => $user->id(), $this->audienceOf($caller));
+        }
+
+        $recipient = $this->userRepository->findById(Uuid::fromString($userId));
+
+        if ($recipient === null || !$this->mayWriteTo($caller, $recipient)) {
+            return null;
+        }
+
+        return [$recipient->id()];
+    }
+
+    /**
+     * @return User[]
+     */
+    private function audienceOf(User $caller): array
+    {
+        if ($caller->isAdmin()) {
+            return array_values(array_filter(
+                $this->userRepository->findAll(),
+                static fn (User $user) => !$user->id()->equals($caller->id())
+            ));
+        }
+
+        return array_values(array_filter(array_map(
+            fn (Uuid $userId) => $this->userRepository->findById($userId),
+            $this->teamMates->administeredBy($caller->id())
+        )));
+    }
+
+    private function mayWriteTo(User $caller, User $recipient): bool
+    {
+        if ($recipient->id()->equals($caller->id())) {
+            return false;
+        }
+
+        return $caller->isAdmin() || $this->teamMates->isAdministeredBy($recipient->id(), $caller->id());
+    }
+
+    private function maySendAnnouncements(User $caller): bool
+    {
+        return $caller->isAdmin() || $this->teamMates->administersAnyTeam($caller->id());
+    }
+
+    private function caller(): User
+    {
+        return $this->userRepository->findByEmail(
+            Email::fromString($this->getUser()->getUserIdentifier())
+        );
     }
 
     private function present(PushSubscription $subscription): array

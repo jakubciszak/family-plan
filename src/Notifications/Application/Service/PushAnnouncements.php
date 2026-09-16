@@ -17,37 +17,34 @@ final readonly class PushAnnouncements
     ) {
     }
 
-    public function toEveryone(string $message, ?string $title = null): int
+    /**
+     * @param iterable<Uuid> $userIds
+     */
+    public function to(iterable $userIds, string $message, ?string $title = null): int
     {
         $reached = 0;
 
-        foreach ($this->subscriptions->usersReachableByPush() as $userId) {
-            $this->push($userId, $message, $title);
+        foreach ($userIds as $userId) {
+            if (!$this->reachable($userId)) {
+                continue;
+            }
+
+            $this->notifications->sendPush(
+                $userId->value(),
+                $message,
+                $this->titleOrDefault($title),
+                ['tag' => 'announcement']
+            );
+
             ++$reached;
         }
 
         return $reached;
     }
 
-    public function toOne(Uuid $userId, string $message, ?string $title = null): bool
+    public function reachable(Uuid $userId): bool
     {
-        if ($this->subscriptions->countForUser($userId) === 0) {
-            return false;
-        }
-
-        $this->push($userId, $message, $title);
-
-        return true;
-    }
-
-    private function push(Uuid $userId, string $message, ?string $title): void
-    {
-        $this->notifications->sendPush(
-            $userId->value(),
-            $message,
-            $this->titleOrDefault($title),
-            ['tag' => 'announcement']
-        );
+        return $this->subscriptions->countForUser($userId) > 0;
     }
 
     private function titleOrDefault(?string $title): string

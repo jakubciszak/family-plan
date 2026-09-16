@@ -57,8 +57,14 @@ ustawiony.
 
 ## Powiadomienie napisane ręcznie
 
-Poza zdarzeniami aplikacji admin może napisać własną wiadomość i wysłać ją sam — do wszystkich
-albo do jednej osoby. Służy do tego zakładka „Wyślij powiadomienie", widoczna tylko dla admina.
+Poza zdarzeniami aplikacji admin zespołu może napisać własną wiadomość i wysłać ją sam — do całego
+zespołu albo do jednej osoby. Służy do tego zakładka „Wyślij powiadomienie", widoczna dla każdego,
+kto administruje jakimkolwiek zespołem.
+
+Krąg odbiorców to członkowie zespołów, które nadawca administruje, **bez niego samego**: wysyłka do
+wszystkich nie wraca na własny telefon, a do siebie służy próbne powiadomienie w ustawieniach.
+Super admin instancji sięga wszystkich użytkowników. Próba napisania do kogoś spoza tego kręgu
+kończy się 404 — tak samo jak do konta, którego nie ma.
 
 Taka wiadomość omija obie bramki polityk: nie jest zdarzeniem aplikacji, więc nie ma polityki
 kanałów ani przełącznika kanału w ustawieniach użytkownika. Zostaje jedyna bramka, której obejść
@@ -128,8 +134,8 @@ ten przypadek i zamiast martwego przełącznika pokazuje, co trzeba zrobić.
 | `POST` | `/api/push/subscriptions` | Zapisanie urządzenia; ponowne zapisanie tego samego odświeża je |
 | `DELETE` | `/api/push/subscriptions?endpoint=…` | Wypisanie urządzenia |
 | `POST` | `/api/push/test` | Próbne powiadomienie do siebie; 409, gdy nie ma żadnego urządzenia |
-| `GET` | `/api/push/audience` | Domownicy z liczbą urządzeń — kogo admin może dosięgnąć (tylko admin) |
-| `POST` | `/api/push/announcements` | Wiadomość napisana przez admina; bez `userId` idzie do wszystkich, 409 gdy nikt nie ma urządzenia (tylko admin) |
+| `GET` | `/api/push/audience` | Kogo nadawca może dosięgnąć, z liczbą urządzeń; 403, gdy nie administruje żadnym zespołem |
+| `POST` | `/api/push/announcements` | Wiadomość napisana przez admina zespołu; bez `userId` idzie do całego kręgu, 404 poza kręgiem, 409 gdy nikt nie ma urządzenia |
 
 Endpoint jest unikalny w całej tabeli, nie na użytkownika. To celowe: jeden telefon to jedna
 subskrypcja, a gdy zaloguje się na nim ktoś inny i włączy powiadomienia, urządzenie przechodzi do
