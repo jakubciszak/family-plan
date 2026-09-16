@@ -18,7 +18,9 @@
     "notificationEvents": "Notifications",
     "notificationEventsShort": "Notifs",
     "allowance": "Pocket money",
-    "allowanceShort": "Money"
+    "allowanceShort": "Money",
+    "pushAnnouncement": "Send a notification",
+    "pushAnnouncementShort": "Send"
   },
   "auth": {
     "login": "Login",
@@ -565,5 +567,24 @@
     "notConfigured": "Push notifications are not configured on the server.",
     "iosInstall": "On iPhone, add the app to your home screen first — Safari allows notifications only then.",
     "failed": "The notification setting could not be changed."
+  },
+  "pushAnnouncement": {
+    "title": "Send a notification",
+    "description": "Write a message and it goes out as a push notification to the household.",
+    "recipient": "Who it goes to",
+    "everyone": "Everyone",
+    "personWithoutDevice": "{{name}} — no device",
+    "reachable": "Notifications switched on: {{count}}",
+    "messageTitle": "Title",
+    "messageTitleHint": "Without a title they see \"Family Plan\"",
+    "message": "Message",
+    "send": "Send",
+    "sending": "Sending…",
+    "sent": "Sent to {{count}} people",
+    "nobodyReachable": "Nobody you picked has notifications switched on any device.",
+    "sendError": "The notification could not be sent.",
+    "loadError": "The household could not be loaded.",
+    "accessDeniedTitle": "Admins only",
+    "accessDeniedBody": "Notifications are sent by an admin."
   }
 }

@@ -5,11 +5,14 @@ declare(strict_types=1);
 namespace App\Presentation\Api;
 
 use App\Notifications\Application\Service\NotificationFacade;
+use App\Notifications\Application\Service\PushAnnouncements;
 use App\Notifications\Domain\Entity\PushSubscription;
 use App\Notifications\Domain\Repository\PushSubscriptionRepositoryInterface;
 use App\Presentation\Api\Dto\Push\RegisterPushSubscriptionRequest;
+use App\Presentation\Api\Dto\Push\SendPushAnnouncementRequest;
 use App\Shared\Domain\Clock\ClockInterface;
 use App\Shared\Domain\ValueObject\Uuid;
+use App\UserManagement\Domain\Entity\User;
 use App\UserManagement\Domain\Repository\UserRepositoryInterface;
 use App\UserManagement\Domain\ValueObject\Email;
 use OpenApi\Attributes as OA;
@@ -30,6 +33,7 @@ class PushSubscriptionApiController extends AbstractController
         private readonly PushSubscriptionRepositoryInterface $subscriptions,
         private readonly UserRepositoryInterface $userRepository,
         private readonly NotificationFacade $notifications,
+        private readonly PushAnnouncements $announcements,
         private readonly ClockInterface $clock,
         private readonly string $vapidPublicKey
     ) {
@@ -133,6 +137,62 @@ class PushSubscriptionApiController extends AbstractController
         );
 
         return $this->json(null, Response::HTTP_ACCEPTED);
+    }
+
+    #[Route('/audience', name: 'audience', methods: ['GET'])]
+    #[IsGranted('ROLE_ADMIN')]
+    #[OA\Get(path: '/api/push/audience', summary: 'Who an admin can reach with a push notification', tags: ['Push notifications'])]
+    #[OA\Response(response: 200, description: 'Every user with the number of devices registered for push')]
+    public function audience(): JsonResponse
+    {
+        $users = array_map(
+            fn (User $user) => [
+                'id' => $user->id()->value(),
+                'name' => $user->name(),
+                'devices' => $this->subscriptions->countForUser($user->id()),
+            ],
+            $this->userRepository->findAll()
+        );
+
+        return $this->json([
+            'users' => $users,
+            'reachable' => count(array_filter($users, static fn (array $user) => $user['devices'] > 0)),
+        ]);
+    }
+
+    #[Route('/announcements', name: 'announce', methods: ['POST'])]
+    #[IsGranted('ROLE_ADMIN')]
+    #[OA\Post(path: '/api/push/announcements', summary: 'Send a push notification an admin has written', tags: ['Push notifications'])]
+    #[OA\Response(response: 202, description: 'Notification handed over to the push service, with the number of people it goes to')]
+    #[OA\Response(response: 404, description: 'No such user')]
+    #[OA\Response(response: 409, description: 'Nobody among the intended recipients has a device registered')]
+    public function announce(#[MapRequestPayload] SendPushAnnouncementRequest $request): JsonResponse
+    {
+        if ($request->userId === null) {
+            $recipients = $this->announcements->toEveryone($request->message, $request->title);
+
+            return $recipients === 0
+                ? $this->json(
+                    ['error' => 'No device is registered for push notifications'],
+                    Response::HTTP_CONFLICT
+                )
+                : $this->json(['recipients' => $recipients], Response::HTTP_ACCEPTED);
+        }
+
+        $recipient = $this->userRepository->findById(Uuid::fromString($request->userId));
+
+        if ($recipient === null) {
+            return $this->json(['error' => 'User not found'], Response::HTTP_NOT_FOUND);
+        }
+
+        if (!$this->announcements->toOne($recipient->id(), $request->message, $request->title)) {
+            return $this->json(
+                ['error' => 'No device is registered for push notifications'],
+                Response::HTTP_CONFLICT
+            );
+        }
+
+        return $this->json(['recipients' => 1], Response::HTTP_ACCEPTED);
     }
 
     private function present(PushSubscription $subscription): array
