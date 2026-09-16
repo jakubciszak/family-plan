@@ -37,7 +37,7 @@ class PushAnnouncementsTest extends TestCase
         $this->giveDevice($mum, 'laptop');
         $this->giveDevice($child, 'tablet');
 
-        $reached = $this->announcements->toEveryone('Obiad za dziesięć minut');
+        $reached = $this->announcements->to([$mum, $child], 'Obiad za dziesięć minut');
 
         $this->assertSame(2, $reached);
         $this->assertSame(
@@ -46,30 +46,37 @@ class PushAnnouncementsTest extends TestCase
         );
     }
 
-    public function testNobodyIsReachedWhenNoDeviceIsRegistered(): void
-    {
-        $this->assertSame(0, $this->announcements->toEveryone('Halo'));
-        $this->assertSame([], $this->adapter->getSentNotifications());
-    }
-
-    public function testOnePersonIsReached(): void
+    public function testSomebodyWithoutADeviceIsSkipped(): void
     {
         $child = Uuid::generate();
         $this->giveDevice($child, 'tablet');
 
-        $this->assertTrue($this->announcements->toOne($child, 'Twoja kolej na śmieci', 'Przypomnienie'));
+        $reached = $this->announcements->to([Uuid::generate(), $child], 'Obiad');
+
+        $this->assertSame(1, $reached);
+        $this->assertSame(
+            [$child->value()],
+            array_column($this->adapter->getSentNotifications(), 'recipient')
+        );
+    }
+
+    public function testNobodyIsReachedWhenNoDeviceIsRegistered(): void
+    {
+        $this->assertSame(0, $this->announcements->to([Uuid::generate()], 'Halo'));
+        $this->assertSame([], $this->adapter->getSentNotifications());
+    }
+
+    public function testMessageCarriesItsTitleAndChannel(): void
+    {
+        $child = Uuid::generate();
+        $this->giveDevice($child, 'tablet');
+
+        $this->announcements->to([$child], 'Twoja kolej na śmieci', 'Przypomnienie');
 
         $sent = $this->adapter->getSentNotifications();
         $this->assertCount(1, $sent);
-        $this->assertSame($child->value(), $sent[0]['recipient']);
         $this->assertSame('Przypomnienie', $sent[0]['subject']);
         $this->assertSame('push', $sent[0]['channel']);
-    }
-
-    public function testPersonWithoutADeviceIsNotReached(): void
-    {
-        $this->assertFalse($this->announcements->toOne(Uuid::generate(), 'Halo'));
-        $this->assertSame([], $this->adapter->getSentNotifications());
     }
 
     public function testMessageWithoutATitleFallsBackToTheApplicationName(): void
@@ -77,7 +84,7 @@ class PushAnnouncementsTest extends TestCase
         $child = Uuid::generate();
         $this->giveDevice($child, 'tablet');
 
-        $this->announcements->toOne($child, 'Halo', '   ');
+        $this->announcements->to([$child], 'Halo', '   ');
 
         $this->assertSame('Family Plan', $this->adapter->getSentNotifications()[0]['subject']);
     }

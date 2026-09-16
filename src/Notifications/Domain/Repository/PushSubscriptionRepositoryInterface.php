@@ -22,8 +22,4 @@ interface PushSubscriptionRepositoryInterface
 
     public function countForUser(Uuid $userId): int;
 
-    /**
-     * @return Uuid[]
-     */
-    public function usersReachableByPush(): array;
 }

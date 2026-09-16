@@ -6,7 +6,7 @@ import '../styles/push-announcement.css';
 
 const EVERYONE = 'everyone';
 
-function PushAnnouncement({ user }) {
+function PushAnnouncement({ manages }) {
     const { t } = useTranslation();
     const [people, setPeople] = useState([]);
     const [recipient, setRecipient] = useState(EVERYONE);
@@ -32,12 +32,12 @@ function PushAnnouncement({ user }) {
     }, [t]);
 
     useEffect(() => {
-        if (user?.role === 'ROLE_ADMIN') {
+        if (manages) {
             load();
         } else {
             setLoading(false);
         }
-    }, [user, load]);
+    }, [manages, load]);
 
     const reachable = people.filter((person) => person.devices > 0).length;
 
@@ -69,7 +69,7 @@ function PushAnnouncement({ user }) {
         }
     };
 
-    if (user?.role !== 'ROLE_ADMIN') {
+    if (!manages) {
         return (
             <div className="access-denied">
                 <Icon name="lock" size={48} />

@@ -55,15 +55,4 @@ final readonly class DoctrinePushSubscriptionRepository implements PushSubscript
             ->getQuery()
             ->getSingleScalarResult();
     }
-
-    public function usersReachableByPush(): array
-    {
-        $users = [];
-
-        foreach ($this->entityManager->getRepository(PushSubscription::class)->findAll() as $subscription) {
-            $users[$subscription->userId()->value()] = $subscription->userId();
-        }
-
-        return array_values($users);
-    }
 }
