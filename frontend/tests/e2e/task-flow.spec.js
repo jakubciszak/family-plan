@@ -265,6 +265,26 @@ test.describe('Week calendar', () => {
     await expect(week.locator('.week-back-to-now')).toHaveCount(0);
   });
 
+  test('a broken streak is not announced', async ({ page }) => {
+    await page.route('**/api/points/week*', async route => {
+      const week = mockApiResponses.weekWithStreak;
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          ...week,
+          days: week.days.map(day => ({ ...day, inStreak: false })),
+          streak: { ...week.streak, length: 0 }
+        })
+      });
+    });
+
+    await page.goto('/');
+    await page.waitForSelector('.task-list-container');
+
+    await expect(page.getByTestId('week-streak')).toHaveCount(0);
+  });
+
   test('without a streak rule only the days are shown', async ({ page }) => {
     await page.route('**/api/points/week*', async route => {
       await route.fulfill({

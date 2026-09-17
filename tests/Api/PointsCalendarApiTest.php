@@ -88,16 +88,16 @@ class PointsCalendarApiTest extends ApiTestCase
         $teamId = $this->teamOfCurrentUser();
         $this->streakRule($teamId, requiredDays: 3, pointsPerDay: 20);
 
-        $monday = $this->mondayOfThisWeek();
-        $this->earned(25, $monday);
-        $this->earned(25, $monday->modify('+1 day'));
-        $this->earned(25, $monday->modify('+2 days'));
+        $monday = $this->mondayOfLastWeek();
+        $this->earned(25, $monday->modify('+4 days'));
+        $this->earned(25, $monday->modify('+5 days'));
+        $this->earned(25, $monday->modify('+6 days'));
 
-        $week = $this->getJson('/api/points/week');
+        $week = $this->getJson('/api/points/week?weekStart=' . $monday->format('Y-m-d'));
 
         $this->assertSame(3, $week['streak']['length']);
         $this->assertTrue($week['streak']['met']);
-        $this->assertSame([true, true, true, false, false, false, false], array_column($week['days'], 'inStreak'));
+        $this->assertSame([false, false, false, false, true, true, true], array_column($week['days'], 'inStreak'));
     }
 
     public function testADayBelowTheThresholdBreaksTheRun(): void
@@ -105,20 +105,41 @@ class PointsCalendarApiTest extends ApiTestCase
         $teamId = $this->teamOfCurrentUser();
         $this->streakRule($teamId, requiredDays: 3, pointsPerDay: 20);
 
-        $monday = $this->mondayOfThisWeek();
-        $this->earned(25, $monday);
-        $this->earned(5, $monday->modify('+1 day'));
-        $this->earned(25, $monday->modify('+2 days'));
+        $monday = $this->mondayOfLastWeek();
+        $this->earned(25, $monday->modify('+4 days'));
+        $this->earned(5, $monday->modify('+5 days'));
+        $this->earned(25, $monday->modify('+6 days'));
 
-        $week = $this->getJson('/api/points/week');
+        $week = $this->getJson('/api/points/week?weekStart=' . $monday->format('Y-m-d'));
 
         $this->assertSame(1, $week['streak']['length']);
         $this->assertFalse($week['streak']['met']);
     }
 
+    public function testARunThatEndedDaysAgoIsNoStreak(): void
+    {
+        $teamId = $this->teamOfCurrentUser();
+        $this->streakRule($teamId, requiredDays: 3, pointsPerDay: 20);
+
+        $monday = $this->mondayOfLastWeek();
+        $this->earned(25, $monday);
+        $this->earned(25, $monday->modify('+1 day'));
+
+        $week = $this->getJson('/api/points/week?weekStart=' . $monday->format('Y-m-d'));
+
+        $this->assertSame(0, $week['streak']['length']);
+        $this->assertFalse($week['streak']['met']);
+        $this->assertSame(array_fill(0, 7, false), array_column($week['days'], 'inStreak'));
+    }
+
     private function mondayOfThisWeek(): DateTimeImmutable
     {
         return (new DateTimeImmutable())->modify('monday this week')->setTime(9, 0);
+    }
+
+    private function mondayOfLastWeek(): DateTimeImmutable
+    {
+        return $this->mondayOfThisWeek()->modify('-7 days');
     }
 
     private function teamOfCurrentUser(): string

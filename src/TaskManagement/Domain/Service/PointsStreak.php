@@ -63,4 +63,21 @@ final class PointsStreak
 
         return $run;
     }
+
+    /**
+     * @param array<string, int> $perDay
+     * @return string[] the run that is still alive on the given day, empty when it has been broken
+     */
+    public static function aliveOn(array $perDay, string $asOf, int $pointsPerDay = 1): array
+    {
+        $run = self::current($perDay, $pointsPerDay);
+
+        if ($run === []) {
+            return [];
+        }
+
+        $last = DailyPoints::day((string) end($run));
+
+        return $last->diff(DailyPoints::day($asOf))->days <= 1 ? $run : [];
+    }
 }

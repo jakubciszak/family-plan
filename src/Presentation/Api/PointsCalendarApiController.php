@@ -143,8 +143,9 @@ class PointsCalendarApiController extends AbstractController
         $counted = $rule === null
             ? []
             : $this->streakPoints->perDay($rule->config(), $userId, $since, $monday->modify('+7 days'));
-        $streakDays = $rule === null ? [] : PointsStreak::current($counted, $pointsPerDay);
         $today = (new DateTimeImmutable())->format('Y-m-d');
+        $lastDay = min($today, $monday->modify('+6 days')->format('Y-m-d'));
+        $streakDays = $rule === null ? [] : PointsStreak::aliveOn($counted, $lastDay, $pointsPerDay);
 
         $days = [];
         for ($offset = 0; $offset < 7; $offset++) {

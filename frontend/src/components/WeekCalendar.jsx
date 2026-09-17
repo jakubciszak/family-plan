@@ -203,7 +203,7 @@ function WeekCalendar({ refreshToken, userId, title }) {
                 </div>
             )}
 
-            {streak && (
+            {streak && streak.length > 0 && (
                 <p className="week-streak" data-testid="week-streak">
                     <Icon name="streak" size={20} />
                     <span>
