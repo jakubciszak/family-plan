@@ -61,9 +61,7 @@ class BonusPointsEvaluator
             return false;
         }
 
-        $perDay = $this->streakDays($config, $userId, $requiredDays);
-
-        return PointsStreak::longest($perDay, $config->pointsPerDay() ?? 1) >= $requiredDays;
+        return count($this->liveStreak($config, $userId, $requiredDays)) >= $requiredDays;
     }
 
     private function evaluateMonthlyTaskCount(BonusPointsRule $rule, Uuid $userId): bool
@@ -106,12 +104,21 @@ class BonusPointsEvaluator
         $config = $rule->config();
         $requiredDays = $config->requiredDays() ?? 2;
 
-        $streak = PointsStreak::current(
-            $this->streakDays($config, $userId, $requiredDays),
-            $config->pointsPerDay() ?? 1
-        );
+        $streak = $this->liveStreak($config, $userId, $requiredDays);
 
         return $streak === [] ? $this->now()->format('Y-m-d') : (string) reset($streak);
+    }
+
+    /**
+     * @return string[] the run going on right now, empty when it has been broken
+     */
+    private function liveStreak(RuleConfig $config, Uuid $userId, int $requiredDays): array
+    {
+        return PointsStreak::aliveOn(
+            $this->streakDays($config, $userId, $requiredDays),
+            $this->now()->format('Y-m-d'),
+            $config->pointsPerDay() ?? 1
+        );
     }
 
     /**

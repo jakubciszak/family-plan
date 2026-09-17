@@ -79,6 +79,29 @@ final readonly class DoctrineEntryRepository implements EntryRepositoryInterface
         return $perDay;
     }
 
+    public function between(Uuid $userId, DateTimeImmutable $from, DateTimeImmutable $to, array $kinds): array
+    {
+        if ($kinds === []) {
+            return [];
+        }
+
+        return $this->entityManager->createQueryBuilder()
+            ->select('e')
+            ->from(Entry::class, 'e')
+            ->join(Account::class, 'a', 'WITH', 'a.id = e.accountId')
+            ->where('a.userId = :userId')
+            ->andWhere('a.kind IN (:kinds)')
+            ->andWhere('e.bookedAt >= :from')
+            ->andWhere('e.bookedAt < :to')
+            ->orderBy('e.bookedAt', 'ASC')
+            ->setParameter('userId', $userId)
+            ->setParameter('kinds', array_map(static fn (AccountKind $kind) => $kind->value, $kinds))
+            ->setParameter('from', $from)
+            ->setParameter('to', $to)
+            ->getQuery()
+            ->getResult();
+    }
+
     public function existsFor(Uuid $accountId, Uuid $reference, string $periodKey): bool
     {
         $count = $this->entityManager->createQueryBuilder()

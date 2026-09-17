@@ -449,6 +449,42 @@ class TaskExecutionApiTest extends ApiTestCase
         $this->assertSame(5, $week['bonusTotal']);
     }
 
+    public function testADayNamesTheRuleThatPaidTheBonus(): void
+    {
+        $context = $this->teamWithMember();
+        $type = $this->defineType($context['teamId'], ['type' => 'unlimited'], 16);
+
+        $this->assertJsonResponse(
+            $this->postJson('/api/bonus-rules', [
+                'teamId' => $context['teamId'],
+                'name' => 'Minimum 15 punktow w tygodniu',
+                'description' => 'Zbierz 15 punktow za zadania w ciagu tygodnia',
+                'bonusPoints' => 5,
+                'ruleType' => 'weekly_points_sum',
+                'ruleConfig' => ['requiredPoints' => 15, 'accounts' => ['tasks']],
+            ]),
+            Response::HTTP_CREATED
+        );
+
+        $this->loginAs($context['member']);
+        $taken = $this->assertJsonResponse(
+            $this->postJson("/api/task-templates/{$type['id']}/take", []),
+            Response::HTTP_CREATED
+        );
+        $this->postJson("/api/task-executions/{$taken['id']}/complete", []);
+
+        $this->loginAs($context['admin']);
+        $this->postJson("/api/task-executions/{$taken['id']}/approve", []);
+
+        $this->loginAs($context['member']);
+        $day = $this->getJson('/api/points/day?date=' . (new \DateTimeImmutable())->format('Y-m-d'));
+
+        $this->assertCount(1, $day['bonuses']);
+        $this->assertSame(5, $day['bonuses'][0]['points']);
+        $this->assertStringContainsString('Minimum 15 punktow w tygodniu', $day['bonuses'][0]['name']);
+        $this->assertNotNull($day['bonuses'][0]['ruleId']);
+    }
+
     public function testOpeningADayListsWhatWasDoneAndWhatItEarned(): void
     {
         $context = $this->teamWithMember();

@@ -45,6 +45,15 @@ final class InMemoryEntryRepository implements EntryRepositoryInterface
         return $perDay;
     }
 
+    public function between(Uuid $userId, DateTimeImmutable $from, DateTimeImmutable $to, array $kinds): array
+    {
+        $entries = array_values($this->matching($userId, $from, $to, $kinds));
+
+        usort($entries, static fn (Entry $a, Entry $b) => $a->bookedAt() <=> $b->bookedAt());
+
+        return $entries;
+    }
+
     public function existsFor(Uuid $accountId, Uuid $reference, string $periodKey): bool
     {
         foreach ($this->entries as $entry) {

@@ -26,5 +26,11 @@ interface EntryRepositoryInterface
      */
     public function perDayBetween(Uuid $userId, DateTimeImmutable $from, DateTimeImmutable $to, array $kinds): array;
 
+    /**
+     * @param AccountKind[] $kinds
+     * @return Entry[] what was booked, oldest first
+     */
+    public function between(Uuid $userId, DateTimeImmutable $from, DateTimeImmutable $to, array $kinds): array;
+
     public function existsFor(Uuid $accountId, Uuid $reference, string $periodKey): bool;
 }

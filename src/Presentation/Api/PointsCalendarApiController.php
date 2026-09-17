@@ -197,7 +197,7 @@ class PointsCalendarApiController extends AbstractController
 
         usort($done, static fn ($a, $b) => $a->earnedOn() <=> $b->earnedOn());
 
-        $bonus = $this->ledger->perDayBetween($userId, $day, $next, [AccountKind::BONUSES]);
+        $bonuses = $this->ledger->between($userId, $day, $next, [AccountKind::BONUSES]);
 
         return $this->json([
             'date' => $day->format('Y-m-d'),
@@ -209,7 +209,12 @@ class PointsCalendarApiController extends AbstractController
                 'earnedOn' => $execution->earnedOn()->format('c'),
             ], $done),
             'total' => array_sum(array_map(static fn ($e) => $e->points()?->value() ?? 0, $done)),
-            'bonus' => $bonus[$day->format('Y-m-d')] ?? 0,
+            'bonus' => array_sum(array_map(static fn ($entry) => $entry->amount(), $bonuses)),
+            'bonuses' => array_map(static fn ($entry) => [
+                'points' => $entry->amount(),
+                'name' => $entry->description(),
+                'ruleId' => $entry->reference(),
+            ], $bonuses),
         ]);
     }
 

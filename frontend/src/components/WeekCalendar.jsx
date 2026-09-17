@@ -190,14 +190,16 @@ function WeekCalendar({ refreshToken, userId, title }) {
                                     </span>
                                 </li>
                             ))}
-                            {dayDetail.bonus > 0 && (
-                                <li className="week-day-task--bonus">
-                                    <span className="week-day-task-name">{t('week.bonusLabel')}</span>
+                            {(dayDetail.bonuses ?? []).map((bonus, index) => (
+                                <li key={bonus.ruleId || index} className="week-day-task--bonus">
+                                    <span className="week-day-task-name">
+                                        {bonus.name || t('week.bonusLabel')}
+                                    </span>
                                     <span className="week-day-task-points">
-                                        {t('week.bonus', { points: dayDetail.bonus })}
+                                        {t('week.bonus', { points: bonus.points })}
                                     </span>
                                 </li>
-                            )}
+                            ))}
                         </ul>
                     )}
                 </div>

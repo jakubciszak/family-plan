@@ -79,6 +79,15 @@ final readonly class PointsLedger
     }
 
     /**
+     * @param AccountKind[] $kinds
+     * @return Entry[]
+     */
+    public function between(Uuid $userId, DateTimeImmutable $from, DateTimeImmutable $to, array $kinds = []): array
+    {
+        return $this->entries->between($userId, $from, $to, $kinds ?: AccountKind::all());
+    }
+
+    /**
      * @return array<string, int> balance per account kind
      */
     public function balances(Uuid $userId): array

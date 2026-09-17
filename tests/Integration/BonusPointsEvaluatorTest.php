@@ -62,6 +62,34 @@ class BonusPointsEvaluatorTest extends IntegrationTestCase
         $this->assertFalse($this->evaluator->isRuleMet($rule, $doer->id()));
     }
 
+    public function testAStreakThatBrokeDoesNotMeetTheRuleAgain(): void
+    {
+        $doer = $this->user('Dziecko');
+        $template = $this->taskType();
+
+        foreach (['-5 days', '-4 days', '-3 days', '-1 day', 'now'] as $day) {
+            $this->approvedRun($doer, $template, $day);
+        }
+
+        $rule = $this->consecutiveDaysRule($template->id(), 3);
+
+        $this->assertFalse($this->evaluator->isRuleMet($rule, $doer->id()));
+    }
+
+    public function testADayShortOfTheThresholdBreaksTheRun(): void
+    {
+        $doer = $this->user('Dziecko');
+        $template = $this->taskType();
+
+        foreach (['-4 days', '-3 days', '-1 day', 'now'] as $day) {
+            $this->approvedRun($doer, $template, $day);
+        }
+
+        $rule = $this->consecutiveDaysRule($template->id(), 4);
+
+        $this->assertFalse($this->evaluator->isRuleMet($rule, $doer->id()));
+    }
+
     public function testRunsOfSomebodyElseDoNotCount(): void
     {
         $doer = $this->user('Dziecko');
