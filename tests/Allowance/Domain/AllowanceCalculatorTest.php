@@ -27,7 +27,7 @@ class AllowanceCalculatorTest extends TestCase
             ['tasks' => 60, 'bonuses' => 25]
         );
 
-        $this->assertSame(1450, $settlement->total()->minorUnits());
+        $this->assertSame(450, $settlement->total()->minorUnits());
         $this->assertSame(85, $settlement->points());
         $this->assertCount(2, $settlement->lines());
     }
@@ -44,6 +44,29 @@ class AllowanceCalculatorTest extends TestCase
         $this->assertSame(0, $settlement->total()->minorUnits());
         $this->assertFalse($lines[0]->reachedMinimum());
         $this->assertSame(30, $lines[0]->points());
+    }
+
+    public function testALineUnderTheMinimumSaysHowFarOffItIs(): void
+    {
+        $settlement = (new AllowanceCalculator())->settle(
+            [$this->rule(AccountKind::TASKS, minimumPoints: 5, amount: 100, perPoints: 1)],
+            ['tasks' => 3]
+        );
+
+        $line = $settlement->lines()[0];
+
+        $this->assertSame(2, $line->missingPoints());
+        $this->assertSame(0, $line->amount()->minorUnits());
+    }
+
+    public function testALineThatReachedTheMinimumMissesNothing(): void
+    {
+        $settlement = (new AllowanceCalculator())->settle(
+            [$this->rule(AccountKind::TASKS, minimumPoints: 5, amount: 100, perPoints: 1)],
+            ['tasks' => 8]
+        );
+
+        $this->assertSame(0, $settlement->lines()[0]->missingPoints());
     }
 
     public function testWithoutAnyRuleNothingIsOwed(): void

@@ -96,16 +96,13 @@ class AllowanceRule
         $this->updatedAt = $clock->now();
     }
 
-    /**
-     * Points below the minimum earn nothing at all - the minimum is a gate, not a free allowance.
-     */
     public function earnedOn(int $points): Money
     {
         if (!$this->isActive || $points < $this->minimumPoints) {
             return Money::zero();
         }
 
-        return $this->rate()->convert($points);
+        return $this->rate()->convert($points - $this->minimumPoints);
     }
 
     public function rate(): ConversionRate

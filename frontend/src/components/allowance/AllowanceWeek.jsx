@@ -23,7 +23,7 @@ const shiftedBy = (day, days) => {
     return shifted.toLocaleDateString('sv');
 };
 
-function AllowanceWeek({ userId, refreshToken, renderActions }) {
+function AllowanceWeek({ userId, refreshToken, renderActions, mine = false }) {
     const { t, i18n } = useTranslation();
     const [week, setWeek] = React.useState(null);
     const [weekStart, setWeekStart] = React.useState(null);
@@ -96,8 +96,15 @@ function AllowanceWeek({ userId, refreshToken, renderActions }) {
                     <Icon name="calendar" size={20} />
                     <span className="week-range">{range}</span>
                 </h3>
-                <span className="allowance-week__amount">
-                    {formatMoney(amount, week.currency, i18n.language)}
+                <span className="allowance-week__earning">
+                    <span className="allowance-week__amount-label">
+                        {mine
+                            ? t(closed ? 'allowance.weekEarned' : 'allowance.weekWillEarn')
+                            : t('allowance.weekWorth')}
+                    </span>
+                    <span className="allowance-week__amount">
+                        {formatMoney(amount, week.currency, i18n.language)}
+                    </span>
                 </span>
             </header>
 
@@ -140,6 +147,11 @@ function AllowanceWeek({ userId, refreshToken, renderActions }) {
                             {t('allowance.pointsOfMinimum', { points: line.points, minimum: line.minimumPoints })}
                         </span>
                         <span>{formatMoney(line.amount, week.currency, i18n.language)}</span>
+                        {!closed && line.missingPoints > 0 && (
+                            <span className="allowance-week__line-hint">
+                                {t('allowance.missingToEarn', { points: line.missingPoints })}
+                            </span>
+                        )}
                     </li>
                 ))}
                 {lines.length === 0 && <li className="empty-hint">{t('allowance.noRulesYet')}</li>}

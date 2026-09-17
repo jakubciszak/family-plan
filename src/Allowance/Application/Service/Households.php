@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Allowance\Application\Service;
 
 use App\Shared\Domain\ValueObject\Uuid;
+use App\TeamManagement\Domain\ReadModel\TeamMembership;
 use App\TeamManagement\Domain\Repository\TeamMembershipRepositoryInterface;
 
 final readonly class Households
@@ -15,11 +16,19 @@ final readonly class Households
 
     public function teamOf(Uuid $userId): ?Uuid
     {
-        foreach ($this->memberships->ofUser($userId) as $membership) {
-            return $membership->teamId();
-        }
+        $memberships = $this->memberships->ofUser($userId);
 
-        return null;
+        usort($memberships, static fn (TeamMembership $a, TeamMembership $b) => [
+            $a->isAdmin(),
+            $b->joinedAt(),
+            $a->teamId()->value(),
+        ] <=> [
+            $b->isAdmin(),
+            $a->joinedAt(),
+            $b->teamId()->value(),
+        ]);
+
+        return $memberships === [] ? null : $memberships[0]->teamId();
     }
 
     /**

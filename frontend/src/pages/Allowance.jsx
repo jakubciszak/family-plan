@@ -180,7 +180,7 @@ function Allowance({ user }) {
                     </Section>
 
                     <Section id="weeks" icon="calendar" title={t('allowance.myWeeks')}>
-                        <AllowanceWeek userId={user?.id} refreshToken={refresh} />
+                        <AllowanceWeek userId={user?.id} refreshToken={refresh} mine />
                     </Section>
 
                     <Section

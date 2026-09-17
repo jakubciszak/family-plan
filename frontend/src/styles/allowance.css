@@ -175,6 +175,18 @@
   font-weight: 500;
 }
 
+.allowance-week__earning {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.allowance-week__amount-label {
+  font-size: var(--md-sys-typescale-label-small-size);
+  color: var(--md-sys-color-on-surface-variant);
+}
+
 .allowance-week__amount {
   font-size: var(--md-sys-typescale-headline-small-size);
   font-weight: 500;
@@ -188,14 +200,21 @@
 
 .allowance-week__lines li {
   display: flex;
+  flex-wrap: wrap;
   align-items: baseline;
   justify-content: space-between;
   gap: 10px;
   font-size: var(--md-sys-typescale-body-medium-size);
 }
 
-.allowance-week__lines li.is-short {
+.allowance-week__lines li.is-short > span:not(.allowance-week__line-hint) {
   opacity: 0.55;
+}
+
+.allowance-week__line-hint {
+  flex-basis: 100%;
+  font-size: var(--md-sys-typescale-body-small-size);
+  color: var(--md-sys-color-primary);
 }
 
 .allowance-week__line-points {

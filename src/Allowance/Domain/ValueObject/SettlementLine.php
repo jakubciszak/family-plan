@@ -39,6 +39,11 @@ final readonly class SettlementLine
         return $this->points >= $this->minimumPoints;
     }
 
+    public function missingPoints(): int
+    {
+        return max(0, $this->minimumPoints - $this->points);
+    }
+
     public function toArray(): array
     {
         return [
@@ -47,6 +52,7 @@ final readonly class SettlementLine
             'minimumPoints' => $this->minimumPoints,
             'amount' => $this->amount->minorUnits(),
             'reachedMinimum' => $this->reachedMinimum(),
+            'missingPoints' => $this->missingPoints(),
         ];
     }
 }

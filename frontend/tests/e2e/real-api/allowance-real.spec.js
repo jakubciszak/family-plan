@@ -149,6 +149,25 @@ test.describe('K. Kieszonkowe', () => {
     expect(wallet.body.pending).toBe(0);
   });
 
+  test('K7 karta tygodnia mowi czego brakuje do wyplaty', async ({ page }) => {
+    const owner = await createTeamOwner('Rodzina Progowa');
+    const member = await addTeamMember(owner, 'Dziecko');
+    await setRule(owner, { minimumPoints: 50, rateAmount: 10 });
+    await earnPointsLastWeek(owner, member, 40);
+
+    await loginThroughUi(page, owner.email);
+    await openTab(page, ALLOWANCE_TAB);
+    await page.getByRole('tab', { name: /rozliczenia|settlements/i }).click();
+    await openTeam(page, owner.teamName);
+    await page.locator('.allowance-page__members .member-chip').first().click();
+
+    const week = page.getByTestId('allowance-week');
+    await week.getByRole('button', { name: /poprzedni tydzie|previous week/i }).click();
+
+    await expect(week).toContainText(/za ten tydzie|for this week/i);
+    await expect(week.locator('.allowance-week__line-hint')).toContainText('10');
+  });
+
   test('K4 dziecko planuje cel i odklada na niego', async ({ page }) => {
     const owner = await createTeamOwner('Rodzina Oszczedzajaca');
     const member = await addTeamMember(owner, 'Dziecko');

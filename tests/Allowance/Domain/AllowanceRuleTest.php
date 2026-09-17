@@ -23,12 +23,12 @@ class AllowanceRuleTest extends TestCase
         $this->assertSame(0, $rule->earnedOn(49)->minorUnits());
     }
 
-    public function testReachingTheMinimumPaysForEveryPoint(): void
+    public function testOnlyThePointsAboveTheMinimumArePaid(): void
     {
         $rule = $this->rule(minimumPoints: 50, amount: 10, perPoints: 1);
 
-        $this->assertSame(500, $rule->earnedOn(50)->minorUnits());
-        $this->assertSame(700, $rule->earnedOn(70)->minorUnits());
+        $this->assertSame(0, $rule->earnedOn(50)->minorUnits());
+        $this->assertSame(200, $rule->earnedOn(70)->minorUnits());
     }
 
     public function testWithoutAMinimumEveryPointCounts(): void
@@ -53,7 +53,8 @@ class AllowanceRuleTest extends TestCase
         $rule->adjust(20, ConversionRate::of(Money::fromMinorUnits(50), 1), $this->clock());
 
         $this->assertSame(0, $rule->earnedOn(19)->minorUnits());
-        $this->assertSame(1000, $rule->earnedOn(20)->minorUnits());
+        $this->assertSame(0, $rule->earnedOn(20)->minorUnits());
+        $this->assertSame(250, $rule->earnedOn(25)->minorUnits());
     }
 
     private function rule(int $minimumPoints, int $amount, int $perPoints): AllowanceRule

@@ -69,7 +69,7 @@ class AllowanceApiTest extends ApiTestCase
         $week = $this->week($monday);
 
         $this->assertSame(60, $week['points']);
-        $this->assertSame(600, $week['expected']['total']);
+        $this->assertSame(100, $week['expected']['total']);
         $this->assertNull($week['closure']);
     }
 
@@ -83,6 +83,18 @@ class AllowanceApiTest extends ApiTestCase
 
         $this->assertSame(0, $week['expected']['total']);
         $this->assertFalse($week['expected']['lines'][0]['reachedMinimum']);
+    }
+
+    public function testAWeekUnderTheMinimumSaysHowManyPointsAreMissing(): void
+    {
+        $this->setRule('tasks', 50, 10, 1);
+        $monday = $this->lastMonday();
+        $this->earned($this->child, 40, $monday);
+
+        $line = $this->week($monday)['expected']['lines'][0];
+
+        $this->assertSame(10, $line['missingPoints']);
+        $this->assertSame(0, $line['amount']);
     }
 
     public function testClosingAWeekPutsTheMoneyOnTheWaitingAccount(): void
