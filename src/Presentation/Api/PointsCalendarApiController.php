@@ -198,6 +198,10 @@ class PointsCalendarApiController extends AbstractController
         usort($done, static fn ($a, $b) => $a->earnedOn() <=> $b->earnedOn());
 
         $bonuses = $this->ledger->between($userId, $day, $next, [AccountKind::BONUSES]);
+        $takenBack = array_filter(array_map(
+            static fn ($entry) => $entry->periodKey() === 'taken-back' ? $entry->reference() : null,
+            $bonuses
+        ));
 
         return $this->json([
             'date' => $day->format('Y-m-d'),
@@ -215,6 +219,7 @@ class PointsCalendarApiController extends AbstractController
                 'points' => $entry->amount(),
                 'name' => $entry->description(),
                 'ruleId' => $entry->reference(),
+                'takenBack' => in_array($entry->id()->value(), $takenBack, true),
             ], $bonuses),
         ]);
     }

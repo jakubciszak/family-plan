@@ -115,6 +115,7 @@ test.describe('W. Kalendarz tygodnia', () => {
 
     await expect(detail).toContainText(/cofni[eę]ty|taken back/i);
     await expect(week.locator('.week-day.is-today .week-day-bonus')).toHaveCount(0);
+    await expect(detail.locator('.week-day-task--bonus button')).toHaveCount(0);
   });
 
   test('W6 admin zespolu zaklada regule serii z formularza', async ({ page }) => {

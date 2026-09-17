@@ -525,6 +525,15 @@ class TaskExecutionApiTest extends ApiTestCase
 
         $this->assertSame(0, $day['bonus'], 'Bonus i jego cofniecie znosza sie tego samego dnia');
         $this->assertCount(2, $day['bonuses'], 'Historia zostaje: wyplata i cofniecie');
+        $this->assertTrue($day['bonuses'][0]['takenBack'], 'Cofnietego bonusu nie da sie cofnac drugi raz');
+
+        $this->deleteJson("/api/points/bonuses/{$bonus['id']}?userId={$memberId}");
+
+        $this->assertSame(
+            0,
+            $this->getJson("/api/points/day?date={$today}&userId={$memberId}")['bonus'],
+            'Drugie cofniecie nie zabiera punktow po raz kolejny'
+        );
     }
 
     public function testAMemberCannotTakeBackTheirOwnBonus(): void

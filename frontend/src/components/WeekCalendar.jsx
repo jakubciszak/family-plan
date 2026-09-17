@@ -209,7 +209,7 @@ function WeekCalendar({ refreshToken, userId, title, manage = false }) {
                                             ? t('week.bonusLost', { points: -bonus.points })
                                             : t('week.bonus', { points: bonus.points })}
                                     </span>
-                                    {manage && bonus.points > 0 && (
+                                    {manage && bonus.points > 0 && !bonus.takenBack && (
                                         <IconButton
                                             icon="delete"
                                             variant="text"
