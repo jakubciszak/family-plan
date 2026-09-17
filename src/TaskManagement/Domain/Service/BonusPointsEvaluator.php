@@ -83,20 +83,15 @@ class BonusPointsEvaluator
         $config = $rule->config();
         $requiredPoints = $config->requiredPoints();
 
-        if ($requiredPoints === null || $this->ledger === null) {
+        if ($requiredPoints === null) {
             return false;
         }
 
         $monday = $this->now()->modify('monday this week')->setTime(0, 0);
 
-        $booked = $this->ledger->sumBetween(
-            $userId,
-            $monday,
-            $monday->modify('+7 days'),
-            $config->accountKinds()
-        );
+        $earned = $this->streakPoints->perDay($config, $userId, $monday, $monday->modify('+7 days'));
 
-        return $booked >= $requiredPoints;
+        return array_sum($earned) >= $requiredPoints;
     }
 
     private function streakStart(BonusPointsRule $rule, Uuid $userId): string

@@ -13,7 +13,9 @@ use App\PointsManagement\Infrastructure\Persistence\InMemoryUserWalletRepository
 use App\Shared\Domain\ValueObject\Uuid;
 use App\Shared\Infrastructure\Clock\FixedClock;
 use App\TaskManagement\Domain\Entity\BonusPointsRule;
+use App\TaskManagement\Domain\Entity\TaskExecution;
 use App\TaskManagement\Domain\Service\BonusPointsEvaluator;
+use App\TaskManagement\Domain\ValueObject\TaskName;
 use App\TaskManagement\Domain\ValueObject\Points;
 use App\TaskManagement\Domain\Repository\TaskExecutionRepositoryInterface;
 use App\TaskManagement\Domain\ValueObject\RuleConfig;
@@ -22,15 +24,22 @@ use PHPUnit\Framework\TestCase;
 
 final class WeeklyPointsSumRuleTest extends TestCase
 {
+    private const TODAY = '2026-09-16 12:00:00';
+
     private FixedClock $clock;
     private PointsLedger $ledger;
     private BonusPointsEvaluator $evaluator;
     private Uuid $userId;
 
+    /**
+     * @var TaskExecution[]
+     */
+    private array $approved = [];
+
     protected function setUp(): void
     {
         // A Wednesday, so the week has a past and a future
-        $this->clock = new FixedClock(new DateTimeImmutable('2026-09-16 12:00:00'));
+        $this->clock = new FixedClock(new DateTimeImmutable(self::TODAY));
         $this->userId = Uuid::generate();
 
         $accounts = new InMemoryAccountRepository();
@@ -41,30 +50,29 @@ final class WeeklyPointsSumRuleTest extends TestCase
             $this->clock
         );
 
-        $this->evaluator = new BonusPointsEvaluator(
-            $this->createStub(TaskExecutionRepositoryInterface::class),
-            $this->ledger,
-            $this->clock
-        );
+        $executions = $this->createStub(TaskExecutionRepositoryInterface::class);
+        $executions->method('findApprovedByUserSince')->willReturnCallback(fn () => $this->approved);
+
+        $this->evaluator = new BonusPointsEvaluator($executions, $this->ledger, $this->clock);
     }
 
-    public function testTaskPointsBookedThisWeekMeetTheRule(): void
+    public function testTaskPointsEarnedThisWeekMeetTheRule(): void
     {
-        $this->book(AccountKind::TASKS, 60);
+        $this->approve(60, 'now');
 
         $this->assertTrue($this->evaluator->isRuleMet($this->rule(50, ['tasks']), $this->userId));
     }
 
     public function testPointsBelowTheThresholdDoNotMeetTheRule(): void
     {
-        $this->book(AccountKind::TASKS, 40);
+        $this->approve(40, 'now');
 
         $this->assertFalse($this->evaluator->isRuleMet($this->rule(50, ['tasks']), $this->userId));
     }
 
     public function testBonusPointsDoNotCountTowardsATaskOnlyRule(): void
     {
-        $this->book(AccountKind::TASKS, 30);
+        $this->approve(30, 'now');
         $this->book(AccountKind::BONUSES, 100);
 
         $this->assertFalse($this->evaluator->isRuleMet($this->rule(50, ['tasks']), $this->userId));
@@ -72,32 +80,25 @@ final class WeeklyPointsSumRuleTest extends TestCase
 
     public function testARuleOverEveryAccountCountsBonusesToo(): void
     {
-        $this->book(AccountKind::TASKS, 30);
+        $this->approve(30, 'now');
         $this->book(AccountKind::BONUSES, 100);
 
         $this->assertTrue($this->evaluator->isRuleMet($this->rule(50, []), $this->userId));
     }
 
-    public function testPointsFromLastWeekDoNotCount(): void
+    public function testWorkDoneLastWeekDoesNotCountEvenWhenApprovedThisWeek(): void
     {
-        $lastWeek = new FixedClock(new DateTimeImmutable('2026-09-08 12:00:00'));
-        $accounts = new InMemoryAccountRepository();
-        $ledger = new PointsLedger(
-            $accounts,
-            new InMemoryEntryRepository($accounts),
-            new InMemoryUserWalletRepository(),
-            $lastWeek
-        );
+        $this->approve(90, 'last sunday');
+        $this->approve(20, 'now');
 
-        $ledger->post($this->userId, AccountKind::TASKS, 90, EntrySource::TASK_EXECUTION, 'Last week');
+        $this->assertFalse($this->evaluator->isRuleMet($this->rule(50, ['tasks']), $this->userId));
+    }
 
-        $evaluator = new BonusPointsEvaluator(
-            $this->createStub(TaskExecutionRepositoryInterface::class),
-            $ledger,
-            $this->clock
-        );
+    public function testWorkDoneThisWeekCountsEvenWhenApprovedLater(): void
+    {
+        $this->approve(60, 'monday this week');
 
-        $this->assertFalse($evaluator->isRuleMet($this->rule(50, ['tasks']), $this->userId));
+        $this->assertTrue($this->evaluator->isRuleMet($this->rule(50, ['tasks']), $this->userId));
     }
 
     public function testThePeriodKeyIsTheIsoWeekSoTheBonusIsPaidOnce(): void
@@ -131,8 +132,21 @@ final class WeeklyPointsSumRuleTest extends TestCase
         );
     }
 
+    private function approve(int $points, string $when): void
+    {
+        $this->approved[] = TaskExecution::takeFromTemplate(
+            Uuid::generate(),
+            Uuid::generate(),
+            TaskName::fromString('Zmywanie'),
+            'opis',
+            Points::fromInt($points),
+            $this->userId,
+            (new DateTimeImmutable(self::TODAY))->modify($when)
+        );
+    }
+
     private function book(AccountKind $kind, int $amount): void
     {
-        $this->ledger->post($this->userId, $kind, $amount, EntrySource::TASK_EXECUTION, 'Booked');
+        $this->ledger->post($this->userId, $kind, $amount, EntrySource::BONUS_RULE, 'Booked');
     }
 }

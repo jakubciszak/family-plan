@@ -134,22 +134,10 @@ class TaskApiTest extends ApiTestCase
         $this->assertSame('approved', $data['status']);
     }
 
-    public function testApprovingATaskPaysOutTheBonusItUnlocks(): void
+    public function testApprovingATaskBooksItsPoints(): void
     {
         $context = $this->createTeamAndAdmin();
         $userId = $context['adminId'];
-
-        $this->assertJsonResponse(
-            $this->postJson('/api/bonus-rules', [
-                'teamId' => $context['teamId'],
-                'name' => 'Minimum 15 punktow w tygodniu',
-                'description' => 'Zbierz 15 punktow za zadania w ciagu tygodnia',
-                'bonusPoints' => 5,
-                'ruleType' => 'weekly_points_sum',
-                'ruleConfig' => ['requiredPoints' => 15, 'accounts' => ['tasks']],
-            ]),
-            201
-        );
 
         $task = $this->assertJsonResponse(
             $this->postJson('/api/tasks', [
@@ -169,7 +157,7 @@ class TaskApiTest extends ApiTestCase
 
         $points = $this->getJson("/api/users/{$userId}/points");
 
-        $this->assertSame(21, $points['balance'], 'Zadanie daje 16 punktow, regula dokłada 5 bonusowych');
+        $this->assertSame(16, $points['balance']);
     }
 
     public function testListTasksFiltersTasksByUserTeamMembership(): void

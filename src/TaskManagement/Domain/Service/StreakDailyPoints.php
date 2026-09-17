@@ -32,11 +32,15 @@ final readonly class StreakDailyPoints
         $perDay = [];
 
         if (in_array(AccountKind::TASKS, $kinds, true)) {
-            $perDay = DailyPoints::perDay($this->executionRepository->findApprovedByUserSince(
-                $userId,
-                $since,
-                $config->taskTemplateId()
-            ));
+            $perDay = array_filter(
+                DailyPoints::perDay($this->executionRepository->findApprovedByUserSince(
+                    $userId,
+                    $since,
+                    $config->taskTemplateId()
+                )),
+                static fn (string $day) => $day >= $since->format('Y-m-d') && $day < $until->format('Y-m-d'),
+                ARRAY_FILTER_USE_KEY
+            );
         }
 
         foreach ($kinds as $kind) {

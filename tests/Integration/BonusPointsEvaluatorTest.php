@@ -159,6 +159,26 @@ class BonusPointsEvaluatorTest extends IntegrationTestCase
         $this->assertFalse($this->evaluator->isRuleMet($rule, $doer->id()));
     }
 
+    public function testAWeeklySumCountsTheWorkOfThisWeekOnly(): void
+    {
+        $doer = $this->user('Dziecko');
+        $template = $this->taskType();
+
+        $this->approvedRun($doer, $template, 'last sunday');
+        $this->approvedRun($doer, $template, 'monday this week');
+
+        $rule = BonusPointsRule::create(
+            Uuid::generate(),
+            Uuid::generate(),
+            'Piętnaście w tygodniu',
+            'opis',
+            Points::fromInt(5),
+            RuleConfig::weeklyPointsSum(15, ['tasks'])
+        );
+
+        $this->assertFalse($this->evaluator->isRuleMet($rule, $doer->id()));
+    }
+
     private function consecutiveDaysRule(Uuid $templateId, int $days): BonusPointsRule
     {
         return BonusPointsRule::create(
