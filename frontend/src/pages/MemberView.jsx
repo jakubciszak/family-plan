@@ -74,7 +74,7 @@ function MemberView({ member, onBack }) {
                 </div>
             )}
 
-            <WeekCalendar userId={member.id} refreshToken={refreshToken} />
+            <WeekCalendar userId={member.id} refreshToken={refreshToken} manage />
 
             <section className="task-section" data-testid="member-awaiting">
                 <h3><Icon name="approve" size={20} />{t('tasks.approvalSection')}</h3>

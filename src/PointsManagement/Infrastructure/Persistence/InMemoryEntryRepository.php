@@ -25,6 +25,11 @@ final class InMemoryEntryRepository implements EntryRepositoryInterface
         $this->entries[$entry->id()->value()] = $entry;
     }
 
+    public function find(Uuid $id): ?Entry
+    {
+        return $this->entries[$id->value()] ?? null;
+    }
+
     public function sumBetween(Uuid $userId, DateTimeImmutable $from, DateTimeImmutable $to, array $kinds): int
     {
         return array_sum(array_map(

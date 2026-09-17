@@ -211,11 +211,29 @@ class PointsCalendarApiController extends AbstractController
             'total' => array_sum(array_map(static fn ($e) => $e->points()?->value() ?? 0, $done)),
             'bonus' => array_sum(array_map(static fn ($entry) => $entry->amount(), $bonuses)),
             'bonuses' => array_map(static fn ($entry) => [
+                'id' => $entry->id()->value(),
                 'points' => $entry->amount(),
                 'name' => $entry->description(),
                 'ruleId' => $entry->reference(),
             ], $bonuses),
         ]);
+    }
+
+    #[Route('/bonuses/{entryId}', name: 'take_back_bonus', methods: ['DELETE'])]
+    #[OA\Delete(path: '/api/points/bonuses/{entryId}', summary: 'Take back bonus points an admin does not stand behind', tags: ['Points'])]
+    #[OA\Parameter(name: 'userId', in: 'query', required: true, description: 'Member the bonus was paid to')]
+    #[OA\Response(response: 200, description: 'The bonus has been taken back')]
+    #[OA\Response(response: 403, description: 'Only an admin of their team takes a bonus back')]
+    #[OA\Response(response: 404, description: 'No such bonus on that member account')]
+    public function takeBackBonus(string $entryId, Request $request): JsonResponse
+    {
+        $userId = $this->lookedAfter($request);
+
+        if (!$this->ledger->takeBackBonus($userId, Uuid::fromString($entryId))) {
+            return $this->json(['message' => 'No such bonus'], 404);
+        }
+
+        return $this->json(['message' => 'Bonus taken back']);
     }
 
     /**
@@ -254,6 +272,23 @@ class PointsCalendarApiController extends AbstractController
         }
 
         throw $this->createAccessDeniedException('Only an admin of their team looks at another member');
+    }
+
+    /**
+     * The member an admin looks after, never the caller themselves.
+     */
+    private function lookedAfter(Request $request): Uuid
+    {
+        $caller = $this->callerId();
+        $target = Uuid::fromString((string) $request->query->get('userId'));
+
+        foreach ($this->memberships->ofUser($target) as $membership) {
+            if ($this->memberships->isAdmin($caller, $membership->teamId())) {
+                return $target;
+            }
+        }
+
+        throw $this->createAccessDeniedException('Only an admin of their team takes a bonus back');
     }
 
     private function reach(?BonusPointsRule $rule): int

@@ -89,6 +89,7 @@ function MemberWeeks({ teamId, refreshToken }) {
                         userId={member.userId}
                         title={member.userName}
                         refreshToken={refreshToken}
+                        manage
                     />
                 ))}
         </section>

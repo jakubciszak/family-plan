@@ -26,6 +26,8 @@ interface EntryRepositoryInterface
      */
     public function perDayBetween(Uuid $userId, DateTimeImmutable $from, DateTimeImmutable $to, array $kinds): array;
 
+    public function find(Uuid $id): ?Entry;
+
     /**
      * @param AccountKind[] $kinds
      * @return Entry[] what was booked, oldest first

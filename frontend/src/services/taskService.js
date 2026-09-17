@@ -61,6 +61,10 @@ const taskService = {
         return await apiClient.get(`/api/points/week${query ? `?${query}` : ''}`);
     },
 
+    async takeBackBonus(entryId, userId) {
+        return await apiClient.delete(`/api/points/bonuses/${entryId}?userId=${userId}`);
+    },
+
     async getDay(date, userId) {
         const params = new URLSearchParams({ date });
         if (userId) {

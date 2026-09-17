@@ -22,12 +22,13 @@ const shiftedBy = (day, days) => {
     return shifted.toLocaleDateString('sv');
 };
 
-function WeekCalendar({ refreshToken, userId, title }) {
+function WeekCalendar({ refreshToken, userId, title, manage = false }) {
     const { t, i18n } = useTranslation();
     const [week, setWeek] = React.useState(null);
     const [weekStart, setWeekStart] = React.useState(null);
     const [openDay, setOpenDay] = React.useState(null);
     const [dayDetail, setDayDetail] = React.useState(null);
+    const [reloads, setReloads] = React.useState(0);
     const touchStart = React.useRef(null);
 
     const goToWeek = (days) => {
@@ -49,7 +50,7 @@ function WeekCalendar({ refreshToken, userId, title }) {
         return () => {
             abandoned = true;
         };
-    }, [refreshToken, userId, weekStart]);
+    }, [refreshToken, userId, weekStart, reloads]);
 
     React.useEffect(() => {
         if (!openDay) {
@@ -71,7 +72,13 @@ function WeekCalendar({ refreshToken, userId, title }) {
         return () => {
             abandoned = true;
         };
-    }, [openDay, userId, refreshToken]);
+    }, [openDay, userId, refreshToken, reloads]);
+
+    const takeBack = (entryId) => {
+        taskService.takeBackBonus(entryId, userId)
+            .then(() => setReloads((count) => count + 1))
+            .catch(() => undefined);
+    };
 
     if (!week?.days?.length) {
         return null;
@@ -190,14 +197,26 @@ function WeekCalendar({ refreshToken, userId, title }) {
                                     </span>
                                 </li>
                             ))}
-                            {(dayDetail.bonuses ?? []).map((bonus, index) => (
-                                <li key={bonus.ruleId || index} className="week-day-task--bonus">
+                            {(dayDetail.bonuses ?? []).map((bonus) => (
+                                <li key={bonus.id} className="week-day-task--bonus">
                                     <span className="week-day-task-name">
-                                        {bonus.name || t('week.bonusLabel')}
+                                        {bonus.points < 0
+                                            ? t('week.bonusTakenBack')
+                                            : bonus.name || t('week.bonusLabel')}
                                     </span>
                                     <span className="week-day-task-points">
-                                        {t('week.bonus', { points: bonus.points })}
+                                        {bonus.points < 0
+                                            ? t('week.bonusLost', { points: -bonus.points })
+                                            : t('week.bonus', { points: bonus.points })}
                                     </span>
+                                    {manage && bonus.points > 0 && (
+                                        <IconButton
+                                            icon="delete"
+                                            variant="text"
+                                            label={t('week.takeBackBonus')}
+                                            onClick={() => takeBack(bonus.id)}
+                                        />
+                                    )}
                                 </li>
                             ))}
                         </ul>

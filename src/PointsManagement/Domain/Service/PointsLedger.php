@@ -33,7 +33,8 @@ final readonly class PointsLedger
         EntrySource $source,
         string $description,
         ?Uuid $reference = null,
-        ?string $periodKey = null
+        ?string $periodKey = null,
+        ?DateTimeImmutable $bookedAt = null
     ): void {
         $account = $this->accountFor($userId, $kind);
 
@@ -48,7 +49,7 @@ final readonly class PointsLedger
             $amount,
             $source,
             $description,
-            $this->clock->now(),
+            $bookedAt ?? $this->clock->now(),
             $reference,
             $periodKey
         );
@@ -59,6 +60,33 @@ final readonly class PointsLedger
         $this->accounts->save($account);
 
         $this->refreshSummary($userId);
+    }
+
+    /**
+     * Books the opposite of a bonus entry, on the day that bonus was booked.
+     * A bonus can be taken back only once; the rule that paid it will not pay it again.
+     */
+    public function takeBackBonus(Uuid $userId, Uuid $entryId): bool
+    {
+        $entry = $this->entries->find($entryId);
+        $account = $this->accountFor($userId, AccountKind::BONUSES);
+
+        if ($entry === null || !$entry->belongsTo($account->id())) {
+            return false;
+        }
+
+        $this->post(
+            $userId,
+            AccountKind::BONUSES,
+            -$entry->amount(),
+            EntrySource::ADJUSTMENT,
+            sprintf('Taken back: %s', $entry->description()),
+            $entry->id(),
+            'taken-back',
+            $entry->bookedAt()
+        );
+
+        return true;
     }
 
     /**

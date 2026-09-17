@@ -24,6 +24,11 @@ final readonly class DoctrineEntryRepository implements EntryRepositoryInterface
         $this->entityManager->flush();
     }
 
+    public function find(Uuid $id): ?Entry
+    {
+        return $this->entityManager->find(Entry::class, $id);
+    }
+
     public function sumBetween(Uuid $userId, DateTimeImmutable $from, DateTimeImmutable $to, array $kinds): int
     {
         if ($kinds === []) {

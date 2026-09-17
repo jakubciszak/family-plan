@@ -485,6 +485,62 @@ class TaskExecutionApiTest extends ApiTestCase
         $this->assertNotNull($day['bonuses'][0]['ruleId']);
     }
 
+    public function testAnAdminTakesBackABonusTheyDoNotStandBehind(): void
+    {
+        $context = $this->teamWithMember();
+        $type = $this->defineType($context['teamId'], ['type' => 'unlimited'], 16);
+
+        $this->assertJsonResponse(
+            $this->postJson('/api/bonus-rules', [
+                'teamId' => $context['teamId'],
+                'name' => 'Minimum 15 punktow w tygodniu',
+                'description' => 'Zbierz 15 punktow za zadania w ciagu tygodnia',
+                'bonusPoints' => 5,
+                'ruleType' => 'weekly_points_sum',
+                'ruleConfig' => ['requiredPoints' => 15, 'accounts' => ['tasks']],
+            ]),
+            Response::HTTP_CREATED
+        );
+
+        $this->loginAs($context['member']);
+        $taken = $this->assertJsonResponse(
+            $this->postJson("/api/task-templates/{$type['id']}/take", []),
+            Response::HTTP_CREATED
+        );
+        $this->postJson("/api/task-executions/{$taken['id']}/complete", []);
+
+        $this->loginAs($context['admin']);
+        $this->postJson("/api/task-executions/{$taken['id']}/approve", []);
+
+        $today = (new \DateTimeImmutable())->format('Y-m-d');
+        $memberId = $context['member']->id()->value();
+        $bonus = $this->getJson("/api/points/day?date={$today}&userId={$memberId}")['bonuses'][0];
+
+        $this->assertJsonResponse(
+            $this->deleteJson("/api/points/bonuses/{$bonus['id']}?userId={$memberId}"),
+            Response::HTTP_OK
+        );
+
+        $day = $this->getJson("/api/points/day?date={$today}&userId={$memberId}");
+
+        $this->assertSame(0, $day['bonus'], 'Bonus i jego cofniecie znosza sie tego samego dnia');
+        $this->assertCount(2, $day['bonuses'], 'Historia zostaje: wyplata i cofniecie');
+    }
+
+    public function testAMemberCannotTakeBackTheirOwnBonus(): void
+    {
+        $context = $this->teamWithMember();
+        $memberId = $context['member']->id()->value();
+
+        $this->loginAs($context['member']);
+
+        $this->assertSame(
+            Response::HTTP_FORBIDDEN,
+            $this->deleteJson(sprintf('/api/points/bonuses/%s?userId=%s', Uuid::generate()->value(), $memberId))
+                ->getStatusCode()
+        );
+    }
+
     public function testOpeningADayListsWhatWasDoneAndWhatItEarned(): void
     {
         $context = $this->teamWithMember();

@@ -85,6 +85,38 @@ test.describe('W. Kalendarz tygodnia', () => {
     await expect(calendar(page).locator('.week-day.is-today .week-day-points')).toHaveText('10');
   });
 
+  test('W7 admin cofa bonus, ktorego nie uznaje', async ({ page }) => {
+    const owner = await createTeamOwner();
+    const teams = await owner.session.get('/api/teams');
+    const shown = { ...owner, teamId: teams.body.teams[0].id };
+    const member = await addTeamMember(shown, 'Dziecko');
+
+    await owner.session.post('/api/bonus-rules', {
+      teamId: shown.teamId,
+      name: 'Minimum 15 punktow w tygodniu',
+      description: 'zbierz 15 punktow',
+      bonusPoints: 5,
+      ruleType: 'weekly_points_sum',
+      ruleConfig: { requiredPoints: 15, accounts: ['tasks'] },
+    });
+
+    await earnPoints(shown, member, 16);
+
+    await loginThroughUi(page, owner.email);
+
+    const week = page.getByTestId('member-weeks').getByTestId('week-calendar').first();
+    await week.locator('.week-day.is-today').click();
+
+    const detail = page.getByTestId('week-day-detail');
+    const bonus = detail.locator('.week-day-task--bonus').first();
+    await expect(bonus).toContainText('Minimum 15 punktow w tygodniu');
+
+    await bonus.getByRole('button').click();
+
+    await expect(detail).toContainText(/cofni[eę]ty|taken back/i);
+    await expect(week.locator('.week-day.is-today .week-day-bonus')).toHaveCount(0);
+  });
+
   test('W6 admin zespolu zaklada regule serii z formularza', async ({ page }) => {
     const owner = await createTeamOwner();
     await loginThroughUi(page, owner.email);
