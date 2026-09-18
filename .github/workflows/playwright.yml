@@ -7,6 +7,42 @@ on:
     branches: [ '**' ]
 
 jobs:
+  test-calendar-real-api:
+    name: Calendar with real API
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      APP_ENV: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: pdo_sqlite, intl
+          coverage: none
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: composer install --prefer-dist --no-progress --no-scripts
+      - run: npm ci
+        working-directory: frontend
+      - run: npx playwright install --with-deps chromium
+        working-directory: frontend
+      - run: npx playwright test week-calendar-real.spec.js --project=chromium
+        working-directory: frontend
+        env:
+          REAL_API: '1'
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: calendar-real-api-results
+          path: |
+            frontend/playwright-report/
+            frontend/test-results/
+          retention-days: 14
+
   # Mocked E2E tests - run on all branches
   test-mocked:
     name: Mocked E2E Tests

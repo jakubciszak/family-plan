@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Presentation\Api;
 
+use App\PointsManagement\Domain\Service\PointsLedger;
+use App\PointsManagement\Domain\ValueObject\AccountKind;
+use App\PointsManagement\Domain\ValueObject\EntrySource;
 use App\Party\Application\Service\PartyResponsibilities;
 use App\Party\Domain\ValueObject\ResponsibilityType;
 use App\Shared\Domain\Clock\ClockInterface;
@@ -21,6 +24,7 @@ use App\TeamManagement\Domain\Repository\TeamMembershipRepositoryInterface;
 use App\UserManagement\Domain\Repository\UserRepositoryInterface;
 use App\UserManagement\Domain\ValueObject\Email;
 use DateTimeImmutable;
+use Doctrine\ORM\EntityManagerInterface;
 use OpenApi\Attributes as OA;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -44,7 +48,9 @@ class TaskExecutionApiController extends AbstractController
         private readonly ClockInterface $clock,
         private readonly BonusSettlementInterface $bonusPayout,
         private readonly TeamMembershipRepositoryInterface $memberships,
-        private readonly ClosedWeeksInterface $closedWeeks
+        private readonly ClosedWeeksInterface $closedWeeks,
+        private readonly PointsLedger $ledger,
+        private readonly EntityManagerInterface $entityManager
     ) {
     }
 
@@ -387,6 +393,80 @@ class TaskExecutionApiController extends AbstractController
 
         if ($execution === null) {
             throw $this->createNotFoundException('Task not found');
+        }
+
+        return $execution;
+    }
+
+    #[Route('/task-executions/{id}', name: 'move', methods: ['PUT'])]
+    #[OA\Put(path: '/api/task-executions/{id}', summary: 'Move an approved execution within its open week (Admin only)', tags: ['My tasks'])]
+    #[OA\RequestBody(required: true, content: new OA\JsonContent(required: ['doneOn'], properties: [
+        new OA\Property(property: 'doneOn', type: 'string', format: 'date'),
+    ]))]
+    #[OA\Response(response: 200, description: 'Completion date changed')]
+    #[OA\Response(response: 400, description: 'Invalid date, state or settled week')]
+    #[OA\Response(response: 403, description: 'Only the owning team admin can correct an execution')]
+    public function move(string $id, Request $request): JsonResponse
+    {
+        $execution = $this->editableExecution($id);
+        $value = $request->toArray()['doneOn'] ?? null;
+        $day = is_string($value) ? DateTimeImmutable::createFromFormat('!Y-m-d', $value) : false;
+
+        if ($day === false || $day->format('Y-m-d') !== $value) {
+            throw new \DomainException('The day must be given as YYYY-MM-DD');
+        }
+
+        $execution->moveTo($day, $this->clock);
+        $this->executionRepository->save($execution);
+
+        return $this->json($this->serialize($execution));
+    }
+
+    #[Route('/task-executions/{id}', name: 'delete', methods: ['DELETE'])]
+    #[OA\Delete(path: '/api/task-executions/{id}', summary: 'Remove an approved execution and reverse its task points (Admin only)', tags: ['My tasks'])]
+    #[OA\Response(response: 204, description: 'Execution removed and task points reversed')]
+    #[OA\Response(response: 400, description: 'Execution is not approved or its week is settled')]
+    #[OA\Response(response: 403, description: 'Only the owning team admin can correct an execution')]
+    public function deleteApproved(string $id): JsonResponse
+    {
+        $execution = $this->editableExecution($id);
+
+        $this->entityManager->wrapInTransaction(function () use ($execution): void {
+            $points = $execution->points()?->value() ?? 0;
+
+            if ($points !== 0) {
+                $this->ledger->post(
+                    $execution->assignedUserId(),
+                    AccountKind::TASKS,
+                    -$points,
+                    EntrySource::ADJUSTMENT,
+                    sprintf('Execution removed: %s', $execution->name()?->value()),
+                    $execution->id(),
+                    'execution-removed',
+                    $execution->earnedOn()
+                );
+            }
+
+            $this->executionRepository->delete($execution);
+        });
+
+        return $this->json(null, Response::HTTP_NO_CONTENT);
+    }
+
+    private function editableExecution(string $id): TaskExecution
+    {
+        $execution = $this->execution($id);
+        $teamId = $this->teamOf($this->templateOf($execution));
+
+        if (!$this->memberships->isAdmin($this->callerId(), $teamId)) {
+            throw new UnauthorizedTaskActionException('Only an admin of the owning team can correct an execution');
+        }
+
+        $execution->assertApproved();
+        $member = $execution->assignedUserId();
+
+        if ($member === null || $this->closedWeeks->isClosedFor($member, $execution->earnedOn())) {
+            throw new \DomainException('An execution in a settled week cannot be corrected');
         }
 
         return $execution;

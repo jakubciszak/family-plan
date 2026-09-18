@@ -3,6 +3,8 @@ import { useTranslation } from 'react-i18next';
 import taskService from '../services/taskService';
 import Icon from './md3/Icon';
 import IconButton from './md3/IconButton';
+import Button from './md3/Button';
+import TextField from './md3/TextField';
 
 const DAY_KEYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
 
@@ -29,6 +31,10 @@ function WeekCalendar({ refreshToken, userId, title, manage = false }) {
     const [openDay, setOpenDay] = React.useState(null);
     const [dayDetail, setDayDetail] = React.useState(null);
     const [reloads, setReloads] = React.useState(0);
+    const [editing, setEditing] = React.useState(null);
+    const [doneOn, setDoneOn] = React.useState('');
+    const [saving, setSaving] = React.useState(false);
+    const [error, setError] = React.useState(null);
     const touchStart = React.useRef(null);
 
     const goToWeek = (days) => {
@@ -78,6 +84,20 @@ function WeekCalendar({ refreshToken, userId, title, manage = false }) {
         taskService.takeBackBonus(entryId, userId)
             .then(() => setReloads((count) => count + 1))
             .catch(() => undefined);
+    };
+
+    const correct = async (action) => {
+        setSaving(true);
+        setError(null);
+        try {
+            await action();
+            setEditing(null);
+            setReloads((count) => count + 1);
+        } catch (failure) {
+            setError(failure.message || t('week.correctionFailed'));
+        } finally {
+            setSaving(false);
+        }
     };
 
     if (!week?.days?.length) {
@@ -183,6 +203,7 @@ function WeekCalendar({ refreshToken, userId, title, manage = false }) {
 
             {openDay && (
                 <div className="week-day-detail" data-testid="week-day-detail">
+                    {error && <p role="alert">{error}</p>}
                     {dayDetail === null ? (
                         <p className="empty-hint">{t('common.loading')}</p>
                     ) : dayDetail.tasks.length === 0 ? (
@@ -195,6 +216,48 @@ function WeekCalendar({ refreshToken, userId, title, manage = false }) {
                                     <span className="week-day-task-points">
                                         {t('user.points', { points: task.points })}
                                     </span>
+                                    {manage && !dayDetail.closed && (
+                                        <>
+                                            <IconButton
+                                                icon="edit"
+                                                variant="text"
+                                                label={t('week.moveExecution')}
+                                                disabled={saving}
+                                                onClick={() => {
+                                                    setEditing(task.id);
+                                                    setDoneOn(openDay);
+                                                    setError(null);
+                                                }}
+                                            />
+                                            <IconButton
+                                                icon="delete"
+                                                variant="text"
+                                                label={t('week.deleteExecution')}
+                                                disabled={saving}
+                                                onClick={() => correct(() => taskService.deleteExecution(task.id))}
+                                            />
+                                            {editing === task.id && (
+                                                <form className="week-execution-edit" onSubmit={(event) => {
+                                                    event.preventDefault();
+                                                    correct(() => taskService.moveExecution(task.id, doneOn));
+                                                }}>
+                                                    <TextField
+                                                        id={`execution-date-${task.id}`}
+                                                        type="date"
+                                                        label={t('week.executionDate')}
+                                                        value={doneOn}
+                                                        min={week.weekStart}
+                                                        max={[shiftedBy(week.weekStart, 6), new Date().toLocaleDateString('sv')].sort()[0]}
+                                                        onChange={(event) => setDoneOn(event.target.value)}
+                                                        required
+                                                        disabled={saving}
+                                                    />
+                                                    <Button type="submit" disabled={saving}>{t('common.save')}</Button>
+                                                    <Button type="button" variant="text" disabled={saving} onClick={() => setEditing(null)}>{t('common.cancel')}</Button>
+                                                </form>
+                                            )}
+                                        </>
+                                    )}
                                 </li>
                             ))}
                             {(dayDetail.bonuses ?? []).map((bonus) => (

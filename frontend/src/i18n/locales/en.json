@@ -321,6 +321,10 @@
     }
   },
   "week": {
+    "moveExecution": "Change completion date",
+    "deleteExecution": "Delete execution",
+    "executionDate": "Completion date",
+    "correctionFailed": "Could not correct the execution.",
     "title": "This week",
     "streakMet": "A streak of {{count}} days — {{points}} bonus points",
     "streakProgress": "Streak: {{count}} of {{required}} days (at least {{pointsPerDay}} points a day)",

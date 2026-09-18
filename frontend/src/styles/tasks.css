@@ -527,6 +527,7 @@
 
 .week-day-tasks li {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
@@ -538,6 +539,20 @@
 .week-day-task-points {
   font-weight: 600;
   white-space: nowrap;
+}
+
+.week-execution-edit {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  flex-basis: 100%;
+}
+
+.week-execution-edit .md-field {
+  flex: 1 1 180px;
+  min-width: 0;
+  margin: 0;
 }
 
 .week-day-task--bonus .week-day-task-points {

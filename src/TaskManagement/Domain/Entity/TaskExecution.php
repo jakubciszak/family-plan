@@ -286,6 +286,29 @@ class TaskExecution
         $this->rejectionReason = $reason;
     }
 
+    public function assertApproved(): void
+    {
+        if ($this->status !== ExecutionStatus::APPROVED) {
+            throw new DomainException('Only an approved execution can be corrected');
+        }
+    }
+
+    public function moveTo(DateTimeImmutable $day, ClockInterface $clock): void
+    {
+        $this->assertApproved();
+
+        if ($day->format('o-W') !== $this->earnedOn()->format('o-W')) {
+            throw new DomainException('An execution can only be moved within the same week');
+        }
+
+        if ($day->setTime(0, 0) > $clock->now()->setTime(0, 0)) {
+            throw new DomainException('A task cannot be finished in the future');
+        }
+
+        $this->completedAt = $day;
+        $this->updatedAt = $clock->now();
+    }
+
     public function rejectionReason(): ?string
     {
         return $this->rejectionReason;
