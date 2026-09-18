@@ -138,10 +138,15 @@ class StatusChangeRule
         $this->updatedAt = new DateTimeImmutable();
     }
 
-    public function update(string $name, string $description): void
-    {
+    public function update(
+        string $name,
+        string $description,
+        StatusChangeConditionConfig $config
+    ): void {
         $this->name = $name;
         $this->description = $description;
+        $this->conditionType = $config->type();
+        $this->config = $config->toArray();
         $this->updatedAt = new DateTimeImmutable();
     }
 

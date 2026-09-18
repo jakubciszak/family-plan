@@ -22,6 +22,7 @@ use App\TeamManagement\Domain\Entity\Team;
 use App\TeamManagement\Domain\Entity\TeamInvitation;
 use App\TeamManagement\Domain\ReadModel\TeamMembership;
 use App\TeamManagement\Domain\Repository\TeamInvitationRepositoryInterface;
+use App\TeamManagement\Domain\Repository\TeamRepositoryInterface;
 use App\TeamManagement\Domain\Repository\TeamMembershipRepositoryInterface;
 use App\UserManagement\Domain\Repository\UserRepositoryInterface;
 use App\UserSettings\Application\Service\Personalisations;
@@ -47,6 +48,7 @@ class TeamApiController extends AbstractController
         private readonly TeamMembershipRepositoryInterface $memberships,
         private readonly InvitationLinkGenerator $invitationLink,
         private readonly TeamInvitationRepositoryInterface $invitationRepository,
+        private readonly TeamRepositoryInterface $teamRepository,
         private readonly Personalisations $personalisations
     ) {
     }
@@ -487,6 +489,7 @@ class TeamApiController extends AbstractController
         return [
             'id' => $invitation->id()->value(),
             'teamId' => $invitation->teamId()->value(),
+            'teamName' => $this->teamRepository->findById($invitation->teamId())?->name()->value(),
             'email' => $invitation->email()->value(),
             'role' => $invitation->role()->value(),
             'token' => $token,

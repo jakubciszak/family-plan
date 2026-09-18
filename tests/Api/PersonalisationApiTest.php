@@ -21,6 +21,25 @@ class PersonalisationApiTest extends ApiTestCase
         $this->assertNotEmpty($mine['places']['navigation']);
     }
 
+    public function testLanguageAndThemeAreRememberedAcrossRequests(): void
+    {
+        $this->assertJsonResponse($this->putJson('/api/personalisation', [
+            'language' => 'en',
+            'themeMode' => 'dark',
+        ]));
+        $this->putJson('/api/personalisation', ['nickname' => 'Moon']);
+
+        $saved = $this->getJson('/api/personalisation');
+        $this->assertSame('en', $saved['language']);
+        $this->assertSame('dark', $saved['themeMode']);
+    }
+
+    public function testUnsupportedLanguageAndThemeAreRefused(): void
+    {
+        $this->assertSame(422, $this->putJson('/api/personalisation', ['language' => 'unknown'])->getStatusCode());
+        $this->assertSame(422, $this->putJson('/api/personalisation', ['themeMode' => 'unknown'])->getStatusCode());
+    }
+
     public function testAColourANameAndAFaceAreRemembered(): void
     {
         $saved = $this->assertJsonResponse($this->putJson('/api/personalisation', [

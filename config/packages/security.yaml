@@ -15,10 +15,29 @@ security:
         dev:
             pattern: ^/(_(profiler|wdt)|css|images|js)/
             security: false
+        api_token_refresh:
+            pattern: ^/api/auth/token/refresh$
+            stateless: true
+            provider: app_user_provider
+            user_checker: App\UserManagement\Infrastructure\Security\UserChecker
+            refresh_jwt:
+                check_path: api_auth_token_refresh
+        api_token:
+            pattern: ^/api/auth/token$
+            stateless: true
+            provider: app_user_provider
+            user_checker: App\UserManagement\Infrastructure\Security\UserChecker
+            json_login:
+                check_path: /api/auth/token
+                username_path: email
+                password_path: password
+                success_handler: lexik_jwt_authentication.handler.authentication_success
+                failure_handler: lexik_jwt_authentication.handler.authentication_failure
         main:
             lazy: true
             provider: app_user_provider
             user_checker: App\UserManagement\Infrastructure\Security\UserChecker
+            jwt: ~
             json_login:
                 check_path: /api/auth/login
                 username_path: email
@@ -46,6 +65,7 @@ security:
     access_control:
         - { path: ^/login, roles: PUBLIC_ACCESS }
         - { path: ^/api/auth/login, roles: PUBLIC_ACCESS }
+        - { path: ^/api/auth/token, roles: PUBLIC_ACCESS }
         - { path: ^/api/auth/register, roles: PUBLIC_ACCESS }
         - { path: ^/api/auth/activate, roles: PUBLIC_ACCESS }
         - { path: ^/api/doc, roles: PUBLIC_ACCESS }

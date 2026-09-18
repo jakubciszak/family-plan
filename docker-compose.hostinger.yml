@@ -40,12 +40,15 @@ services:
       MAILER_FROM_NAME: ${MAILER_FROM_NAME:-Family Plan}
       APP_URL: ${APP_URL:-https://family-plan.srv1201847.hstgr.cloud}
       FRONTEND_URL: ${FRONTEND_URL:-https://family-plan.srv1201847.hstgr.cloud}
+      JWT_PASSPHRASE: ${JWT_PASSPHRASE:-}
       DEFAULT_TEAM_NAME: ${DEFAULT_TEAM_NAME:-Moja rodzina}
       VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
       VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
       VAPID_SUBJECT: ${VAPID_SUBJECT:-mailto:noreply@familyplan.local}
       MESSENGER_TRANSPORT_DSN: ${MESSENGER_TRANSPORT_DSN:-doctrine://default?auto_setup=1}
       TZ: ${TZ:-Europe/Warsaw}
+    volumes:
+      - jwt_keys:/app/config/jwt
     depends_on:
       database:
         condition: service_healthy
@@ -96,6 +99,8 @@ services:
       - family-plan-network
 
 volumes:
+  jwt_keys:
+    driver: local
   database_data:
     driver: local
 

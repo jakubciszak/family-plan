@@ -77,6 +77,8 @@ final readonly class Personalisations
             'userId' => $personalisation->userId()->value(),
             'nickname' => $personalisation->nickname(),
             'theme' => $personalisation->theme(),
+            'themeMode' => $personalisation->themeMode(),
+            'language' => $personalisation->language(),
             'avatar' => [
                 'style' => $avatar->style(),
                 'seed' => $avatar->seed(),
@@ -94,6 +96,10 @@ final readonly class Personalisations
             'places' => [
                 'home' => Personalisation::HOME_PLACES,
                 'navigation' => Personalisation::NAV_PLACES,
+            ],
+            'choices' => [
+                'themeModes' => Personalisation::THEME_MODES,
+                'languages' => Personalisation::LANGUAGES,
             ],
         ];
     }

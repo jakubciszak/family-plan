@@ -14,7 +14,15 @@ final readonly class UpdateStatusChangeRuleRequest
         public string $name,
 
         #[Assert\NotBlank]
-        public string $description
+        public string $description,
+
+        #[Assert\NotBlank]
+        #[Assert\Choice(choices: ['other_task_completed_today', 'last_execution_cooldown'])]
+        public string $conditionType,
+
+        #[Assert\NotBlank]
+        #[Assert\Type('array')]
+        public array $conditionConfig
     ) {
     }
 }

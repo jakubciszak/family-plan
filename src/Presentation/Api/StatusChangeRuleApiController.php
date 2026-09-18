@@ -10,6 +10,7 @@ use App\TaskManagement\Application\StatusChangeRule\Command\CreateStatusChangeRu
 use App\TaskManagement\Application\StatusChangeRule\Command\DeactivateStatusChangeRuleCommand;
 use App\TaskManagement\Application\StatusChangeRule\Command\UpdateStatusChangeRuleCommand;
 use App\TaskManagement\Application\StatusChangeRule\Query\FindStatusChangeRuleByIdQuery;
+use App\TaskManagement\Domain\Repository\TaskTemplateRepositoryInterface;
 use App\TaskManagement\Application\StatusChangeRule\Query\GetAllStatusChangeRulesQuery;
 use App\TaskManagement\Domain\Entity\StatusChangeRule;
 use App\Presentation\Api\Dto\StatusChangeRule\CreateStatusChangeRuleRequest;
@@ -20,6 +21,7 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
+use Symfony\Component\Messenger\Exception\HandlerFailedException;
 use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Component\Messenger\Stamp\HandledStamp;
 use Symfony\Component\Routing\Attribute\Route;
@@ -32,7 +34,8 @@ class StatusChangeRuleApiController extends AbstractController
 {
     public function __construct(
         private readonly MessageBusInterface $commandBus,
-        private readonly MessageBusInterface $queryBus
+        private readonly MessageBusInterface $queryBus,
+        private readonly TaskTemplateRepositoryInterface $taskTemplates
     ) {
     }
 
@@ -158,8 +161,19 @@ class StatusChangeRuleApiController extends AbstractController
     public function create(
         #[MapRequestPayload] CreateStatusChangeRuleRequest $request
     ): JsonResponse {
+        $template = $this->taskTemplates->findById(Uuid::fromString($request->taskTemplateId));
+
+        if ($template === null) {
+            return $this->json(['error' => 'No such task type'], Response::HTTP_NOT_FOUND);
+        }
+
+        if ($template->teamId() === null) {
+            return $this->json(['error' => 'That task type belongs to no team'], Response::HTTP_BAD_REQUEST);
+        }
+
         $command = new CreateStatusChangeRuleCommand(
             Uuid::generate()->value(),
+            $template->teamId()->value(),
             $request->taskTemplateId,
             $request->name,
             $request->description,
@@ -172,6 +186,14 @@ class StatusChangeRuleApiController extends AbstractController
             return $this->json(['message' => 'Rule created successfully'], Response::HTTP_CREATED);
         } catch (\InvalidArgumentException $e) {
             return $this->json(['error' => $e->getMessage()], Response::HTTP_BAD_REQUEST);
+        } catch (HandlerFailedException $e) {
+            $previous = $e->getPrevious();
+
+            if ($previous instanceof \InvalidArgumentException) {
+                return $this->json(['error' => $previous->getMessage()], Response::HTTP_BAD_REQUEST);
+            }
+
+            throw $e;
         }
     }
 
@@ -190,10 +212,16 @@ class StatusChangeRuleApiController extends AbstractController
     #[OA\RequestBody(
         required: true,
         content: new OA\JsonContent(
-            required: ['name', 'description'],
+            required: ['name', 'description', 'conditionType', 'conditionConfig'],
             properties: [
                 new OA\Property(property: 'name', type: 'string'),
-                new OA\Property(property: 'description', type: 'string')
+                new OA\Property(property: 'description', type: 'string'),
+                new OA\Property(
+                    property: 'conditionType',
+                    type: 'string',
+                    enum: ['other_task_completed_today', 'last_execution_cooldown']
+                ),
+                new OA\Property(property: 'conditionConfig', type: 'object')
             ]
         )
     )]
@@ -212,7 +240,9 @@ class StatusChangeRuleApiController extends AbstractController
         $command = new UpdateStatusChangeRuleCommand(
             $id,
             $request->name,
-            $request->description
+            $request->description,
+            $request->conditionType,
+            $request->conditionConfig
         );
 
         try {
@@ -220,6 +250,14 @@ class StatusChangeRuleApiController extends AbstractController
             return $this->json(['message' => 'Rule updated successfully']);
         } catch (\InvalidArgumentException $e) {
             return $this->json(['error' => $e->getMessage()], Response::HTTP_BAD_REQUEST);
+        } catch (HandlerFailedException $e) {
+            $previous = $e->getPrevious();
+
+            if ($previous instanceof \InvalidArgumentException) {
+                return $this->json(['error' => $previous->getMessage()], Response::HTTP_BAD_REQUEST);
+            }
+
+            throw $e;
         }
     }
 

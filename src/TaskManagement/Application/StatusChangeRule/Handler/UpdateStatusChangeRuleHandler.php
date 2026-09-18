@@ -7,6 +7,8 @@ namespace App\TaskManagement\Application\StatusChangeRule\Handler;
 use App\Shared\Domain\ValueObject\Uuid;
 use App\TaskManagement\Application\StatusChangeRule\Command\UpdateStatusChangeRuleCommand;
 use App\TaskManagement\Domain\Repository\StatusChangeRuleRepositoryInterface;
+use App\TaskManagement\Domain\ValueObject\StatusChangeConditionConfig;
+use App\TaskManagement\Domain\ValueObject\StatusChangeConditionType;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 
 #[AsMessageHandler(bus: 'command.bus')]
@@ -25,7 +27,14 @@ final readonly class UpdateStatusChangeRuleHandler
             throw new \DomainException('Status change rule not found');
         }
 
-        $rule->update($command->name, $command->description);
+        $rule->update(
+            $command->name,
+            $command->description,
+            StatusChangeConditionConfig::fromInput(
+                StatusChangeConditionType::from($command->conditionType),
+                $command->conditionConfig
+            )
+        );
         $this->repository->save($rule);
     }
 }

@@ -26,6 +26,7 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
+use Symfony\Component\Messenger\Exception\HandlerFailedException;
 use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Component\Messenger\Stamp\HandledStamp;
 use Symfony\Component\Routing\Attribute\Route;
@@ -238,6 +239,14 @@ class BonusPointsRuleApiController extends AbstractController
             return $this->json(['message' => 'Rule created successfully'], Response::HTTP_CREATED);
         } catch (\InvalidArgumentException $e) {
             return $this->json(['error' => $e->getMessage()], Response::HTTP_BAD_REQUEST);
+        } catch (HandlerFailedException $e) {
+            $previous = $e->getPrevious();
+
+            if ($previous instanceof \InvalidArgumentException) {
+                return $this->json(['error' => $previous->getMessage()], Response::HTTP_BAD_REQUEST);
+            }
+
+            throw $e;
         }
     }
 
@@ -256,11 +265,17 @@ class BonusPointsRuleApiController extends AbstractController
     #[OA\RequestBody(
         required: true,
         content: new OA\JsonContent(
-            required: ['name', 'description', 'bonusPoints'],
+            required: ['name', 'description', 'bonusPoints', 'ruleType', 'ruleConfig'],
             properties: [
                 new OA\Property(property: 'name', type: 'string'),
                 new OA\Property(property: 'description', type: 'string'),
-                new OA\Property(property: 'bonusPoints', type: 'integer')
+                new OA\Property(property: 'bonusPoints', type: 'integer'),
+                new OA\Property(
+                    property: 'ruleType',
+                    type: 'string',
+                    enum: ['consecutive_days', 'monthly_task_count', 'weekly_points_sum']
+                ),
+                new OA\Property(property: 'ruleConfig', type: 'object')
             ]
         )
     )]
@@ -280,7 +295,9 @@ class BonusPointsRuleApiController extends AbstractController
             $id,
             $request->name,
             $request->description,
-            $request->bonusPoints
+            $request->bonusPoints,
+            $request->ruleType,
+            $request->ruleConfig
         );
 
         try {
@@ -288,6 +305,14 @@ class BonusPointsRuleApiController extends AbstractController
             return $this->json(['message' => 'Rule updated successfully']);
         } catch (\InvalidArgumentException $e) {
             return $this->json(['error' => $e->getMessage()], Response::HTTP_BAD_REQUEST);
+        } catch (HandlerFailedException $e) {
+            $previous = $e->getPrevious();
+
+            if ($previous instanceof \InvalidArgumentException) {
+                return $this->json(['error' => $previous->getMessage()], Response::HTTP_BAD_REQUEST);
+            }
+
+            throw $e;
         }
     }
 

@@ -8,6 +8,8 @@ use App\Shared\Domain\ValueObject\Uuid;
 use App\TaskManagement\Application\BonusRule\Command\UpdateBonusPointsRuleCommand;
 use App\TaskManagement\Domain\Repository\BonusPointsRuleRepositoryInterface;
 use App\TaskManagement\Domain\ValueObject\Points;
+use App\TaskManagement\Domain\ValueObject\RuleConfig;
+use App\TaskManagement\Domain\ValueObject\RuleType;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use InvalidArgumentException;
 
@@ -30,7 +32,8 @@ final readonly class UpdateBonusPointsRuleHandler
         $rule->update(
             $command->name,
             $command->description,
-            Points::fromInt($command->bonusPoints)
+            Points::fromInt($command->bonusPoints),
+            RuleConfig::fromInput(RuleType::from($command->ruleType), $command->ruleConfig)
         );
 
         $this->repository->save($rule);

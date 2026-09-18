@@ -122,7 +122,9 @@ class StatusChangeRuleManagementTest extends TestCase
         $updateCommand = new UpdateStatusChangeRuleCommand(
             $ruleId,
             'Updated Name',
-            'Updated Description'
+            'Updated Description',
+            StatusChangeConditionType::LAST_EXECUTION_COOLDOWN->value,
+            ['cooldownDays' => 2]
         );
         ($this->updateHandler)($updateCommand);
 
@@ -130,6 +132,89 @@ class StatusChangeRuleManagementTest extends TestCase
         $rule = $this->repository->findById(Uuid::fromString($ruleId));
         $this->assertEquals('Updated Name', $rule->name());
         $this->assertEquals('Updated Description', $rule->description());
+    }
+
+    public function testAdminCanRetuneTheCooldownOfARule(): void
+    {
+        $ruleId = Uuid::generate()->value();
+        ($this->createHandler)(new CreateStatusChangeRuleCommand(
+            $ruleId,
+            Uuid::generate()->value(),
+            Uuid::generate()->value(),
+            'Breather',
+            'Two days off',
+            StatusChangeConditionType::LAST_EXECUTION_COOLDOWN->value,
+            ['cooldownDays' => 2]
+        ));
+
+        ($this->updateHandler)(new UpdateStatusChangeRuleCommand(
+            $ruleId,
+            'Breather',
+            'Five days off',
+            StatusChangeConditionType::LAST_EXECUTION_COOLDOWN->value,
+            ['cooldownDays' => 5]
+        ));
+
+        $rule = $this->repository->findById(Uuid::fromString($ruleId));
+        $this->assertSame(5, $rule->config()->cooldownDays());
+    }
+
+    public function testAdminCanSwapTheConditionOfARule(): void
+    {
+        $ruleId = Uuid::generate()->value();
+        $guardedTask = Uuid::generate()->value();
+        $requiredTask = Uuid::generate()->value();
+
+        ($this->createHandler)(new CreateStatusChangeRuleCommand(
+            $ruleId,
+            Uuid::generate()->value(),
+            $guardedTask,
+            'Breather',
+            'Two days off',
+            StatusChangeConditionType::LAST_EXECUTION_COOLDOWN->value,
+            ['cooldownDays' => 2]
+        ));
+
+        ($this->updateHandler)(new UpdateStatusChangeRuleCommand(
+            $ruleId,
+            'Tidy first',
+            'Wash up before this one',
+            StatusChangeConditionType::OTHER_TASK_COMPLETED_TODAY->value,
+            ['requiredTaskTemplateId' => $requiredTask]
+        ));
+
+        $rule = $this->repository->findById(Uuid::fromString($ruleId));
+        $this->assertEquals(
+            StatusChangeConditionType::OTHER_TASK_COMPLETED_TODAY,
+            $rule->conditionType()
+        );
+        $this->assertEquals($requiredTask, $rule->config()->requiredTaskTemplateId()->value());
+        $this->assertNull($rule->config()->cooldownDays());
+        $this->assertEquals($guardedTask, $rule->taskTemplateId()->value());
+    }
+
+    public function testAnUpdateWithoutTheRequiredTaskIsRefused(): void
+    {
+        $ruleId = Uuid::generate()->value();
+        ($this->createHandler)(new CreateStatusChangeRuleCommand(
+            $ruleId,
+            Uuid::generate()->value(),
+            Uuid::generate()->value(),
+            'Breather',
+            'Two days off',
+            StatusChangeConditionType::LAST_EXECUTION_COOLDOWN->value,
+            ['cooldownDays' => 2]
+        ));
+
+        $this->expectException(\InvalidArgumentException::class);
+
+        ($this->updateHandler)(new UpdateStatusChangeRuleCommand(
+            $ruleId,
+            'Tidy first',
+            'Wash up before this one',
+            StatusChangeConditionType::OTHER_TASK_COMPLETED_TODAY->value,
+            []
+        ));
     }
 
     public function testAdminCanDeactivateRule(): void

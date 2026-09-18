@@ -76,6 +76,26 @@ final readonly class RuleConfig
         );
     }
 
+    /**
+     * @param array<string, mixed> $config
+     */
+    public static function fromInput(RuleType $type, array $config): self
+    {
+        return match ($type) {
+            RuleType::CONSECUTIVE_DAYS => self::consecutiveDays(
+                (int) ($config['requiredDays'] ?? 0),
+                (int) ($config['pointsPerDay'] ?? 1),
+                isset($config['taskTemplateId']) ? Uuid::fromString((string) $config['taskTemplateId']) : null,
+                $config['accounts'] ?? []
+            ),
+            RuleType::MONTHLY_TASK_COUNT => self::monthlyTaskCount((int) ($config['requiredCount'] ?? 0)),
+            RuleType::WEEKLY_POINTS_SUM => self::weeklyPointsSum(
+                (int) ($config['requiredPoints'] ?? 0),
+                $config['accounts'] ?? []
+            ),
+        };
+    }
+
     public function type(): RuleType
     {
         return $this->type;

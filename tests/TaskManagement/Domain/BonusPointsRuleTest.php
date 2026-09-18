@@ -112,12 +112,28 @@ class BonusPointsRuleTest extends TestCase
         $newBonusPoints = Points::fromInt(50);
 
         // When
-        $rule->update($newName, $newDescription, $newBonusPoints);
+        $rule->update($newName, $newDescription, $newBonusPoints, $rule->config());
 
         // Then
         $this->assertEquals($newName, $rule->name());
         $this->assertEquals($newDescription, $rule->description());
         $this->assertEquals($newBonusPoints, $rule->bonusPoints());
+    }
+
+    public function testUpdateCarriesANewCondition(): void
+    {
+        $rule = $this->createSampleRule();
+
+        $rule->update(
+            $rule->name(),
+            $rule->description(),
+            $rule->bonusPoints(),
+            RuleConfig::weeklyPointsSum(120, ['bonuses'])
+        );
+
+        $this->assertEquals(RuleType::WEEKLY_POINTS_SUM, $rule->type());
+        $this->assertSame(120, $rule->config()->requiredPoints());
+        $this->assertSame(['bonuses'], $rule->config()->accounts());
     }
 
     public function testBonusPointsCannotBeNegative(): void
