@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 
 const ICONS = {
     account: 'account_circle',
+    actionPlans: 'route',
     add: 'add',
     admin: 'admin_panel_settings',
     approve: 'thumb_up',

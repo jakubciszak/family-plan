@@ -34,6 +34,19 @@ class TaskExecution
     #[ORM\Transient]
     private ?ExecutionStateInterface $state = null;
 
+    #[ORM\Column(type: 'json', nullable: true)]
+    private ?array $actionPlan = null;
+
+    public function actionPlan(): ?array
+    {
+        return $this->actionPlan;
+    }
+
+    public function attachActionPlan(?array $plan): void
+    {
+        $this->actionPlan = $plan;
+    }
+
     private function __construct(
         #[ORM\Id]
         #[ORM\Column(type: 'uuid')]

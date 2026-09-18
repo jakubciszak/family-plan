@@ -1,3 +1,4 @@
+export { default as Autocomplete } from './Autocomplete';
 export { default as Button } from './Button';
 export { default as Card } from './Card';
 export { default as Chip } from './Chip';

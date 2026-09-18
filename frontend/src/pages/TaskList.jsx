@@ -27,7 +27,7 @@ function useLimitLabel() {
     };
 }
 
-function TaskList({ onNavigate, user, onInspectMember }) {
+function TaskList({ onNavigate, user, onInspectMember, onOpenPlan }) {
     const { t } = useTranslation();
     const { own } = usePersonalisation();
     const [taskTypes, setTaskTypes] = React.useState([]);
@@ -232,6 +232,7 @@ function TaskList({ onNavigate, user, onInspectMember }) {
                                     {points(task.points)}
                                 </div>
                                 <div className="task-actions">
+                                    {task.actionPlan && onOpenPlan && <Button variant="tonal" onClick={() => onOpenPlan(task)}>{t('actionPlans.showPlan')}</Button>}
                                     <Button
                                         tone="success"
                                         icon="check"
@@ -272,6 +273,7 @@ function TaskList({ onNavigate, user, onInspectMember }) {
                                     </p>
                                 )}
                                 <div className="task-actions">
+                                    {task.actionPlan && onOpenPlan && <Button variant="tonal" onClick={() => onOpenPlan(task)}>{t('actionPlans.showPlan')}</Button>}
                                     <Button
                                         icon="check"
                                         onClick={() => run(() => taskService.complete(task.id), { cheer: true })}

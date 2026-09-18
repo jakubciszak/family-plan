@@ -1,6 +1,8 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import TaskList from './pages/TaskList';
+import ActionPlans from './pages/ActionPlans';
+import { storageKey as actionPlanStorageKey } from './services/actionPlanRun';
 import MemberView from './pages/MemberView';
 import Allowance from './pages/Allowance';
 import Personalise from './pages/Personalise';
@@ -95,6 +97,8 @@ function App() {
     const [showRegister, setShowRegister] = React.useState(false);
     const [inviteToken, setInviteToken] = React.useState(null);
     const [administersTeam, setAdministersTeam] = React.useState(false);
+    const [taskPlan, setTaskPlan] = React.useState(null);
+    const [actionFocus, setActionFocus] = React.useState(false);
     const [scrolled, setScrolled] = React.useState(false);
     const [inspectedMember, setInspectedMember] = React.useState(null);
 
@@ -153,6 +157,9 @@ function App() {
         apiClient.get('/api/auth/me')
             .then(data => {
                 setUser(data);
+                try {
+                    if (localStorage.getItem(actionPlanStorageKey(data.id))) setCurrentPage('action-plans');
+                } catch {}
                 setIsAuthenticated(true);
                 refreshTeamAdminFlag();
                 refreshPoints(data.id);
@@ -212,6 +219,7 @@ function App() {
 
     const allNavItems = {
         tasks: { id: 'tasks', icon: 'tasks', label: t('nav.tasks') },
+        'action-plans': { id: 'action-plans', icon: 'actionPlans', label: t('actionPlans.title'), shortLabel: t('actionPlans.shortTitle') },
         teams: { id: 'teams', icon: 'teams', label: t('nav.teams') },
         allowance: { id: 'allowance', icon: 'wallet', label: t('nav.allowance'), shortLabel: t('nav.allowanceShort') },
         personalise: { id: 'personalise', icon: 'stars', label: t('personalise.title'), shortLabel: t('personalise.short') },
@@ -237,7 +245,8 @@ function App() {
     ];
 
     return (
-        <div className="app">
+        <div className={`app${actionFocus ? ' app--action-focus' : ''}`}>
+            {!actionFocus && <>
             <header className={`app-header${scrolled ? ' app-header--scrolled' : ''}`}>
                 <div className="header-left">
                     <h1>{t('app.title')}</h1>
@@ -263,9 +272,15 @@ function App() {
                 appTitle={t('app.title')}
             />
 
+            </>}
             <main className="app-main">
+                {currentPage === 'action-plans' && <ActionPlans key={user.id} user={user} onFocusChange={setActionFocus}
+                    taskPlan={taskPlan} onConsumeTaskPlan={() => setTaskPlan(null)}
+                    onTaskCompleted={() => refreshPoints(user.id)}
+                    onBackToTasks={() => { setTaskPlan(null); setCurrentPage('tasks'); }} />}
                 {currentPage === 'tasks' && (
                     <TaskList
+                        onOpenPlan={(task) => { setTaskPlan(task); setCurrentPage('action-plans'); }}
                         onNavigate={setCurrentPage}
                         user={user}
                         onInspectMember={(member) => { setInspectedMember(member); setCurrentPage('member'); }}
@@ -295,8 +310,7 @@ function App() {
                 {currentPage === 'settings' && <UserSettings user={user} />}
             </main>
 
-            <NotificationCenter />
-            <InstallPrompt />
+            {!actionFocus && <><NotificationCenter /><InstallPrompt /></>}
         </div>
     );
 }

@@ -37,6 +37,7 @@ class TaskTemplateApiController extends AbstractController
         private readonly TaskTemplateRepositoryInterface $taskTemplateRepository,
         private readonly TaskTypePool $pool,
         private readonly PartyResponsibilities $responsibilities,
+        private readonly \App\ActionPlanning\Application\Service\ActionPlanAccess $actionPlans,
         private readonly UserRepositoryInterface $userRepository
     ) {
     }
@@ -92,6 +93,9 @@ class TaskTemplateApiController extends AbstractController
             $teamId
         );
 
+        $planId = $request->actionPlanId === null ? null : Uuid::fromString($request->actionPlanId);
+        $this->actionPlans->forTaskType($planId, $template->teamId());
+        $template->attachActionPlan($planId);
         $this->taskTemplateRepository->save($template);
 
         return $this->json($this->serialize($template), Response::HTTP_CREATED);
@@ -103,7 +107,7 @@ class TaskTemplateApiController extends AbstractController
     #[OA\Response(response: 400, description: 'Invalid execution limit')]
     #[OA\Response(response: 403, description: 'Only team admins change task types')]
     #[OA\Response(response: 404, description: 'Task type not found')]
-    public function update(string $id, #[MapRequestPayload] UpdateTaskTypeRequest $request): JsonResponse
+    public function update(string $id, #[MapRequestPayload] UpdateTaskTypeRequest $request, \Symfony\Component\HttpFoundation\Request $httpRequest): JsonResponse
     {
         $template = $this->ownedTemplate($id);
 
@@ -124,6 +128,11 @@ class TaskTemplateApiController extends AbstractController
         );
         $template->changeExecutionLimit($limit);
 
+        if (array_key_exists('actionPlanId', $httpRequest->toArray())) {
+            $planId = $request->actionPlanId === null ? null : Uuid::fromString($request->actionPlanId);
+            $this->actionPlans->forTaskType($planId, $template->teamId());
+            $template->attachActionPlan($planId);
+        }
         $this->taskTemplateRepository->save($template);
 
         return $this->json($this->serialize($template));
@@ -229,6 +238,7 @@ class TaskTemplateApiController extends AbstractController
         return [
             'id' => $template->id()->value(),
             'teamId' => $template->teamId()?->value(),
+            'actionPlanId' => $template->actionPlanId()?->value(),
             'name' => $template->name()->value(),
             'description' => $template->description(),
             'points' => $template->points()->value(),

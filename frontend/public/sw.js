@@ -1,10 +1,10 @@
-const CACHE = 'family-plan-shell-v1';
+const CACHE = 'family-plan-shell-v2';
+const CACHE_ENABLED = new URL(self.location.href).searchParams.get('cache') !== 'off';
 const SHELL = ['/', '/manifest.json', '/favicon.svg', '/icon-192.png', '/icon-512.png'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE)
-      .then((cache) => cache.addAll(SHELL))
+    (CACHE_ENABLED ? caches.open(CACHE).then((cache) => cache.addAll(SHELL)) : Promise.resolve())
       .catch(() => undefined)
       .then(() => self.skipWaiting())
   );
@@ -13,7 +13,7 @@ self.addEventListener('install', (event) => {
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys()
-      .then((keys) => Promise.all(keys.filter((key) => key !== CACHE).map((key) => caches.delete(key))))
+      .then((keys) => Promise.all(keys.filter((key) => key.startsWith('family-plan-shell-') && (!CACHE_ENABLED || key !== CACHE)).map((key) => caches.delete(key))))
       .then(() => self.clients.claim())
   );
 });
@@ -72,7 +72,7 @@ self.addEventListener('notificationclick', (event) => {
 self.addEventListener('fetch', (event) => {
   const { request } = event;
 
-  if (request.method !== 'GET') {
+  if (!CACHE_ENABLED || request.method !== 'GET') {
     return;
   }
 

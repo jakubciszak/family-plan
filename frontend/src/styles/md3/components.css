@@ -514,6 +514,18 @@ textarea.md-field__input {
   z-index: 1;
 }
 
+.md-autocomplete { position: relative; }
+.md-autocomplete .md-field { margin: 0; }
+.md-autocomplete .md-field__input { padding-right: 48px; }
+.md-autocomplete .md-field__input:focus-visible { outline: none; }
+.md-autocomplete__arrow { position: absolute; right: 16px; top: 16px; pointer-events: none; color: var(--md-sys-color-on-surface-variant); }
+.md-autocomplete--open .md-autocomplete__arrow { transform: rotate(180deg); }
+.md-autocomplete__menu { margin: 0; }
+.md-autocomplete__menu ul { margin: 0; padding: 0; list-style: none; }
+.md-autocomplete__menu .md-select__option { overflow-wrap: anywhere; }
+.md-autocomplete__menu .md-select__option:hover { background: var(--md-sys-color-surface-container-highest); }
+.md-autocomplete__empty { padding: 12px; margin: 0 !important; color: var(--md-sys-color-on-surface-variant); }
+
 .md-field__trailing-icon {
   position: absolute;
   right: 12px;

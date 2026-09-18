@@ -34,6 +34,12 @@ doctrine:
             Doctrine\DBAL\Platforms\PostgreSQLPlatform: identity
         auto_mapping: true
         mappings:
+            ActionPlanning:
+                type: attribute
+                is_bundle: false
+                dir: '%kernel.project_dir%/src/ActionPlanning/Domain/Entity'
+                prefix: 'App\ActionPlanning\Domain\Entity'
+                alias: ActionPlanning
             Allowance:
                 type: attribute
                 is_bundle: false

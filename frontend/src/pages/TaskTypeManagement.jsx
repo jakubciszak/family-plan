@@ -2,12 +2,15 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import taskService from '../services/taskService';
 import teamService from '../services/teamService';
+import actionPlanService from '../services/actionPlanService';
 import { Button, Icon, Select, TextField, CircularProgress } from '../components/md3';
 
 const LIMIT_TYPES = ['unlimited', 'once', 'per_day', 'per_week', 'per_month'];
 
 function TaskTypeManagement() {
     const { t } = useTranslation();
+    const [actionPlans, setActionPlans] = React.useState([]);
+    const [plansUnavailable, setPlansUnavailable] = React.useState(false);
     const [taskTypes, setTaskTypes] = React.useState([]);
     const [teams, setTeams] = React.useState([]);
     const [selectedTeam, setSelectedTeam] = React.useState(null);
@@ -35,6 +38,7 @@ function TaskTypeManagement() {
                 setSelectedTeam((current) => current || administered[0] || null);
             })
             .catch(() => setTeams([]));
+        actionPlanService.list().then((data) => setActionPlans(data.plans || [])).catch(() => setPlansUnavailable(true));
         loadTaskTypes();
     }, [loadTaskTypes]);
 
@@ -43,12 +47,16 @@ function TaskTypeManagement() {
         try {
             await action();
             await loadTaskTypes();
+            return true;
         } catch (err) {
-            setError(err?.response?.data?.error || t('tasks.actionFailed'));
+            const message = err?.response?.data?.error;
+            setError(message?.startsWith('actionPlans.') ? t(message) : message || t('tasks.actionFailed'));
+            return false;
         }
     };
 
     const payload = (formData) => ({
+        actionPlanId: formData.actionPlanId || null,
         name: formData.name,
         description: formData.description,
         points: formData.points,
@@ -59,19 +67,19 @@ function TaskTypeManagement() {
     });
 
     const handleCreate = async (formData) => {
-        await run(() => taskService.createTaskType({
+        const saved = await run(() => taskService.createTaskType({
             teamId: selectedTeam.id,
             ...payload(formData),
         }));
-        setShowForm(false);
+        if (saved) setShowForm(false);
     };
 
     const handleUpdate = async (id, formData) => {
-        await run(() => taskService.updateTaskType(id, payload(formData)));
-        setEditingId(null);
+        if (await run(() => taskService.updateTaskType(id, payload(formData)))) setEditingId(null);
     };
 
     const formValues = (type) => ({
+        actionPlanId: type.actionPlanId || '',
         name: type.name,
         description: type.description || '',
         points: type.points,
@@ -140,7 +148,7 @@ function TaskTypeManagement() {
                 </div>
             )}
 
-            {showForm && <TaskTypeForm onSubmit={handleCreate} submitLabel={t('taskTypes.create')} submitIcon="add" />}
+            {showForm && <TaskTypeForm key={selectedTeam?.id} plans={actionPlans.filter((plan) => plan.teamId === selectedTeam?.id)} plansUnavailable={plansUnavailable} onSubmit={handleCreate} submitLabel={t('taskTypes.create')} submitIcon="add" />}
 
             <div className="tasks">
                 {visibleTypes.length === 0 ? (
@@ -210,6 +218,8 @@ function TaskTypeManagement() {
                             </div>
                             {editingId === type.id && (
                                 <TaskTypeForm
+                                    plans={actionPlans.filter((plan) => plan.teamId === type.teamId)}
+                                    plansUnavailable={plansUnavailable}
                                     initial={formValues(type)}
                                     onSubmit={(formData) => handleUpdate(type.id, formData)}
                                     submitLabel={t('common.save')}
@@ -224,9 +234,10 @@ function TaskTypeManagement() {
     );
 }
 
-function TaskTypeForm({ onSubmit, initial, submitLabel, submitIcon }) {
+function TaskTypeForm({ onSubmit, initial, submitLabel, submitIcon, plans = [], plansUnavailable }) {
     const { t } = useTranslation();
     const [formData, setFormData] = React.useState(initial || {
+        actionPlanId: '',
         name: '',
         description: '',
         points: 10,
@@ -326,6 +337,13 @@ function TaskTypeForm({ onSubmit, initial, submitLabel, submitIcon }) {
                     />
                 )}
             </div>
+            <TextField as="select" id="actionPlanId" name="actionPlanId" label={t('actionPlans.taskTypePlan')}
+                value={formData.actionPlanId} onChange={handleChange} disabled={plansUnavailable}>
+                <option value="">{t('actionPlans.noAttachedPlan')}</option>
+                {formData.actionPlanId && !plans.some((plan) => plan.id === formData.actionPlanId) && <option value={formData.actionPlanId}>{t('actionPlans.currentAttachedPlan')}</option>}
+                {plans.map((plan) => <option key={plan.id} value={plan.id}>{plan.name}</option>)}
+            </TextField>
+            <p className="empty-hint">{t(plansUnavailable ? 'actionPlans.loadError' : 'actionPlans.taskTypePlanHint')}</p>
             <div className="form-actions">
                 <Button type="submit" icon={submitIcon}>{submitLabel}</Button>
             </div>
