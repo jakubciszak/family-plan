@@ -70,6 +70,7 @@ class NotificationOrchestratorTest extends TestCase
 
         $this->assertSame(['email', 'in_app', 'push'], $this->sentChannels());
         $this->assertSame('zosia@example.com', $this->adapter->getSentNotifications()[0]['recipient']);
+        $this->assertSame(['email', 'in_app', 'push'], $this->adapter->getSentNotifications()[0]['parameters']['delivery_channels']);
     }
 
     public function testAdminMovesAnEventToTheInAppChannel(): void
@@ -81,6 +82,7 @@ class NotificationOrchestratorTest extends TestCase
         $sent = $this->adapter->getSentNotifications();
         $this->assertSame(['in_app'], $this->sentChannels());
         $this->assertSame($this->user->id()->value(), $sent[0]['recipient']);
+        $this->assertSame(['in_app'], $sent[0]['parameters']['delivery_channels']);
     }
 
     public function testEventSwitchedOffReachesNobody(): void

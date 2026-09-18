@@ -6,6 +6,7 @@ export type Notification = {
   message: string;
   createdAt: string;
   readAt: string | null;
+  parameters?: { delivery_channels?: string[] };
 };
 
 export const listUnread = async (limit: number): Promise<Notification[]> => {

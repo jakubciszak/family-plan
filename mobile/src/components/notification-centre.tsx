@@ -61,6 +61,7 @@ export default function NotificationCentre() {
           if (channels.find((choice) => choice.name === 'push')?.enabled) {
             for (const notification of fresh) {
               if (cancelled) break;
+              if (!notification.parameters?.delivery_channels?.includes('push')) continue;
               await showDeviceNotification(notification, user.id, () => !cancelled).catch(() => undefined);
             }
           }
