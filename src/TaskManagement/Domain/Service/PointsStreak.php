@@ -8,37 +8,6 @@ final class PointsStreak
 {
     /**
      * @param array<string, int> $perDay
-     */
-    public static function longest(array $perDay, int $pointsPerDay = 1): int
-    {
-        $days = DailyPoints::daysReaching($perDay, $pointsPerDay);
-
-        if ($days === []) {
-            return 0;
-        }
-
-        $longest = 1;
-        $current = 1;
-
-        for ($index = 1; $index < count($days); $index++) {
-            $previous = DailyPoints::day($days[$index - 1]);
-            $day = DailyPoints::day($days[$index]);
-
-            if ($previous->diff($day)->days === 1) {
-                $current++;
-                $longest = max($longest, $current);
-
-                continue;
-            }
-
-            $current = 1;
-        }
-
-        return $longest;
-    }
-
-    /**
-     * @param array<string, int> $perDay
      * @return string[] the days of the run that ends on the most recent qualifying day
      */
     public static function current(array $perDay, int $pointsPerDay = 1): array

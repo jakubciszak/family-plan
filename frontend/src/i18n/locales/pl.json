@@ -321,6 +321,10 @@
     }
   },
   "week": {
+    "moveExecution": "Zmień datę wykonania",
+    "deleteExecution": "Usuń wykonanie",
+    "executionDate": "Data wykonania",
+    "correctionFailed": "Nie udało się poprawić wykonania.",
     "title": "Ten tydzień",
     "streakMet": "Seria {{count}} dni z rzędu — bonus {{points}} pkt",
     "streakProgress": "Seria: {{count}} z {{required}} dni (min. {{pointsPerDay}} pkt dziennie)",

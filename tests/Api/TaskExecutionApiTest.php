@@ -892,6 +892,98 @@ class TaskExecutionApiTest extends ApiTestCase
         );
     }
 
+    public function testAdminMovesAndRemovesApprovedExecution(): void
+    {
+        $context = $this->teamWithMember();
+        $type = $this->defineType($context['teamId'], ['type' => 'unlimited'], 30);
+        $memberId = $context['member']->id()->value();
+        $sunday = new \DateTimeImmutable('last sunday');
+        $saturday = $sunday->modify('-1 day')->format('Y-m-d');
+        $booked = $this->assertJsonResponse($this->postJson("/api/task-templates/{$type['id']}/book", [
+            'userId' => $memberId,
+            'doneOn' => $sunday->format('Y-m-d'),
+        ]), Response::HTTP_CREATED);
+
+        $moved = $this->assertJsonResponse($this->putJson("/api/task-executions/{$booked['id']}", ['doneOn' => $saturday]));
+        $this->assertSame($saturday, substr($moved['completedAt'], 0, 10));
+        $this->assertSame(30, $this->getJson("/api/users/{$memberId}/points")['balance']);
+        $this->assertSame(30, $this->getJson("/api/points/day?userId={$memberId}&date={$saturday}")['total']);
+        $this->assertSame(0, $this->getJson('/api/points/day?userId=' . $memberId . '&date=' . $sunday->format('Y-m-d'))['total']);
+
+        $this->assertSame(Response::HTTP_NO_CONTENT, $this->deleteJson("/api/task-executions/{$booked['id']}")->getStatusCode());
+        $this->assertSame(0, $this->getJson("/api/users/{$memberId}/points")['balance']);
+        $this->assertSame([], $this->getJson("/api/points/day?userId={$memberId}&date={$saturday}")['tasks']);
+        $this->assertSame(Response::HTTP_NOT_FOUND, $this->deleteJson("/api/task-executions/{$booked['id']}")->getStatusCode());
+        $this->assertSame(0, $this->getJson("/api/users/{$memberId}/points")['balance']);
+    }
+
+    public function testExecutionCorrectionsRejectOtherWeeksInvalidDatesAndMembers(): void
+    {
+        $context = $this->teamWithMember();
+        $type = $this->defineType($context['teamId'], ['type' => 'unlimited']);
+        $day = new \DateTimeImmutable('last sunday');
+        $booked = $this->assertJsonResponse($this->postJson("/api/task-templates/{$type['id']}/book", [
+            'userId' => $context['member']->id()->value(),
+            'doneOn' => $day->format('Y-m-d'),
+        ]), Response::HTTP_CREATED);
+
+        foreach ([$day->modify('+1 day')->format('Y-m-d'), '2026-02-30', '', null, 123] as $invalid) {
+            $this->assertSame(Response::HTTP_BAD_REQUEST, $this->putJson("/api/task-executions/{$booked['id']}", ['doneOn' => $invalid])->getStatusCode());
+        }
+
+        $this->loginAs($context['member']);
+        $this->assertSame(Response::HTTP_FORBIDDEN, $this->deleteJson("/api/task-executions/{$booked['id']}")->getStatusCode());
+        $this->assertSame(Response::HTTP_FORBIDDEN, $this->putJson("/api/task-executions/{$booked['id']}", ['doneOn' => $day->format('Y-m-d')])->getStatusCode());
+    }
+
+    public function testClosedWeekBlocksBothExecutionCorrections(): void
+    {
+        $context = $this->teamWithMember();
+        $type = $this->defineType($context['teamId'], ['type' => 'unlimited']);
+        $memberId = $context['member']->id()->value();
+        $day = (new \DateTimeImmutable('last sunday'))->format('Y-m-d');
+        $booked = $this->assertJsonResponse($this->postJson("/api/task-templates/{$type['id']}/book", [
+            'userId' => $memberId,
+            'doneOn' => $day,
+        ]), Response::HTTP_CREATED);
+        $this->assertJsonResponse($this->postJson('/api/allowance/weeks/close', ['userId' => $memberId, 'weekStart' => $day]));
+
+        $this->assertSame(Response::HTTP_BAD_REQUEST, $this->putJson("/api/task-executions/{$booked['id']}", ['doneOn' => $day])->getStatusCode());
+        $this->assertSame(Response::HTTP_BAD_REQUEST, $this->deleteJson("/api/task-executions/{$booked['id']}")->getStatusCode());
+        $detail = $this->getJson("/api/points/day?userId={$memberId}&date={$day}");
+        $this->assertTrue($detail['closed']);
+        $this->assertCount(1, $detail['tasks']);
+    }
+
+    public function testUnapprovedExecutionCannotBeMovedOrDeleted(): void
+    {
+        $context = $this->teamWithMember();
+        $type = $this->defineType($context['teamId'], ['type' => 'unlimited']);
+        $given = $this->assertJsonResponse($this->postJson("/api/task-templates/{$type['id']}/assign", [
+            'userId' => $context['member']->id()->value(),
+        ]), Response::HTTP_CREATED);
+
+        $this->assertSame(Response::HTTP_BAD_REQUEST, $this->deleteJson("/api/task-executions/{$given['id']}")->getStatusCode());
+        $this->assertSame(Response::HTTP_BAD_REQUEST, $this->putJson("/api/task-executions/{$given['id']}", [
+            'doneOn' => (new \DateTimeImmutable())->format('Y-m-d'),
+        ])->getStatusCode());
+    }
+
+    public function testAnUnrelatedAdminCannotCorrectAnExecution(): void
+    {
+        $context = $this->teamWithMember();
+        $type = $this->defineType($context['teamId'], ['type' => 'unlimited']);
+        $booked = $this->assertJsonResponse($this->postJson("/api/task-templates/{$type['id']}/book", [
+            'userId' => $context['member']->id()->value(),
+        ]), Response::HTTP_CREATED);
+        $this->authenticate();
+
+        $this->assertSame(Response::HTTP_FORBIDDEN, $this->deleteJson("/api/task-executions/{$booked['id']}")->getStatusCode());
+        $this->assertSame(Response::HTTP_FORBIDDEN, $this->putJson("/api/task-executions/{$booked['id']}", [
+            'doneOn' => (new \DateTimeImmutable())->format('Y-m-d'),
+        ])->getStatusCode());
+    }
+
     private function teamWithMember(): array
     {
         $admin = $this->currentUser;

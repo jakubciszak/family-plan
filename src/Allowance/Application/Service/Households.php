@@ -16,6 +16,13 @@ final readonly class Households
 
     public function teamOf(Uuid $userId): ?Uuid
     {
+        $memberships = $this->orderedMemberships($userId);
+
+        return $memberships === [] ? null : $memberships[0]->teamId();
+    }
+
+    private function orderedMemberships(Uuid $userId): array
+    {
         $memberships = $this->memberships->ofUser($userId);
 
         usort($memberships, static fn (TeamMembership $a, TeamMembership $b) => [
@@ -28,7 +35,7 @@ final readonly class Households
             $b->teamId()->value(),
         ]);
 
-        return $memberships === [] ? null : $memberships[0]->teamId();
+        return $memberships;
     }
 
     /**
@@ -36,7 +43,7 @@ final readonly class Households
      */
     public function sharedWithAdmin(Uuid $adminId, Uuid $memberId): ?Uuid
     {
-        foreach ($this->memberships->ofUser($memberId) as $membership) {
+        foreach ($this->orderedMemberships($memberId) as $membership) {
             if ($this->memberships->isAdmin($adminId, $membership->teamId())) {
                 return $membership->teamId();
             }

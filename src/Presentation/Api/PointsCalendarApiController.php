@@ -9,6 +9,7 @@ use App\Party\Domain\ValueObject\ResponsibilityType;
 use App\PointsManagement\Domain\Service\PointsLedger;
 use App\PointsManagement\Domain\ValueObject\AccountKind;
 use App\Shared\Domain\ValueObject\Uuid;
+use App\Shared\Domain\Period\ClosedWeeksInterface;
 use App\TaskManagement\Domain\Entity\BonusPointsRule;
 use App\TaskManagement\Domain\Repository\BonusPointsRuleRepositoryInterface;
 use App\TaskManagement\Domain\Repository\TaskExecutionRepositoryInterface;
@@ -39,7 +40,8 @@ class PointsCalendarApiController extends AbstractController
         private readonly UserRepositoryInterface $userRepository,
         private readonly TeamMembershipRepositoryInterface $memberships,
         private readonly PointsLedger $ledger,
-        private readonly StreakDailyPoints $streakPoints
+        private readonly StreakDailyPoints $streakPoints,
+        private readonly ClosedWeeksInterface $closedWeeks
     ) {
     }
 
@@ -205,6 +207,7 @@ class PointsCalendarApiController extends AbstractController
 
         return $this->json([
             'date' => $day->format('Y-m-d'),
+            'closed' => $this->closedWeeks->isClosedFor($userId, $day),
             'userId' => $userId->value(),
             'tasks' => array_map(static fn ($execution) => [
                 'id' => $execution->id()->value(),

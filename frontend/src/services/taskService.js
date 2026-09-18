@@ -1,6 +1,14 @@
 import apiClient from './apiClient';
 
 const taskService = {
+    async moveExecution(id, doneOn) {
+        return await apiClient.put(`/api/task-executions/${id}`, { doneOn });
+    },
+
+    async deleteExecution(id) {
+        return await apiClient.delete(`/api/task-executions/${id}`);
+    },
+
     async getTaskTypes() {
         return await apiClient.get('/api/task-templates');
     },

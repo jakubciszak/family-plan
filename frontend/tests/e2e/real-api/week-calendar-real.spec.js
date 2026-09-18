@@ -15,7 +15,10 @@ test.describe('W. Kalendarz tygodnia', () => {
 
   test('W1 ekran glowny pokazuje siedem dni tygodnia', async ({ page }) => {
     const owner = await createTeamOwner();
-    await loginThroughUi(page, owner.email);
+    const member = await addTeamMember(owner);
+    await loginThroughUi(page, member.email);
+    await page.locator('.team-selector').click();
+    await page.getByRole('option', { name: owner.teamName, exact: true }).click();
 
     await expect(calendar(page)).toBeVisible();
     await expect(calendar(page).locator('.week-day')).toHaveCount(7);
@@ -27,6 +30,8 @@ test.describe('W. Kalendarz tygodnia', () => {
     await earnPoints(owner, member, 30);
 
     await loginThroughUi(page, member.email);
+    await page.locator('.team-selector').click();
+    await page.getByRole('option', { name: owner.teamName, exact: true }).click();
 
     const today = calendar(page).locator('.week-day.is-today');
     await expect(today).toHaveCount(1);
@@ -58,6 +63,8 @@ test.describe('W. Kalendarz tygodnia', () => {
     await earnPoints(owner, member, 25);
 
     await loginThroughUi(page, member.email);
+    await page.locator('.team-selector').click();
+    await page.getByRole('option', { name: owner.teamName, exact: true }).click();
 
     await expect(page.getByTestId('week-streak')).toContainText('3');
     await expect(page.getByTestId('week-streak')).toContainText('20');
@@ -80,6 +87,8 @@ test.describe('W. Kalendarz tygodnia', () => {
     await earnPoints(owner, member, 10);
 
     await loginThroughUi(page, member.email);
+    await page.locator('.team-selector').click();
+    await page.getByRole('option', { name: owner.teamName, exact: true }).click();
 
     await expect(calendar(page).locator('.week-day.in-streak')).toHaveCount(0);
     await expect(calendar(page).locator('.week-day.is-today .week-day-points')).toHaveText('10');
@@ -116,6 +125,38 @@ test.describe('W. Kalendarz tygodnia', () => {
     await expect(detail).toContainText(/cofni[eę]ty|taken back/i);
     await expect(week.locator('.week-day.is-today .week-day-bonus')).toHaveCount(0);
     await expect(detail.locator('.week-day-task--bonus button')).toHaveCount(0);
+  });
+
+  test('W8 admin zmienia date wykonania i usuwa je z kalendarza', async ({ page }) => {
+    const owner = await createTeamOwner();
+    const teams = await owner.session.get('/api/teams');
+    const shown = { ...owner, teamId: teams.body.teams[0].id };
+    const member = await addTeamMember(shown);
+    const type = await createTaskType(shown, { name: 'Wykonanie do poprawy', points: 17 });
+    const sunday = new Date();
+    sunday.setDate(sunday.getDate() - (sunday.getDay() || 7));
+    const saturday = new Date(sunday);
+    saturday.setDate(saturday.getDate() - 1);
+    const oldDay = sunday.toLocaleDateString('sv');
+    const newDay = saturday.toLocaleDateString('sv');
+    const booked = await owner.session.post(`/api/task-templates/${type.id}/book`, { userId: member.id, doneOn: oldDay });
+    expect(booked.status).toBe(201);
+
+    await loginThroughUi(page, owner.email);
+    const week = page.getByTestId('member-weeks').getByTestId('week-calendar').first();
+    await week.getByRole('button', { name: /poprzedni tydzień|previous week/i }).click();
+    await week.locator(`[data-date="${oldDay}"] button`).click();
+    await week.getByRole('button', { name: /zmień datę wykonania|change completion date/i }).click();
+    await week.getByLabel(/^(data wykonania|completion date)$/i).fill(newDay);
+    await week.getByRole('button', { name: /^(zapisz|save)$/i }).click();
+    await expect(week.locator(`[data-date="${oldDay}"] .week-day-points`)).toHaveText('0');
+    await expect(week.locator(`[data-date="${newDay}"] .week-day-points`)).toHaveText('17');
+    await week.locator(`[data-date="${newDay}"] button`).click();
+    await week.getByRole('button', { name: /usuń wykonanie|delete execution/i }).click();
+    await expect(week.locator(`[data-date="${newDay}"] .week-day-points`)).toHaveText('0');
+    await expect(week.getByTestId('week-day-detail')).not.toContainText('Wykonanie do poprawy');
+    const balance = await owner.session.get(`/api/users/${member.id}/points`);
+    expect(balance.body.balance).toBe(0);
   });
 
   test('W6 admin zespolu zaklada regule serii z formularza', async ({ page }) => {
