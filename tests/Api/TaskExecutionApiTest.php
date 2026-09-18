@@ -984,6 +984,60 @@ class TaskExecutionApiTest extends ApiTestCase
         ])->getStatusCode());
     }
 
+    public function testReturningAndResubmittingNotifiesTheRightPeopleWithoutAwardingPointsTwice(): void
+    {
+        foreach (['task_completed', 'task_approved'] as $event) {
+            $this->assertJsonResponse($this->putJson('/api/notification-policies/' . $event, ['channels' => ['email', 'in_app', 'push']]));
+        }
+        $context = $this->teamWithMember();
+        $type = $this->defineType($context['teamId'], ['type' => 'unlimited']);
+        $memberId = $context['member']->id()->value();
+        $given = $this->assertJsonResponse($this->postJson("/api/task-templates/{$type['id']}/assign", ['userId' => $memberId]), 201);
+        $id = $given['id'];
+
+        $this->loginAs($context['member']);
+        $assigned = $this->getJson('/api/notifications')['notifications'];
+        $this->assertCount(1, $assigned);
+        $this->assertSame('task_assigned', $assigned[0]['parameters']['event']);
+        $this->assertJsonResponse($this->postJson("/api/task-executions/{$id}/complete", []));
+
+        $this->loginAs($context['admin']);
+        $this->assertCount(1, $this->getJson('/api/notifications')['notifications']);
+        foreach (['', '   ', str_repeat('ą', 501), ['bad'], 123] as $invalid) {
+            $this->assertSame(400, $this->postJson("/api/task-executions/{$id}/reject", ['reason' => $invalid])->getStatusCode());
+        }
+        $returned = $this->assertJsonResponse($this->postJson("/api/task-executions/{$id}/reject", ['reason' => '  Umyj też kubki.  ']));
+        $this->assertSame('rejected', $returned['status']);
+        $this->assertSame('Umyj też kubki.', $returned['rejectionReason']);
+        $this->assertSame($memberId, $returned['assignedUserId']);
+        $this->assertSame(0, $this->getJson("/api/users/{$memberId}/points")['balance']);
+        $this->assertSame(400, $this->postJson("/api/task-executions/{$id}/reject", ['reason' => 'Jeszcze raz'])->getStatusCode());
+
+        $this->loginAs($context['member']);
+        $notifications = $this->getJson('/api/notifications')['notifications'];
+        $this->assertCount(2, $notifications);
+        $returnedNotifications = array_values(array_filter($notifications, static fn (array $notification) => $notification['parameters']['event'] === 'task_rejected'));
+        $this->assertSame('Umyj też kubki.', $returnedNotifications[0]['parameters']['reason']);
+        $this->assertStringContainsString('Umyj też kubki.', $returnedNotifications[0]['message']);
+        $this->assertSame(403, $this->postJson("/api/task-executions/{$id}/reject", ['reason' => 'Sam sobie'])->getStatusCode());
+        $completed = $this->assertJsonResponse($this->postJson("/api/task-executions/{$id}/complete", []));
+        $this->assertNull($completed['rejectionReason']);
+        $this->assertSame('completed', $completed['status']);
+        $this->assertJsonResponse($this->postJson("/api/task-executions/{$id}/complete", []));
+
+        $this->loginAs($context['admin']);
+        $this->assertCount(2, $this->getJson('/api/notifications')['notifications']);
+        $this->assertJsonResponse($this->postJson("/api/task-executions/{$id}/approve", []));
+        $this->assertSame($given['points'], $this->getJson("/api/users/{$memberId}/points")['balance']);
+        $this->assertSame(400, $this->postJson("/api/task-executions/{$id}/reject", ['reason' => 'Za późno'])->getStatusCode());
+
+        $this->loginAs($context['member']);
+        $this->assertCount(3, $this->getJson('/api/notifications')['notifications']);
+        $this->authenticate();
+        $this->assertSame(403, $this->postJson("/api/task-executions/{$id}/reject", ['reason' => 'Obcy administrator'])->getStatusCode());
+        $this->assertSame([], $this->getJson('/api/notifications')['notifications']);
+    }
+
     private function teamWithMember(): array
     {
         $admin = $this->currentUser;

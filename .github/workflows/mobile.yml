@@ -6,34 +6,44 @@ on:
   pull_request:
     branches: [ '**' ]
 
+permissions:
+  contents: read
+
 jobs:
   mobile-tests:
-    name: React Native Tests
+    name: Expo checks and mobile flows
     timeout-minutes: 30
     runs-on: ubuntu-latest
-    
+    defaults:
+      run:
+        working-directory: mobile
     steps:
-    - uses: actions/checkout@v4
-    
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20'
-        cache: 'npm'
-        cache-dependency-path: mobile/package-lock.json
-    
-    - name: Install dependencies
-      working-directory: ./mobile
-      run: npm ci
-    
-    - name: Run Jest tests
-      working-directory: ./mobile
-      run: npm test -- --coverage --ci
-    
-    - name: Upload test results
-      uses: actions/upload-artifact@v4
-      if: always()
-      with:
-        name: mobile-test-results
-        path: mobile/coverage/
-        retention-days: 30
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: mobile/.node-version
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npx playwright install --with-deps chromium
+      - run: npm run e2e
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: pdo_sqlite, intl, mbstring, gd
+          coverage: none
+      - run: composer install --prefer-dist --no-progress --ignore-platform-req=ext-redis
+        working-directory: .
+      - run: npm run e2e:real
+      - run: npx expo export --platform all
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mobile-test-results
+          path: |
+            mobile/playwright-report/
+            mobile/test-results/
+            mobile/test-results-real/
+          retention-days: 14

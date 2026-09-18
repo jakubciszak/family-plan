@@ -1,8 +1,9 @@
 import React from 'react';
+import ReturnTaskDialog from '../components/ReturnTaskDialog';
 import { useTranslation } from 'react-i18next';
 import WeekCalendar from '../components/WeekCalendar';
 import taskService from '../services/taskService';
-import { Button, Icon, CircularProgress, Dialog, TextField } from '../components/md3';
+import { Button, Icon, CircularProgress } from '../components/md3';
 
 function MemberView({ member, onBack }) {
     const { t } = useTranslation();
@@ -10,7 +11,6 @@ function MemberView({ member, onBack }) {
     const [error, setError] = React.useState(null);
     const [refreshToken, setRefreshToken] = React.useState(0);
     const [toReject, setToReject] = React.useState(null);
-    const [reason, setReason] = React.useState('');
 
     const load = React.useCallback(async () => {
         try {
@@ -52,8 +52,9 @@ function MemberView({ member, onBack }) {
                     <Icon name="stars" size={16} />
                     {t('user.points', { points: execution.points })}
                 </span>
-                <span className="task-status">{t(`tasks.status.${execution.status}`, execution.status)}</span>
+                <span className="task-status">{t(`tasks.status${execution.status[0].toUpperCase()}${execution.status.slice(1)}`, execution.status)}</span>
             </div>
+            {execution.rejectionReason && <p>{t('tasks.rejectedReason', { reason: execution.rejectionReason })}</p>}
             {actions}
         </div>
     );
@@ -93,7 +94,7 @@ function MemberView({ member, onBack }) {
                                 <Button
                                     variant="outlined"
                                     icon="close"
-                                    onClick={() => { setToReject(execution); setReason(''); }}
+                                    onClick={() => setToReject(execution)}
                                 >
                                     {t('member.reject')}
                                 </Button>
@@ -114,40 +115,10 @@ function MemberView({ member, onBack }) {
                 )}
             </section>
 
-            <Dialog
-                open={!!toReject}
-                onClose={() => setToReject(null)}
-                headline={t('member.rejectHeadline', { name: toReject?.name })}
-                actions={
-                    <>
-                        <Button variant="text" onClick={() => setToReject(null)}>
-                            {t('common.cancel')}
-                        </Button>
-                        <Button
-                            tone="danger"
-                            icon="close"
-                            disabled={reason.trim() === ''}
-                            onClick={() => {
-                                const execution = toReject;
-                                setToReject(null);
-                                run(() => taskService.rejectExecution(execution.id, reason.trim()));
-                            }}
-                        >
-                            {t('member.reject')}
-                        </Button>
-                    </>
-                }
-            >
-                <TextField
-                    id="rejection-reason"
-                    as="textarea"
-                    label={t('member.reasonLabel')}
-                    value={reason}
-                    onChange={(e) => setReason(e.target.value)}
-                    supportingText={t('member.reasonHint')}
-                    required
-                />
-            </Dialog>
+            {toReject && <ReturnTaskDialog key={toReject.id} task={toReject} onClose={() => setToReject(null)} onReturned={async () => {
+                await load();
+                setRefreshToken((value) => value + 1);
+            }} />}
         </div>
     );
 }

@@ -13,13 +13,43 @@ final readonly class NotificationEvent
     public const PAYOUT_OFFERED = 'payout_offered';
     public const STREAK_AT_RISK = 'streak_at_risk';
 
+    public const TASK_ASSIGNED = 'task_assigned';
+
+    public const TASK_REJECTED = 'task_rejected';
+
+    public const TASK_ABANDONED = 'task_abandoned';
+
+    public const TASK_CORRECTED = 'task_corrected';
+
+    public const TASK_REMOVED = 'task_removed';
+
     private const CATALOG = [
+        self::TASK_ASSIGNED => [
+            'defaultChannels' => [NotificationChannels::IN_APP, NotificationChannels::PUSH],
+            'configurable' => true,
+        ],
         self::TASK_COMPLETED => [
-            'defaultChannels' => [NotificationChannels::EMAIL],
+            'defaultChannels' => [NotificationChannels::EMAIL, NotificationChannels::IN_APP, NotificationChannels::PUSH],
+            'configurable' => true,
+        ],
+        self::TASK_REJECTED => [
+            'defaultChannels' => [NotificationChannels::IN_APP, NotificationChannels::PUSH],
             'configurable' => true,
         ],
         self::TASK_APPROVED => [
-            'defaultChannels' => [NotificationChannels::EMAIL],
+            'defaultChannels' => [NotificationChannels::EMAIL, NotificationChannels::IN_APP, NotificationChannels::PUSH],
+            'configurable' => true,
+        ],
+        self::TASK_ABANDONED => [
+            'defaultChannels' => [NotificationChannels::IN_APP, NotificationChannels::PUSH],
+            'configurable' => true,
+        ],
+        self::TASK_CORRECTED => [
+            'defaultChannels' => [NotificationChannels::IN_APP, NotificationChannels::PUSH],
+            'configurable' => true,
+        ],
+        self::TASK_REMOVED => [
+            'defaultChannels' => [NotificationChannels::IN_APP, NotificationChannels::PUSH],
             'configurable' => true,
         ],
         self::USER_WELCOME => [

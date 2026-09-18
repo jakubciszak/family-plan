@@ -4,7 +4,7 @@ import { Snackbar } from './md3';
 import notificationService from '../services/notificationService';
 import '../styles/notifications.css';
 
-const POLL_INTERVAL_MS = 30000;
+const POLL_INTERVAL_MS = 10000;
 const DISPLAY_MS = 6000;
 const MAX_VISIBLE = 3;
 
@@ -47,10 +47,14 @@ function NotificationCenter() {
 
         poll();
         const timer = window.setInterval(poll, POLL_INTERVAL_MS);
+        document.addEventListener('visibilitychange', poll);
+        window.addEventListener('focus', poll);
 
         return () => {
             cancelled = true;
             window.clearInterval(timer);
+            document.removeEventListener('visibilitychange', poll);
+            window.removeEventListener('focus', poll);
         };
     }, []);
 

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Presentation\Api;
 
+use App\Notifications\Communication\Service\TaskActivityNotifier;
 use App\PointsManagement\Domain\Service\PointsLedger;
 use App\PointsManagement\Domain\ValueObject\AccountKind;
 use App\PointsManagement\Domain\ValueObject\EntrySource;
@@ -51,7 +52,8 @@ class TaskExecutionApiController extends AbstractController
         private readonly \App\ActionPlanning\Application\Service\ActionPlanAccess $actionPlans,
         private readonly ClosedWeeksInterface $closedWeeks,
         private readonly PointsLedger $ledger,
-        private readonly EntityManagerInterface $entityManager
+        private readonly EntityManagerInterface $entityManager,
+        private readonly TaskActivityNotifier $taskNotifications
     ) {
     }
 
@@ -348,11 +350,11 @@ class TaskExecutionApiController extends AbstractController
     #[OA\Response(response: 403, description: 'Only team admins judge a finished task')]
     public function reject(string $id, Request $request): JsonResponse
     {
-        $reason = trim((string) ($request->toArray()['reason'] ?? ''));
+        $reason = $request->toArray()['reason'] ?? null;
 
-        if ($reason === '') {
+        if (!is_string($reason) || trim($reason) === '' || mb_strlen(trim($reason)) > 500) {
             return $this->json(
-                ['error' => 'A rejection needs a reason the assignee can act on'],
+                ['error' => 'Podaj powód cofnięcia zadania (od 1 do 500 znaków).'],
                 Response::HTTP_BAD_REQUEST
             );
         }
@@ -365,7 +367,7 @@ class TaskExecutionApiController extends AbstractController
             throw new UnauthorizedTaskActionException('Nobody judges their own task');
         }
 
-        $execution->reject($reason);
+        $execution->reject(trim($reason));
         $this->executionRepository->save($execution);
 
         return $this->json($this->serialize($execution));
@@ -389,6 +391,7 @@ class TaskExecutionApiController extends AbstractController
         }
 
         $this->executionRepository->delete($execution);
+        $this->taskNotifications->changed($execution, 'task_abandoned', 'Zadanie oddane do puli', sprintf('Zadanie „%s” zostało oddane do puli.', $execution->name()?->value()), true);
 
         return $this->json(null, Response::HTTP_NO_CONTENT);
     }
@@ -422,8 +425,12 @@ class TaskExecutionApiController extends AbstractController
             throw new \DomainException('The day must be given as YYYY-MM-DD');
         }
 
+        $previousDay = $execution->earnedOn()->format('Y-m-d');
         $execution->moveTo($day, $this->clock);
         $this->executionRepository->save($execution);
+        if ($previousDay !== $day->format('Y-m-d')) {
+            $this->taskNotifications->changed($execution, 'task_corrected', 'Zmieniono datę zadania', sprintf('Data wykonania zadania „%s” została zmieniona na %s.', $execution->name()?->value(), $day->format('d.m.Y')));
+        }
 
         return $this->json($this->serialize($execution));
     }
@@ -455,6 +462,7 @@ class TaskExecutionApiController extends AbstractController
 
             $this->executionRepository->delete($execution);
         });
+        $this->taskNotifications->changed($execution, 'task_removed', 'Usunięto wykonanie zadania', sprintf('Wykonanie zadania „%s” zostało usunięte, a przyznane za nie punkty cofnięte.', $execution->name()?->value()));
 
         return $this->json(null, Response::HTTP_NO_CONTENT);
     }

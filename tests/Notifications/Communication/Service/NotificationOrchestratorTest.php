@@ -64,11 +64,11 @@ class NotificationOrchestratorTest extends TestCase
         $this->userRepository->save($this->user);
     }
 
-    public function testWithoutAnyPolicyTheNotificationStillGoesOutByEmail(): void
+    public function testTaskDefaultsReachEmailInAppAndPush(): void
     {
         $this->notifyUser(NotificationEvent::taskApproved());
 
-        $this->assertSame(['email'], $this->sentChannels());
+        $this->assertSame(['email', 'in_app', 'push'], $this->sentChannels());
         $this->assertSame('zosia@example.com', $this->adapter->getSentNotifications()[0]['recipient']);
     }
 

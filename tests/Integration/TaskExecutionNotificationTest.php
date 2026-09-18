@@ -141,7 +141,7 @@ class TaskExecutionNotificationTest extends IntegrationTestCase
 
         $mail = $this->mailTo($doer);
         $this->assertNotNull($mail);
-        $this->assertStringContainsString('40 points', $mail['message']);
+        $this->assertStringContainsString('40 punktów', $mail['message']);
     }
 
     public function testNothingIsSentForAnExecutionThatIsGone(): void
