@@ -252,8 +252,9 @@ jobs:
           for attempt in $(seq 1 30); do
             api=$(curl -s -o /dev/null -w '%{http_code}' "${APP_HEALTH_URL}/api/auth/me" || true)
             spa=$(curl -s -o /dev/null -w '%{http_code}' "${APP_HEALTH_URL}/" || true)
-            echo "attempt ${attempt}: api=${api} spa=${spa}"
-            if [ "$api" = "401" ] && [ "$spa" = "200" ]; then
+            jwt=$(curl -s -o /dev/null -w '%{http_code}' -X POST -H 'Content-Type: application/json' -d '{}' "${APP_HEALTH_URL}/api/auth/token" || true)
+            echo "attempt ${attempt}: api=${api} spa=${spa} jwt=${jwt}"
+            if [ "$api" = "401" ] && [ "$spa" = "200" ] && { [ "$jwt" = "400" ] || [ "$jwt" = "401" ]; }; then
               echo "Deployment is healthy."
               exit 0
             fi

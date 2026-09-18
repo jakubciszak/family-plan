@@ -122,7 +122,9 @@ class BonusPointsRuleManagementTest extends TestCase
             $ruleId,
             'Updated Name',
             'Updated Description',
-            50
+            50,
+            RuleType::MONTHLY_TASK_COUNT->value,
+            ['requiredCount' => 10]
         );
         ($this->updateHandler)($updateCommand);
 
@@ -131,6 +133,87 @@ class BonusPointsRuleManagementTest extends TestCase
         $this->assertEquals('Updated Name', $rule->name());
         $this->assertEquals('Updated Description', $rule->description());
         $this->assertEquals(50, $rule->bonusPoints()->value());
+    }
+
+    public function testAdminCanRetuneTheConditionOfARule(): void
+    {
+        $ruleId = Uuid::generate()->value();
+        ($this->createHandler)(new CreateBonusPointsRuleCommand(
+            $ruleId,
+            Uuid::generate()->value(),
+            'Streak',
+            'Five days running',
+            20,
+            RuleType::CONSECUTIVE_DAYS->value,
+            ['requiredDays' => 5, 'pointsPerDay' => 10, 'accounts' => ['tasks']]
+        ));
+
+        ($this->updateHandler)(new UpdateBonusPointsRuleCommand(
+            $ruleId,
+            'Streak',
+            'Three days running, bonuses count too',
+            20,
+            RuleType::CONSECUTIVE_DAYS->value,
+            ['requiredDays' => 3, 'pointsPerDay' => 4, 'accounts' => ['tasks', 'bonuses']]
+        ));
+
+        $rule = $this->repository->findById(Uuid::fromString($ruleId));
+        $this->assertSame(3, $rule->config()->requiredDays());
+        $this->assertSame(4, $rule->config()->pointsPerDay());
+        $this->assertSame(['tasks', 'bonuses'], $rule->config()->accounts());
+    }
+
+    public function testAdminCanSwapTheTypeOfARule(): void
+    {
+        $ruleId = Uuid::generate()->value();
+        ($this->createHandler)(new CreateBonusPointsRuleCommand(
+            $ruleId,
+            Uuid::generate()->value(),
+            'Monthly',
+            'Twenty tasks a month',
+            30,
+            RuleType::MONTHLY_TASK_COUNT->value,
+            ['requiredCount' => 20]
+        ));
+
+        ($this->updateHandler)(new UpdateBonusPointsRuleCommand(
+            $ruleId,
+            'Weekly',
+            'A hundred points a week',
+            30,
+            RuleType::WEEKLY_POINTS_SUM->value,
+            ['requiredPoints' => 100, 'accounts' => ['tasks']]
+        ));
+
+        $rule = $this->repository->findById(Uuid::fromString($ruleId));
+        $this->assertEquals(RuleType::WEEKLY_POINTS_SUM, $rule->type());
+        $this->assertSame(100, $rule->config()->requiredPoints());
+        $this->assertNull($rule->config()->requiredCount());
+    }
+
+    public function testAnUpdateThatBreaksTheConditionIsRefused(): void
+    {
+        $ruleId = Uuid::generate()->value();
+        ($this->createHandler)(new CreateBonusPointsRuleCommand(
+            $ruleId,
+            Uuid::generate()->value(),
+            'Streak',
+            'Five days running',
+            20,
+            RuleType::CONSECUTIVE_DAYS->value,
+            ['requiredDays' => 5, 'pointsPerDay' => 10]
+        ));
+
+        $this->expectException(\InvalidArgumentException::class);
+
+        ($this->updateHandler)(new UpdateBonusPointsRuleCommand(
+            $ruleId,
+            'Streak',
+            'One day running',
+            20,
+            RuleType::CONSECUTIVE_DAYS->value,
+            ['requiredDays' => 1, 'pointsPerDay' => 10]
+        ));
     }
 
     public function testAdminCanDeactivateRule(): void

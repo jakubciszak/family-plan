@@ -138,11 +138,17 @@ class BonusPointsRule
         $this->updatedAt = new DateTimeImmutable();
     }
 
-    public function update(string $name, string $description, Points $bonusPoints): void
-    {
+    public function update(
+        string $name,
+        string $description,
+        Points $bonusPoints,
+        RuleConfig $config
+    ): void {
         $this->name = $name;
         $this->description = $description;
         $this->bonusPoints = $bonusPoints;
+        $this->type = $config->type();
+        $this->config = $config->toArray();
         $this->updatedAt = new DateTimeImmutable();
     }
 

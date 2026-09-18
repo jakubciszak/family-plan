@@ -97,6 +97,14 @@ class PersonalisationApiController extends AbstractController
             $mine->paintWith($request->theme, $this->clock);
         }
 
+        if ($request->themeMode !== null) {
+            $mine->lightOrDark($request->themeMode, $this->clock);
+        }
+
+        if ($request->language !== null) {
+            $mine->speak($request->language, $this->clock);
+        }
+
         if ($request->avatar !== null) {
             $mine->wear($this->avatarFrom($request->avatar, $caller), $this->clock);
         }

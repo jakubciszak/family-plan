@@ -105,6 +105,48 @@ class AuthApiController extends AbstractController
         ]);
     }
 
+    #[Route('/token', name: 'token', methods: ['POST'])]
+    #[OA\Post(
+        path: '/api/auth/token',
+        summary: 'Exchange credentials for a JWT access token and a refresh token',
+        tags: ['Authentication']
+    )]
+    #[OA\RequestBody(
+        required: true,
+        content: new OA\JsonContent(
+            required: ['email', 'password'],
+            properties: [
+                new OA\Property(property: 'email', type: 'string', format: 'email'),
+                new OA\Property(property: 'password', type: 'string', format: 'password')
+            ]
+        )
+    )]
+    #[OA\Response(
+        response: 200,
+        description: 'Access token issued',
+        content: new OA\JsonContent(
+            properties: [
+                new OA\Property(property: 'token', type: 'string'),
+                new OA\Property(property: 'refresh_token', type: 'string'),
+                new OA\Property(
+                    property: 'user',
+                    properties: [
+                        new OA\Property(property: 'id', type: 'string', format: 'uuid'),
+                        new OA\Property(property: 'name', type: 'string'),
+                        new OA\Property(property: 'email', type: 'string', format: 'email'),
+                        new OA\Property(property: 'role', type: 'string')
+                    ],
+                    type: 'object'
+                )
+            ]
+        )
+    )]
+    #[OA\Response(response: 401, description: 'Invalid credentials')]
+    public function token(): never
+    {
+        throw new \LogicException('Handled by the api_token firewall.');
+    }
+
     #[Route('/me', name: 'current_user', methods: ['GET'])]
     #[OA\Get(
         path: '/api/auth/me',

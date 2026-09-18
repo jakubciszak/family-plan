@@ -113,6 +113,9 @@ jobs:
     - name: Create the test database
       run: PGPASSWORD='!ChangeMe!' psql -h 127.0.0.1 -U app -d app -c 'CREATE DATABASE app_test OWNER app'
 
+    - name: Generate test signing keys
+      run: php bin/console lexik:jwt:generate-keypair --skip-if-exists --env=test
+
     - name: Run Integration Tests
       run: |
         mkdir -p test-results

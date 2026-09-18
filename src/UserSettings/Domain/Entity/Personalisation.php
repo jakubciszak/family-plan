@@ -29,6 +29,12 @@ class Personalisation
 
     public const DEFAULT_THEME = '#2e7d5b';
 
+    public const THEME_MODES = ['light', 'dark', 'system'];
+
+    public const DEFAULT_THEME_MODE = 'system';
+
+    public const LANGUAGES = ['pl', 'en'];
+
     private function __construct(
         #[ORM\Id]
         #[ORM\Column(type: 'uuid')]
@@ -42,6 +48,12 @@ class Personalisation
 
         #[ORM\Column(type: 'string', length: 7)]
         private string $theme,
+
+        #[ORM\Column(type: 'string', length: 10)]
+        private string $themeMode,
+
+        #[ORM\Column(type: 'string', length: 5, nullable: true)]
+        private ?string $language,
 
         #[ORM\Column(type: 'json')]
         private array $avatar,
@@ -76,6 +88,8 @@ class Personalisation
             $userId,
             null,
             self::DEFAULT_THEME,
+            self::DEFAULT_THEME_MODE,
+            null,
             AvatarChoice::drawn('bottts', $userId->value())->toArray(),
             Backdrop::none()->toArray(),
             self::HOME_START,
@@ -109,6 +123,26 @@ class Personalisation
         }
 
         $this->theme = strtolower($theme);
+        $this->touch($clock);
+    }
+
+    public function lightOrDark(string $themeMode, ClockInterface $clock): void
+    {
+        if (!in_array($themeMode, self::THEME_MODES, true)) {
+            throw new DomainException('A theme mode is light, dark or system');
+        }
+
+        $this->themeMode = $themeMode;
+        $this->touch($clock);
+    }
+
+    public function speak(string $language, ClockInterface $clock): void
+    {
+        if (!in_array($language, self::LANGUAGES, true)) {
+            throw new DomainException('A language is one of those the app speaks');
+        }
+
+        $this->language = $language;
         $this->touch($clock);
     }
 
@@ -161,6 +195,16 @@ class Personalisation
     public function theme(): string
     {
         return $this->theme;
+    }
+
+    public function themeMode(): string
+    {
+        return $this->themeMode;
+    }
+
+    public function language(): ?string
+    {
+        return $this->language;
     }
 
     public function avatar(): AvatarChoice

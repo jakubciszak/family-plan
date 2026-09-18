@@ -67,3 +67,8 @@ compose.override.yaml
 *.bak
 *.backup
 *.sql
+
+/config/jwt/*.pem
+/mobile/
+/.claude/
+/.agents/

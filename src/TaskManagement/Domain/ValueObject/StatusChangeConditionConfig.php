@@ -39,6 +39,25 @@ final readonly class StatusChangeConditionConfig
         );
     }
 
+    /**
+     * @param array<string, mixed> $config
+     */
+    public static function fromInput(StatusChangeConditionType $type, array $config): self
+    {
+        return match ($type) {
+            StatusChangeConditionType::OTHER_TASK_COMPLETED_TODAY => self::otherTaskCompletedToday(
+                isset($config['requiredTaskTemplateId'])
+                    ? Uuid::fromString((string) $config['requiredTaskTemplateId'])
+                    : throw new InvalidArgumentException(
+                        'Required task template ID is mandatory for other_task_completed_today condition'
+                    )
+            ),
+            StatusChangeConditionType::LAST_EXECUTION_COOLDOWN => self::lastExecutionCooldown(
+                (int) ($config['cooldownDays'] ?? 0)
+            ),
+        };
+    }
+
     public function type(): StatusChangeConditionType
     {
         return $this->type;

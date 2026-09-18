@@ -145,6 +145,124 @@ class BonusRuleApiTest extends ApiTestCase
         $this->assertSame(Response::HTTP_FORBIDDEN, $response->getStatusCode());
     }
 
+    public function testCreatingARuleWithABrokenConditionIsRefused(): void
+    {
+        $teamId = $this->createTeam();
+
+        $response = $this->postJson('/api/bonus-rules', [
+            'teamId' => $teamId,
+            'name' => 'Seria',
+            'description' => 'Jeden dzien',
+            'bonusPoints' => 30,
+            'ruleType' => 'consecutive_days',
+            'ruleConfig' => ['requiredDays' => 1, 'pointsPerDay' => 10],
+        ]);
+
+        $this->assertSame(Response::HTTP_BAD_REQUEST, $response->getStatusCode(), $response->getContent());
+    }
+
+    public function testEditingARuleCanRetuneItsCondition(): void
+    {
+        $teamId = $this->createTeam();
+
+        $this->assertJsonResponse(
+            $this->postJson('/api/bonus-rules', [
+                'teamId' => $teamId,
+                'name' => 'Seria',
+                'description' => 'Piec dni z rzedu',
+                'bonusPoints' => 30,
+                'ruleType' => 'consecutive_days',
+                'ruleConfig' => ['requiredDays' => 5, 'pointsPerDay' => 10, 'accounts' => ['tasks']],
+            ]),
+            Response::HTTP_CREATED
+        );
+
+        $rule = $this->getJson('/api/bonus-rules')['rules'][0];
+
+        $this->assertJsonResponse(
+            $this->putJson('/api/bonus-rules/' . $rule['id'], [
+                'name' => 'Seria',
+                'description' => 'Trzy dni z rzedu, bonusy tez licza',
+                'bonusPoints' => 30,
+                'ruleType' => 'consecutive_days',
+                'ruleConfig' => [
+                    'requiredDays' => 3,
+                    'pointsPerDay' => 4,
+                    'accounts' => ['tasks', 'bonuses'],
+                ],
+            ]),
+            Response::HTTP_OK
+        );
+
+        $changed = $this->getJson('/api/bonus-rules')['rules'][0];
+        $this->assertSame(3, $changed['config']['requiredDays']);
+        $this->assertSame(4, $changed['config']['pointsPerDay']);
+        $this->assertSame(['tasks', 'bonuses'], $changed['config']['accounts']);
+    }
+
+    public function testEditingARuleCanSwapItsType(): void
+    {
+        $teamId = $this->createTeam();
+
+        $this->assertJsonResponse(
+            $this->postJson('/api/bonus-rules', [
+                'teamId' => $teamId,
+                'name' => 'Miesiac',
+                'description' => 'Dwadziescia zadan',
+                'bonusPoints' => 40,
+                'ruleType' => 'monthly_task_count',
+                'ruleConfig' => ['requiredCount' => 20],
+            ]),
+            Response::HTTP_CREATED
+        );
+
+        $rule = $this->getJson('/api/bonus-rules')['rules'][0];
+
+        $this->assertJsonResponse(
+            $this->putJson('/api/bonus-rules/' . $rule['id'], [
+                'name' => 'Tydzien',
+                'description' => 'Sto punktow w tygodniu',
+                'bonusPoints' => 40,
+                'ruleType' => 'weekly_points_sum',
+                'ruleConfig' => ['requiredPoints' => 100, 'accounts' => ['tasks']],
+            ]),
+            Response::HTTP_OK
+        );
+
+        $changed = $this->getJson('/api/bonus-rules')['rules'][0];
+        $this->assertSame('weekly_points_sum', $changed['type']);
+        $this->assertSame(100, $changed['config']['requiredPoints']);
+    }
+
+    public function testEditingARuleIntoABrokenConditionIsRefused(): void
+    {
+        $teamId = $this->createTeam();
+
+        $this->assertJsonResponse(
+            $this->postJson('/api/bonus-rules', [
+                'teamId' => $teamId,
+                'name' => 'Seria',
+                'description' => 'Piec dni z rzedu',
+                'bonusPoints' => 30,
+                'ruleType' => 'consecutive_days',
+                'ruleConfig' => ['requiredDays' => 5, 'pointsPerDay' => 10],
+            ]),
+            Response::HTTP_CREATED
+        );
+
+        $rule = $this->getJson('/api/bonus-rules')['rules'][0];
+
+        $response = $this->putJson('/api/bonus-rules/' . $rule['id'], [
+            'name' => 'Seria',
+            'description' => 'Jeden dzien',
+            'bonusPoints' => 30,
+            'ruleType' => 'consecutive_days',
+            'ruleConfig' => ['requiredDays' => 1, 'pointsPerDay' => 10],
+        ]);
+
+        $this->assertSame(Response::HTTP_BAD_REQUEST, $response->getStatusCode(), $response->getContent());
+    }
+
     private function createTeam(string $name = 'Rodzina'): string
     {
         $team = $this->assertJsonResponse(

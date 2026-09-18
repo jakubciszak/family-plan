@@ -23,25 +23,7 @@ final readonly class CreateBonusPointsRuleHandler
 
     public function __invoke(CreateBonusPointsRuleCommand $command): void
     {
-        $ruleType = RuleType::from($command->ruleType);
-        
-        $config = match ($ruleType) {
-            RuleType::CONSECUTIVE_DAYS => RuleConfig::consecutiveDays(
-                (int) $command->ruleConfig['requiredDays'],
-                (int) ($command->ruleConfig['pointsPerDay'] ?? 1),
-                isset($command->ruleConfig['taskTemplateId'])
-                    ? Uuid::fromString($command->ruleConfig['taskTemplateId'])
-                    : null,
-                $command->ruleConfig['accounts'] ?? []
-            ),
-            RuleType::MONTHLY_TASK_COUNT => RuleConfig::monthlyTaskCount(
-                $command->ruleConfig['requiredCount']
-            ),
-            RuleType::WEEKLY_POINTS_SUM => RuleConfig::weeklyPointsSum(
-                (int) $command->ruleConfig['requiredPoints'],
-                $command->ruleConfig['accounts'] ?? []
-            ),
-        };
+        $config = RuleConfig::fromInput(RuleType::from($command->ruleType), $command->ruleConfig);
 
         $rule = BonusPointsRule::create(
             Uuid::fromString($command->id),

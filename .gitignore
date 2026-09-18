@@ -24,3 +24,7 @@ yarn-error.log
 
 # Composer
 /composer.phar
+
+###> lexik/jwt-authentication-bundle ###
+/config/jwt/*.pem
+###< lexik/jwt-authentication-bundle ###

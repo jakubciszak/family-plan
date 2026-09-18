@@ -21,6 +21,7 @@ if [ "${RESET_DATABASE:-false}" = "true" ]; then
 fi
 
 if [ "${RUN_MIGRATIONS:-true}" = "true" ]; then
+    php bin/console lexik:jwt:generate-keypair --skip-if-exists --no-interaction
     echo "Running database migrations..."
     php bin/console doctrine:migrations:migrate --no-interaction --allow-no-migration
 

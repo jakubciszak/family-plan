@@ -163,6 +163,42 @@ class TeamApiTest extends ApiTestCase
         );
     }
 
+    public function testMyInvitationsCarryTheNameOfTheTeamInviting(): void
+    {
+        $team = $this->assertJsonResponse(
+            $this->postJson('/api/teams', ['name' => 'Kowalscy', 'description' => null]),
+            Response::HTTP_CREATED
+        );
+
+        $invited = User::create(
+            Uuid::generate(),
+            'Zaproszony',
+            Email::fromString(sprintf('zaproszony-%s@example.com', uniqid())),
+            password_hash('password123', PASSWORD_BCRYPT),
+            Role::USER
+        );
+        static::getContainer()->get(UserRepositoryInterface::class)->save($invited);
+
+        $this->assertJsonResponse(
+            $this->postJson("/api/teams/{$team['id']}/invite", [
+                'email' => $invited->email()->value(),
+                'role' => 'member',
+            ]),
+            Response::HTTP_CREATED
+        );
+
+        $this->loginAs($invited);
+
+        $invitations = $this->getJson('/api/teams/invitations')['invitations'];
+
+        $this->assertCount(1, $invitations);
+        $this->assertSame(
+            'Kowalscy',
+            $invitations[0]['teamName'],
+            'Bez nazwy zespolu wiersz zaproszenia renderuje sie z pustym tytulem.'
+        );
+    }
+
     private function joinTeam(string $teamId): User
     {
         $user = User::create(

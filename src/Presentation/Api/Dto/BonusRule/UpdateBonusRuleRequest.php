@@ -34,7 +34,18 @@ final readonly class UpdateBonusRuleRequest
             max: 1000,
             notInRangeMessage: 'Bonus points must be between {{ min }} and {{ max }}'
         )]
-        public int $bonusPoints
+        public int $bonusPoints,
+
+        #[Assert\NotBlank(message: 'Rule type is required')]
+        #[Assert\Choice(
+            choices: ['consecutive_days', 'monthly_task_count', 'weekly_points_sum'],
+            message: 'Unknown rule type'
+        )]
+        public string $ruleType,
+
+        #[Assert\NotNull(message: 'Rule config is required')]
+        #[Assert\Type(type: 'array', message: 'Rule config must be an object')]
+        public array $ruleConfig
     ) {
     }
 }

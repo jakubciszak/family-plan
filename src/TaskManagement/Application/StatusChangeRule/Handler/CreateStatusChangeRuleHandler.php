@@ -22,18 +22,10 @@ final readonly class CreateStatusChangeRuleHandler
 
     public function __invoke(CreateStatusChangeRuleCommand $command): void
     {
-        $conditionType = StatusChangeConditionType::from($command->conditionType);
-        
-        $config = match ($conditionType) {
-            StatusChangeConditionType::OTHER_TASK_COMPLETED_TODAY => 
-                StatusChangeConditionConfig::otherTaskCompletedToday(
-                    Uuid::fromString($command->conditionConfig['requiredTaskTemplateId'])
-                ),
-            StatusChangeConditionType::LAST_EXECUTION_COOLDOWN => 
-                StatusChangeConditionConfig::lastExecutionCooldown(
-                    $command->conditionConfig['cooldownDays']
-                ),
-        };
+        $config = StatusChangeConditionConfig::fromInput(
+            StatusChangeConditionType::from($command->conditionType),
+            $command->conditionConfig
+        );
 
         $rule = StatusChangeRule::create(
             Uuid::fromString($command->id),
