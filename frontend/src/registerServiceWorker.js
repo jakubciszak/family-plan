@@ -4,7 +4,8 @@ export default function registerServiceWorker() {
     }
 
     window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js').catch((error) => {
+        const script = process.env.NODE_ENV === 'production' ? '/sw.js' : '/sw.js?cache=off';
+        navigator.serviceWorker.register(script).catch((error) => {
             console.error('Service worker registration failed:', error);
         });
     });

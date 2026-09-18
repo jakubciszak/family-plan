@@ -23,6 +23,19 @@ class TaskTemplate
     #[ORM\Transient]
     private array $domainEvents = [];
 
+    #[ORM\Column(type: 'uuid', nullable: true)]
+    private ?Uuid $actionPlanId = null;
+
+    public function actionPlanId(): ?Uuid
+    {
+        return $this->actionPlanId;
+    }
+
+    public function attachActionPlan(?Uuid $id): void
+    {
+        $this->actionPlanId = $id;
+    }
+
     private function __construct(
         #[ORM\Id]
         #[ORM\Column(type: 'uuid')]

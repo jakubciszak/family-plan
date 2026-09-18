@@ -30,7 +30,10 @@ final readonly class CreateTaskTypeRequest
         public string $description = '',
 
         #[Assert\Type(type: 'array')]
-        public array $executionLimit = ['type' => 'unlimited']
+        public array $executionLimit = ['type' => 'unlimited'],
+
+        #[Assert\Uuid(versions: [4])]
+        public ?string $actionPlanId = null
     ) {
     }
 }

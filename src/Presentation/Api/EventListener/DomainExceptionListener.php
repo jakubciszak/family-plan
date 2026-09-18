@@ -54,6 +54,7 @@ final readonly class DomainExceptionListener
     private function statusFor(\DomainException $exception): int
     {
         return match (true) {
+            $exception instanceof \App\ActionPlanning\Domain\Exception\ActionPlanNotFound,
             $exception instanceof TeamNotFoundException,
             $exception instanceof InvitationNotFoundException => Response::HTTP_NOT_FOUND,
             $exception instanceof UnauthorizedTeamActionException,

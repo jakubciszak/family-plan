@@ -48,6 +48,7 @@ class TaskExecutionApiController extends AbstractController
         private readonly ClockInterface $clock,
         private readonly BonusSettlementInterface $bonusPayout,
         private readonly TeamMembershipRepositoryInterface $memberships,
+        private readonly \App\ActionPlanning\Application\Service\ActionPlanAccess $actionPlans,
         private readonly ClosedWeeksInterface $closedWeeks,
         private readonly PointsLedger $ledger,
         private readonly EntityManagerInterface $entityManager
@@ -87,6 +88,7 @@ class TaskExecutionApiController extends AbstractController
             $this->callerId(),
             new DateTimeImmutable()
         );
+        $execution->attachActionPlan($this->actionPlans->forTaskType($template->actionPlanId(), $this->teamOf($template)));
 
         $this->executionRepository->save($execution);
 
@@ -264,6 +266,10 @@ class TaskExecutionApiController extends AbstractController
         }
 
         $this->assertCarries(ResponsibilityType::completeTask(), $teamId);
+
+        if (in_array($execution->status()->value, ['completed', 'approved'], true)) {
+            return $this->json($this->serialize($execution));
+        }
 
         $doneOn = $this->doneOn($request);
 
@@ -574,6 +580,7 @@ class TaskExecutionApiController extends AbstractController
             $member,
             $scheduledFor
         );
+        $execution->attachActionPlan($this->actionPlans->forTaskType($template->actionPlanId(), $this->teamOf($template)));
 
         $this->executionRepository->save($execution);
 
@@ -625,6 +632,7 @@ class TaskExecutionApiController extends AbstractController
         return [
             'id' => $execution->id()->value(),
             'taskTemplateId' => $execution->taskTemplateId()?->value(),
+            'actionPlan' => $execution->actionPlan(),
             'name' => $execution->name()?->value(),
             'description' => $execution->description(),
             'points' => $execution->points()?->value(),
