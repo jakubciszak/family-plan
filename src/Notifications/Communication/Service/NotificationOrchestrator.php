@@ -61,6 +61,8 @@ final readonly class NotificationOrchestrator
             return;
         }
 
+        $additionalParameters['delivery_channels'] = $channels->toArray();
+
         foreach ($channels->toArray() as $channel) {
             try {
                 match ($channel) {

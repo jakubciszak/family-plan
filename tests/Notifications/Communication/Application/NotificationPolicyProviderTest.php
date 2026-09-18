@@ -24,9 +24,9 @@ class NotificationPolicyProviderTest extends TestCase
         $this->provider = new NotificationPolicyProvider($this->repository);
     }
 
-    public function testEventWithoutAPolicyKeepsSendingEmail(): void
+    public function testTaskDefaultsIncludeEmailInAppAndPush(): void
     {
-        $this->assertSame(['email'], $this->provider->channelsFor(NotificationEvent::taskApproved())->toArray());
+        $this->assertSame(['email', 'in_app', 'push'], $this->provider->channelsFor(NotificationEvent::taskApproved())->toArray());
     }
 
     public function testStoredPolicyWins(): void
@@ -67,7 +67,7 @@ class NotificationPolicyProviderTest extends TestCase
         $matrix = $this->provider->matrix();
 
         $this->assertSame(
-            ['task_completed', 'task_approved', 'user_welcome', 'account_activation', 'payout_offered', 'streak_at_risk'],
+            ['task_assigned', 'task_completed', 'task_rejected', 'task_approved', 'task_abandoned', 'task_corrected', 'task_removed', 'user_welcome', 'account_activation', 'payout_offered', 'streak_at_risk'],
             array_keys($matrix)
         );
     }

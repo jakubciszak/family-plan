@@ -1,4 +1,5 @@
 import React from 'react';
+import ReturnTaskDialog from '../components/ReturnTaskDialog';
 import { useTranslation } from 'react-i18next';
 import WeekCalendar from '../components/WeekCalendar';
 import Leaderboard from '../components/Leaderboard';
@@ -30,6 +31,7 @@ function useLimitLabel() {
 function TaskList({ onNavigate, user, onInspectMember, onOpenPlan }) {
     const { t } = useTranslation();
     const { own } = usePersonalisation();
+    const [returning, setReturning] = React.useState(null);
     const [taskTypes, setTaskTypes] = React.useState([]);
     const [myTasks, setMyTasks] = React.useState([]);
     const [awaitingApproval, setAwaitingApproval] = React.useState([]);
@@ -264,7 +266,7 @@ function TaskList({ onNavigate, user, onInspectMember, onOpenPlan }) {
                                     {points(task.points)}
                                     <span className="task-status status-rejected">
                                         <Icon name="error" size={16} />
-                                        {t('tasks.status.rejected', 'rejected')}
+                                        {t('tasks.statusRejected')}
                                     </span>
                                 </div>
                                 {task.rejectionReason && (
@@ -391,6 +393,7 @@ function TaskList({ onNavigate, user, onInspectMember, onOpenPlan }) {
                                         >
                                             {t('tasks.approve')}
                                         </Button>
+                                        <Button variant="outlined" icon="back" onClick={() => setReturning(task)}>{t('member.reject')}</Button>
                                     </div>
                                 </div>
                             ))}
@@ -530,6 +533,7 @@ function TaskList({ onNavigate, user, onInspectMember, onOpenPlan }) {
             {homeOrder.map((place) => (
                 <React.Fragment key={place}>{pieces[place]}</React.Fragment>
             ))}
+        {returning && <ReturnTaskDialog key={returning.id} task={returning} onClose={() => setReturning(null)} onReturned={refresh} />}
         </div>
     );
 }

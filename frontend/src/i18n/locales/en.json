@@ -92,7 +92,7 @@
     "loadFailed": "Could not load the tasks",
     "actionFailed": "The action did not go through",
     "availableCollapsed": "Tasks to take",
-    "rejectedReason": "Rejected: {{reason}}",
+    "rejectedReason": "Reason for returning: {{reason}}",
     "submitAgain": "Submit again",
     "standingsCollapsed": "Standings",
     "backlog": "Backlog",
@@ -105,7 +105,9 @@
     "handOutDate": "Day it was done",
     "handOutHint": "The day only matters when writing down a task already done",
     "handOutAssign": "Give it to them",
-    "handOutBook": "Write it down as done"
+    "handOutBook": "Write it down as done",
+    "returnFailed": "Could not return the task. Please try again.",
+    "statusRejected": "Returned"
   },
   "bonusRules": {
     "title": "Bonus Rules",
@@ -367,12 +369,12 @@
   "member": {
     "backToTasks": "Back",
     "tasksOf": "Tasks: {{name}}",
-    "reject": "Reject",
+    "reject": "Return",
     "noTasks": "This member has no tasks.",
     "tasksSection": "Tasks",
-    "rejectHeadline": "Reject: {{name}}?",
-    "reasonLabel": "Reason for rejection",
-    "reasonHint": "Say what needs fixing — the person who did the task will see this."
+    "rejectHeadline": "Return “{{name}}”",
+    "reasonLabel": "Reason for returning",
+    "reasonHint": "Explain what needs to be improved. The assignee will see this reason (up to 500 characters)."
   },
   "notifications": {
     "dismiss": "Dismiss"
@@ -400,7 +402,12 @@
       "user_welcome": "Welcome for a new user",
       "account_activation": "Account activation",
       "payout_offered": "Allowance waiting",
-      "streak_at_risk": "Streak about to break"
+      "streak_at_risk": "Streak about to break",
+      "task_assigned": "Task assigned",
+      "task_rejected": "Task returned for correction",
+      "task_abandoned": "Task given back to the pool",
+      "task_corrected": "Task completion date changed",
+      "task_removed": "Task execution removed"
     },
     "hints": {
       "task_completed": "Goes to the admins when somebody submits a finished task",
@@ -408,7 +415,12 @@
       "user_welcome": "The first message after an account is created",
       "account_activation": "The activation link sent after registration",
       "payout_offered": "The child learns a parent set money aside and is waiting for them to confirm they got it",
-      "streak_at_risk": "A 6 pm reminder for someone whose streak is running and who has not earned anything today"
+      "streak_at_risk": "A 6 pm reminder for someone whose streak is running and who has not earned anything today",
+      "task_assigned": "Notification for the task assignee",
+      "task_rejected": "Notification for the task assignee",
+      "task_abandoned": "Notification for the assignee and team administrators",
+      "task_corrected": "Notification for the task assignee",
+      "task_removed": "Notification for the task assignee"
     }
   },
   "allowance": {

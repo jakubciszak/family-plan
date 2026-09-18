@@ -92,7 +92,7 @@
     "loadFailed": "Nie udało się wczytać zadań",
     "actionFailed": "Nie udało się wykonać akcji",
     "availableCollapsed": "Zadania do wzięcia",
-    "rejectedReason": "Odrzucone: {{reason}}",
+    "rejectedReason": "Powód cofnięcia: {{reason}}",
     "submitAgain": "Zgłoś ponownie",
     "standingsCollapsed": "Tabela wyników",
     "backlog": "Zaległość",
@@ -105,7 +105,9 @@
     "handOutDate": "Dzień wykonania",
     "handOutHint": "Data dotyczy tylko dopisywania zrobionego zadania",
     "handOutAssign": "Przypisz do zrobienia",
-    "handOutBook": "Dopisz jako zrobione"
+    "handOutBook": "Dopisz jako zrobione",
+    "returnFailed": "Nie udało się cofnąć zadania. Spróbuj ponownie.",
+    "statusRejected": "Cofnięte"
   },
   "bonusRules": {
     "title": "Zasady bonusowe",
@@ -367,12 +369,12 @@
   "member": {
     "backToTasks": "Wróć",
     "tasksOf": "Zadania: {{name}}",
-    "reject": "Odrzuć",
+    "reject": "Cofnij",
     "noTasks": "Ten członek nie ma żadnych zadań.",
     "tasksSection": "Zadania",
-    "rejectHeadline": "Odrzucić: {{name}}?",
-    "reasonLabel": "Powód odrzucenia",
-    "reasonHint": "Napisz, co trzeba poprawić — zobaczy to osoba, która wykonała zadanie."
+    "rejectHeadline": "Cofnij zadanie „{{name}}”",
+    "reasonLabel": "Powód cofnięcia",
+    "reasonHint": "Napisz, co trzeba poprawić. Wykonawca zobaczy ten powód (maks. 500 znaków)."
   },
   "notifications": {
     "dismiss": "Zamknij"
@@ -400,7 +402,12 @@
       "user_welcome": "Powitanie nowego użytkownika",
       "account_activation": "Aktywacja konta",
       "payout_offered": "Kieszonkowe do odebrania",
-      "streak_at_risk": "Seria zaraz przepadnie"
+      "streak_at_risk": "Seria zaraz przepadnie",
+      "task_assigned": "Przypisanie zadania",
+      "task_rejected": "Cofnięcie zadania do poprawy",
+      "task_abandoned": "Oddanie zadania do puli",
+      "task_corrected": "Zmiana daty wykonania zadania",
+      "task_removed": "Usunięcie wykonania zadania"
     },
     "hints": {
       "task_completed": "Trafia do administratorów, gdy ktoś zgłosi wykonane zadanie",
@@ -408,7 +415,12 @@
       "user_welcome": "Pierwsza wiadomość po założeniu konta",
       "account_activation": "Link aktywacyjny wysyłany po rejestracji",
       "payout_offered": "Dziecko dowiaduje się, że rodzic odłożył dla niego pieniądze i czeka na potwierdzenie odbioru",
-      "streak_at_risk": "Przypomnienie o 18:00 dla kogoś, kto ma trwającą serię, a tego dnia nie zdobył jeszcze punktów"
+      "streak_at_risk": "Przypomnienie o 18:00 dla kogoś, kto ma trwającą serię, a tego dnia nie zdobył jeszcze punktów",
+      "task_assigned": "Powiadomienie dla osoby przypisanej do zadania",
+      "task_rejected": "Powiadomienie dla osoby przypisanej do zadania",
+      "task_abandoned": "Powiadomienie dla wykonawcy i administratorów zespołu",
+      "task_corrected": "Powiadomienie dla osoby przypisanej do zadania",
+      "task_removed": "Powiadomienie dla osoby przypisanej do zadania"
     }
   },
   "allowance": {

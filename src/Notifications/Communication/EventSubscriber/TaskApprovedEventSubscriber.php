@@ -40,7 +40,7 @@ final readonly class TaskApprovedEventSubscriber implements EventSubscriberInter
         }
 
         $message = sprintf(
-            'Your task "%s" has been approved! You earned %d points.',
+            'Zadanie „%s” zostało zatwierdzone. Otrzymujesz %d punktów.',
             $execution->name()->value(),
             $execution->points()->value()
         );
@@ -49,8 +49,11 @@ final readonly class TaskApprovedEventSubscriber implements EventSubscriberInter
             NotificationEvent::taskApproved(),
             $assignedUserId,
             $message,
-            'Task Approved',
+            'Zadanie zatwierdzone',
             [
+                'event' => 'task_approved',
+                'url' => '/tasks',
+                'tag' => 'task-' . $execution->id()->value(),
                 'task_id' => $execution->id()->value(),
                 'task_name' => $execution->name()->value(),
                 'points' => $execution->points()->value(),

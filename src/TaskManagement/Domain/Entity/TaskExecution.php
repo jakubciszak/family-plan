@@ -12,6 +12,8 @@ use App\TaskManagement\Domain\ValueObject\ExecutionStatus;
 use App\TaskManagement\Domain\Event\TaskExecutionCreated;
 use App\TaskManagement\Domain\Event\TaskExecutionCompleted;
 use App\TaskManagement\Domain\Event\TaskExecutionApproved;
+use App\TaskManagement\Domain\Event\TaskExecutionAssigned;
+use App\TaskManagement\Domain\Event\TaskExecutionRejected;
 use App\TaskManagement\Domain\State\ExecutionStateInterface;
 use App\TaskManagement\Domain\State\ExecutionStateFactory;
 use DateTimeImmutable;
@@ -270,8 +272,13 @@ class TaskExecution
 
     public function assignTo(Uuid $userId): void
     {
+        if ($this->assignedUserId?->equals($userId)) {
+            return;
+        }
+
         $this->assignedUserId = $userId;
         $this->updatedAt = new DateTimeImmutable();
+        $this->record(new TaskExecutionAssigned($this->id, $this->updatedAt));
     }
 
     public function isOpen(): bool
@@ -297,6 +304,7 @@ class TaskExecution
     {
         $this->getState()->reject($this);
         $this->rejectionReason = $reason;
+        $this->record(new TaskExecutionRejected($this->id, $this->updatedAt));
     }
 
     public function assertApproved(): void
@@ -334,6 +342,7 @@ class TaskExecution
         ClockInterface $clock,
         ?DateTimeImmutable $doneOn = null
     ): void {
+        $this->rejectionReason = null;
         $this->status = ExecutionStatus::COMPLETED;
         $this->completedByUserId = $userId;
         $this->completedAt = $doneOn ?? $clock->now();

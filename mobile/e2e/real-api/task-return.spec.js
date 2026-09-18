@@ -1,0 +1,41 @@
+const { test, expect } = require('@playwright/test');
+const api = process.env.MOBILE_API_URL || 'http://127.0.0.1:19080';
+
+test('administrator cofa zadanie z powodem, a wykonawca dostaje powiadomienia i zgłasza poprawkę', async ({ page, request }) => {
+  const password = 'MobileTest123!';
+  const register = async (name) => {
+    const email = `return-${name}-${Date.now()}@example.com`;
+    expect((await request.post(`${api}/api/auth/register`, { data: { name, email, password } })).ok()).toBeTruthy();
+    const issued = await (await request.post(`${api}/api/auth/token`, { data: { email, password } })).json();
+    return { email, headers: { Authorization: `Bearer ${issued.token}` } };
+  };
+  const parent = await register('Rodzic');
+  const child = await register('Dziecko');
+  const team = (await (await request.get(`${api}/api/teams`, { headers: parent.headers })).json()).teams[0];
+  const invitation = await (await request.post(`${api}/api/teams/${team.id}/invite`, { headers: parent.headers, data: { email: child.email, role: 'member' } })).json();
+  expect((await request.post(`${api}/api/teams/invitations/${invitation.invitation.token}/accept`, { headers: child.headers })).ok()).toBeTruthy();
+  const type = await (await request.post(`${api}/api/task-templates`, { headers: parent.headers, data: { teamId: team.id, name: 'Kubki', points: 5, frequency: 'daily', executionLimit: { type: 'unlimited' } } })).json();
+  const task = await (await request.post(`${api}/api/task-templates/${type.id}/take`, { headers: child.headers })).json();
+  expect((await request.post(`${api}/api/task-executions/${task.id}/complete`, { headers: child.headers })).ok()).toBeTruthy();
+  await page.goto('/');
+  await page.getByLabel('Email', { exact: true }).fill(parent.email);
+  await page.getByLabel('Hasło', { exact: true }).fill(password);
+  await page.getByRole('button', { name: 'Zaloguj', exact: true }).click();
+  const approval = page.getByTestId('approval-Kubki');
+  await approval.getByRole('button', { name: 'Cofnij' }).click();
+  await page.getByLabel('Powód cofnięcia', { exact: true }).fill('Domyj uchwyty.');
+  await page.getByRole('button', { name: 'Cofnij', exact: true }).last().click();
+  await expect(approval).toHaveCount(0);
+  const returned = (await (await request.get(`${api}/api/task-executions/mine`, { headers: child.headers })).json()).executions.find((entry) => entry.id === task.id);
+  expect(returned.status).toBe('rejected');
+  expect(returned.rejectionReason).toBe('Domyj uchwyty.');
+  const notifications = (await (await request.get(`${api}/api/notifications`, { headers: child.headers })).json()).notifications;
+  expect(notifications.find((entry) => entry.parameters.event === 'task_rejected').message).toContain('Domyj uchwyty.');
+  const completed = await (await request.post(`${api}/api/task-executions/${task.id}/complete`, { headers: child.headers })).json();
+  expect(completed.rejectionReason).toBeNull();
+  await page.reload();
+  await approval.getByRole('button', { name: 'Zatwierdź' }).click();
+  await expect(approval).toHaveCount(0);
+  const approved = (await (await request.get(`${api}/api/notifications`, { headers: child.headers })).json()).notifications;
+  expect(approved.some((entry) => entry.parameters.event === 'task_approved')).toBeTruthy();
+});
