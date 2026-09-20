@@ -76,6 +76,30 @@ test.describe('Available tasks', () => {
     await expect(available(page)).toContainText('No tasks available');
   });
 
+  test('a type assigned to another member is not offered even with runs left', async ({ page }) => {
+    await page.route('**/api/task-templates', route => route.fulfill({ json: {
+      templates: [{ ...mockApiResponses.sampleTaskTypes.templates[0], remaining: 2, isAvailable: false }]
+    } }));
+    await page.goto('/');
+    await expect(available(page)).toContainText('No tasks available');
+    await expect(available(page).getByRole('button', { name: /take this task/i })).toHaveCount(0);
+  });
+
+  test('refreshes the pool when another member takes the task first', async ({ page }) => {
+    let isAvailable = true;
+    await page.route('**/api/task-templates', route => route.fulfill({ json: {
+      templates: [{ ...mockApiResponses.sampleTaskTypes.templates[0], isAvailable }]
+    } }));
+    await page.route('**/api/task-templates/*/take', route => {
+      isAvailable = false;
+      return route.fulfill({ status: 409, json: { error: 'Task already assigned' } });
+    });
+    await page.goto('/');
+    await available(page).getByRole('button', { name: /take this task/i }).click();
+    await expect(available(page)).toContainText('No tasks available');
+    await expect(page.getByRole('alert')).toContainText('Task already assigned');
+  });
+
   test('an exhausted type is not offered', async ({ page }) => {
     await page.route('**/api/task-templates', async route => {
       await route.fulfill({

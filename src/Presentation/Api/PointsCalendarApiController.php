@@ -127,7 +127,7 @@ class PointsCalendarApiController extends AbstractController
         $rule = $this->streakRule($userId);
         $pointsPerDay = $rule?->config()->pointsPerDay() ?? 1;
 
-        $since = $monday->modify(sprintf('-%d days', $this->reach($rule)));
+        $since = $rule === null ? $monday : new DateTimeImmutable('1970-01-01');
 
         $earned = $this->executionRepository->findApprovedByUserSince(
             $userId,
@@ -147,7 +147,10 @@ class PointsCalendarApiController extends AbstractController
             : $this->streakPoints->perDay($rule->config(), $userId, $since, $monday->modify('+7 days'));
         $today = (new DateTimeImmutable())->format('Y-m-d');
         $lastDay = min($today, $monday->modify('+6 days')->format('Y-m-d'));
-        $streakDays = $rule === null ? [] : PointsStreak::aliveOn($counted, $lastDay, $pointsPerDay);
+        $streakDays = $rule === null ? [] : PointsStreak::cycle(
+            PointsStreak::aliveOn($counted, $lastDay, $pointsPerDay),
+            $rule->config()->requiredDays()
+        );
 
         $days = [];
         for ($offset = 0; $offset < 7; $offset++) {
@@ -297,11 +300,6 @@ class PointsCalendarApiController extends AbstractController
         }
 
         throw $this->createAccessDeniedException('Only an admin of their team takes a bonus back');
-    }
-
-    private function reach(?BonusPointsRule $rule): int
-    {
-        return max(7, ($rule?->config()->requiredDays() ?? 0) * 2);
     }
 
     private function mondayOf(?string $day): DateTimeImmutable

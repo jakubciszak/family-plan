@@ -30,19 +30,17 @@ final readonly class BonusPointsPayout implements BonusSettlementInterface
     {
         foreach ($this->memberships->ofUser($userId) as $membership) {
             foreach ($this->rules->findActiveByTeamId($membership->teamId()) as $rule) {
-                if (!$this->evaluator->isRuleMet($rule, $userId)) {
-                    continue;
+                foreach ($this->evaluator->earnedPeriodKeys($rule, $userId) as $periodKey) {
+                    $this->ledger->post(
+                        $userId,
+                        AccountKind::BONUSES,
+                        $rule->bonusPoints()->value(),
+                        EntrySource::BONUS_RULE,
+                        sprintf('Bonus: %s', $rule->name()),
+                        $rule->id(),
+                        $periodKey
+                    );
                 }
-
-                $this->ledger->post(
-                    $userId,
-                    AccountKind::BONUSES,
-                    $rule->bonusPoints()->value(),
-                    EntrySource::BONUS_RULE,
-                    sprintf('Bonus: %s', $rule->name()),
-                    $rule->id(),
-                    $this->evaluator->periodKey($rule, $userId)
-                );
             }
         }
     }

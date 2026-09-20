@@ -132,6 +132,34 @@ class PointsCalendarApiTest extends ApiTestCase
         $this->assertSame(array_fill(0, 7, false), array_column($week['days'], 'inStreak'));
     }
 
+    public function testSixthDayStartsANewFiveDayStreak(): void
+    {
+        $this->streakRule($this->teamOfCurrentUser(), requiredDays: 5, pointsPerDay: 2);
+        foreach (range(5, 1) as $daysAgo) {
+            $this->earned(2, new DateTimeImmutable("-{$daysAgo} days"));
+        }
+        $week = $this->getJson('/api/points/week');
+        $this->assertSame(5, $week['streak']['length']);
+        $this->assertTrue($week['streak']['met']);
+
+        $this->earned(2, new DateTimeImmutable());
+        $week = $this->getJson('/api/points/week');
+        $this->assertSame(1, $week['streak']['length']);
+        $this->assertFalse($week['streak']['met']);
+        $this->assertCount(1, array_filter($week['days'], static fn (array $day) => $day['inStreak']));
+    }
+
+    public function testLongStreakKeepsItsCycleAcrossWeeks(): void
+    {
+        $this->streakRule($this->teamOfCurrentUser(), requiredDays: 5, pointsPerDay: 2);
+        foreach (range(20, 0) as $daysAgo) {
+            $this->earned(2, new DateTimeImmutable("-{$daysAgo} days"));
+        }
+        $week = $this->getJson('/api/points/week');
+        $this->assertSame(1, $week['streak']['length']);
+        $this->assertFalse($week['streak']['met']);
+    }
+
     private function mondayOfThisWeek(): DateTimeImmutable
     {
         return (new DateTimeImmutable())->modify('monday this week')->setTime(9, 0);

@@ -52,6 +52,26 @@ class BonusPointsEvaluator
         };
     }
 
+    /**
+     * @return string[]
+     */
+    public function earnedPeriodKeys(BonusPointsRule $rule, Uuid $userId): array
+    {
+        if (!$this->isRuleMet($rule, $userId)) {
+            return [];
+        }
+
+        if ($rule->type() !== RuleType::CONSECUTIVE_DAYS) {
+            return [$this->periodKey($rule, $userId)];
+        }
+
+        $requiredDays = $rule->config()->requiredDays();
+        $run = $this->liveStreak($rule->config(), $userId);
+        $cycles = array_filter(array_chunk($run, $requiredDays), static fn (array $cycle) => count($cycle) === $requiredDays);
+
+        return array_values(array_map(static fn (array $cycle) => $cycle[0], $cycles));
+    }
+
     private function evaluateConsecutiveDays(BonusPointsRule $rule, Uuid $userId): bool
     {
         $config = $rule->config();
@@ -61,7 +81,7 @@ class BonusPointsEvaluator
             return false;
         }
 
-        return count($this->liveStreak($config, $userId, $requiredDays)) >= $requiredDays;
+        return count($this->liveStreak($config, $userId)) >= $requiredDays;
     }
 
     private function evaluateMonthlyTaskCount(BonusPointsRule $rule, Uuid $userId): bool
@@ -99,18 +119,18 @@ class BonusPointsEvaluator
         $config = $rule->config();
         $requiredDays = $config->requiredDays() ?? 2;
 
-        $streak = $this->liveStreak($config, $userId, $requiredDays);
+        $streak = $this->liveStreak($config, $userId);
 
-        return $streak === [] ? $this->now()->format('Y-m-d') : (string) reset($streak);
+        return $streak === [] ? $this->now()->format('Y-m-d') : $streak[max(0, intdiv(count($streak), $requiredDays) - 1) * $requiredDays];
     }
 
     /**
      * @return string[] the run going on right now, empty when it has been broken
      */
-    private function liveStreak(RuleConfig $config, Uuid $userId, int $requiredDays): array
+    private function liveStreak(RuleConfig $config, Uuid $userId): array
     {
         return PointsStreak::aliveOn(
-            $this->streakDays($config, $userId, $requiredDays),
+            $this->streakDays($config, $userId),
             $this->now()->format('Y-m-d'),
             $config->pointsPerDay() ?? 1
         );
@@ -119,14 +139,14 @@ class BonusPointsEvaluator
     /**
      * @return array<string, int>
      */
-    private function streakDays(RuleConfig $config, Uuid $userId, int $requiredDays): array
+    private function streakDays(RuleConfig $config, Uuid $userId): array
     {
         $now = $this->now();
 
         return $this->streakPoints->perDay(
             $config,
             $userId,
-            $now->modify(sprintf('-%d days', $requiredDays * 2)),
+            new DateTimeImmutable('1970-01-01'),
             $now->modify('+1 day')
         );
     }

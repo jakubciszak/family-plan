@@ -245,6 +245,7 @@ class TaskTemplateApiController extends AbstractController
             'frequency' => $template->frequency()->value,
             'executionLimit' => $template->executionLimit()->toArray(),
             'remaining' => $this->pool->remaining($template),
+            'isAvailable' => $template->isActive() && $this->pool->hasRoomForAnother($template),
             'isActive' => $template->isActive(),
         ];
     }

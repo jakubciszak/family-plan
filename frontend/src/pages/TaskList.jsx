@@ -120,6 +120,7 @@ function TaskList({ onNavigate, user, onInspectMember, onOpenPlan }) {
 
             await refresh();
         } catch (err) {
+            if (err?.response?.status === 409) await refresh();
             setError(err?.response?.data?.error || t('tasks.actionFailed'));
         }
     };
@@ -177,7 +178,7 @@ function TaskList({ onNavigate, user, onInspectMember, onOpenPlan }) {
     const belongsToSelectedTeam = (teamId) => !selectedTeam || teamId === selectedTeam.id;
 
     const availableTypes = taskTypes.filter((type) =>
-        belongsToSelectedTeam(type.teamId) && type.isActive && type.remaining !== 0
+        belongsToSelectedTeam(type.teamId) && type.isActive && type.isAvailable !== false && type.remaining !== 0
     );
 
     const searchedFor = availableSearch.trim().toLowerCase();

@@ -27,6 +27,35 @@ test.describe('Zadania', () => {
     await expect(card(app, 'Wycofane')).toHaveCount(0);
   });
 
+  for (const status of ['new', 'pending', 'rejected']) {
+    test(`pula ukrywa zadanie innej osoby o statusie ${status}`, async ({ app, page }) => {
+      app.world.templates = [template({ id: 'taken', name: 'Zmywanie', remaining: 3 })];
+      app.world.executions = [execution({ taskTemplateId: 'taken', assignedUserId: 'another-member', status })];
+      await app.signIn();
+      await expect(card(app, 'Zmywanie')).toHaveCount(0);
+      await expect(page.getByText('Brak dostępnych zadań')).toBeVisible();
+    });
+  }
+
+  test('pula ponownie pokazuje ukończone zadanie innej osoby', async ({ app }) => {
+    app.world.templates = [template({ id: 'done', name: 'Zmywanie', remaining: 2 })];
+    app.world.executions = [execution({ taskTemplateId: 'done', assignedUserId: 'another-member', status: 'completed' })];
+    await app.signIn();
+    await expect(card(app, 'Zmywanie').getByRole('button', { name: 'Weź to zadanie' })).toBeVisible();
+  });
+
+  test('odświeża pulę, gdy inna osoba zdążyła wziąć zadanie', async ({ app, page }) => {
+    app.world.templates = [template({ id: 'busy', name: 'Zmywanie' })];
+    await page.route('**/api/task-templates/busy/take', route => {
+      app.world.executions.push(execution({ taskTemplateId: 'busy', assignedUserId: 'another-member', status: 'new' }));
+      return route.fulfill({ status: 409, json: { error: 'Task already assigned' } });
+    });
+    await app.signIn();
+    await card(app, 'Zmywanie').getByRole('button', { name: 'Weź to zadanie' }).click();
+    await expect(card(app, 'Zmywanie')).toHaveCount(0);
+    await expect(page.getByText('Brak dostępnych zadań')).toBeVisible();
+  });
+
   test('pusta lista i pusta pula mówią o tym wprost', async ({ app, page }) => {
     await app.signIn();
 

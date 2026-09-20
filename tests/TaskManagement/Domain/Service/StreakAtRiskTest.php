@@ -17,6 +17,15 @@ class StreakAtRiskTest extends TestCase
         $this->today = new DateTimeImmutable('2026-09-15');
     }
 
+    public function testCompletedCycleIsNotAtRiskAndOnlyNewCycleDaysAreCounted(): void
+    {
+        $counted = array_fill_keys(['2026-09-10', '2026-09-11', '2026-09-12', '2026-09-13', '2026-09-14'], 2);
+        $this->assertSame(0, StreakAtRisk::days($counted, 2, $this->today, 5));
+        $counted['2026-09-09'] = 2;
+        ksort($counted);
+        $this->assertSame(1, StreakAtRisk::days($counted, 2, $this->today, 5));
+    }
+
     public function testStreakRunningUntilYesterdayIsAtRisk(): void
     {
         $counted = [
