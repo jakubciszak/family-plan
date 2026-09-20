@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\TaskManagement\Application\Service;
 
 use App\TaskManagement\Domain\Entity\TaskTemplate;
+use App\TaskManagement\Domain\ValueObject\ExecutionStatus;
 use App\TaskManagement\Domain\Repository\TaskExecutionRepositoryInterface;
 use DateTimeImmutable;
 
@@ -22,7 +23,23 @@ final readonly class TaskTypePool
 
     public function hasRoomForAnother(TaskTemplate $template): bool
     {
-        return $template->executionLimit()->allowsAnother($this->takenInCurrentWindow($template));
+        return !$this->hasUnfinishedAssignment($template)
+            && $template->executionLimit()->allowsAnother($this->takenInCurrentWindow($template));
+    }
+
+    private function hasUnfinishedAssignment(TaskTemplate $template): bool
+    {
+        foreach ($this->executionRepository->findByRoutineTask($template->id()) as $execution) {
+            if ($execution->assignedUserId() !== null && in_array($execution->status(), [
+                ExecutionStatus::NEW,
+                ExecutionStatus::PENDING,
+                ExecutionStatus::REJECTED,
+            ], true)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public function takenInCurrentWindow(TaskTemplate $template): int

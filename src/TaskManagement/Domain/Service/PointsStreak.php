@@ -49,4 +49,20 @@ final class PointsStreak
 
         return $last->diff(DailyPoints::day($asOf))->days <= 1 ? $run : [];
     }
+
+    /**
+     * @param string[] $run
+     * @return string[]
+     */
+    public static function cycle(array $run, int $requiredDays): array
+    {
+        if ($run === []) {
+            return [];
+        }
+
+        $offset = intdiv(count($run) - 1, $requiredDays) * $requiredDays;
+
+        return array_slice($run, $offset);
+    }
+
 }

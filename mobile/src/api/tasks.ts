@@ -16,6 +16,7 @@ export type TaskTemplate = {
   frequency: string;
   executionLimit: ExecutionLimit;
   remaining: number | null;
+  isAvailable: boolean;
   isActive: boolean;
 };
 

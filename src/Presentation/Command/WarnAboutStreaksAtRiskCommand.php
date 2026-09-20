@@ -30,8 +30,6 @@ use Symfony\Component\Console\Style\SymfonyStyle;
 )]
 class WarnAboutStreaksAtRiskCommand extends Command
 {
-    private const HISTORY_DAYS = 60;
-
     public function __construct(
         private readonly TeamRepositoryInterface $teams,
         private readonly TeamMembershipRepositoryInterface $memberships,
@@ -110,11 +108,11 @@ class WarnAboutStreaksAtRiskCommand extends Command
         $counted = $this->streakPoints->perDay(
             $rule->config(),
             $userId,
-            $today->modify(sprintf('-%d days', self::HISTORY_DAYS)),
+            new DateTimeImmutable('1970-01-01'),
             $today->modify('+1 day')
         );
 
-        return StreakAtRisk::days($counted, $pointsPerDay, $today);
+        return StreakAtRisk::days($counted, $pointsPerDay, $today, $rule->config()->requiredDays());
     }
 
     private function warn(Uuid $userId, BonusPointsRule $rule, int $days): void

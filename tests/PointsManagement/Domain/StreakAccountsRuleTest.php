@@ -106,6 +106,24 @@ final class StreakAccountsRuleTest extends TestCase
         $this->assertTrue($this->evaluator->isRuleMet($this->rule(2, 20, ['tasks', 'bonuses']), $this->userId));
     }
 
+    public function testEveryFiveDaysUnlockANewBonusWithoutOverlappingCycles(): void
+    {
+        $rule = $this->rule(5, 2, ['tasks']);
+        $this->clock->setTime(new DateTimeImmutable('2026-09-01 12:00:00'));
+        for ($day = 1; $day <= 21; $day++) {
+            $date = new DateTimeImmutable(sprintf('2026-09-%02d 12:00:00', $day));
+            $this->clock->setTime($date);
+            $this->approve(2, $date->format('Y-m-d'));
+            $keys = $this->evaluator->earnedPeriodKeys($rule, $this->userId);
+            $this->assertCount(intdiv($day, 5), $keys);
+            foreach ($keys as $key) {
+                $this->ledger->post($this->userId, AccountKind::BONUSES, 5, EntrySource::BONUS_RULE, 'Seria', $rule->id(), $key);
+            }
+            $this->assertSame(intdiv($day, 5) * 5, $this->ledger->balances($this->userId)['bonuses']);
+        }
+        $this->assertSame(['2026-09-01', '2026-09-06', '2026-09-11', '2026-09-16'], $keys);
+    }
+
     /**
      * @param string[] $accounts
      */

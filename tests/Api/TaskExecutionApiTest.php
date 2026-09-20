@@ -64,20 +64,69 @@ class TaskExecutionApiTest extends ApiTestCase
         $this->assertSame(0, $this->typeById($type['id'])['remaining']);
     }
 
-    public function testUnlimitedTypeCanBeTakenRepeatedly(): void
+    public function testUnlimitedTypeCanBeTakenAgainAfterCompletion(): void
     {
         $context = $this->teamWithMember();
         $type = $this->defineType($context['teamId'], ['type' => 'unlimited']);
 
         $this->loginAs($context['member']);
         foreach (range(1, 3) as $ignored) {
-            $this->assertJsonResponse(
+            $taken = $this->assertJsonResponse(
                 $this->postJson("/api/task-templates/{$type['id']}/take", []),
                 Response::HTTP_CREATED
             );
+            $this->assertFalse($this->typeById($type['id'])['isAvailable']);
+            $this->assertSame(409, $this->postJson("/api/task-templates/{$type['id']}/take", [])->getStatusCode());
+            $this->assertSame(200, $this->postJson("/api/task-executions/{$taken['id']}/complete", [])->getStatusCode());
+            $this->assertTrue($this->typeById($type['id'])['isAvailable']);
         }
 
         $this->assertCount(3, $this->getJson('/api/task-executions/mine')['executions']);
+    }
+
+    public function testAssignedTypeIsUnavailableToTheWholeTeamUntilCompleted(): void
+    {
+        $context = $this->teamWithMember();
+        $type = $this->defineType($context['teamId'], ['type' => 'per_day', 'count' => 3]);
+        $memberId = $context['member']->id()->value();
+        $taken = $this->assertJsonResponse($this->postJson("/api/task-templates/{$type['id']}/assign", [
+            'userId' => $memberId,
+        ]), 201);
+
+        $this->assertFalse($this->typeById($type['id'])['isAvailable']);
+        $this->assertSame(2, $this->typeById($type['id'])['remaining']);
+        foreach (['take', 'assign', 'book'] as $action) {
+            $this->assertSame(409, $this->postJson("/api/task-templates/{$type['id']}/{$action}", [
+                'userId' => $context['admin']->id()->value(),
+            ])->getStatusCode());
+        }
+
+        $this->loginAs($context['member']);
+        $this->assertFalse($this->typeById($type['id'])['isAvailable']);
+        $this->assertSame(200, $this->postJson("/api/task-executions/{$taken['id']}/complete", [])->getStatusCode());
+        $this->assertTrue($this->typeById($type['id'])['isAvailable']);
+
+        $this->loginAs($context['admin']);
+        $this->assertSame(200, $this->postJson("/api/task-executions/{$taken['id']}/reject", ['reason' => 'Popraw naczynia'])->getStatusCode());
+        $this->assertFalse($this->typeById($type['id'])['isAvailable']);
+        $this->assertSame(409, $this->postJson("/api/task-templates/{$type['id']}/take", [])->getStatusCode());
+    }
+
+    public function testYesterdayAssignmentStillBlocksTodaysPool(): void
+    {
+        $context = $this->teamWithMember();
+        $type = $this->defineType($context['teamId'], ['type' => 'per_day', 'count' => 1]);
+        $taken = $this->assertJsonResponse($this->postJson("/api/task-templates/{$type['id']}/assign", [
+            'userId' => $context['member']->id()->value(),
+        ]), 201);
+        static::getContainer()->get(\Doctrine\ORM\EntityManagerInterface::class)->getConnection()->executeStatement(
+            "UPDATE task_executions SET created_at = :yesterday WHERE id = :id",
+            ['yesterday' => (new \DateTimeImmutable('yesterday'))->format('Y-m-d H:i:s'), 'id' => $taken['id']]
+        );
+
+        $this->assertSame(1, $this->typeById($type['id'])['remaining']);
+        $this->assertFalse($this->typeById($type['id'])['isAvailable']);
+        $this->assertSame(409, $this->postJson("/api/task-templates/{$type['id']}/take", [])->getStatusCode());
     }
 
     public function testAbandoningGivesTheRunBack(): void
@@ -98,6 +147,7 @@ class TaskExecutionApiTest extends ApiTestCase
         );
 
         $this->assertSame(1, $this->typeById($type['id'])['remaining']);
+        $this->assertTrue($this->typeById($type['id'])['isAvailable']);
         $this->assertCount(0, $this->getJson('/api/task-executions/mine')['executions']);
     }
 

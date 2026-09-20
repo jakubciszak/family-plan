@@ -25,12 +25,14 @@ use App\TeamManagement\Domain\Repository\TeamMembershipRepositoryInterface;
 use App\UserManagement\Domain\Repository\UserRepositoryInterface;
 use App\UserManagement\Domain\ValueObject\Email;
 use DateTimeImmutable;
+use Doctrine\DBAL\LockMode;
 use Doctrine\ORM\EntityManagerInterface;
 use OpenApi\Attributes as OA;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
@@ -61,7 +63,7 @@ class TaskExecutionApiController extends AbstractController
     #[OA\Post(path: '/api/task-templates/{id}/take', summary: 'Take a task type and make it my own task', tags: ['My tasks'])]
     #[OA\Response(response: 201, description: 'Task taken')]
     #[OA\Response(response: 403, description: 'Caller is not a member of the owning team')]
-    #[OA\Response(response: 409, description: 'No runs left or the task type is retired')]
+    #[OA\Response(response: 409, description: 'Task already assigned, no runs left or the task type is retired')]
     public function take(string $id): JsonResponse
     {
         $template = $this->taskTemplateRepository->findById(Uuid::fromString($id));
@@ -73,33 +75,7 @@ class TaskExecutionApiController extends AbstractController
         $teamId = $this->teamOf($template);
         $this->assertCarries(ResponsibilityType::takeTask(), $teamId);
 
-        if (!$template->isActive()) {
-            return $this->json(['error' => 'This task type is no longer available'], Response::HTTP_CONFLICT);
-        }
-
-        if (!$this->pool->hasRoomForAnother($template)) {
-            return $this->json(['error' => 'This task type has no runs left'], Response::HTTP_CONFLICT);
-        }
-
-        $execution = TaskExecution::takeFromTemplate(
-            Uuid::generate(),
-            $template->id(),
-            $template->name(),
-            $template->description(),
-            $template->points(),
-            $this->callerId(),
-            new DateTimeImmutable()
-        );
-        $execution->attachActionPlan($this->actionPlans->forTaskType($template->actionPlanId(), $this->teamOf($template)));
-
-        $this->executionRepository->save($execution);
-
-        $this->responsibilities->sign(
-            $this->callerId(),
-            ResponsibilityType::takeTask(),
-            $execution->id(),
-            $teamId
-        );
+        $execution = $this->handOver($template, $this->callerId(), $this->clock->now());
 
         return $this->json($this->serialize($execution), Response::HTTP_CREATED);
     }
@@ -117,7 +93,7 @@ class TaskExecutionApiController extends AbstractController
     )]
     #[OA\Response(response: 201, description: 'Task given to the member, waiting for them to do it')]
     #[OA\Response(response: 403, description: 'Caller does not administer this member')]
-    #[OA\Response(response: 409, description: 'No runs left or the task type is retired')]
+    #[OA\Response(response: 409, description: 'Task already assigned, no runs left or the task type is retired')]
     public function assign(string $id, Request $request): JsonResponse
     {
         $template = $this->available($id);
@@ -545,11 +521,11 @@ class TaskExecutionApiController extends AbstractController
         }
 
         if (!$template->isActive()) {
-            throw new \DomainException('This task type is no longer available');
+            throw new ConflictHttpException('This task type is no longer available');
         }
 
         if (!$this->pool->hasRoomForAnother($template)) {
-            throw new \DomainException('This task type has no runs left');
+            throw new ConflictHttpException('This task type is already assigned or has no runs left');
         }
 
         return $template;
@@ -579,27 +555,32 @@ class TaskExecutionApiController extends AbstractController
 
     private function handOver(TaskTemplate $template, Uuid $member, DateTimeImmutable $scheduledFor): TaskExecution
     {
-        $execution = TaskExecution::takeFromTemplate(
-            Uuid::generate(),
-            $template->id(),
-            $template->name(),
-            $template->description(),
-            $template->points(),
-            $member,
-            $scheduledFor
-        );
-        $execution->attachActionPlan($this->actionPlans->forTaskType($template->actionPlanId(), $this->teamOf($template)));
+        return $this->entityManager->wrapInTransaction(function () use ($template, $member, $scheduledFor): TaskExecution {
+            $this->entityManager->refresh($template, LockMode::PESSIMISTIC_WRITE);
+            $this->available($template->id()->value());
 
-        $this->executionRepository->save($execution);
+            $execution = TaskExecution::takeFromTemplate(
+                Uuid::generate(),
+                $template->id(),
+                $template->name(),
+                $template->description(),
+                $template->points(),
+                $member,
+                $scheduledFor
+            );
+            $execution->attachActionPlan($this->actionPlans->forTaskType($template->actionPlanId(), $this->teamOf($template)));
 
-        $this->responsibilities->sign(
-            $member,
-            ResponsibilityType::takeTask(),
-            $execution->id(),
-            $this->teamOf($template)
-        );
+            $this->executionRepository->save($execution);
 
-        return $execution;
+            $this->responsibilities->sign(
+                $member,
+                ResponsibilityType::takeTask(),
+                $execution->id(),
+                $this->teamOf($template)
+            );
+
+            return $execution;
+        });
     }
 
     private function assertAdministersATeamOf(Uuid $member): void

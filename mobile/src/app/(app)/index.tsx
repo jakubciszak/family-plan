@@ -16,7 +16,7 @@ import {
 } from 'react-native-paper';
 
 import { useAuth } from '@/auth/auth-context';
-import apiClient from '@/api/client';
+import apiClient, { ApiError } from '@/api/client';
 import {
   abandonExecution,
   approveExecution,
@@ -143,7 +143,8 @@ export default function TasksScreen() {
       if (cheer && own?.celebrates) setCelebrating(true);
       setRevision((value) => value + 1);
       await load();
-    } catch {
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 409) await load();
       setError(t('tasks.actionFailed'));
     } finally {
       setBusyId(null);
@@ -167,6 +168,7 @@ export default function TasksScreen() {
   const pool = templates.filter(
     (template) =>
       template.isActive &&
+      template.isAvailable !== false &&
       template.remaining !== 0 &&
       (!selectedTeam || template.teamId === selectedTeam.id),
   );

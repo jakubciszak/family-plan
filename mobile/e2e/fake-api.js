@@ -513,7 +513,12 @@ const teams = (world, { method, rest, body }) => {
 const templates = (world, { method, rest, body }) => {
   if (rest.length === 0) {
     if (method === 'GET') {
-      return ok({ templates: world.templates });
+      return ok({ templates: world.templates.map((item) => ({
+        ...item,
+        isAvailable: item.isActive && item.remaining !== 0 && !world.executions.some(
+          (run) => run.taskTemplateId === item.id && run.assignedUserId && ['new', 'pending', 'rejected'].includes(run.status)
+        ),
+      })) });
     }
 
     if (method === 'POST') {

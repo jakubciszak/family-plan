@@ -23,6 +23,9 @@ test('logowanie, wykonanie zadania i odtworzenie sesji z prawdziwym API', async 
   await page.getByRole('button', { name: 'Zaloguj', exact: true }).click();
   await page.getByRole('button', { name: 'Zadania do wzięcia', exact: true }).click();
   await page.getByTestId('task-Mobilne zmywanie').getByRole('button', { name: 'Weź to zadanie' }).click();
+  await expect(page.getByTestId('task-Mobilne zmywanie').getByRole('button', { name: 'Weź to zadanie' })).toHaveCount(0);
+  const pool = await (await request.get(`${api}/api/task-templates`, { headers })).json();
+  expect(pool.templates.find((item) => item.name === 'Mobilne zmywanie').isAvailable).toBe(false);
   await page.getByTestId('task-Mobilne zmywanie').filter({ has: page.getByRole('button', { name: 'Ukończ', exact: true }) }).getByRole('button', { name: 'Ukończ', exact: true }).click();
   await expect.poll(async () => {
     const response = await request.get(`${api}/api/task-executions/mine`, { headers });
