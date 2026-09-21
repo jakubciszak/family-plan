@@ -46,7 +46,8 @@ test('cel oszczędnościowy i zmiana hasła działają z prawdziwym API', async 
   await page.getByLabel('Email', { exact: true }).fill(email);
   await page.getByLabel('Hasło', { exact: true }).fill(password);
   await page.getByRole('button', { name: 'Zaloguj', exact: true }).click();
-  await page.getByRole('button', { name: 'Kasa', exact: true }).click();
+  await page.getByRole('button', { name: 'Więcej', exact: true }).click();
+  await page.getByTestId('modal-surface').getByText('Kieszonkowe', { exact: true }).click();
   await page.getByRole('button', { name: 'Dopisz dochód' }).click();
   await page.getByLabel('Kwota', { exact: true }).fill('50');
   await page.getByLabel('Skąd te pieniądze', { exact: true }).fill('Prezent');
