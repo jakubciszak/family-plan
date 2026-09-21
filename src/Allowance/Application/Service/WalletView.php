@@ -23,7 +23,7 @@ final readonly class WalletView
 
     public function payoutsOf(Uuid $userId): array
     {
-        $payouts = $this->payouts->ofUser($userId);
+        $payouts = $this->payouts->ofUser($userId, null);
 
         return [
             'currency' => $this->currency,

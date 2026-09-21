@@ -19,7 +19,7 @@ interface PayoutRepositoryInterface
     /**
      * @return Payout[]
      */
-    public function ofUser(Uuid $userId, int $limit = 50): array;
+    public function ofUser(Uuid $userId, ?int $limit = 50): array;
 
     public function save(Payout $payout): void;
 }

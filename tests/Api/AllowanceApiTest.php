@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Tests\Api;
 
+use App\Allowance\Domain\Entity\Payout;
+use App\Allowance\Domain\Repository\PayoutRepositoryInterface;
+use App\Allowance\Domain\ValueObject\Money;
 use App\Shared\Domain\ValueObject\Uuid;
 use App\Shared\Infrastructure\Clock\FixedClock;
 use App\TaskManagement\Domain\Entity\TaskExecution;
@@ -332,6 +335,25 @@ class AllowanceApiTest extends ApiTestCase
         $this->client->request('GET', '/api/allowance/wallet?userId=' . $this->child->id()->value());
 
         $this->assertSame(Response::HTTP_FORBIDDEN, $this->client->getResponse()->getStatusCode());
+    }
+
+    public function testPayoutSummaryIncludesMoreThanTheHistoryPage(): void
+    {
+        $repository = static::getContainer()->get(PayoutRepositoryInterface::class);
+        $clock = new FixedClock(new DateTimeImmutable('2026-01-01'));
+        $awaiting = Payout::offer(Uuid::generate(), $this->child->id(), Money::fromMinorUnits(100), $this->admin->id(), null, $clock);
+        $repository->save($awaiting);
+
+        for ($i = 0; $i < 51; ++$i) {
+            $clock = new FixedClock(new DateTimeImmutable('2026-02-01'));
+            $payout = Payout::offer(Uuid::generate(), $this->child->id(), Money::fromMinorUnits(100), $this->admin->id(), null, $clock);
+            $payout->confirm(Uuid::generate(), $clock);
+            $repository->save($payout);
+        }
+
+        $summary = $this->getJson('/api/allowance/wallet?userId=' . $this->child->id()->value());
+        $this->assertSame(5100, $summary['paid']);
+        $this->assertSame($awaiting->id()->value(), $summary['awaitingConfirmation'][0]['id']);
     }
 
     public function testPrivateMoneyIsHiddenFromTheAdminThroughoutAPayout(): void
