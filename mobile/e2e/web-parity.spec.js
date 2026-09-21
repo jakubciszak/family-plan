@@ -79,13 +79,17 @@ test('dochód zachowuje wybraną datę a cel termin', async ({ app, page }) => {
   expect(app.lastSent('POST', '/api/allowance/goals').body.wantedBy).toBe('2026-12-31');
 });
 
-test('rodzic widzi portfel i cele domownika oraz wypłaca wolną kwotę', async ({ app, page }) => {
+test('rodzic widzi tylko wypłaty domownika i wypłaca wolną kwotę', async ({ app, page }) => {
   app.world.wallet.pending = 5000;
   app.world.wallet.awaitingConfirmation = [{ id: 'p1', amount: 1200, note: 'Poprzednia wypłata' }];
   app.world.goals.goals = [goal()];
   await app.signIn();
   await app.goTo('Kieszonkowe');
-  await expect(page.getByTestId('goal-progress-g1')).toContainText('Rower');
+  await expect(page.getByText('Wypłacone', { exact: true })).toBeVisible();
+  await expect(page.getByTestId('goal-progress-g1')).toHaveCount(0);
+  await expect(page.getByText('Do wydania', { exact: true })).toHaveCount(0);
+  expect(app.sent('GET', '/api/allowance/goals')).toHaveLength(0);
+  expect(app.sent('GET', '/api/allowance/ledger')).toHaveLength(0);
   await expect.poll(() => app.sent('GET', '/api/allowance/wallet').some(call => call.query.userId === app.world.users[1].id)).toBeTruthy();
   await page.getByRole('button', { name: 'Wypłać wszystko', exact: true }).click();
   await expect.poll(() => app.sent('POST', '/api/allowance/payouts').length).toBe(1);

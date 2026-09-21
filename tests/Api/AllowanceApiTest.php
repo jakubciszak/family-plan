@@ -111,7 +111,7 @@ class AllowanceApiTest extends ApiTestCase
         $wallet = $this->getJson('/api/allowance/wallet?userId=' . $this->child->id()->value());
 
         $this->assertSame(600, $wallet['pending']);
-        $this->assertSame(0, $wallet['available']);
+        $this->assertArrayNotHasKey('available', $wallet);
     }
 
     public function testAWeekStillRunningCannotBeClosed(): void
@@ -322,7 +322,7 @@ class AllowanceApiTest extends ApiTestCase
         );
     }
 
-    public function testAnAdminSeesAMembersWalletButAStrangerDoesNot(): void
+    public function testAnAdminSeesOnlyPayoutBalancesButAStrangerDoesNot(): void
     {
         $this->earnAndClose(600);
 
@@ -332,6 +332,70 @@ class AllowanceApiTest extends ApiTestCase
         $this->client->request('GET', '/api/allowance/wallet?userId=' . $this->child->id()->value());
 
         $this->assertSame(Response::HTTP_FORBIDDEN, $this->client->getResponse()->getStatusCode());
+    }
+
+    public function testPrivateMoneyIsHiddenFromTheAdminThroughoutAPayout(): void
+    {
+        $this->earnAndClose(600);
+        $this->loginAs($this->child);
+        $this->postJson('/api/allowance/income', ['amount' => 5000, 'description' => 'Private income']);
+        $this->postJson('/api/allowance/expenses', ['amount' => 700, 'description' => 'Private expense']);
+        $goal = $this->assertJsonResponse(
+            $this->postJson('/api/allowance/goals', ['name' => 'Private goal', 'target' => 1000]),
+            Response::HTTP_CREATED
+        )['goals'][0]['id'];
+        $this->postJson('/api/allowance/goals/' . $goal . '/put-aside', ['amount' => 1000]);
+        $this->loginAs($this->admin);
+
+        $summary = $this->getJson('/api/allowance/wallet?userId=' . $this->child->id()->value());
+        $this->assertSame(['currency', 'pending', 'paid', 'awaitingConfirmation'], array_keys($summary));
+        $this->assertSame(600, $summary['pending']);
+        $this->assertSame(0, $summary['paid']);
+
+        $offered = $this->assertJsonResponse($this->postJson('/api/allowance/payouts', [
+            'userId' => $this->child->id()->value(),
+            'amount' => 400,
+        ]), Response::HTTP_CREATED);
+        $this->assertSame(array_keys($summary), array_keys($offered));
+        $this->assertSame(0, $offered['paid']);
+        $payoutId = $offered['awaitingConfirmation'][0]['id'];
+
+        $this->loginAs($this->child);
+        $this->postJson('/api/allowance/payouts/' . $payoutId . '/confirm', []);
+        $this->postJson('/api/allowance/expenses', ['amount' => 100, 'description' => 'Another expense']);
+        $own = $this->getJson('/api/allowance/wallet?userId=' . $this->child->id()->value());
+        $this->assertSame(3600, $own['available']);
+        $this->assertSame(1000, $own['putAside']);
+        $this->assertSame(5000, $own['otherIncome']);
+        $this->assertSame(800, $own['spent']);
+        $this->getJson('/api/allowance/ledger?userId=' . $this->child->id()->value());
+        $this->getJson('/api/allowance/goals?userId=' . $this->child->id()->value());
+
+        $this->loginAs($this->admin);
+        $paid = $this->getJson('/api/allowance/wallet?userId=' . $this->child->id()->value());
+        $this->assertSame(array_keys($summary), array_keys($paid));
+        $this->assertSame(200, $paid['pending']);
+        $this->assertSame(400, $paid['paid']);
+        $history = $this->getJson('/api/allowance/payouts?userId=' . $this->child->id()->value());
+        $this->assertSame('confirmed', $history['payouts'][0]['status']);
+
+        $offered = $this->assertJsonResponse($this->postJson('/api/allowance/payouts', [
+            'userId' => $this->child->id()->value(),
+            'amount' => 200,
+        ]), Response::HTTP_CREATED);
+        $cancelled = $this->assertJsonResponse($this->postJson(
+            '/api/allowance/payouts/' . $offered['awaitingConfirmation'][0]['id'] . '/cancel',
+            []
+        ));
+        $this->assertSame($paid, $cancelled);
+
+        foreach (['ledger', 'goals', 'goals?all=1'] as $endpoint) {
+            $separator = str_contains($endpoint, '?') ? '&' : '?';
+            $this->client->request('GET', '/api/allowance/' . $endpoint . $separator . 'userId=' . $this->child->id()->value());
+            $this->assertResponseStatusCodeSame(Response::HTTP_FORBIDDEN);
+        }
+
+        $this->assertArrayHasKey('available', $this->getJson('/api/allowance/wallet'));
     }
 
     public function testAWeekCannotBeOpenedAgainOnceTheMoneyIsInTheirHands(): void

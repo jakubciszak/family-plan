@@ -6,22 +6,19 @@ import {
   closeWeek,
   offerPayout,
   reopenWeek,
-  type Goals,
-  type Wallet,
+  type PayoutSummary,
   type Week,
 } from '@/api/allowance';
 import type { Member } from '@/api/teams';
 import MoneyTile from '@/components/money-tile';
 import { TaskButton as Button } from '@/components/tasks/task-ui';
 import { formatMoney, toMinorUnits } from '@/money';
-import GoalProgress from './goal-progress';
 import WeekSummary from './week-summary';
 
 type Props = {
   members: Member[];
   weeks: Record<string, Week>;
-  wallets: Record<string, Wallet>;
-  goals: Record<string, Goals>;
+  wallets: Record<string, PayoutSummary>;
   currency: string;
   busy: boolean;
   onChanged: (action: () => Promise<unknown>) => void;
@@ -31,7 +28,6 @@ export default function SettleMembers({
   members,
   weeks,
   wallets,
-  goals,
   currency,
   busy,
   onChanged,
@@ -44,7 +40,6 @@ export default function SettleMembers({
   const member = members.find((one) => one.userId === selected) ?? members[0];
   const week = member && weeks[member.userId];
   const wallet = member && wallets[member.userId];
-  const wanted = member && goals[member.userId];
   const free = wallet
     ? wallet.pending - wallet.awaitingConfirmation.reduce((sum, payout) => sum + payout.amount, 0)
     : 0;
@@ -98,9 +93,9 @@ export default function SettleMembers({
       ) : null}
       {wallet ? (
         <Card style={{ borderRadius: 16 }}>
-          <Card.Title title={t('allowance.memberWallet')} titleVariant="titleMedium" />
+          <Card.Title title={t('allowance.memberPayouts')} titleVariant="titleMedium" />
           <Card.Content style={{ gap: 12 }}>
-            {(['pending', 'available', 'putAside'] as const).map((kind) => (
+            {(['pending', 'paid'] as const).map((kind) => (
               <MoneyTile
                 key={kind}
                 label={t(`allowance.${kind}`)}
@@ -137,20 +132,6 @@ export default function SettleMembers({
                 {t('allowance.payEverything')}
               </Button>
             </View>
-          </Card.Content>
-        </Card>
-      ) : null}
-      {wanted ? (
-        <Card style={{ borderRadius: 16 }}>
-          <Card.Title title={t('allowance.memberGoals')} titleVariant="titleMedium" />
-          <Card.Content style={{ gap: 20 }}>
-            {wanted.weeklyPace > 0 ? (
-              <Text>{t('allowance.weeklyPace', { amount: money(wanted.weeklyPace) })}</Text>
-            ) : null}
-            {wanted.goals.map((goal) => (
-              <GoalProgress key={goal.id} goal={goal} currency={wanted.currency} />
-            ))}
-            {!wanted.goals.length ? <Text>{t('allowance.noGoalsYet')}</Text> : null}
           </Card.Content>
         </Card>
       ) : null}

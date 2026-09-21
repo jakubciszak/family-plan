@@ -43,12 +43,12 @@ class AllowanceWalletApiController extends AbstractController
     }
 
     #[Route('/wallet', name: 'show', methods: ['GET'])]
-    #[OA\Get(path: '/api/allowance/wallet', summary: 'Money waiting to be paid out and money already in hand', tags: ['Allowance'])]
+    #[OA\Get(path: '/api/allowance/wallet', summary: 'Own wallet, or payout summary for an administered member', tags: ['Allowance'])]
     #[OA\Parameter(name: 'userId', in: 'query', required: false, description: 'Member to look at; defaults to the caller')]
-    #[OA\Response(response: 200, description: 'Balances in minor units, with the payouts still to be confirmed')]
+    #[OA\Response(response: 200, description: 'Own balances or member pending and paid totals, with payouts awaiting confirmation')]
     public function show(Request $request): JsonResponse
     {
-        return $this->json($this->wallet->of($this->inspected($request)));
+        return $this->json($this->visibleWallet($this->inspected($request)));
     }
 
     #[Route('/ledger', name: 'ledger', methods: ['GET'])]
@@ -59,6 +59,8 @@ class AllowanceWalletApiController extends AbstractController
     #[OA\Response(response: 200, description: 'Bookings, newest first')]
     public function ledger(Request $request): JsonResponse
     {
+        $this->access->assertSelf($this->caller(), $this->inspected($request));
+
         return $this->json($this->ledger->of(
             $this->inspected($request),
             $this->day($request->query->get('from')),
@@ -143,7 +145,7 @@ class AllowanceWalletApiController extends AbstractController
             $request->note
         ));
 
-        return $this->json($this->wallet->of($member), Response::HTTP_CREATED);
+        return $this->json($this->visibleWallet($member), Response::HTTP_CREATED);
     }
 
     #[Route('/payouts/{id}/confirm', name: 'confirm_payout', methods: ['POST'])]
@@ -174,7 +176,14 @@ class AllowanceWalletApiController extends AbstractController
 
         $this->commandBus->dispatch(new CancelPayoutCommand($id));
 
-        return $this->json($this->wallet->of($payout->userId()));
+        return $this->json($this->visibleWallet($payout->userId()));
+    }
+
+    private function visibleWallet(Uuid $owner): array
+    {
+        return $this->caller()->equals($owner)
+            ? $this->wallet->of($owner)
+            : $this->wallet->payoutsOf($owner);
     }
 
     private function inspected(Request $request): Uuid

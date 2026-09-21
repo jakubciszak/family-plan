@@ -163,6 +163,7 @@ const freshWorld = () => ({
   personalisation: personalisation(ADMIN.id),
   allowanceRules: { rules: [], currency: 'PLN' },
   wallet: {
+    paid: 0,
     currency: 'PLN',
     pending: 0,
     available: 0,

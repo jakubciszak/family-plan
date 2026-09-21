@@ -2,25 +2,23 @@
   "expo": {
     "name": "Family Plan",
     "slug": "family-plan",
-    "version": "1.0.3",
+    "version": "1.0.4",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "familyplan",
     "userInterfaceStyle": "automatic",
     "ios": {
       "bundleIdentifier": "pl.familyplan.app",
-      "icon": "./assets/expo.icon"
+      "icon": "./assets/images/icon.png"
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/images/android-icon-foreground.png",
-        "backgroundImage": "./assets/images/android-icon-background.png",
-        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+        "backgroundColor": "#2c3e50",
+        "foregroundImage": "./assets/images/android-icon-foreground.png"
       },
       "predictiveBackGestureEnabled": false,
       "package": "pl.familyplan.app",
-      "versionCode": 4
+      "versionCode": 5
     },
     "web": {
       "output": "static",

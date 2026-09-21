@@ -47,6 +47,7 @@ class SavingsGoalApiController extends AbstractController
     public function list(Request $request): JsonResponse
     {
         $userId = $this->access->inspected($this->caller(), $request->query->get('userId'));
+        $this->access->assertSelf($this->caller(), $userId);
 
         return $this->json($this->goals->of($userId, !$request->query->getBoolean('all', false)));
     }

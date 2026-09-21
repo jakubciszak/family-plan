@@ -16,6 +16,8 @@ import {
   readLedger,
   readRules,
   readWallet,
+  readPayoutSummary,
+  type PayoutSummary,
   readWeek,
   type AllowanceRule,
   type Goals,
@@ -51,8 +53,7 @@ export default function AllowanceScreen() {
   const [rules, setRules] = useState<AllowanceRule[]>([]);
   const [currency, setCurrency] = useState('PLN');
   const [members, setMembers] = useState<Member[]>([]);
-  const [wallets, setWallets] = useState<Record<string, Wallet>>({});
-  const [memberGoals, setMemberGoals] = useState<Record<string, Goals>>({});
+  const [wallets, setWallets] = useState<Record<string, PayoutSummary>>({});
   const [weeks, setWeeks] = useState<Record<string, Week>>({});
 
   const [loading, setLoading] = useState(true);
@@ -104,13 +105,11 @@ export default function AllowanceScreen() {
           children.map(async (one) => ({
             userId: one.userId,
             week: await readWeek(one.userId, weekStart),
-            wallet: await readWallet(one.userId),
-            goals: await readGoals(one.userId),
+            wallet: await readPayoutSummary(one.userId),
           })),
         );
         setWeeks(Object.fromEntries(balances.map((one) => [one.userId, one.week])));
         setWallets(Object.fromEntries(balances.map((one) => [one.userId, one.wallet])));
-        setMemberGoals(Object.fromEntries(balances.map((one) => [one.userId, one.goals])));
         setError(null);
       } catch {
         setError(t('errors.generic'));
@@ -209,7 +208,6 @@ export default function AllowanceScreen() {
                 key={teamId}
                 members={members}
                 wallets={wallets}
-                goals={memberGoals}
                 weeks={weeks}
                 currency={currency}
                 busy={busy}

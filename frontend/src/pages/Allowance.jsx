@@ -6,6 +6,7 @@ import BookingForm from '../components/allowance/BookingForm';
 import GoalBoard from '../components/allowance/GoalBoard';
 import GoalForm from '../components/allowance/GoalForm';
 import LedgerList from '../components/allowance/LedgerList';
+import PayoutSummary from '../components/allowance/PayoutSummary';
 import PayoutForm from '../components/allowance/PayoutForm';
 import Section from '../components/Section';
 import WalletCards from '../components/allowance/WalletCards';
@@ -29,7 +30,6 @@ function Allowance({ user }) {
     const [memberWallet, setMemberWallet] = React.useState(null);
     const [ledger, setLedger] = React.useState(null);
     const [goals, setGoals] = React.useState(null);
-    const [memberGoals, setMemberGoals] = React.useState(null);
     const [rules, setRules] = React.useState(null);
     const [refresh, setRefresh] = React.useState(0);
     const [error, setError] = React.useState(null);
@@ -112,7 +112,6 @@ function Allowance({ user }) {
         }
 
         allowanceService.getWallet(memberId).then(setMemberWallet).catch(() => setMemberWallet(null));
-        allowanceService.getGoals(memberId).then(setMemberGoals).catch(() => setMemberGoals(null));
     }, [memberId, tab, refresh]);
 
     const administers = (adminTeams || []).length > 0;
@@ -317,8 +316,8 @@ function Allowance({ user }) {
                             />
                             </Section>
 
-                            <Section id="member-wallet" icon="wallet" title={t('allowance.memberWallet')}>
-                                <WalletCards wallet={memberWallet} readOnly />
+                            <Section id="member-wallet" icon="wallet" title={t('allowance.memberPayouts')}>
+                                <PayoutSummary wallet={memberWallet} />
 
                                 <PayoutForm
                                     wallet={memberWallet}
@@ -326,9 +325,6 @@ function Allowance({ user }) {
                                 />
                             </Section>
 
-                            <Section id="member-goals" icon="goal" title={t('allowance.memberGoals')} defaultOpen={false}>
-                                <GoalBoard goals={memberGoals} readOnly />
-                            </Section>
                         </>
                     )}
                 </>

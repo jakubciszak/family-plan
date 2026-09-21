@@ -8,6 +8,13 @@ export type Payout = {
   offeredAt: string;
 };
 
+export type PayoutSummary = {
+  currency: string;
+  pending: number;
+  paid: number;
+  awaitingConfirmation: Payout[];
+};
+
 export type Wallet = {
   currency: string;
   pending: number;
@@ -132,6 +139,9 @@ export const reopenWeek = (userId: string, weekStart: string): Promise<unknown> 
 
 export const offerPayout = (userId: string, amount: number, note?: string): Promise<unknown> =>
   apiClient.post('/api/allowance/payouts', { userId, amount, note: note || null });
+
+export const readPayoutSummary = (userId: string): Promise<PayoutSummary> =>
+  apiClient.get<PayoutSummary>(`/api/allowance/wallet?userId=${encodeURIComponent(userId)}`);
 
 export const readWallet = (userId?: string): Promise<Wallet> =>
   apiClient.get<Wallet>(
