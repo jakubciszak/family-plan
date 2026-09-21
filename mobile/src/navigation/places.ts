@@ -11,6 +11,7 @@ export const BAR_LIMIT = 4;
 
 const ARRANGEABLE: Place[] = [
   { name: 'tasks', route: 'index', icon: 'checkbox-marked-outline', labelKey: 'nav.tasks' },
+  { name: 'day-planning', route: 'day-planning', icon: 'calendar-outline', labelKey: 'dayPlanning.title' },
   { name: 'teams', route: 'teams', icon: 'account-group-outline', labelKey: 'nav.teams' },
   {
     name: 'allowance',

@@ -14,6 +14,20 @@ jobs:
     name: React Native Tests
     timeout-minutes: 30
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: app
+          POSTGRES_PASSWORD: mobile-tests
+          POSTGRES_DB: mobile_api_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U app -d mobile_api_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     defaults:
       run:
         working-directory: mobile
@@ -32,11 +46,13 @@ jobs:
       - uses: shivammathur/setup-php@v2
         with:
           php-version: '8.3'
-          extensions: pdo_sqlite, intl, mbstring, gd
+          extensions: pdo_pgsql, intl, mbstring, gd
           coverage: none
       - run: composer install --prefer-dist --no-progress --ignore-platform-req=ext-redis
         working-directory: .
       - run: npm run e2e:real
+        env:
+          DATABASE_URL: postgresql://app:mobile-tests@127.0.0.1:5432/mobile_api?serverVersion=16&charset=utf8
       - run: npx expo export --platform all
       - uses: actions/upload-artifact@v4
         if: always()

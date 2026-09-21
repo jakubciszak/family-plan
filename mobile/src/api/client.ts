@@ -138,11 +138,13 @@ const request = async <T>(path: string, init: RequestInit): Promise<T> => {
 
 const apiClient = {
   get: <T>(path: string) => request<T>(path, { method: 'GET' }),
-  post: <T>(path: string, data?: unknown) =>
-    request<T>(path, { method: 'POST', body: JSON.stringify(data ?? {}) }),
-  put: <T>(path: string, data?: unknown) =>
-    request<T>(path, { method: 'PUT', body: JSON.stringify(data ?? {}) }),
-  delete: <T>(path: string) => request<T>(path, { method: 'DELETE' }),
+  post: <T>(path: string, data?: unknown, headers?: Record<string, string>) =>
+    request<T>(path, { method: 'POST', body: JSON.stringify(data ?? {}), headers }),
+  patch: <T>(path: string, data: unknown, headers?: Record<string, string>) =>
+    request<T>(path, { method: 'PATCH', body: JSON.stringify(data), headers }),
+  put: <T>(path: string, data?: unknown, headers?: Record<string, string>) =>
+    request<T>(path, { method: 'PUT', body: JSON.stringify(data ?? {}), headers }),
+  delete: <T>(path: string, headers?: Record<string, string>, data?: unknown) => request<T>(path, { method: 'DELETE', headers, ...(data ? { body: JSON.stringify(data) } : {}) }),
 };
 
 export const requestTokens = async (email: string, password: string) => {

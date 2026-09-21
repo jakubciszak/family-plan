@@ -45,20 +45,24 @@ const request = async (url, options) => {
 };
 
 const apiClient = {
-    get(url) {
-        return request(url, { method: 'GET' });
+    get(url, options = {}) {
+        return request(url, { ...options, method: 'GET' });
     },
 
-    post(url, data) {
-        return request(url, { method: 'POST', body: JSON.stringify(data ?? {}) });
+    post(url, data, options = {}) {
+        return request(url, { ...options, method: 'POST', body: JSON.stringify(data ?? {}) });
     },
 
-    put(url, data) {
-        return request(url, { method: 'PUT', body: JSON.stringify(data ?? {}) });
+    put(url, data, options = {}) {
+        return request(url, { ...options, method: 'PUT', body: JSON.stringify(data ?? {}) });
     },
 
-    delete(url) {
-        return request(url, { method: 'DELETE' });
+    patch(url, data, options = {}) {
+        return request(url, { ...options, method: 'PATCH', body: JSON.stringify(data ?? {}) });
+    },
+
+    delete(url, options = {}) {
+        return request(url, { ...options, method: 'DELETE' });
     },
 };
 

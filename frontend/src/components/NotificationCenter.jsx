@@ -39,7 +39,10 @@ function NotificationCenter() {
                         return;
                     }
 
-                    fresh.forEach((notification) => queued.current.add(notification.id));
+                    fresh.forEach((notification) => {
+                        queued.current.add(notification.id);
+                        if (notification.parameters?.url === '/day-planning') window.dispatchEvent(new Event('day-planning:changed'));
+                    });
                     setVisible((current) => [...current, ...fresh].slice(-MAX_VISIBLE));
                 })
                 .catch(() => undefined);

@@ -60,7 +60,7 @@ export default function AppTabBar({ state, navigation }: BottomTabBarProps) {
 
   const { onBar, behindMore } = splitAtBar(
     placesToShow({
-      chosen: own?.navigation,
+      chosen: own && !own.places.navigation.includes('day-planning') ? [...own.navigation, 'day-planning'] : own?.navigation,
       built: state.routes.map((route) => route.name),
       manages,
       isSuperAdmin,

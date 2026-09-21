@@ -1,3 +1,5 @@
+import { useRouter } from 'expo-router';
+import { notifyCalendarChanged } from '@/day-planning/changes';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AppState, StyleSheet } from 'react-native';
@@ -5,7 +7,7 @@ import { Portal, Snackbar, Text } from 'react-native-paper';
 
 import { useAuth } from '@/auth/auth-context';
 import { readNotificationChannels } from '@/api/user-settings';
-import { clearDeviceNotifications, requestNotificationPermission, showDeviceNotification } from '@/notifications/device';
+import { clearDeviceNotifications, requestNotificationPermission, showDeviceNotification, subscribeCalendarNotificationOpen } from '@/notifications/device';
 
 import { listUnread, markAsRead, type Notification } from '@/api/notifications';
 
@@ -15,6 +17,7 @@ const AT_ONCE = 3;
 
 export default function NotificationCentre() {
   const { user } = useAuth();
+  const router = useRouter();
   const { t } = useTranslation();
   const [queue, setQueue] = useState<Notification[]>([]);
   const alreadySeen = useRef(new Set<string>());
@@ -58,6 +61,7 @@ export default function NotificationCentre() {
 
           fresh.forEach((notification) => alreadySeen.current.add(notification.id));
           setQueue((waiting) => [...waiting, ...fresh]);
+          if (fresh.some((notification) => notification.parameters?.url === '/day-planning')) notifyCalendarChanged();
           if (channels.find((choice) => choice.name === 'push')?.enabled) {
             for (const notification of fresh) {
               if (cancelled) break;
@@ -82,6 +86,11 @@ export default function NotificationCentre() {
     };
   }, [user]);
 
+  useEffect(() => {
+    if (!user) return;
+    return subscribeCalendarNotificationOpen(user.id, () => { notifyCalendarChanged(); router.push('/day-planning'); });
+  }, [user, router]);
+
   const showing = queue[0];
 
   if (!showing) {
@@ -95,7 +104,7 @@ export default function NotificationCentre() {
         testID="notification-snackbar"
         duration={SHOW_MS}
         onDismiss={() => dismiss(showing.id)}
-        action={{ label: t('notifications.dismiss'), onPress: () => dismiss(showing.id) }}>
+        action={showing.parameters?.url === '/day-planning' ? { label: t('dayPlanning.title'), onPress: () => { dismiss(showing.id); router.push('/day-planning'); } } : { label: t('notifications.dismiss'), onPress: () => dismiss(showing.id) }}>
         {showing.subject ? (
           <Text variant="bodyMedium">
             <Text variant="titleSmall" style={styles.subject}>

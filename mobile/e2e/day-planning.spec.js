@@ -1,0 +1,122 @@
+const { test, expect } = require('./app');
+const { TEAM } = require('./fake-api');
+const DAY = '2026-09-21';
+const button = (page, name) => page.getByRole('button', { name, exact: true });
+const event = (world, over = {}) => ({ id: '11111111-aaaa-4111-8111-111111111111', occurrenceKey: DAY + 'T09:00', title: 'Plan lekcji', description: 'Przynieś zeszyt', location: 'Szkoła', ownerId: world.me.id, teamId: TEAM.id, visibility: 'PRIVATE', start: DAY + 'T07:00:00Z', end: DAY + 'T08:00:00Z', allDay: false, timeZone: 'Europe/Warsaw', participantIds: [world.me.id, world.users[1].id], participants: [{ personId: world.me.id, status: 'INCLUDED' }, { personId: world.users[1].id, status: 'INCLUDED' }], tags: [{ id: 'school', name: 'Szkoła', color: '#226a4c' }], blocksTime: true, recurring: true, canEdit: true, canChangeParticipation: true, participation: 'INCLUDED', version: 3, ...over });
+const install = async (page, world) => {
+  const state = { events: [], tags: [{ id: 'school', name: 'Szkoła', color: '#226a4c', scope: 'TEAM', teamId: TEAM.id, canEdit: true }, { id: 'work', name: 'Praca', color: '#325f99', scope: 'PERSONAL', teamId: null, canEdit: true }], busy: [{ kind: 'busy', personId: world.users[1].id, start: DAY + 'T10:00:00Z', end: DAY + 'T11:00:00Z' }], calls: [], failCreate: false, conflict: false, stale: false, exceptions: {}, needsReset: false };
+  await page.route('**/api/day-planning/**', async (route) => {
+    const req = route.request(), url = new URL(req.url()), path = url.pathname, method = req.method(), body = req.postDataJSON();
+    state.calls.push({ method, path, body, query: url.searchParams, headers: req.headers() });
+    const send = (data, status = 200) => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(data) });
+    const coverage = { from: url.searchParams.get('from'), to: url.searchParams.get('to'), complete: true };
+    if (path.endsWith('/calendar')) { const tags = url.searchParams.getAll('tagIds[]'); return send({ events: state.events.filter((item) => !tags.length || item.tags.some((tag) => tags.includes(tag.id))), busy: url.searchParams.has('teamId') ? state.busy : [], coverage }); }
+    if (path.endsWith('/planning/suggestions')) return send({ slots: [{ start: DAY + 'T13:30:00Z', end: DAY + 'T14:30:00Z' }], personIds: body.personIds, busy: state.busy, coverage });
+    if (path.endsWith('/tags') && method === 'GET') return send({ tags: state.tags });
+    if (path.endsWith('/tags') && method === 'POST') { const tag = { ...body, id: 'new-tag', canEdit: true }; state.tags.push(tag); return send(tag, 201); }
+    if (path.includes('/tags/') && method === 'DELETE') { state.tags = state.tags.filter((tag) => !path.endsWith(tag.id)); return route.fulfill({ status: 204 }); }
+    if (path.endsWith('/events') && method === 'POST') {
+      if (state.failCreate) return send({}, 503);
+      if (state.conflict && !body.conflictConfirmation) return send({ code: 'planning_conflict', conflicts: state.busy, confirmationToken: 'confirmed-slot' }, 409);
+      state.events.push(event(world, { id: 'new-event', title: body.title, recurring: !!body.recurrence, allDay: body.schedule.kind === 'ALL_DAY', tags: state.tags.filter((tag) => body.tagIds.includes(tag.id)), ...(body.schedule.kind === 'ALL_DAY' ? { start: body.schedule.startDate + 'T00:00:00+02:00', end: body.schedule.endDate + 'T00:00:00+02:00' } : {}) })); return send({ ...body, id: 'new-event', version: 1 }, 201);
+    }
+    const current = state.events.find((item) => path.includes(item.id));
+    if (method === 'GET' && path.includes('/occurrences/')) return send(current);
+    if (method === 'GET' && current) return send({ ...current, schedule: { kind: 'TIMED', localStart: DAY + 'T09:00', durationMinutes: 60, timeZone: 'Europe/Warsaw' }, recurrence: { frequency: 'WEEKLY', interval: 1, byDay: [1], until: null, count: null }, tagIds: current.tags.map((tag) => tag.id), exceptions: state.exceptions });
+    if (path.endsWith('/participation/me')) { current.participation = body.status; return send(body); }
+    if (method === 'PUT' && path.includes('/exceptions/')) { if (body.cancelled) state.events = state.events.filter((item) => item.id !== current.id); else Object.assign(current, body.changes); return send({ ...current, version: current.version + 1 }); }
+    if (method === 'DELETE' && path.includes('/exceptions/')) { delete state.exceptions[decodeURIComponent(path.split('/').at(-1))]; return send({ ...current, schedule: { kind: 'TIMED', localStart: DAY + 'T09:00', durationMinutes: 60, timeZone: 'Europe/Warsaw' }, recurrence: null, tagIds: current.tags.map((tag) => tag.id), exceptions: state.exceptions }); }
+    if (method === 'PATCH') { if (state.needsReset && !body.resetExceptions) return send({ code: 'exceptions_reset_required' }, 409); if (state.stale) return send({}, 412); Object.assign(current, body); return send({ ...current, version: current.version + 1 }); }
+    if (method === 'DELETE') { state.events = state.events.filter((item) => item.id !== current.id); return route.fulfill({ status: 204 }); }
+    return send({}, 404);
+  });
+  return state;
+};
+const open = async (app) => { await app.signIn(); await app.goTo('Plan dnia'); await app.field('Data (RRRR-MM-DD)').fill(DAY); };
+const chooseTeam = async (page) => { await button(page, 'Zespół').click(); await button(page, TEAM.name).click(); };
+
+test('keeps busy placeholders under tag filtering without offering private details', async ({ app, page, world }) => {
+  const state = await install(page, world); state.events = [event(world)];
+  await open(app); await page.getByText('Plan zespołu', { exact: true }).click(); await chooseTeam(page);
+  await page.getByRole('checkbox', { name: 'Pokaż osobę: Bartek Kowalski' }).click();
+  await expect(page.getByTestId('day-busy')).toContainText('Zajęty'); await page.getByText('Praca', { exact: true }).click();
+  await expect(page.getByTestId('day-event-' + state.events[0].id)).toHaveCount(0); await expect(page.getByTestId('day-busy')).toBeVisible();
+  await page.getByTestId('day-busy').click(); expect(state.calls.filter((call) => call.path.includes('/occurrences/'))).toHaveLength(0);
+});
+
+test('creates an overnight private recurrence with stable idempotency across failure and confirmed conflict', async ({ app, page, world }) => {
+  const state = await install(page, world); await open(app); await chooseTeam(page); await button(page, 'Nowe wydarzenie').click();
+  await app.field('Tytuł wydarzenia').fill('Nocna podróż'); await app.field('Strefa czasowa IANA').fill('Europe/Warsaw'); await app.field('Godzina początku (GG:MM)').fill('23:00'); await app.field('Data końca (RRRR-MM-DD)').fill('2026-09-22'); await app.field('Godzina końca (GG:MM)').fill('01:00');
+  await button(page, 'Powtarzanie').click(); await button(page, 'Co kilka tygodni').click(); await page.getByRole('checkbox', { name: 'Zaproś: Bartek Kowalski' }).click();
+  state.failCreate = true; await button(page, 'Zapisz').click(); await expect(page.getByRole('alert')).toContainText('Sprawdź połączenie');
+  state.failCreate = false; state.conflict = true; await button(page, 'Zapisz').click(); await button(page, 'Zapisz mimo kolizji').click();
+  await expect(page.getByTestId('day-event-new-event')).toContainText('Nocna podróż');
+  const saves = state.calls.filter((call) => call.method === 'POST' && call.path.endsWith('/events'));
+  expect(new Set(saves.map((call) => call.headers['idempotency-key'])).size).toBe(1);
+  expect(saves.at(-1).body).toMatchObject({ visibility: 'PRIVATE', participantIds: [world.me.id, world.users[1].id], schedule: { localStart: DAY + 'T23:00', durationMinutes: 120 }, recurrence: { frequency: 'WEEKLY', interval: 1 }, conflictConfirmation: 'confirmed-slot' });
+});
+
+test('edits a single occurrence with version checks and preserves invitee details after declining', async ({ app, page, world }) => {
+  const state = await install(page, world); state.events = [event(world)]; await open(app); await page.getByTestId('day-event-' + state.events[0].id).click(); await button(page, 'Edytuj ten dzień').click();
+  await expect(button(page, 'Powtarzanie')).toHaveCount(0); await app.field('Tytuł wydarzenia').fill('Wycieczka szkolna'); await button(page, 'Zapisz').click(); await expect(page.getByText('Wycieczka szkolna', { exact: true })).toBeVisible();
+  const change = state.calls.find((call) => call.method === 'PUT' && call.path.includes('/exceptions/')); expect(change.headers['if-match']).toBe('"3"'); expect(change.body.changes.title).toBe('Wycieczka szkolna'); expect(change.body.changes).not.toHaveProperty('recurrence'); expect(change.body.changes).not.toHaveProperty('teamId');
+  state.events[0].canEdit = false; state.events[0].ownerId = world.users[1].id; await page.getByTestId('day-event-' + state.events[0].id).click(); await expect(button(page, 'Edytuj całą serię')).toHaveCount(0); await button(page, 'Zrezygnuj tylko w tym dniu').click();
+  await expect(page.getByTestId('day-event-' + state.events[0].id)).toContainText('Udział odrzucony'); await page.getByTestId('day-event-' + state.events[0].id).click(); await expect(page.getByText('Przynieś zeszyt')).toBeVisible(); await button(page, 'Wróć tylko w tym dniu').click();
+  expect(state.calls.filter((call) => call.path.endsWith('/participation/me')).map((call) => call.body)).toEqual([{ status: 'DECLINED', occurrenceKey: DAY + 'T09:00' }, { status: 'INCLUDED', occurrenceKey: DAY + 'T09:00' }]);
+});
+
+test('includes the author and all calendars in planning and prefills a selected slot', async ({ app, page, world }) => {
+  const state = await install(page, world); await open(app); await chooseTeam(page); await page.getByText('Praca', { exact: true }).click(); await page.getByText('Znajdź termin', { exact: true }).click();
+  await page.getByRole('checkbox', { name: 'Pokaż osobę: Bartek Kowalski' }).click(); await app.field('Ostatni dzień poszukiwań (RRRR-MM-DD)').fill('2026-09-27'); await app.field('Strefa czasowa IANA').fill('Europe/Warsaw'); await button(page, 'Znajdź wspólny termin').click(); await expect(page.getByTestId('day-suggestions')).toBeVisible();
+  const query = state.calls.find((call) => call.path.endsWith('/planning/suggestions')).body; expect(query.personIds).toContain(world.me.id); expect(query.personIds).toContain(world.users[1].id); expect(query).not.toHaveProperty('tagIds');
+  await button(page, 'Wybierz termin').click(); await expect(app.field('Godzina początku (GG:MM)')).toHaveValue('15:30'); await expect(app.field('Godzina końca (GG:MM)')).toHaveValue('16:30'); await expect(page.getByRole('checkbox', { name: 'Zaproś: Bartek Kowalski' })).toBeChecked();
+});
+
+test('manages tags and reloads stale versions while preserving rejected drafts', async ({ app, page, world }) => {
+  const state = await install(page, world); state.events = [event(world)]; await open(app); await button(page, 'Zarządzaj tagami').click(); await app.field('Nazwa tagu').fill('Muzyka'); await button(page, 'Zapisz').click(); await expect(page.getByText('Muzyka · Osobisty')).toBeVisible();
+  await button(page, 'Archiwizuj tag: Muzyka').click(); await button(page, 'Potwierdź archiwizację').click(); await expect(page.getByText('Muzyka · Osobisty')).toHaveCount(0); await button(page, 'Wróć do kalendarza').click();
+  await page.getByTestId('day-event-' + state.events[0].id).click(); await button(page, 'Edytuj całą serię').click(); state.stale = true; await app.field('Tytuł wydarzenia').fill('Nowy plan'); await button(page, 'Zapisz').click(); await expect(page.getByRole('alert')).toContainText('Ktoś zmienił'); await expect(app.field('Tytuł wydarzenia')).toHaveValue('Nowy plan');
+  await button(page, 'Wczytaj aktualną wersję').click(); await expect(app.field('Tytuł wydarzenia')).toHaveValue('Plan lekcji');
+});
+
+test('all-day dates have an exclusive API end and the screen fits a narrow dark phone', async ({ app, page, world }, testInfo) => {
+  const state = await install(page, world); world.personalisation.themeMode = 'dark'; const errors = []; page.on('pageerror', (error) => errors.push(error.message)); await page.setViewportSize({ width: 320, height: 740 });
+  await open(app); await button(page, 'Nowe wydarzenie').click(); await app.field('Tytuł wydarzenia').fill('Wolny dzień'); await page.getByRole('checkbox', { name: 'Cały dzień', exact: true }).click(); await button(page, 'Zapisz').click(); await expect(page.getByTestId('day-event-new-event')).toBeVisible();
+  expect(state.calls.find((call) => call.path.endsWith('/events') && call.method === 'POST').body.schedule).toMatchObject({ kind: 'ALL_DAY', startDate: DAY, endDate: '2026-09-22' }); expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(320); expect(errors).toEqual([]); await page.getByTestId('day-event-new-event').scrollIntoViewIfNeeded(); await page.screenshot({ path: testInfo.outputPath('day-plan-mobile-dark.png') });
+});
+
+
+test('shows cancelled exceptions and requires confirmation before resetting a series schedule', async ({ app, page, world }) => {
+  const state = await install(page, world); state.events = [event(world)]; state.exceptions = { '2026-09-28T09:00': { cancelled: true } };
+  await open(app); await page.getByTestId('day-event-' + state.events[0].id).click(); await button(page, 'Edytuj całą serię').click();
+  await expect(page.getByText('2026-09-28 09:00 · Anulowane')).toBeVisible(); await button(page, 'Przywróć według serii').click();
+  await expect(page.getByText('2026-09-28 09:00 · Anulowane')).toHaveCount(0);
+  const restored = state.calls.find((call) => call.method === 'DELETE' && call.path.includes('/exceptions/'));
+  expect(restored.headers['if-match']).toBe('"3"');
+  state.needsReset = true; await app.field('Godzina początku (GG:MM)').fill('08:30'); await button(page, 'Zapisz').click();
+  await expect(page.getByText('Ta zmiana usunie wszystkie wyjątki tej serii, w tym przeniesione i anulowane dni. Pojedyncze wystąpienia będą znów wynikać z nowego harmonogramu.')).toBeVisible();
+  await button(page, 'Usuń wyjątki i zapisz').click(); await expect(page.getByTestId('day-event-' + state.events[0].id)).toBeVisible();
+  expect(state.calls.filter((call) => call.method === 'PATCH').at(-1).body.resetExceptions).toBe(true);
+});
+
+test('rejects a nonexistent DST time and lets a user choose the second autumn occurrence', async ({ app, page, world }) => {
+  const state = await install(page, world); await open(app); await button(page, 'Nowe wydarzenie').click();
+  await app.field('Tytuł wydarzenia').fill('Zmiana czasu'); await app.field('Strefa czasowa IANA').fill('Europe/Warsaw');
+  await app.field('Data początku (RRRR-MM-DD)').fill('2026-03-29'); await app.field('Data końca (RRRR-MM-DD)').fill('2026-03-29');
+  await app.field('Godzina początku (GG:MM)').fill('02:30'); await app.field('Godzina końca (GG:MM)').fill('03:30'); await button(page, 'Zapisz').click();
+  await expect(page.getByRole('alert')).toContainText('godzina musi istnieć'); expect(state.calls.filter((call) => call.method === 'POST' && call.path.endsWith('/events'))).toHaveLength(0);
+  await app.field('Data początku (RRRR-MM-DD)').fill('2026-10-25'); await app.field('Data końca (RRRR-MM-DD)').fill('2026-10-25');
+  await button(page, 'Godzina podczas zmiany czasu').click(); await button(page, 'Drugie wystąpienie godziny (UTC+01:00)').click(); await button(page, 'Zapisz').click();
+  expect(state.calls.find((call) => call.method === 'POST' && call.path.endsWith('/events')).body.schedule).toMatchObject({ utcOffset: '+01:00', durationMinutes: 60 });
+});
+
+
+test('a calendar notification invalidates open private details and reloads the agenda', async ({ app, page, world }) => {
+  const state = await install(page, world); state.events = [event(world)]; await page.clock.install();
+  await open(app); await page.getByTestId('day-event-' + state.events[0].id).click(); await expect(page.getByTestId('day-event-detail')).toContainText('Przynieś zeszyt');
+  state.events = [];
+  world.notifications = [{ id: 'calendar-revoked', subject: 'Zmiana w planie dnia', message: 'Twoje wydarzenie się zmieniło', createdAt: '2026-09-21T10:00:00Z', readAt: null, parameters: { url: '/day-planning' } }];
+  await page.clock.runFor(11000);
+  await expect(page.getByTestId('day-event-detail')).toHaveCount(0); await expect(page.getByText('Przynieś zeszyt')).toHaveCount(0);
+  await expect(page.getByText('Brak wydarzeń w tym dniu.')).toBeVisible();
+});

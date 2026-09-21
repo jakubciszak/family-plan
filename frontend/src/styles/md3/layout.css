@@ -745,3 +745,23 @@ button.user-points {
 .app-nav__sheet-item[aria-current='page'] svg {
   color: inherit;
 }
+
+@media (max-width: 359px) {
+  .header-left {
+    display: none;
+  }
+
+  .user-info {
+    justify-content: space-between;
+    width: 100%;
+  }
+
+  .user-points__scope {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+  }
+}

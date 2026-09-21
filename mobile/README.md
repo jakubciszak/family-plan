@@ -53,18 +53,23 @@ problemy sieciowe nie usuwają zapisanej sesji. Wylogowanie usuwa oba tokeny.
 npm run typecheck
 npm run lint
 npm run e2e
-npm run e2e:real
+DATABASE_URL='postgresql://app:password@127.0.0.1:5432/mobile_api?serverVersion=16&charset=utf8' npm run e2e:real
 npx expo export --platform all
 ```
 
 Playwright uruchamia wersję przeglądarkową w rozmiarze telefonu na porcie 19082.
 `EXPO_WEB_PORT` pozwala wybrać inny port. Testy zawsze uruchamiają własny serwer,
 żeby nie pomylić aplikacji z inną usługą działającą pod tym samym adresem.
-Scenariusze ekranów wykorzystują kontrolowane odpowiedzi API. `e2e:real` uruchamia
-własny backend z tymczasową bazą SQLite (wymaga PHP i zainstalowanych zależności
-Composer) oraz Expo na portach 19080 i 19083. Sprawdza logowanie, wykonanie zadania
-i odtworzenie sesji. Testy backendu dodatkowo sprawdzają rotację tokenów,
-uprawnienia i zapis danych.
+Scenariusze ekranów wykorzystują kontrolowane odpowiedzi API. `e2e:real` wymaga PHP,
+zależności Composer oraz PostgreSQL 16. Podaj `DATABASE_URL` wskazujący osobną bazę
+testową; konfiguracja Symfony dopisuje do nazwy bazy sufiks `_test`. Użytkownik bazy
+musi móc ją utworzyć. Skrypt uruchamia migracje, własny backend oraz Expo na portach
+19080 i 19083. Dane pozostają w bazie po zakończeniu testów. GitHub Actions zapewnia
+własną instancję PostgreSQL dla każdego uruchomienia.
+
+Testy sprawdzają logowanie, wykonanie zadania, odtworzenie sesji oraz Plan dnia:
+prywatną zajętość, zaproszenia, cykle, wyjątki i wspólne terminy. Testy backendu
+dodatkowo sprawdzają rotację tokenów, uprawnienia i zapis danych.
 Eksport sprawdza bundlowanie Androida, iOS i web; nie zastępuje testu na urządzeniu.
 
 ## Backend JWT

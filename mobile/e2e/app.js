@@ -7,6 +7,7 @@ const { freshWorld, installApi } = require('./fake-api');
  * not substrings of each other ("Bonusy" vs "Zasady bonusowe").
  */
 const PLACES = {
+  'Plan dnia': 'Plan dnia',
   'Plany działania': 'Plany',
   'Zadania': 'Zadania',
   'Zespoły': 'Zespoły',
