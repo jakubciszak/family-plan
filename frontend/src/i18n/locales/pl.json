@@ -723,6 +723,13 @@
     "taskTypePlanHint": "Wybierz plan tego zespołu. Aby użyć prywatnego planu, najpierw zmień go na zespołowy w „Planach działania”."
   },
   "dayPlanning": {
+    "calendarView": "Sposób wyświetlania planu",
+    "listView": "Lista",
+    "weekView": "Kalendarz tygodniowy",
+    "weekScrollHint": "Wydarzenia w tym samym czasie są obok siebie. Przewiń kalendarz, aby zobaczyć pozostałe dni i godziny.",
+    "overlapping": "Nakładające się wydarzenia",
+    "continuesBefore": "Kontynuacja z poprzedniego dnia",
+    "continuesAfter": "Kontynuacja w następnym dniu",
     "title": "Plan dnia",
     "subtitle": "Twój czas, wspólny plan",
     "intro": "Zaplanuj dzień i znajdź czas dla zespołu.",

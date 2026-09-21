@@ -15,6 +15,8 @@ import { useAuth } from '@/auth/auth-context';
 import ChoicePicker from '@/components/action-plans/choice-picker';
 import EventEditor from '@/components/day-planning/event-editor';
 import TagManager from '@/components/day-planning/tag-manager';
+import WeekCalendar from '@/components/day-planning/week-calendar';
+import { mondayOf } from '@/day-planning/week-layout';
 import { dayString, isDay, shiftDay } from '@/dates';
 import { deviceTimeZone, draftFromDefinition, draftFromOccurrence, isTime, localInstant, localParts, makeRequestKey, rangeFor } from '@/day-planning/time';
 import { useScreenBackground } from '@/personalisation/use-screen-background';
@@ -35,6 +37,7 @@ export default function DayPlanningScreen() {
   const [tagIds, setTagIds] = useState<string[]>([]);
   const [date, setDate] = useState(dayString(new Date()));
   const [days, setDays] = useState(1);
+  const [display, setDisplay] = useState<'LIST' | 'WEEK'>('LIST');
   const [view, setView] = useState('MINE');
   const [calendar, setCalendar] = useState<Calendar | null>(null);
   const [suggestions, setSuggestions] = useState<Suggestions | null>(null);
@@ -98,13 +101,13 @@ export default function DayPlanningScreen() {
     if (!focused.current || view === 'PLAN' || !isDay(date)) return;
     if (view === 'TEAM' && (!teamId || !people.length)) return;
     let range: { from: string; to: string };
-    try { range = rangeFor(date, days, zone); } catch { void Promise.resolve().then(() => { if (sequence === request.current) setError(t('dayPlanning.invalidTime')); }); return; }
+    try { range = rangeFor(display === 'WEEK' ? mondayOf(date) : date, display === 'WEEK' ? 7 : days, zone); } catch { void Promise.resolve().then(() => { if (sequence === request.current) setError(t('dayPlanning.invalidTime')); }); return; }
     void Promise.resolve().then(() => { if (sequence === request.current) setLoading(true); });
     readCalendar(range.from, range.to, view === 'MINE' ? null : teamId, view === 'MINE' ? [] : people, tagIds)
       .then((next) => { if (sequence === request.current) { if (!next.coverage.complete) throw new Error('incomplete'); setCalendar(next); } })
       .catch(() => { if (sequence === request.current) setError(t('dayPlanning.loadError')); })
       .finally(() => { if (sequence === request.current) setLoading(false); });
-  }, [date, days, view, teamId, people, tagIds, zone, revision, t]);
+  }, [date, days, display, view, teamId, people, tagIds, zone, revision, t]);
   useEffect(() => { scroll.current?.scrollTo({ y: 0, animated: false }); }, [selected, editing, tagManager]);
   const chooseTeam = (value: string) => { setTeamId(value || null); setPeople([currentUser]); setTagIds([]); setSuggestions(null); };
   const personToggle = (id: string) => { setPeople((current) => current.includes(id) ? current.filter((person) => person !== id) : [...current, id]); setSuggestions(null); };
@@ -201,7 +204,7 @@ export default function DayPlanningScreen() {
   const plannerField = (key: string, value: string, change: (value: string) => void) => <TextInput mode="outlined" label={t(`dayPlanning.${key}`)} accessibilityLabel={t(`dayPlanning.${key}`)} value={value} onChangeText={(next) => { change(next); setSuggestions(null); request.current += 1; setLoading(false); }} />;
   return <SafeAreaView edges={['left', 'right']} style={{ flex: 1, backgroundColor: ground }}>
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <ScrollView ref={scroll} keyboardShouldPersistTaps="handled" contentInsetAdjustmentBehavior="automatic" contentContainerStyle={{ padding: 16, gap: 16, paddingBottom: 36 }}
+      <ScrollView ref={scroll} nestedScrollEnabled keyboardShouldPersistTaps="handled" contentInsetAdjustmentBehavior="automatic" contentContainerStyle={{ padding: 16, gap: 16, paddingBottom: 36 }}
         refreshControl={<RefreshControl refreshing={loading} onRefresh={() => refresh()} />}>
         {!!error && <View><Text accessibilityRole="alert" style={{ color: theme.colors.error }}>{error}</Text>{!editing && <Button onPress={() => refresh()}>{t('common.retry')}</Button>}</View>}
         {stale && editing?.occurrence && <Button onPress={() => void beginEdit(editing.occurrence!, editing.occurrenceOnly)}>{t('dayPlanning.reloadEditor')}</Button>}
@@ -245,13 +248,16 @@ export default function DayPlanningScreen() {
             </View>}
             {view !== 'PLAN' && <>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
-                <Chip selected={days === 1} onPress={() => setDays(1)}>{t('dayPlanning.day')}</Chip><Chip selected={days === 7} onPress={() => setDays(7)}>{t('dayPlanning.week')}</Chip>
+                {(['LIST', 'WEEK'] as const).map((value) => <Chip key={value} accessibilityLabel={t(`dayPlanning.display.${value}`)} accessibilityState={{ selected: display === value }} selected={display === value} onPress={() => setDisplay(value)}>{t(`dayPlanning.display.${value}`)}</Chip>)}
+              </View>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                {display === 'LIST' && <><Chip selected={days === 1} onPress={() => setDays(1)}>{t('dayPlanning.day')}</Chip><Chip selected={days === 7} onPress={() => setDays(7)}>{t('dayPlanning.week')}</Chip></>}
                 <Button onPress={() => setDate(dayString(new Date()))}>{t('dayPlanning.today')}</Button>
               </View>
               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <IconButton icon="chevron-left" accessibilityLabel={t('dayPlanning.previous')} disabled={!isDay(date)} onPress={() => setDate(shiftDay(date, -days))} />
-                <Text style={{ flex: 1 }} variant="titleMedium">{isDay(date) ? dateTitle(date) : date}</Text>
-                <IconButton icon="chevron-right" accessibilityLabel={t('dayPlanning.next')} disabled={!isDay(date)} onPress={() => setDate(shiftDay(date, days))} />
+                <IconButton icon="chevron-left" accessibilityLabel={t('dayPlanning.previous')} disabled={!isDay(date)} onPress={() => setDate(shiftDay(date, display === 'WEEK' ? -7 : -days))} />
+                <Text style={{ flex: 1 }} variant="titleMedium">{isDay(date) ? display === 'WEEK' ? `${dateTitle(mondayOf(date))} – ${dateTitle(shiftDay(mondayOf(date), 6))}` : dateTitle(date) : date}</Text>
+                <IconButton icon="chevron-right" accessibilityLabel={t('dayPlanning.next')} disabled={!isDay(date)} onPress={() => setDate(shiftDay(date, display === 'WEEK' ? 7 : days))} />
               </View>
             </>}
             {plannerField('calendarDate', date, setDate)}
@@ -278,7 +284,8 @@ export default function DayPlanningScreen() {
               {!!tagIds.length && <Text variant="bodySmall">{t('dayPlanning.filterHint')}</Text>}
               <Button accessibilityLabel={t('dayPlanning.manageTags')} icon="tag-outline" onPress={() => setTagManager(true)}>{t('dayPlanning.manageTags')}</Button>
               {loading && <ActivityIndicator />}
-              {calendar && Array.from({ length: days }, (_, offset) => shiftDay(date, offset)).map((day) => {
+              {calendar && display === 'WEEK' && isDay(date) && <WeekCalendar calendar={calendar} date={date} zone={zone} nameFor={nameFor} onOpen={openDetails} />}
+              {calendar && display === 'LIST' && Array.from({ length: days }, (_, offset) => shiftDay(date, offset)).map((day) => {
                 const range = rangeFor(day, 1, zone);
                 const rows = [
                   ...calendar.events.map((event) => ({ start: event.start, end: event.end, event })),
