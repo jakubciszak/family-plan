@@ -151,3 +151,17 @@
     .day-display-switch button { flex: 1; padding: 8px; font-size: .8rem; }
     .day-week-scroll { max-height: 65vh; min-height: 320px; }
 }
+
+.day-color-palette { display: flex; flex-wrap: wrap; gap: 8px; }
+.day-color-option { position: relative; display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; border: 2px solid transparent; border-radius: 50%; cursor: pointer; }
+.day-color-option input { position: absolute; opacity: 0; width: 100%; height: 100%; margin: 0; }
+.day-color-swatch { display: flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 50%; box-shadow: 0 0 0 1px var(--md-sys-color-outline-variant); color: white; font-size: 20px; font-weight: 700; }
+.day-color-option:has(input:checked) { border-color: var(--md-sys-color-primary); }
+.day-color-option:has(input:focus-visible) { outline: 3px solid var(--md-sys-color-primary); outline-offset: 3px; }
+.day-color-option:has(input:disabled) { opacity: .6; cursor: default; }
+.day-inline-tag { display: flex; flex-direction: column; gap: 16px; padding: 18px; margin-top: 12px; border: 1px solid var(--md-sys-color-outline-variant); border-radius: 14px; background: var(--md-sys-color-surface-container-low); }
+.day-inline-tag .day-alert { margin: 0; }
+@media (max-width: 420px) {
+    .day-inline-tag { padding: 12px; }
+    .day-inline-tag .day-actions { align-items: stretch; flex-direction: column; }
+}

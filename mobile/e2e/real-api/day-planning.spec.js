@@ -5,7 +5,7 @@ const button = (page, name) => page.getByRole('button', { name, exact: true });
 
 test.use({ timezoneId: 'Europe/Warsaw' });
 
-test('mobile calendar, private team availability, weekly exception and planner use the real API', async ({ page, request }, testInfo) => {
+test('mobile calendar, inline tags, private team availability, weekly exception and planner use the real API', async ({ page, request }, testInfo) => {
   const stamp = Date.now();
   const password = 'MobilePlanningTest123!';
   const users = [];
@@ -37,6 +37,15 @@ test('mobile calendar, private team availability, weekly exception and planner u
   await button(page, 'Zespół').click(); await button(page, team.name).click();
   await button(page, 'Nowe wydarzenie').click();
   await page.getByLabel('Tytuł wydarzenia', { exact: true }).fill('Wspólna nauka mobile');
+  await button(page, 'Nowy tag').click();
+  await page.getByLabel('Nazwa tagu', { exact: true }).fill('Nauka z formularza');
+  await page.getByRole('radio', { name: 'Niebieski', exact: true }).click();
+  await button(page, 'Utwórz tag').click();
+  await expect(page.getByTestId('day-inline-tag')).toHaveCount(0);
+  await expect(page.getByLabel('Tytuł wydarzenia', { exact: true })).toHaveValue('Wspólna nauka mobile');
+  const catalog = await call('get', '/api/day-planning/tags', undefined, author.headers);
+  const createdTag = catalog.tags.find((tag) => tag.name === 'Nauka z formularza');
+  expect(createdTag).toMatchObject({ color: '#325f99', scope: 'PERSONAL', teamId: null });
   await button(page, 'Powtarzanie').click(); await button(page, 'Co kilka tygodni').click();
   await page.getByRole('checkbox', { name: 'Zaproś: Mobile Friend' }).click();
   await button(page, 'Zapisz').click();
@@ -44,6 +53,7 @@ test('mobile calendar, private team availability, weekly exception and planner u
   const calendar = await call('get', '/api/day-planning/calendar?from=2026-09-21T00%3A00%3A00%2B02%3A00&to=2026-09-22T00%3A00%3A00%2B02%3A00', undefined, author.headers);
   const saved = calendar.events.find((entry) => entry.title === 'Wspólna nauka mobile');
   expect(saved.recurring).toBe(true);
+  expect(saved.tags).toEqual(expect.arrayContaining([expect.objectContaining({ id: createdTag.id, name: 'Nauka z formularza', color: '#325f99' })]));
   const invited = await call('get', `/api/day-planning/events/${saved.id}/occurrences/${encodeURIComponent(saved.occurrenceKey)}`, undefined, friend.headers);
   expect(invited.title).toBe('Wspólna nauka mobile');
   expect(invited.canEdit).toBe(false);

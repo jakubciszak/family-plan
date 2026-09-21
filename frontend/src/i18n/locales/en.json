@@ -723,6 +723,13 @@
     "taskTypePlanHint": "Choose a plan from this team. To use a private plan, first share it with the team in Action plans."
   },
   "dayPlanning": {
+    "createTag": "Create tag",
+    "savingTag": "Creating tag…",
+    "cancelTag": "Cancel tag creation",
+    "finishTagDraft": "Create the tag or cancel its creation before saving the event.",
+    "teamTagAdminOnly": "Team events can only use team tags. Only a team administrator can create new team tags.",
+    "tagContextChanged": "The tag was created for the previous selection. Check the current team and selected tags.",
+    "tagColors": {"green": "Green", "blue": "Blue", "purple": "Purple", "orange": "Orange", "gold": "Gold", "red": "Red", "pink": "Pink", "teal": "Teal", "gray": "Gray", "indigo": "Indigo", "current": "Current color"},
     "calendarView": "Calendar display",
     "listView": "List",
     "weekView": "Weekly calendar",

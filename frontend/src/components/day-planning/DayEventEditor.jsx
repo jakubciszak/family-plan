@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '../md3';
+import TagColorPalette from './TagColorPalette';
 import service from '../../services/dayPlanningService';
 import teamService from '../../services/teamService';
 import { addDays, dateInZone, localDateTime, peopleOf, personName, zonedIso } from '../../services/dayPlanningTime';
@@ -27,7 +28,7 @@ const initialDraft = (event, seed = {}, zone, userId) => {
     };
 };
 
-export default function DayEventEditor({ event, occurrenceKey, seed, zone, user, teams, onSaved, onClose, onReload }) {
+export default function DayEventEditor({ event, occurrenceKey, seed, zone, user, teams, onSaved, onClose, onReload, onTagCreated }) {
     const { t, i18n } = useTranslation();
     const [draft, setDraft] = useState(() => initialDraft(event, seed, zone, String(user.id)));
     const initial = useRef(draft);
@@ -42,6 +43,37 @@ export default function DayEventEditor({ event, occurrenceKey, seed, zone, user,
     const attempt = useRef(null);
     const heading = useRef(null);
     const [catalogVersion, setCatalogVersion] = useState(0);
+    const [tagDraft, setTagDraft] = useState(null);
+    const [tagSaving, setTagSaving] = useState(false);
+    const [tagError, setTagError] = useState('');
+    const tagPending = useRef(false);
+    const active = useRef(true);
+    const canCreateTeamTag = teams.some((team) => team.id === draft.teamId && team.role === 'admin');
+    const canCreateTag = draft.visibility === 'PRIVATE' || canCreateTeamTag;
+    const tagScope = draft.visibility === 'TEAM' || tagDraft?.scope === 'TEAM' && canCreateTeamTag ? 'TEAM' : 'PERSONAL';
+    const tagContext = `${draft.teamId}:${draft.visibility}:${canCreateTeamTag}`;
+    const currentTagContext = useRef(tagContext);
+    currentTagContext.current = tagContext;
+    useEffect(() => { active.current = true; return () => { active.current = false; }; }, []);
+    const createTag = async () => {
+        if (tagPending.current || !tagDraft?.name.trim() || !canCreateTag || loading || catalogError) return;
+        const context = currentTagContext.current;
+        tagPending.current = true;
+        setTagSaving(true);
+        setTagError('');
+        try {
+            const tag = await service.saveTag({ name: tagDraft.name.trim(), color: tagDraft.color, scope: tagScope, teamId: tagScope === 'TEAM' ? draft.teamId : null });
+            if (!active.current) return;
+            onTagCreated?.(tag);
+            if (currentTagContext.current !== context) { setTagError(t('dayPlanning.tagContextChanged')); return; }
+            setTags((current) => [...current.filter((item) => item.id !== tag.id), tag]);
+            setDraft((current) => ({ ...current, tagIds: [...new Set([...current.tagIds, tag.id])] }));
+            setTagDraft(null);
+            setConfirmation(null);
+            setError('');
+        } catch (failure) { if (active.current) setTagError(failure.response?.data?.message || t('dayPlanning.tagError')); }
+        finally { tagPending.current = false; if (active.current) setTagSaving(false); }
+    };
     useEffect(() => { heading.current?.focus(); }, []);
     useEffect(() => {
         let active = true;
@@ -78,6 +110,7 @@ export default function DayEventEditor({ event, occurrenceKey, seed, zone, user,
         };
     };
     const save = async (payload, extra = {}) => {
+        if (tagPending.current || tagDraft) return;
         setSaving(true);
         setError('');
         try {
@@ -116,6 +149,7 @@ export default function DayEventEditor({ event, occurrenceKey, seed, zone, user,
     };
     const submit = (e) => {
         e.preventDefault();
+        if (tagPending.current || tagDraft) { setError(t('dayPlanning.finishTagDraft')); return; }
         try { save(makePayload(draft)); }
         catch (failure) { setError(t(failure.message === 'invalid_range' ? 'dayPlanning.invalidRange' : 'dayPlanning.invalidTime')); }
     };
@@ -123,9 +157,9 @@ export default function DayEventEditor({ event, occurrenceKey, seed, zone, user,
     const select = (key, label, options, extra = {}) => <label className="day-field">{t(`dayPlanning.${label}`)}<select aria-label={t(`dayPlanning.${label}`)} value={draft[key]} onChange={(e) => update({ [key]: e.target.value })} {...extra}>{options.map(([value, text]) => <option key={value} value={value}>{text}</option>)}</select></label>;
     const weekdays = Array.from({ length: 7 }, (_, index) => ({ value: index + 1, label: new Intl.DateTimeFormat(i18n.language, { weekday: 'short', timeZone: 'UTC' }).format(new Date(`2026-09-${21 + index}T12:00:00Z`)) }));
     return <section className="day-editor day-panel">
-        <div className="day-head"><div><p className="day-eyebrow">{t(occurrenceKey ? 'dayPlanning.thisOccurrence' : 'dayPlanning.title')}</p><h2 ref={heading} tabIndex={-1}>{t(event ? 'dayPlanning.editEvent' : 'dayPlanning.newEvent')}</h2></div><Button type="button" variant="text" disabled={saving} onClick={onClose}>{t('common.cancel')}</Button></div>
+        <div className="day-head"><div><p className="day-eyebrow">{t(occurrenceKey ? 'dayPlanning.thisOccurrence' : 'dayPlanning.title')}</p><h2 ref={heading} tabIndex={-1}>{t(event ? 'dayPlanning.editEvent' : 'dayPlanning.newEvent')}</h2></div><Button type="button" variant="text" disabled={saving || tagSaving} onClick={onClose}>{t('common.cancel')}</Button></div>
         <form onSubmit={submit}>
-            <fieldset disabled={saving} className="day-fields">
+            <fieldset disabled={saving || tagSaving} className="day-fields">
                 {field('title', 'eventTitle', 'text', { required: true, maxLength: 200, autoComplete: 'off' })}
                 <div className="day-row">
                     <label className="day-field">{t('dayPlanning.eventTeam')}<select aria-label={t('dayPlanning.eventTeam')} value={draft.teamId} disabled={!!occurrenceKey} onChange={(e) => update({ teamId: e.target.value, participantIds: [String(user.id)], tagIds: [], visibility: e.target.value ? draft.visibility : 'PRIVATE' })}><option value="">{t('dayPlanning.personal')}</option>{teams.map((team) => <option value={team.id} key={team.id}>{team.name}</option>)}</select></label>
@@ -144,15 +178,30 @@ export default function DayEventEditor({ event, occurrenceKey, seed, zone, user,
                 {catalogError && <div role="alert" className="day-alert">{t('dayPlanning.catalogError')}<Button type="button" variant="text" onClick={() => setCatalogVersion((value) => value + 1)}>{t('dayPlanning.retry')}</Button></div>}
                 {loading && <p role="status">{t('common.loading')}</p>}
                 <fieldset className="day-choice-group"><legend>{t('dayPlanning.participants')}</legend><div className="day-chips">{[user, ...members.filter((person) => person.id !== String(user.id))].map((person) => <label className="day-choice" key={person.id}><input type="checkbox" checked={draft.participantIds.includes(String(person.id))} disabled={String(person.id) === String(user.id)} onChange={() => toggle('participantIds', String(person.id))} />{String(person.id) === String(user.id) ? t('dayPlanning.you') : personName(person)}</label>)}</div><p className="day-hint">{t('dayPlanning.participationHint')}</p></fieldset>
-                <fieldset className="day-choice-group"><legend>{t('dayPlanning.tags')}</legend><div className="day-chips">{[...allowedTags, ...retainedTags.map((id) => ({ id, name: event?.tags?.find((tag) => tag.id === id)?.name || t('dayPlanning.archivedTag'), color: '#808080' }))].map((tag) => <label className="day-choice" key={tag.id}><input type="checkbox" checked={draft.tagIds.includes(tag.id)} onChange={() => toggle('tagIds', tag.id)} /><span className="day-dot" style={{ background: tag.color }} />{tag.name}</label>)}</div>{!loading && !allowedTags.length && <p className="day-hint">{t('dayPlanning.noTags')}</p>}{!loading && invalidTags && <div role="alert" className="day-alert">{t('dayPlanning.replaceTags')}<Button type="button" variant="text" onClick={() => update({ tagIds: draft.tagIds.filter((id) => allowedTags.some((tag) => tag.id === id) || retainedTags.includes(id)) })}>{t('dayPlanning.removeUnavailableTags')}</Button></div>}</fieldset>
+                <fieldset className="day-choice-group"><legend>{t('dayPlanning.tags')}</legend><div className="day-chips">{[...allowedTags, ...retainedTags.map((id) => ({ id, name: event?.tags?.find((tag) => tag.id === id)?.name || t('dayPlanning.archivedTag'), color: '#808080' }))].map((tag) => <label className="day-choice" key={tag.id}><input type="checkbox" checked={draft.tagIds.includes(tag.id)} onChange={() => toggle('tagIds', tag.id)} /><span className="day-dot" style={{ background: tag.color }} />{tag.name}</label>)}</div>{!loading && !allowedTags.length && <p className="day-hint">{t('dayPlanning.noTags')}</p>}{!loading && invalidTags && <div role="alert" className="day-alert">{t('dayPlanning.replaceTags')}<Button type="button" variant="text" onClick={() => update({ tagIds: draft.tagIds.filter((id) => allowedTags.some((tag) => tag.id === id) || retainedTags.includes(id)) })}>{t('dayPlanning.removeUnavailableTags')}</Button></div>}
+                    {!tagDraft && canCreateTag && <Button type="button" variant="text" disabled={loading || catalogError} onClick={() => { setTagDraft({ name: '', color: '#226a4c', scope: draft.visibility === 'TEAM' ? 'TEAM' : 'PERSONAL' }); setTagError(''); setConfirmation(null); }}>{t('dayPlanning.newTag')}</Button>}
+                    {!canCreateTag && <p className="day-hint">{t('dayPlanning.teamTagAdminOnly')}</p>}
+                    {tagDraft && <section className="day-inline-tag" aria-label={t('dayPlanning.newTag')}>
+                        <h3>{t('dayPlanning.newTag')}</h3>
+                        <label className="day-field">{t('dayPlanning.tagName')}<input maxLength={60} autoComplete="off" value={tagDraft.name} onChange={(e) => setTagDraft((current) => ({ ...current, name: e.target.value }))} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); createTag(); } }} /></label>
+                        <TagColorPalette value={tagDraft.color} onChange={(color) => setTagDraft((current) => ({ ...current, color }))} disabled={tagSaving} />
+                        {canCreateTag && <label className="day-field">{t('dayPlanning.tagScope')}<select aria-label={t('dayPlanning.tagScope')} value={tagScope} onChange={(e) => setTagDraft((current) => ({ ...current, scope: e.target.value }))}>
+                            {draft.visibility === 'PRIVATE' && <option value="PERSONAL">{t('dayPlanning.personalTag')}</option>}
+                            {canCreateTeamTag && <option value="TEAM">{t('dayPlanning.teamTag')}</option>}
+                        </select></label>}
+                        {tagError && <p role="alert" className="day-alert">{tagError}</p>}
+                        <p className="day-hint">{t('dayPlanning.finishTagDraft')}</p>
+                        <div className="day-actions"><Button type="button" disabled={tagSaving || !tagDraft.name.trim() || !canCreateTag || loading || catalogError} onClick={createTag}>{t(tagSaving ? 'dayPlanning.savingTag' : 'dayPlanning.createTag')}</Button><Button type="button" variant="text" disabled={tagSaving} onClick={() => { setTagDraft(null); setTagError(''); }}>{t('dayPlanning.cancelTag')}</Button></div>
+                    </section>}
+                </fieldset>
                 <label className="day-field">{t('dayPlanning.description')}<textarea rows={3} maxLength={5000} value={draft.description} onChange={(e) => update({ description: e.target.value })} /></label>
                 {field('location', 'location', 'text', { maxLength: 500 })}
                 <label className="day-check"><input type="checkbox" checked={draft.blocksTime} onChange={(e) => update({ blocksTime: e.target.checked })} />{t('dayPlanning.blocksTime')}</label>
             </fieldset>
             {error && <div role="alert" className="day-alert">{error}{stale && <Button type="button" variant="text" onClick={() => { if (window.confirm(t('dayPlanning.reloadDraft'))) onReload(); }}>{t('dayPlanning.reload')}</Button>}</div>}
-            {confirmation && <div role="alert" className="day-confirmation"><h3>{t(confirmation.type === 'conflict' ? 'dayPlanning.conflicts' : 'dayPlanning.resetExceptions')}</h3><p>{t(confirmation.type === 'conflict' ? 'dayPlanning.conflictsHint' : 'dayPlanning.resetExceptionsHint')}</p>{confirmation.data.conflicts?.map((conflict, index) => <p key={index}>{personName([user, ...members].find((person) => String(person.id) === conflict.personId))} · {new Date(conflict.start).toLocaleString(i18n.language, { timeZone: draft.timeZone })}–{new Date(conflict.end).toLocaleTimeString(i18n.language, { timeZone: draft.timeZone, hour: '2-digit', minute: '2-digit' })}</p>)}<Button type="button" disabled={saving} onClick={() => confirmation.restoreKey ? restore(confirmation.restoreKey, confirmation.data.confirmationToken) : save(confirmation.payload, { ...confirmation.extra, ...(confirmation.type === 'conflict' ? { conflictConfirmation: confirmation.data.confirmationToken } : { resetExceptions: true }) })}>{t('dayPlanning.confirmSave')}</Button><Button type="button" variant="text" disabled={saving} onClick={() => setConfirmation(null)}>{t('common.cancel')}</Button></div>}
-            <div className="day-actions"><Button type="submit" disabled={saving || loading || catalogError || invalidTags || stale || (draft.frequency === 'WEEKLY' && !draft.byDay.length)}>{t(saving ? 'dayPlanning.saving' : 'common.save')}</Button><Button type="button" variant="text" disabled={saving} onClick={onClose}>{t('common.cancel')}</Button></div>
+            {confirmation && <div role="alert" className="day-confirmation"><h3>{t(confirmation.type === 'conflict' ? 'dayPlanning.conflicts' : 'dayPlanning.resetExceptions')}</h3><p>{t(confirmation.type === 'conflict' ? 'dayPlanning.conflictsHint' : 'dayPlanning.resetExceptionsHint')}</p>{confirmation.data.conflicts?.map((conflict, index) => <p key={index}>{personName([user, ...members].find((person) => String(person.id) === conflict.personId))} · {new Date(conflict.start).toLocaleString(i18n.language, { timeZone: draft.timeZone })}–{new Date(conflict.end).toLocaleTimeString(i18n.language, { timeZone: draft.timeZone, hour: '2-digit', minute: '2-digit' })}</p>)}<Button type="button" disabled={saving || tagSaving || !!tagDraft} onClick={() => confirmation.restoreKey ? restore(confirmation.restoreKey, confirmation.data.confirmationToken) : save(confirmation.payload, { ...confirmation.extra, ...(confirmation.type === 'conflict' ? { conflictConfirmation: confirmation.data.confirmationToken } : { resetExceptions: true }) })}>{t('dayPlanning.confirmSave')}</Button><Button type="button" variant="text" disabled={saving} onClick={() => setConfirmation(null)}>{t('common.cancel')}</Button></div>}
+            <div className="day-actions"><Button type="submit" disabled={saving || tagSaving || !!tagDraft || loading || catalogError || invalidTags || stale || (draft.frequency === 'WEEKLY' && !draft.byDay.length)}>{t(saving ? 'dayPlanning.saving' : 'common.save')}</Button><Button type="button" variant="text" disabled={saving || tagSaving} onClick={onClose}>{t('common.cancel')}</Button></div>
         </form>
-        {!occurrenceKey && Object.keys(event?.exceptions || {}).length > 0 && <section className="day-exceptions"><h3>{t('dayPlanning.exceptions')}</h3><p className="day-hint">{t('dayPlanning.exceptionsHint')}</p><ul className="day-tag-list">{Object.entries(event.exceptions).sort(([a], [b]) => a.localeCompare(b)).map(([key, exception]) => <li key={key}><span>{key.replace('T', ' ')}<small>{t(exception.cancelled ? 'dayPlanning.cancelledOccurrence' : 'dayPlanning.changedOccurrence')}</small></span><Button type="button" variant="text" disabled={saving || stale} onClick={() => restore(key)} aria-label={t('dayPlanning.restoreOccurrence', { key: key.replace('T', ' ') })}>{t('dayPlanning.restore')}</Button></li>)}</ul></section>}
+        {!occurrenceKey && Object.keys(event?.exceptions || {}).length > 0 && <section className="day-exceptions"><h3>{t('dayPlanning.exceptions')}</h3><p className="day-hint">{t('dayPlanning.exceptionsHint')}</p><ul className="day-tag-list">{Object.entries(event.exceptions).sort(([a], [b]) => a.localeCompare(b)).map(([key, exception]) => <li key={key}><span>{key.replace('T', ' ')}<small>{t(exception.cancelled ? 'dayPlanning.cancelledOccurrence' : 'dayPlanning.changedOccurrence')}</small></span><Button type="button" variant="text" disabled={saving || tagSaving || !!tagDraft || stale} onClick={() => restore(key)} aria-label={t('dayPlanning.restoreOccurrence', { key: key.replace('T', ' ') })}>{t('dayPlanning.restore')}</Button></li>)}</ul></section>}
     </section>;
 }

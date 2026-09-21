@@ -800,7 +800,7 @@
     "editTagTitle": "Edit tag",
     "tagName": "Tag name",
     "tagScope": "Tag scope",
-    "tagColor": "Tag color (#RRGGBB)",
+    "tagColor": "Tag color",
     "tagScopes": {
       "PERSONAL": "Personal",
       "TEAM": "Team"
@@ -810,7 +810,7 @@
     "archive": "Archive",
     "archiveHint": "The tag will leave the catalog. Existing assignments will remain.",
     "confirmArchive": "Confirm archive",
-    "invalidTag": "Enter a name and a color in #RRGGBB format.",
+    "invalidTag": "Enter a tag name (up to 60 characters).",
     "conflictTitle": "This time is busy",
     "conflictHint": "These people already have plans at this time. You can still save the event.",
     "saveDespiteConflict": "Save despite conflicts",
@@ -850,6 +850,23 @@
     "simultaneous": "At the same time: {{count}}",
     "continuesBefore": "Continues from the previous day",
     "continuesAfter": "Continues into the next day",
-    "weekEmpty": "No events this week."
+    "weekEmpty": "No events this week.",
+    "createTag": "Create tag",
+    "cancelTag": "Cancel tag creation",
+    "finishTagFirst": "Create the tag or cancel tag creation before saving the event.",
+    "teamTagAdminHint": "Team events use team tags. A team administrator can create a new tag.",
+    "colors": {
+      "green": "Green",
+      "blue": "Blue",
+      "purple": "Purple",
+      "orange": "Orange",
+      "gold": "Gold",
+      "red": "Red",
+      "pink": "Pink",
+      "teal": "Teal",
+      "gray": "Gray",
+      "indigo": "Indigo",
+      "current": "Current color"
+    }
   }
 }
