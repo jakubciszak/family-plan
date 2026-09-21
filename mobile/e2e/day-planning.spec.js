@@ -120,3 +120,85 @@ test('a calendar notification invalidates open private details and reloads the a
   await expect(page.getByTestId('day-event-detail')).toHaveCount(0); await expect(page.getByText('Przynieś zeszyt')).toHaveCount(0);
   await expect(page.getByText('Brak wydarzeń w tym dniu.')).toBeVisible();
 });
+
+test.describe('weekly calendar', () => {
+  test.use({ timezoneId: 'Europe/Warsaw' });
+
+  test('switches from the selected day to a Monday–Sunday week and preserves the list range', async ({ app, page, world }) => {
+    const state = await install(page, world);
+    await open(app); await app.field('Data (RRRR-MM-DD)').fill('2026-09-23');
+    await button(page, 'Kalendarz tygodniowy').click();
+    await expect(page.getByTestId('day-week-calendar')).toBeVisible();
+    await expect(page.getByTestId(/^week-day-/)).toHaveCount(7);
+    await expect.poll(() => state.calls.filter((call) => call.path.endsWith('/calendar')).at(-1).query.get('from')).toBe('2026-09-20T22:00:00.000Z');
+    expect(state.calls.filter((call) => call.path.endsWith('/calendar')).at(-1).query.get('to')).toBe('2026-09-27T22:00:00.000Z');
+    await expect(page.getByText('Brak wydarzeń w tym tygodniu.')).toBeVisible();
+    await button(page, 'Następny okres').click();
+    await expect(page.getByTestId('week-day-2026-09-28')).toBeVisible();
+    await button(page, 'Poprzedni okres').click();
+    await button(page, 'Lista').click();
+    await expect(page.getByTestId('day-agenda-2026-09-23')).toBeVisible();
+    await expect(page.getByTestId('day-week-calendar')).toHaveCount(0);
+    await expect.poll(() => state.calls.filter((call) => call.path.endsWith('/calendar')).at(-1).query.get('to')).toBe('2026-09-23T22:00:00.000Z');
+  });
+
+  test('positions overlapping events side by side, keeps all-day events separate and opens authorized details', async ({ app, page, world }, testInfo) => {
+    const state = await install(page, world);
+    state.events = [
+      event(world, { end: DAY + 'T09:00:00Z' }),
+      event(world, { id: 'second', title: 'Trening', start: DAY + 'T07:30:00Z', end: DAY + 'T08:30:00Z', tags: [{ id: 'work', name: 'Praca', color: '#325f99' }] }),
+      event(world, { id: 'all-day', title: 'Dzień wolny', allDay: true, start: '2026-09-20T22:00:00Z', end: DAY + 'T22:00:00Z' }),
+    ];
+    await open(app); await button(page, 'Kalendarz tygodniowy').click();
+    const first = page.getByTestId(`week-event-${state.events[0].id}-${DAY}`);
+    const second = page.getByTestId(`week-event-second-${DAY}`);
+    await expect(first).toHaveAttribute('aria-label', /Jednocześnie: 2/);
+    await expect(page.getByTestId(`week-all-day-${DAY}`)).toContainText('Dzień wolny');
+    await first.scrollIntoViewIfNeeded();
+    await expect(page.getByTestId(`week-day-${DAY}`)).toBeInViewport();
+    const a = await first.boundingBox(), b = await second.boundingBox();
+    expect(a.x + a.width).toBeLessThanOrEqual(b.x);
+    expect(a.y).toBeLessThan(b.y); expect(b.y).toBeLessThan(a.y + a.height);
+    expect(a.height).toBeGreaterThan(b.height * 1.9);
+    await page.screenshot({ path: testInfo.outputPath('weekly-mobile-overlaps.png') });
+    await second.click(); await expect(page.getByTestId('day-event-detail')).toContainText('Trening');
+    await button(page, 'Wróć do kalendarza').click();
+    await expect(page.getByTestId('day-week-calendar')).toBeVisible();
+  });
+
+  test('keeps noninteractive busy blocks visible in the team week under tag filtering', async ({ app, page, world }) => {
+    const state = await install(page, world); state.events = [event(world)];
+    state.busy = [{ kind: 'busy', personId: world.users[1].id, start: DAY + 'T07:30:00Z', end: DAY + 'T08:30:00Z' }];
+    await open(app); await page.getByText('Plan zespołu', { exact: true }).click(); await chooseTeam(page);
+    await page.getByRole('checkbox', { name: 'Pokaż osobę: Bartek Kowalski' }).click();
+    await button(page, 'Kalendarz tygodniowy').click();
+    const busy = page.getByTestId(`week-busy-${DAY}`);
+    await expect(busy).toContainText('Zajęty · Bartek Kowalski');
+    await expect(busy).not.toHaveAttribute('role', 'button');
+    await busy.click(); expect(state.calls.filter((call) => call.path.includes('/occurrences/'))).toHaveLength(0);
+    await page.getByText('Praca', { exact: true }).click();
+    await expect(page.getByTestId(/^week-event-/)).toHaveCount(0); await expect(busy).toBeVisible();
+    await expect(busy).not.toContainText('Plan lekcji');
+    expect(state.calls.filter((call) => call.path.endsWith('/calendar')).at(-1).query.getAll('personIds[]')).toContain(world.users[1].id);
+  });
+
+  test('splits overnight events across days and scrolls the full week inside a narrow dark phone', async ({ app, page, world }, testInfo) => {
+    const state = await install(page, world); world.personalisation.themeMode = 'dark';
+    await page.setViewportSize({ width: 320, height: 740 });
+    const errors = []; page.on('pageerror', (error) => errors.push(error.message));
+    state.events = [event(world, { id: 'overnight', title: 'Nocna podróż', start: '2026-09-25T21:00:00Z', end: '2026-09-25T23:00:00Z' })];
+    await open(app); await button(page, 'Kalendarz tygodniowy').click();
+    const friday = page.getByTestId('week-event-overnight-2026-09-25');
+    const saturday = page.getByTestId('week-event-overnight-2026-09-26');
+    await expect(friday).toHaveAttribute('aria-label', /Trwa również następnego dnia/);
+    await expect(saturday).toHaveAttribute('aria-label', /Ciąg dalszy z poprzedniego dnia/);
+    await saturday.scrollIntoViewIfNeeded();
+    await expect(saturday).toBeVisible();
+    await expect(page.getByTestId('week-day-2026-09-26')).toBeInViewport();
+    await expect.poll(async () => Math.abs((await page.getByTestId('week-day-2026-09-26').boundingBox()).x + 4 - (await saturday.boundingBox()).x)).toBeLessThan(2);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(320);
+    expect(errors).toEqual([]);
+    await page.screenshot({ path: testInfo.outputPath('weekly-mobile-dark.png') });
+    await saturday.click(); await expect(page.getByTestId('day-event-detail')).toContainText('Nocna podróż');
+  });
+});

@@ -723,6 +723,13 @@
     "taskTypePlanHint": "Choose a plan from this team. To use a private plan, first share it with the team in Action plans."
   },
   "dayPlanning": {
+    "calendarView": "Calendar display",
+    "listView": "List",
+    "weekView": "Weekly calendar",
+    "weekScrollHint": "Events at the same time appear side by side. Scroll to see the remaining days and hours.",
+    "overlapping": "Overlapping events",
+    "continuesBefore": "Continues from the previous day",
+    "continuesAfter": "Continues on the next day",
     "title": "Day planner",
     "subtitle": "Your time, shared plans",
     "intro": "Plan your day and find time for your team.",

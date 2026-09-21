@@ -840,6 +840,16 @@
     "clockChoice": "Time during the clock change",
     "firstClockTime": "First occurrence of this time",
     "secondClockTime": "Second occurrence of this time",
-    "endClockChoice": "End during the clock change"
+    "endClockChoice": "End during the clock change",
+    "display": {
+      "LIST": "List",
+      "WEEK": "Weekly calendar"
+    },
+    "weekScrollHint": "Swipe sideways to see more days. Events at the same time appear side by side.",
+    "weekCalendar": "Weekly calendar",
+    "simultaneous": "At the same time: {{count}}",
+    "continuesBefore": "Continues from the previous day",
+    "continuesAfter": "Continues into the next day",
+    "weekEmpty": "No events this week."
   }
 }

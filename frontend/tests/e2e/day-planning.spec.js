@@ -25,7 +25,8 @@ async function setup(page, options = {}) {
         if (path.endsWith('/calendar')) {
             state.queries.push(url.searchParams);
             const selectedTags = url.searchParams.getAll('tagIds[]');
-            return route.fulfill({ json: { events: state.event && (!selectedTags.length || selectedTags.includes('school')) ? [state.event] : [], busy: url.searchParams.get('teamId') ? [{ kind: 'busy', personId: '2', start: '2026-09-21T10:00:00Z', end: '2026-09-21T11:00:00Z' }] : [], coverage: { complete: true } } });
+            const events = (state.events || (state.event ? [state.event] : [])).filter((item) => !selectedTags.length || item.tags?.some((tag) => selectedTags.includes(tag.id)));
+            return route.fulfill({ json: { events, busy: url.searchParams.get('teamId') ? state.busy || [{ kind: 'busy', personId: '2', start: '2026-09-21T10:00:00Z', end: '2026-09-21T11:00:00Z' }] : [], coverage: { complete: true } } });
         }
         if (path.endsWith('/tags') && req.method() === 'GET') return route.fulfill({ json: { tags: state.tags } });
         if (req.method() !== 'GET') state.writes.push({ method: req.method(), path, data: req.postDataJSON(), headers: req.headers() });
@@ -38,7 +39,7 @@ async function setup(page, options = {}) {
         if (path.endsWith('/suggestions')) return route.fulfill({ json: { slots: [{ start: '2026-09-21T17:00:00Z', end: '2026-09-21T18:00:00Z' }], personIds: ['1', '2'], busy: [], coverage: { complete: true } } });
         if (path.includes('/participation/me') && state.participationConflict && req.postDataJSON().status === 'INCLUDED' && !req.postDataJSON().conflictConfirmation) return route.fulfill({ status: 409, json: { code: 'planning_conflict', confirmationToken: 'join-token' } });
         if (path.includes('/participation/me')) { state.event.participation = req.postDataJSON().status; return route.fulfill({ json: req.postDataJSON() }); }
-        if (path.includes('/occurrences/')) return route.fulfill({ json: state.event });
+        if (path.includes('/occurrences/')) return route.fulfill({ json: state.events?.find((item) => path.includes(`/events/${item.id}/`)) || state.event });
         if (req.method() === 'GET') return route.fulfill({ json: state.definition });
         if (state.failure) return route.fulfill(state.failure);
         if (req.method() === 'DELETE' && path.includes('/exceptions/')) {
@@ -249,7 +250,7 @@ test('maps ambiguous Warsaw times to the first occurrence and rejects spring gap
 test('navigates a full week and explicitly deletes only one occurrence', async ({ page }) => {
     const state = await setup(page);
     await page.getByLabel('Zakres', { exact: true }).selectOption('week');
-    await expect(page.locator('.day-column-title')).toHaveCount(7);
+    await expect(page.locator('.day-agenda-column')).toHaveCount(7);
     await expect.poll(() => new Date(state.queries.at(-1).get('to')) - new Date(state.queries.at(-1).get('from'))).toBe(7 * 86400000);
     await page.getByRole('button', { name: 'Następny zakres', exact: true }).click();
     await expect(page.getByLabel('Data planu', { exact: true })).toHaveValue('2026-09-28');
@@ -298,4 +299,97 @@ test('edits an occurrence spanning the repeated DST hour without changing its du
     await page.getByRole('button', { name: 'Zapisz', exact: true }).click();
     await expect(page.getByText('Wydarzenie zapisane.', { exact: true })).toBeVisible();
     expect(state.writes.at(-1).data).toEqual({ changes: { title: 'Przesunięcie zegara' } });
+});
+
+
+test('switches a Wednesday list to a full week and places overlapping events side by side', async ({ page }) => {
+    await page.setViewportSize({ width: 1600, height: 1100 });
+    const state = await setup(page, { events: [
+        { ...sample(), title: 'Praca w domu', tags: [{ id: 'work', name: 'Praca', color: '#b57632' }], start: '2026-09-21T07:00:00Z', end: '2026-09-21T10:00:00Z' },
+        { ...sample(), id: 'meeting', title: 'Spotkanie', tags: [{ id: 'other', name: 'Inne', color: '#5770af' }], start: '2026-09-21T08:00:00Z', end: '2026-09-21T09:00:00Z' },
+        { ...sample(), id: 'call', title: 'Rozmowa', tags: [{ id: 'other', name: 'Inne', color: '#5770af' }], start: '2026-09-21T08:30:00Z', end: '2026-09-21T09:30:00Z' },
+        { ...sample(), id: 'day-off', title: 'Wolne od szkoły', allDay: true, start: '2026-09-20T22:00:00Z', end: '2026-09-21T22:00:00Z' },
+    ] });
+    await page.getByLabel('Data planu', { exact: true }).fill('2026-09-23');
+    await page.getByRole('button', { name: 'Kalendarz tygodniowy', exact: true }).click();
+    await expect(page.getByRole('button', { name: 'Kalendarz tygodniowy', exact: true })).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.locator('.day-week-header')).toHaveCount(7);
+    await expect.poll(() => state.queries.at(-1).get('from')).toBe('2026-09-20T22:00:00.000Z');
+    expect(state.queries.at(-1).get('to')).toBe('2026-09-27T22:00:00.000Z');
+    const work = page.getByRole('button', { name: /^Praca w domu,/ });
+    const meeting = page.getByRole('button', { name: /^Spotkanie,/ });
+    const call = page.getByRole('button', { name: /^Rozmowa,/ });
+    await expect(work).toHaveAttribute('data-overlap-count', '2');
+    const [a, b, c] = await Promise.all([work.boundingBox(), meeting.boundingBox(), call.boundingBox()]);
+    expect(a.x + a.width).toBeLessThanOrEqual(b.x);
+    expect(b.x + b.width).toBeLessThanOrEqual(c.x);
+    expect(b.y - a.y).toBeCloseTo(60, 0);
+    expect(c.y - b.y).toBeCloseTo(30, 0);
+    expect(a.height).toBeCloseTo(179, 0);
+    const header = await page.locator('.day-week-header').first().boundingBox();
+    const allDay = await page.locator('.day-week-allday').first().boundingBox();
+    expect(allDay.y).toBeCloseTo(header.y + header.height, 0);
+    expect(await page.locator('.day-week-scroll').evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
+    await expect(page.getByRole('button', { name: /^Wolne od szkoły,/ })).toBeVisible();
+    await page.screenshot({ path: test.info().outputPath('weekly-overlaps-desktop.png'), fullPage: true });
+    await meeting.click();
+    await expect(page.getByRole('dialog')).toContainText('Spotkanie');
+    await page.getByRole('button', { name: 'Zamknij', exact: true }).click();
+    await page.getByRole('button', { name: 'Następny zakres', exact: true }).click();
+    await expect(page.getByLabel('Data planu', { exact: true })).toHaveValue('2026-09-30');
+    await expect.poll(() => state.queries.at(-1).get('from')).toBe('2026-09-27T22:00:00.000Z');
+    await page.getByRole('button', { name: 'Lista', exact: true }).click();
+    await expect(page.locator('.day-week-grid')).toHaveCount(0);
+    await expect.poll(() => state.queries.at(-1).get('from')).toBe('2026-09-29T22:00:00.000Z');
+    expect(state.queries.at(-1).get('to')).toBe('2026-09-30T22:00:00.000Z');
+});
+
+test('keeps private busy placeholders in the team week when filtering shared events', async ({ page }) => {
+    const state = await setup(page, { busy: [{ kind: 'busy', personId: '2', start: '2026-09-21T07:30:00Z', end: '2026-09-21T08:30:00Z' }] });
+    await page.getByRole('tab', { name: 'Plan zespołu', exact: true }).click();
+    await page.getByRole('button', { name: 'Kalendarz tygodniowy', exact: true }).click();
+    const busy = page.locator('.day-week-event.day-event--busy');
+    await expect(busy).toHaveCount(1);
+    await expect(busy).toContainText('Zajęty');
+    await expect(busy).toContainText('Bartek');
+    await expect(busy).toHaveAttribute('data-overlap-count', '1');
+    expect(await busy.evaluate((element) => element.tagName)).toBe('DIV');
+    await expect(busy.locator('button, a')).toHaveCount(0);
+    await expect(page.getByRole('button', { name: /^Plan lekcji,/ })).toHaveCount(1);
+    await page.getByRole('button', { name: 'Praca', exact: true }).click();
+    await expect(page.getByRole('button', { name: /^Plan lekcji,/ })).toHaveCount(0);
+    await expect(busy).toHaveCount(1);
+    expect(state.queries.at(-1).getAll('personIds[]')).toEqual(['1', '2']);
+    expect(new Date(state.queries.at(-1).get('to')) - new Date(state.queries.at(-1).get('from'))).toBe(7 * 86400000);
+    await page.getByRole('button', { name: 'Następny zakres', exact: true }).click();
+    await expect(page.getByLabel('Data planu', { exact: true })).toHaveValue('2026-09-28');
+});
+
+test('separates all-day events, splits overnight events and scrolls a narrow dark week', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.emulateMedia({ colorScheme: 'dark' });
+    await setup(page, { events: [
+        { ...sample(), id: 'holiday', title: 'Urlop', allDay: true, start: '2026-09-20T22:00:00Z', end: '2026-09-23T22:00:00Z' },
+        { ...sample(), id: 'night', title: 'Nocna podróż', start: '2026-09-21T21:00:00Z', end: '2026-09-22T01:00:00Z' },
+    ] });
+    await page.getByRole('button', { name: 'Kalendarz tygodniowy', exact: true }).click();
+    await expect(page.locator('.day-week-allday .day-week-event')).toHaveCount(3);
+    await expect(page.locator('.day-week-timeline .day-week-event')).toHaveCount(2);
+    await expect(page.locator('.day-week-timeline[data-date="2026-09-21"]')).toContainText('Nocna podróż');
+    await expect(page.locator('.day-week-timeline[data-date="2026-09-22"]')).toContainText('Nocna podróż');
+    await expect(page.locator('.day-week-timeline[data-date="2026-09-23"] .day-week-event')).toHaveCount(0);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+    await page.locator('.day-week-scroll').evaluate((element) => { element.scrollLeft = 146; });
+    await expect.poll(() => page.locator('.day-week-scroll').evaluate((element) => element.scrollLeft)).toBe(146);
+    await page.locator('.day-week-scroll').scrollIntoViewIfNeeded();
+    await page.screenshot({ path: test.info().outputPath('weekly-narrow-dark.png') });
+});
+
+test('shows a complete empty weekly grid instead of hiding the calendar', async ({ page }) => {
+    await setup(page, { event: null });
+    await page.getByRole('button', { name: 'Kalendarz tygodniowy', exact: true }).click();
+    await expect(page.locator('.day-week-header')).toHaveCount(7);
+    await expect(page.locator('.day-week-hours span')).toHaveCount(24);
+    await expect(page.locator('.day-week-event')).toHaveCount(0);
+    await expect(page.getByRole('region', { name: 'Kalendarz tygodniowy', exact: true })).toBeVisible();
 });

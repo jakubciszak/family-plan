@@ -840,6 +840,16 @@
     "clockChoice": "Godzina podczas zmiany czasu",
     "firstClockTime": "Pierwsze wystąpienie godziny",
     "secondClockTime": "Drugie wystąpienie godziny",
-    "endClockChoice": "Koniec podczas zmiany czasu"
+    "endClockChoice": "Koniec podczas zmiany czasu",
+    "display": {
+      "LIST": "Lista",
+      "WEEK": "Kalendarz tygodniowy"
+    },
+    "weekScrollHint": "Przesuń w bok, aby zobaczyć kolejne dni. Wydarzenia w tym samym czasie są obok siebie.",
+    "weekCalendar": "Kalendarz tygodniowy",
+    "simultaneous": "Jednocześnie: {{count}}",
+    "continuesBefore": "Ciąg dalszy z poprzedniego dnia",
+    "continuesAfter": "Trwa również następnego dnia",
+    "weekEmpty": "Brak wydarzeń w tym tygodniu."
   }
 }
