@@ -53,6 +53,7 @@ export default function DayPlanningScreen() {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [selected, setSelected] = useState<Occurrence | null>(null);
+  const [organizer, setOrganizer] = useState<{ personId: string; name: string } | null>(null);
   const [editing, setEditing] = useState<Editing | null>(null);
   const [tagManager, setTagManager] = useState(false);
   const [confirmation, setConfirmation] = useState<Confirm | null>(null);
@@ -120,8 +121,17 @@ export default function DayPlanningScreen() {
     setError(''); setStale(false); attempt.current = { payload: '', key: makeRequestKey() };
     setEditing({ key: makeRequestKey(), occurrenceOnly: false, draft: { title: '', description: '', location: '', teamId, visibility: 'PRIVATE',
       schedule: { kind: 'TIMED', localStart: `${start.date}T${start.time}`, durationMinutes: slot ? (Date.parse(slot.end) - Date.parse(slot.start)) / 60000 : 60, timeZone: zone },
-      recurrence: null, participantIds: [...new Set([currentUser, ...(teamId && view === 'PLAN' ? people : [])])], tagIds: [], blocksTime: true } });
+      recurrence: null, participantIds: [...new Set([currentUser, ...(teamId && view === 'PLAN' ? people : [])])], tagIds: [], blocksTime: true, ownerParticipates: true } });
   };
+  useEffect(() => {
+    const event = selected && !selected.participantIds.includes(selected.ownerId) ? selected : null;
+    if (!event?.teamId || members.some((member) => member.userId === event.ownerId)) return undefined;
+    let active = true;
+    listMembers(event.teamId)
+      .then((roster) => { if (active) setOrganizer({ personId: event.ownerId, name: roster.find((member) => member.userId === event.ownerId)?.userName ?? '' }); })
+      .catch(() => {});
+    return () => { active = false; };
+  }, [selected, members]);
   const openDetails = useCallback(async (event: Occurrence) => {
     const sequence = ++request.current;
     setSelected(null); setError(''); setSaving(true);
@@ -145,7 +155,7 @@ export default function DayPlanningScreen() {
     setSaving(true); setError('');
     try {
       if (editing.definition && editing.occurrenceOnly && editing.occurrence) {
-        const changes = Object.fromEntries(Object.entries(draft).filter(([key, value]) => !['teamId', 'recurrence'].includes(key) && JSON.stringify(value) !== JSON.stringify(editing.draft[key as keyof EventDraft])));
+        const changes = Object.fromEntries(Object.entries(draft).filter(([key, value]) => !['teamId', 'recurrence', 'ownerParticipates'].includes(key) && JSON.stringify(value) !== JSON.stringify(editing.draft[key as keyof EventDraft])));
         if (Object.keys(changes).length) await changeOccurrence(editing.definition.id, editing.occurrence.occurrenceKey, editing.definition.version, changes, confirmed);
       } else if (editing.definition) await updateEvent(editing.definition.id, editing.definition.version, draft, confirmed);
       else await createEvent(draft, attempt.current.key, confirmed);
@@ -221,6 +231,7 @@ export default function DayPlanningScreen() {
             <Text>{selected.allDay ? `${t('dayPlanning.allDay')} · ` : ''}{selected.allDay ? `${localParts(selected.start, selected.timeZone).date} – ${shiftDay(localParts(selected.end, selected.timeZone).date, -1)}` : formatInterval(selected.start, selected.end, selected.timeZone)}</Text>
             <Text>{selected.timeZone}</Text><Text>{t(selected.visibility === 'PRIVATE' ? 'dayPlanning.private' : 'dayPlanning.shared')}</Text>
             {selected.description ? <Text selectable>{selected.description}</Text> : null}{selected.location ? <Text selectable>{selected.location}</Text> : null}
+            {!selected.participantIds.includes(selected.ownerId) && <Text>{t('dayPlanning.scheduledBy', { name: (organizer?.personId === selected.ownerId ? organizer.name : '') || nameFor(selected.ownerId) })}</Text>}
             <Text>{selected.participants.map((person) => `${nameFor(person.personId)}${person.status === 'DECLINED' ? ` (${t('dayPlanning.declined')})` : ''}`).join(', ')}</Text>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>{selected.tags.map((tag) => <Chip key={tag.id} icon={() => <TagColorDot color={tag.color} />}>{tag.name}</Chip>)}</View>
             {!selected.blocksTime && <Text>{t('dayPlanning.doesNotBlock')}</Text>}

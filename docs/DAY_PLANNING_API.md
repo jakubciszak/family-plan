@@ -28,13 +28,14 @@ Wspólny kontrakt backendu, webu i mobile. Daty `start`/`end` w odpowiedziach s�
   },
   "participantIds": ["uuid"],
   "tagIds": ["uuid"],
-  "blocksTime": true
+  "blocksTime": true,
+  "ownerParticipates": true
 }
 ```
 
 `recurrence: null` oznacza jednorazowe wydarzenie. `byDay` to ISO 1–7. `until` i `count` są opcjonalne, wzajemnie wykluczające. `frequency`: `DAILY`/`WEEKLY`. Dla całodniowego wpisu: `schedule: {kind: "ALL_DAY", startDate: "2026-09-21", endDate: "2026-09-22", timeZone: "Europe/Warsaw"}`; koniec wyłączny. Opcjonalne `schedule.utcOffset`, np. `"+01:00"`, wskazuje konkretną godzinę przy jesiennej zmianie czasu. Domyślnie wybierane jest pierwsze wystąpienie. Nieistniejąca godzina pojedynczego wpisu jest odrzucana; w cyklu taki dzień jest pomijany.
 
-Autor zawsze pochodzi z sesji i uczestniczy w nowym wydarzeniu. `visibility`: `PRIVATE`/`TEAM`. `teamId` wymagane przy zapraszaniu innych lub `TEAM`.
+Autor zawsze pochodzi z sesji. Domyślnie uczestniczy w wydarzeniu, a `participantIds` uzupełniane jest o jego identyfikator. `ownerParticipates: false` wypisuje autora z listy uczestników: wydarzenie nie zajmuje mu czasu i nie pojawia się w jego kalendarzu, ale pozostaje jego własnością — tylko on je czyta, edytuje i odwołuje. Wymaga `teamId`, przynajmniej jednego uczestnika i roli administratora w tym zespole; inaczej 403 `access_denied`. Pole jest zapamiętywane, więc `PATCH` bez niego nie dopisuje autora z powrotem. `visibility`: `PRIVATE`/`TEAM`. `teamId` wymagane przy zapraszaniu innych lub `TEAM`.
 
 Odpowiedź zapisu i `GET /events/{id}`: definicja wydarzenia z powyższymi polami oraz `id`, `ownerId`, `version`, `participants: [{personId,status}]`, gdzie status to `INCLUDED`/`DECLINED`. Definicja zawiera także `exceptions: {"<originalKey>": {changes: {...}} | {cancelled: true}}`, wyłącznie dla autora. GET definicji wyłącznie dla autora. Zmiany wymagają `If-Match: "<version>"`; 412 oznacza nowszą wersję, a 428 brak wymaganej wersji. POST przyjmuje `Idempotency-Key` (UUID), który klient zachowuje przy ponowieniu tej samej próby.
 
@@ -102,7 +103,7 @@ Zapis cyklu sprawdza pierwsze 90 dni od początku serii, najbliższe 90 dni od c
 
 ## Integracje i prywatność
 
-Odejście lub usunięcie z zespołu atomowo odwołuje zaproszenia tej osoby. Ponowne dołączenie nie przywraca dawnych zaproszeń. Własne wydarzenia pozostają prywatne i osobiste. Istniejące etykiety zachowują historię; nie można dopisać nowych tagów obcego zespołu.
+Odejście lub usunięcie z zespołu atomowo odwołuje zaproszenia tej osoby. Ponowne dołączenie nie przywraca dawnych zaproszeń. Własne wydarzenia pozostają prywatne i osobiste. Wydarzenie, w którym autor nie uczestniczy, zostaje odwołane, gdy z zespołu wychodzi autor albo ostatni uczestnik — nie ma już dla kogo trwać. Istniejące etykiety zachowują historię; nie można dopisać nowych tagów obcego zespołu.
 
 Powiadomienia są neutralne i kierują do `/day-planning`, bez tytułu, uczestników ani identyfikatora wydarzenia. Kolejka push ponownie sprawdza dostęp przed wysyłką. Klienci odświeżają kalendarz po powrocie do aplikacji i powiadomieniu o zmianie.
 

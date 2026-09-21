@@ -51,6 +51,7 @@ export const draftFromOccurrence = (event: Occurrence): EventDraft => ({
   title: event.title, description: event.description, location: event.location, teamId: event.teamId,
   visibility: event.visibility, schedule: scheduleFromOccurrence(event), recurrence: null,
   participantIds: event.participantIds, tagIds: event.tags.map((tag) => tag.id), blocksTime: event.blocksTime,
+  ownerParticipates: event.participantIds.includes(event.ownerId),
 });
 export const makeRequestKey = () => 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (letter) => {
   const random = Math.floor(Math.random() * 16);
@@ -61,4 +62,5 @@ export const draftFromDefinition = (event: EventDefinition): EventDraft => ({
   title: event.title, description: event.description, location: event.location, teamId: event.teamId,
   visibility: event.visibility, schedule: event.schedule, recurrence: event.recurrence,
   participantIds: event.participantIds, tagIds: event.tagIds, blocksTime: event.blocksTime,
+  ownerParticipates: event.participantIds.includes(event.ownerId),
 });

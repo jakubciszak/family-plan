@@ -52,8 +52,8 @@ export default function EventEditor({ initial, teams, userId, occurrenceOnly, sa
   const [scopeError, setScopeError] = useState(false);
   const [revision, setRevision] = useState(0);
   const [creatingTag, setCreatingTag] = useState(false);
-  const canManageTags = teams.some((team) => team.id === draft.teamId && team.role === 'admin');
-  const tagScopes: CalendarTag['scope'][] = draft.visibility === 'TEAM' ? (canManageTags ? ['TEAM'] : []) : ['PERSONAL', ...(canManageTags ? ['TEAM' as const] : [])];
+  const isTeamAdmin = teams.some((team) => team.id === draft.teamId && team.role === 'admin');
+  const tagScopes: CalendarTag['scope'][] = draft.visibility === 'TEAM' ? (isTeamAdmin ? ['TEAM'] : []) : ['PERSONAL', ...(isTeamAdmin ? ['TEAM' as const] : [])];
   useEffect(() => {
     let active = true;
     void Promise.resolve().then(() => { if (active) { setLoadingScope(true); setScopeError(false); setMembers([]); setTags([]); } });
@@ -65,8 +65,11 @@ export default function EventEditor({ initial, teams, userId, occurrenceOnly, sa
   }, [draft.teamId, revision]);
   const change = <K extends keyof EventDraft>(key: K, value: EventDraft[K]) => setDraft((current) => ({ ...current, [key]: value }));
   const changeTeam = (teamId: string) => { setCreatingTag(false); setDraft((current) => ({ ...current, teamId: teamId || null,
-    visibility: teamId ? current.visibility : 'PRIVATE', participantIds: [userId], tagIds: [] })); };
+    visibility: teamId ? current.visibility : 'PRIVATE', participantIds: [userId], ownerParticipates: true, tagIds: [] })); };
   const changeVisibility = (value: string) => { setCreatingTag(false); setDraft((current) => ({ ...current, visibility: value as EventDraft['visibility'], tagIds: value === 'TEAM' ? current.tagIds.filter((id) => tags.some((tag) => tag.id === id && tag.scope === 'TEAM')) : current.tagIds })); };
+  const toggleSelf = () => setDraft((current) => current.ownerParticipates
+    ? { ...current, ownerParticipates: false, participantIds: current.participantIds.filter((id) => id !== userId) }
+    : { ...current, ownerParticipates: true, participantIds: [...new Set([userId, ...current.participantIds])] });
   const toggle = (key: 'tagIds' | 'participantIds', value: string) => change(key, draft[key].includes(value) ? draft[key].filter((id) => id !== value) : [...draft[key], value]);
   const invalidTags = draft.visibility === 'TEAM' && tags.some((tag) => draft.tagIds.includes(tag.id) && tag.scope === 'PERSONAL');
   const save = () => {
@@ -74,6 +77,7 @@ export default function EventEditor({ initial, teams, userId, occurrenceOnly, sa
     setError('');
     try {
       if (!draft.title.trim()) throw new Error('titleRequired');
+      if (!draft.ownerParticipates && !draft.participantIds.length) throw new Error('nobodyAttends');
       if (!isDay(startDate) || !isDay(endDate) || endDate < startDate) throw new Error('invalidTime');
       new Intl.DateTimeFormat('en', { timeZone: zone }).format();
       let nextSchedule: Schedule;
@@ -142,6 +146,8 @@ export default function EventEditor({ initial, teams, userId, occurrenceOnly, sa
     <Text>{t(draft.visibility === 'PRIVATE' ? 'dayPlanning.privateHint' : 'dayPlanning.sharedHint')}</Text>
     <Text variant="titleMedium">{t('dayPlanning.participants')}</Text>
     <Text variant="bodySmall">{t('dayPlanning.participantsHint')}</Text>
+    {isTeamAdmin && !occurrenceOnly && <><PlanningCheckbox label={t('dayPlanning.attendMyself')} accessibilityLabel={t('dayPlanning.attendMyself')} disabled={saving}
+      status={draft.ownerParticipates ? 'checked' : 'unchecked'} onPress={toggleSelf} /><Text variant="bodySmall">{t('dayPlanning.adminParticipationHint')}</Text></>}
     {members.filter((member) => member.userId !== userId).map((member) => <PlanningCheckbox key={member.userId}
       label={member.userName} accessibilityLabel={t('dayPlanning.invitePerson', { name: member.userName })} disabled={saving}
       status={draft.participantIds.includes(member.userId) ? 'checked' : 'unchecked'} onPress={() => toggle('participantIds', member.userId)} />)}

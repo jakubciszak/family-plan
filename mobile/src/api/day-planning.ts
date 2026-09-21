@@ -8,6 +8,7 @@ export type CalendarTag = { id: string; name: string; color: string; scope: 'PER
 export type EventDraft = {
   title: string; description: string; location: string; teamId: string | null; visibility: 'PRIVATE' | 'TEAM';
   schedule: Schedule; recurrence: Recurrence | null; participantIds: string[]; tagIds: string[]; blocksTime: boolean;
+  ownerParticipates: boolean;
 };
 export type EventDefinition = EventDraft & {
   exceptions?: Record<string, { cancelled?: boolean; changes?: Partial<EventDraft> }>;

@@ -283,6 +283,92 @@ final class DayPlanningApiTest extends ApiTestCase
         self::assertSame(401, $this->request('POST', '/events', $this->payload())->getStatusCode());
     }
 
+    public function testTeamAdminWritesIntoAnotherCalendarWithoutSpendingAnyOfTheirOwnTime(): void
+    {
+        $admin = $this->currentUser;
+        $team = $this->team();
+        $member = $this->member($team);
+        $this->loginAs($admin);
+        $own = $this->create();
+        $event = $this->create(['teamId' => $team, 'participantIds' => [$member->id()->value()], 'ownerParticipates' => false]);
+        self::assertSame([['personId' => $member->id()->value(), 'status' => 'INCLUDED']], $event['participants']);
+        self::assertSame($admin->id()->value(), $event['ownerId']);
+        self::assertSame([$own['id']], array_column($this->calendar()['events'], 'id'));
+        self::assertCount(1, $this->json('POST', '/availability/query', ['from' => self::FROM, 'to' => self::TO])['busy']);
+        $written = $this->calendar($team, [$member->id()->value()])['events'][0];
+        self::assertSame($event['id'], $written['id']);
+        self::assertTrue($written['canEdit']);
+        self::assertFalse($written['canChangeParticipation']);
+        self::assertNull($written['participation']);
+        $this->loginAs($member);
+        $entry = $this->json('GET', '/events/'.$event['id'].'/occurrences/single');
+        self::assertSame('Secret consultation', $entry['title']);
+        self::assertFalse($entry['canEdit']);
+        self::assertTrue($entry['canChangeParticipation']);
+        self::assertCount(1, $this->json('POST', '/availability/query', ['from' => self::FROM, 'to' => self::TO])['busy']);
+    }
+
+    public function testWritingIntoAnotherCalendarNeedsAdminRightsATeamAndSomebodyToAttend(): void
+    {
+        $admin = $this->currentUser;
+        $team = $this->team();
+        $member = $this->member($team);
+        $guest = $this->member($team);
+        $this->loginAs($admin);
+        foreach ([['participantIds' => []], ['teamId' => null, 'participantIds' => [$guest->id()->value()]]] as $invalid) {
+            self::assertSame(422, $this->request('POST', '/events', $this->payload($invalid + ['teamId' => $team, 'ownerParticipates' => false]))->getStatusCode());
+        }
+        $this->loginAs($member);
+        self::assertSame(403, $this->request('POST', '/events', $this->payload(['teamId' => $team, 'participantIds' => [$guest->id()->value()], 'ownerParticipates' => false]))->getStatusCode());
+    }
+
+    public function testTheAuthorStaysOutOfTheEventUntilTheyPutThemselvesBackIn(): void
+    {
+        $admin = $this->currentUser;
+        $team = $this->team();
+        $member = $this->member($team);
+        $this->loginAs($admin);
+        $event = $this->create(['teamId' => $team, 'participantIds' => [$member->id()->value()], 'ownerParticipates' => false]);
+        $renamed = $this->json('PATCH', '/events/'.$event['id'], ['title' => 'Dentist for you'], 200, $event['version']);
+        self::assertSame([$member->id()->value()], $renamed['participantIds']);
+        self::assertSame([], $this->calendar()['events']);
+        $joined = $this->json('PATCH', '/events/'.$event['id'], ['ownerParticipates' => true], 200, $renamed['version']);
+        self::assertEqualsCanonicalizing([$admin->id()->value(), $member->id()->value()], $joined['participantIds']);
+        self::assertSame([$event['id']], array_column($this->calendar()['events'], 'id'));
+    }
+
+    public function testTheAdminsOwnCommitmentsDoNotCollideWithWhatTheyWriteForSomebodyElse(): void
+    {
+        $admin = $this->currentUser;
+        $team = $this->team();
+        $member = $this->member($team);
+        $this->loginAs($admin);
+        $this->create();
+        $written = $this->payload(['teamId' => $team, 'participantIds' => [$member->id()->value()], 'ownerParticipates' => false]);
+        self::assertSame([$member->id()->value()], $this->json('POST', '/events', $written, 201)['participantIds']);
+        $conflict = $this->json('POST', '/events', $written, 409);
+        self::assertSame([$member->id()->value()], array_column($conflict['conflicts'], 'personId'));
+    }
+
+    public function testAnEventItsAuthorNeverAttendsEndsWhenNobodyIsLeftToAttendIt(): void
+    {
+        $admin = $this->currentUser;
+        $team = $this->team();
+        $guest = $this->member($team);
+        $other = $this->member($team);
+        $this->loginAs($admin);
+        $abandoned = $this->create(['teamId' => $team, 'participantIds' => [$guest->id()->value()], 'ownerParticipates' => false]);
+        $orphaned = $this->create(['teamId' => $team, 'participantIds' => [$other->id()->value()], 'ownerParticipates' => false]);
+        $memberships = static::getContainer()->get(TeamMembershipRepositoryInterface::class);
+        $memberships->leave(Uuid::fromString($team), $guest->id());
+        self::assertSame(404, $this->request('GET', '/events/'.$abandoned['id'])->getStatusCode());
+        self::assertSame(200, $this->request('GET', '/events/'.$orphaned['id'])->getStatusCode());
+        $memberships->leave(Uuid::fromString($team), $admin->id());
+        self::assertSame(404, $this->request('GET', '/events/'.$orphaned['id'])->getStatusCode());
+        $this->loginAs($guest);
+        self::assertSame(404, $this->request('GET', '/events/'.$abandoned['id'].'/occurrences/single')->getStatusCode());
+    }
+
     private function team(): string
     {
         return $this->assertJsonResponse($this->postJson('/api/teams', ['name' => 'Calendar family', 'description' => null]), 201)['id'];
