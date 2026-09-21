@@ -1,4 +1,5 @@
 import PlanningCheckbox from '@/components/day-planning/checkbox';
+import PlanningDateTimeField from '@/components/day-planning/date-time-field';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
@@ -109,10 +110,10 @@ export default function EventEditor({ initial, teams, userId, occurrenceOnly, sa
     <ChoicePicker label={t('dayPlanning.eventTeam')} value={draft.teamId ?? ''} disabled={saving || occurrenceOnly}
       options={[{ value: '', label: t('dayPlanning.noTeam') }, ...teams.map((team) => ({ value: team.id, label: team.name }))]} onChange={changeTeam} />
     <PlanningCheckbox label={t('dayPlanning.allDay')} accessibilityLabel={t('dayPlanning.allDay')} status={allDay ? 'checked' : 'unchecked'} onPress={() => setAllDay(!allDay)} disabled={saving} />
-    {field('startDate', startDate, (value) => { setStartDate(value); if (endDate === startDate) setEndDate(value); }, { placeholder: 'YYYY-MM-DD', autoCapitalize: 'none' })}
-    {!allDay && field('startTime', startTime, setStartTime, { placeholder: 'HH:MM', keyboardType: 'numbers-and-punctuation' })}
-    {field('endDate', endDate, setEndDate, { placeholder: 'YYYY-MM-DD', autoCapitalize: 'none' })}
-    {!allDay && field('endTime', endTime, setEndTime, { placeholder: 'HH:MM', keyboardType: 'numbers-and-punctuation' })}
+    <PlanningDateTimeField label={t('dayPlanning.startDate')} mode="date" value={startDate} disabled={saving} onChange={(value) => { setStartDate(value); if (endDate === startDate) setEndDate(value); }} />
+    {!allDay && <PlanningDateTimeField label={t('dayPlanning.startTime')} mode="time" value={startTime} disabled={saving} onChange={setStartTime} />}
+    <PlanningDateTimeField label={t('dayPlanning.endDate')} mode="date" value={endDate} minimumDate={startDate} disabled={saving} onChange={setEndDate} />
+    {!allDay && <PlanningDateTimeField label={t('dayPlanning.endTime')} mode="time" value={endTime} disabled={saving} onChange={setEndTime} />}
     {allDay && <Text variant="bodySmall">{t('dayPlanning.inclusiveEnd')}</Text>}
     {field('timeZone', zone, setZone, { autoCapitalize: 'none', autoCorrect: false })}
     {!allDay && offsets.length > 1 && <ChoicePicker label={t('dayPlanning.clockChoice')} value={selectedOffset} disabled={saving} options={offsets.map((value, index) => ({ value, label: `${t(index === 0 ? 'dayPlanning.firstClockTime' : 'dayPlanning.secondClockTime')} (UTC${value})` }))} onChange={setUtcOffset} />}
@@ -130,7 +131,7 @@ export default function EventEditor({ initial, teams, userId, occurrenceOnly, sa
         </View>}
         <ChoicePicker label={t('dayPlanning.repeatEnds')} value={ending} disabled={saving}
           options={['NEVER', 'UNTIL', 'COUNT'].map((value) => ({ value, label: t(`dayPlanning.ending.${value}`) }))} onChange={setEnding} />
-        {ending === 'UNTIL' && field('until', until, setUntil, { placeholder: 'YYYY-MM-DD' })}
+        {ending === 'UNTIL' && <PlanningDateTimeField label={t('dayPlanning.until')} mode="date" value={until} minimumDate={startDate} disabled={saving} onChange={setUntil} />}
         {ending === 'COUNT' && field('count', count, setCount, { keyboardType: 'number-pad' })}
         <Text variant="bodySmall">{t('dayPlanning.recurrenceHint')}</Text>
       </>}

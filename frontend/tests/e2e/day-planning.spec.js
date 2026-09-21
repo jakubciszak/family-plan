@@ -14,7 +14,7 @@ const tags = () => [
 ];
 async function setup(page, options = {}) {
     const state = { event: sample(), definition: definition(), writes: [], queries: [], tags: tags(), ...options };
-    await page.addInitScript(() => localStorage.setItem('i18nextLng', 'pl'));
+    await page.addInitScript((locale) => localStorage.setItem('i18nextLng', locale), options.locale || 'pl');
     await page.route('**/api/**', (route) => route.fulfill({ status: 404, json: {} }));
     await setupAuthenticatedSession(page);
     if (state.teamRole) await page.route('**/api/teams', (route) => route.fulfill({ json: { teams: [{ id: 'team-1', name: 'Family Team', role: state.teamRole }] } }));
@@ -62,9 +62,9 @@ async function setup(page, options = {}) {
         return route.fulfill({ json: { ...payload, id: 'event-1', ownerId: '1', version: 8 } });
     });
     await page.goto('/');
-    await page.getByRole('button', { name: 'Plan dnia', exact: true }).click();
-    await page.getByLabel('Data planu', { exact: true }).fill('2026-09-21');
-    await page.getByLabel('Strefa wyświetlania', { exact: true }).selectOption('Europe/Warsaw');
+    await page.getByRole('button', { name: options.locale === 'en' ? 'Day planner' : 'Plan dnia', exact: true }).click();
+    await page.getByLabel(options.locale === 'en' ? 'Calendar date' : 'Data planu', { exact: true }).fill('2026-09-21');
+    await page.getByLabel(options.locale === 'en' ? 'Display time zone' : 'Strefa wyświetlania', { exact: true }).selectOption('Europe/Warsaw');
     await expect(page.getByRole('status').filter({ hasText: 'Ładowanie' })).toHaveCount(0);
     return state;
 }
@@ -132,8 +132,8 @@ test('plans with the author included and creates from a real suggested slot', as
     await page.getByLabel('Szukaj od godziny', { exact: true }).fill('16:00');
     await page.getByRole('button', { name: 'Pokaż wspólne terminy', exact: true }).click();
     await page.getByRole('button', { name: /Wybierz termin/ }).click();
-    await expect(page.getByLabel('Początek', { exact: true })).toHaveValue('2026-09-21T19:00');
-    await expect(page.getByLabel('Koniec', { exact: true })).toHaveValue('2026-09-21T20:00');
+    await expect(page.getByLabel('Początek', { exact: true })).toHaveValue('21.09.2026 19:00');
+    await expect(page.getByLabel('Koniec', { exact: true })).toHaveValue('21.09.2026 20:00');
     await expect(page.getByLabel('Bartek', { exact: true })).toBeChecked();
     const query = state.writes.find((write) => write.path.endsWith('/suggestions')).data;
     expect(query.personIds).toEqual(['1', '2']);
@@ -256,7 +256,7 @@ test('navigates a full week and explicitly deletes only one occurrence', async (
     await expect(page.locator('.day-agenda-column')).toHaveCount(7);
     await expect.poll(() => new Date(state.queries.at(-1).get('to')) - new Date(state.queries.at(-1).get('from'))).toBe(7 * 86400000);
     await page.getByRole('button', { name: 'Następny zakres', exact: true }).click();
-    await expect(page.getByLabel('Data planu', { exact: true })).toHaveValue('2026-09-28');
+    await expect(page.getByLabel('Data planu', { exact: true })).toHaveValue('28.09.2026');
     await page.getByRole('button', { name: 'Poprzedni zakres', exact: true }).click();
     await page.getByRole('button', { name: /Plan lekcji, / }).click();
     page.once('dialog', (dialog) => dialog.accept());
@@ -296,8 +296,8 @@ test('edits an occurrence spanning the repeated DST hour without changing its du
     await page.getByLabel('Data planu', { exact: true }).fill('2026-10-25');
     await page.getByRole('button', { name: /Plan lekcji, / }).click();
     await page.getByRole('button', { name: 'Edytuj', exact: true }).click();
-    await expect(page.getByLabel('Początek', { exact: true })).toHaveValue('2026-10-25T02:30');
-    await expect(page.getByLabel('Koniec', { exact: true })).toHaveValue('2026-10-25T02:30');
+    await expect(page.getByLabel('Początek', { exact: true })).toHaveValue('25.10.2026 02:30');
+    await expect(page.getByLabel('Koniec', { exact: true })).toHaveValue('25.10.2026 02:30');
     await page.getByLabel('Tytuł wydarzenia', { exact: true }).fill('Przesunięcie zegara');
     await page.getByRole('button', { name: 'Zapisz', exact: true }).click();
     await expect(page.getByText('Wydarzenie zapisane.', { exact: true })).toBeVisible();
@@ -339,7 +339,7 @@ test('switches a Wednesday list to a full week and places overlapping events sid
     await expect(page.getByRole('dialog')).toContainText('Spotkanie');
     await page.getByRole('button', { name: 'Zamknij', exact: true }).click();
     await page.getByRole('button', { name: 'Następny zakres', exact: true }).click();
-    await expect(page.getByLabel('Data planu', { exact: true })).toHaveValue('2026-09-30');
+    await expect(page.getByLabel('Data planu', { exact: true })).toHaveValue('30.09.2026');
     await expect.poll(() => state.queries.at(-1).get('from')).toBe('2026-09-27T22:00:00.000Z');
     await page.getByRole('button', { name: 'Lista', exact: true }).click();
     await expect(page.locator('.day-week-grid')).toHaveCount(0);
@@ -365,7 +365,7 @@ test('keeps private busy placeholders in the team week when filtering shared eve
     expect(state.queries.at(-1).getAll('personIds[]')).toEqual(['1', '2']);
     expect(new Date(state.queries.at(-1).get('to')) - new Date(state.queries.at(-1).get('from'))).toBe(7 * 86400000);
     await page.getByRole('button', { name: 'Następny zakres', exact: true }).click();
-    await expect(page.getByLabel('Data planu', { exact: true })).toHaveValue('2026-09-28');
+    await expect(page.getByLabel('Data planu', { exact: true })).toHaveValue('28.09.2026');
 });
 
 test('separates all-day events, splits overnight events and scrolls a narrow dark week', async ({ page }) => {
@@ -541,4 +541,199 @@ test('keeps the selection check readable on a light custom tag color', async ({ 
     await expect(selected).toHaveCSS('color', 'rgb(0, 0, 0)');
     await expect(selected).toContainText('✓');
     await page.screenshot({ path: test.info().outputPath('tag-palette-light-custom.png') });
+});
+
+
+test('date picker supports keyboard navigation, cancellation and focus return without changing the calendar early', async ({ page }) => {
+    const state = await setup(page);
+    const trigger = page.getByRole('button', { name: 'Wybierz: Data planu', exact: true });
+    const initialQueries = state.queries.length;
+    await trigger.click();
+    const dialog = page.getByRole('dialog', { name: 'Data planu', exact: true });
+    await expect(dialog.getByRole('columnheader').first()).toHaveText('pon.');
+    const selected = dialog.getByRole('gridcell', { name: /21 września 2026/ });
+    await expect(selected).toBeFocused();
+    await selected.press('ArrowRight');
+    const next = dialog.getByRole('gridcell', { name: /22 września 2026/ });
+    await expect(next).toBeFocused();
+    await next.press('Enter');
+    await expect(next).toHaveAttribute('aria-selected', 'true');
+    expect(state.queries.length).toBe(initialQueries);
+    await page.keyboard.press('Escape');
+    await expect(dialog).toHaveCount(0);
+    await expect(trigger).toBeFocused();
+    await expect(page.getByLabel('Data planu', { exact: true })).toHaveValue('21.09.2026');
+    await trigger.click();
+    await dialog.getByRole('gridcell', { name: /21 września 2026/ }).press('PageDown');
+    await expect(dialog.getByRole('gridcell', { name: /21 października 2026/ })).toBeFocused();
+    await page.keyboard.press('Home');
+    await expect(dialog.getByRole('gridcell', { name: /19 października 2026/ })).toBeFocused();
+    await page.keyboard.press('End');
+    const sunday = dialog.getByRole('gridcell', { name: /25 października 2026/ });
+    await expect(sunday).toBeFocused();
+    await sunday.press('Enter');
+    await dialog.getByRole('button', { name: 'Wybierz', exact: true }).click();
+    await expect(page.getByLabel('Data planu', { exact: true })).toHaveValue('25.10.2026');
+    await expect.poll(() => state.queries.at(-1).get('from')).toBe('2026-10-24T22:00:00.000Z');
+});
+
+test('date and time pickers retain arbitrary minutes across midnight without submitting the event', async ({ page }) => {
+    const state = await setup(page, { event: null });
+    await page.getByRole('button', { name: 'Nowe wydarzenie', exact: true }).click();
+    await page.getByLabel('Tytuł wydarzenia', { exact: true }).fill('Nocna wyprawa');
+    await page.getByLabel('Początek', { exact: true }).click();
+    let dialog = page.getByRole('dialog', { name: 'Początek', exact: true });
+    expect(await dialog.evaluate((element) => element.closest('form'))).toBeNull();
+    await page.screenshot({ path: test.info().outputPath('date-picker-desktop.png') });
+    await dialog.getByRole('tab', { name: 'Godzina', exact: true }).click();
+    await dialog.getByRole('listbox', { name: 'Godziny', exact: true }).getByRole('option', { name: '23', exact: true }).click();
+    await dialog.getByRole('listbox', { name: 'Minuty', exact: true }).getByRole('option', { name: '37', exact: true }).click();
+    await page.screenshot({ path: test.info().outputPath('time-picker-desktop.png') });
+    await dialog.getByRole('button', { name: 'Wybierz', exact: true }).click();
+    await expect(page.getByLabel('Początek', { exact: true })).toHaveValue('21.09.2026 23:37');
+    await page.getByRole('button', { name: 'Wybierz: Koniec', exact: true }).click();
+    dialog = page.getByRole('dialog', { name: 'Koniec', exact: true });
+    await dialog.getByRole('gridcell', { name: /22 września 2026/ }).click();
+    await dialog.getByRole('tab', { name: 'Godzina', exact: true }).click();
+    await dialog.getByRole('listbox', { name: 'Godziny', exact: true }).getByRole('option', { name: '01', exact: true }).click();
+    await dialog.getByRole('listbox', { name: 'Minuty', exact: true }).getByRole('option', { name: '13', exact: true }).click();
+    await dialog.getByRole('button', { name: 'Wybierz', exact: true }).click();
+    expect(state.writes).toHaveLength(0);
+    await page.getByRole('button', { name: 'Zapisz', exact: true }).click();
+    await expect(page.getByText('Wydarzenie zapisane.', { exact: true })).toBeVisible();
+    expect(state.writes.at(-1).data.schedule).toEqual({ kind: 'TIMED', localStart: '2026-09-21T23:37', durationMinutes: 96, timeZone: 'Europe/Warsaw' });
+});
+
+test('all-day and recurrence date pickers preserve exclusive end dates and enforce the recurrence minimum', async ({ page }) => {
+    const state = await setup(page, { event: null });
+    await page.getByRole('button', { name: 'Nowe wydarzenie', exact: true }).click();
+    await page.getByLabel('Tytuł wydarzenia', { exact: true }).fill('Wyjazd');
+    await page.getByLabel('Cały dzień', { exact: true }).check();
+    await page.getByRole('button', { name: 'Wybierz: Początek', exact: true }).click();
+    let dialog = page.getByRole('dialog', { name: 'Początek', exact: true });
+    await expect(dialog.getByRole('tab')).toHaveCount(0);
+    await dialog.getByLabel('Miesiąc', { exact: true }).selectOption('10');
+    await dialog.getByRole('gridcell', { name: /, 4 października 2026$/ }).click();
+    await dialog.getByRole('button', { name: 'Wybierz', exact: true }).click();
+    await page.getByRole('button', { name: /Wybierz: Koniec/ }).click();
+    dialog = page.getByRole('dialog');
+    await dialog.getByLabel('Miesiąc', { exact: true }).selectOption('10');
+    await dialog.getByRole('gridcell', { name: /, 6 października 2026$/ }).click();
+    await dialog.getByRole('button', { name: 'Wybierz', exact: true }).click();
+    await page.getByLabel('Powtarzanie', { exact: true }).selectOption('WEEKLY');
+    await page.getByLabel('Koniec cyklu', { exact: true }).selectOption('until');
+    await page.getByRole('button', { name: 'Wybierz: Ostatni dzień cyklu', exact: true }).click();
+    dialog = page.getByRole('dialog', { name: 'Ostatni dzień cyklu', exact: true });
+    await dialog.getByLabel('Miesiąc', { exact: true }).selectOption('10');
+    await expect(dialog.getByRole('gridcell', { name: /, 3 października 2026$/ })).toBeDisabled();
+    await dialog.getByLabel('Miesiąc', { exact: true }).selectOption('11');
+    await dialog.getByLabel('Miesiąc', { exact: true }).selectOption('10');
+    const firstAllowed = dialog.getByRole('gridcell', { name: /, 4 października 2026$/ });
+    await expect(firstAllowed).toHaveAttribute('tabindex', '0');
+    await dialog.getByLabel('Miesiąc', { exact: true }).focus();
+    await page.keyboard.press('Tab');
+    await page.keyboard.press('Tab');
+    await page.keyboard.press('Tab');
+    await expect(firstAllowed).toBeFocused();
+    await dialog.getByRole('gridcell', { name: /18 października 2026/ }).click();
+    await dialog.getByRole('button', { name: 'Wybierz', exact: true }).click();
+    await page.getByRole('button', { name: 'Zapisz', exact: true }).click();
+    await expect(page.getByText('Wydarzenie zapisane.', { exact: true })).toBeVisible();
+    expect(state.writes.at(-1).data.schedule).toEqual({ kind: 'ALL_DAY', startDate: '2026-10-04', endDate: '2026-10-06', timeZone: 'Europe/Warsaw' });
+    expect(state.writes.at(-1).data.recurrence.until).toBe('2026-10-18');
+});
+
+test('planning date and time-window pickers apply values only when confirmed', async ({ page }) => {
+    const state = await setup(page);
+    await page.getByRole('tab', { name: 'Plan zespołu', exact: true }).click();
+    await page.getByRole('button', { name: 'Wybierz: Data planu', exact: true }).click();
+    await expect(page.getByRole('dialog', { name: 'Data planu', exact: true })).toBeVisible();
+    await page.getByRole('dialog').getByRole('button', { name: 'Anuluj', exact: true }).click();
+    await page.getByRole('tab', { name: 'Znajdź termin', exact: true }).click();
+    await page.getByRole('button', { name: 'Wybierz: Data planu', exact: true }).click();
+    await page.getByRole('dialog').getByRole('gridcell', { name: /22 września 2026/ }).click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Wybierz', exact: true }).click();
+    for (const [field, hour, minute] of [['Szukaj od godziny', '16', '37'], ['Szukaj do godziny', '18', '41']]) {
+        await page.getByRole('button', { name: `Wybierz: ${field}`, exact: true }).click();
+        const dialog = page.getByRole('dialog', { name: field, exact: true });
+        await dialog.getByRole('listbox', { name: 'Godziny', exact: true }).getByRole('option', { name: hour, exact: true }).click();
+        await dialog.getByRole('listbox', { name: 'Minuty', exact: true }).getByRole('option', { name: minute, exact: true }).click();
+        await dialog.getByRole('button', { name: 'Wybierz', exact: true }).click();
+    }
+    expect(state.writes).toHaveLength(0);
+    await page.getByRole('button', { name: 'Pokaż wspólne terminy', exact: true }).click();
+    await expect(page.getByRole('button', { name: /Wybierz termin/ })).toBeVisible();
+    expect(state.writes.at(-1).data).toMatchObject({ windowStart: '16:37', windowEnd: '18:41', from: '2026-09-21T22:00:00.000Z' });
+});
+
+test('date picker localizes English labels and uses Sunday as the first column', async ({ page }) => {
+    await setup(page, { locale: 'en' });
+    await page.getByRole('button', { name: 'Choose: Calendar date', exact: true }).click();
+    const dialog = page.getByRole('dialog', { name: 'Calendar date', exact: true });
+    await expect(dialog.getByRole('columnheader').first()).toHaveText('Sun');
+    await dialog.getByRole('gridcell', { name: /September 23, 2026/ }).click();
+    await dialog.getByRole('button', { name: 'Choose', exact: true }).click();
+    await expect(page.getByLabel('Calendar date', { exact: true })).toHaveValue('09/23/2026');
+});
+
+test('date picker fits a narrow dark viewport and traps keyboard focus until cancelled', async ({ page }) => {
+    await page.setViewportSize({ width: 320, height: 760 });
+    await page.emulateMedia({ colorScheme: 'dark' });
+    await setup(page, { event: null });
+    await page.getByRole('button', { name: 'Nowe wydarzenie', exact: true }).click();
+    await page.getByRole('button', { name: 'Wybierz: Początek', exact: true }).click();
+    const dialog = page.getByRole('dialog', { name: 'Początek', exact: true });
+    const bounds = await dialog.boundingBox();
+    expect(bounds.x).toBeGreaterThanOrEqual(0);
+    expect(bounds.x + bounds.width).toBeLessThanOrEqual(320);
+    expect(await dialog.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
+    for (let index = 0; index < 12; index++) {
+        await page.keyboard.press('Tab');
+        expect(await page.evaluate(() => document.activeElement.closest('dialog') !== null)).toBe(true);
+    }
+    await page.screenshot({ path: test.info().outputPath('date-picker-narrow-dark.png') });
+    await dialog.getByRole('tab', { name: 'Godzina', exact: true }).click();
+    await page.screenshot({ path: test.info().outputPath('time-picker-narrow-dark.png') });
+    await dialog.getByRole('button', { name: 'Anuluj', exact: true }).click();
+    await expect(page.getByRole('button', { name: 'Wybierz: Początek', exact: true })).toBeFocused();
+    await expect(page.getByLabel('Początek', { exact: true })).toHaveValue('21.09.2026 09:00');
+});
+
+test('date picker rejects impossible typed dates without replacing the calendar query', async ({ page }) => {
+    const state = await setup(page);
+    const field = page.getByLabel('Data planu', { exact: true });
+    await field.fill('2026-02-30');
+    await expect(field).toHaveAttribute('aria-invalid', 'true');
+    expect(await field.evaluate((element) => element.checkValidity())).toBe(false);
+    expect(state.queries.at(-1).get('from')).toBe('2026-09-20T22:00:00.000Z');
+    await field.fill('2028-02-29');
+    await expect(field).toHaveAttribute('aria-invalid', 'false');
+    await expect.poll(() => state.queries.at(-1).get('from')).toBe('2028-02-28T23:00:00.000Z');
+});
+
+test('localized date and time input keeps local API values and normalizes the displayed format', async ({ page }) => {
+    const state = await setup(page, { event: null });
+    await page.getByRole('button', { name: 'Nowe wydarzenie', exact: true }).click();
+    await page.getByLabel('Tytuł wydarzenia', { exact: true }).fill('Wpisany z klawiatury');
+    await page.getByLabel('Początek', { exact: true }).fill('29.02.2028 07:13');
+    await page.getByLabel('Koniec', { exact: true }).fill('2028-02-29T08:27');
+    await expect(page.getByLabel('Początek', { exact: true })).toHaveValue('29.02.2028 07:13');
+    await expect(page.getByLabel('Koniec', { exact: true })).toHaveValue('29.02.2028 08:27');
+    await expect(page.getByLabel('Początek', { exact: true })).toHaveAttribute('placeholder', 'DD.MM.RRRR GG:mm');
+    await page.getByRole('button', { name: 'Zapisz', exact: true }).click();
+    await expect(page.getByText('Wydarzenie zapisane.', { exact: true })).toBeVisible();
+    expect(state.writes.at(-1).data.schedule).toEqual({ kind: 'TIMED', localStart: '2028-02-29T07:13', durationMinutes: 74, timeZone: 'Europe/Warsaw' });
+});
+
+test('an open picker cannot modify a field disabled by its parent fieldset', async ({ page }) => {
+    const state = await setup(page, { event: null });
+    await page.getByRole('button', { name: 'Nowe wydarzenie', exact: true }).click();
+    await page.getByRole('button', { name: 'Wybierz: Początek', exact: true }).click();
+    const dialog = page.getByRole('dialog', { name: 'Początek', exact: true });
+    await dialog.getByRole('gridcell', { name: /22 września 2026/ }).click();
+    await page.locator('input[aria-label="Początek"]').evaluate((element) => { element.closest('fieldset').disabled = true; });
+    await dialog.getByRole('button', { name: 'Wybierz', exact: true }).click();
+    await expect(dialog).toHaveCount(0);
+    await expect(page.getByLabel('Początek', { exact: true })).toHaveValue('21.09.2026 09:00');
+    expect(state.writes).toHaveLength(0);
 });

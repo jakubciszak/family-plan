@@ -723,6 +723,7 @@
     "taskTypePlanHint": "Wybierz plan tego zespołu. Aby użyć prywatnego planu, najpierw zmień go na zespołowy w „Planach działania”."
   },
   "dayPlanning": {
+    "picker": {"datePlaceholder": "DD.MM.RRRR", "timePlaceholder": "GG:mm", "dateTimePlaceholder": "DD.MM.RRRR GG:mm", "open": "Wybierz: {{field}}", "parts": "Część daty i godziny", "date": "Data", "time": "Godzina", "hour": "Godziny", "minute": "Minuty", "month": "Miesiąc", "year": "Rok", "previousMonth": "Poprzedni miesiąc", "nextMonth": "Następny miesiąc", "choose": "Wybierz", "invalid": "Wpisz poprawną datę i godzinę w podanym formacie."},
     "createTag": "Utwórz tag",
     "savingTag": "Tworzenie tagu…",
     "cancelTag": "Anuluj tworzenie tagu",

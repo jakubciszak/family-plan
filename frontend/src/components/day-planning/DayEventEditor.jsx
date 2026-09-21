@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '../md3';
 import TagColorPalette from './TagColorPalette';
+import DateTimePickerField from './DateTimePickerField';
 import service from '../../services/dayPlanningService';
 import teamService from '../../services/teamService';
 import { addDays, dateInZone, localDateTime, peopleOf, personName, zonedIso } from '../../services/dayPlanningTime';
@@ -153,7 +154,7 @@ export default function DayEventEditor({ event, occurrenceKey, seed, zone, user,
         try { save(makePayload(draft)); }
         catch (failure) { setError(t(failure.message === 'invalid_range' ? 'dayPlanning.invalidRange' : 'dayPlanning.invalidTime')); }
     };
-    const field = (key, label, type = 'text', extra = {}) => <label className="day-field">{t(`dayPlanning.${label}`)}<input type={type} value={draft[key]} onChange={(e) => update({ [key]: e.target.value })} {...extra} /></label>;
+    const field = (key, label, type = 'text', extra = {}) => type === 'date' ? <DateTimePickerField label={t(`dayPlanning.${label}`)} value={draft[key]} onChange={(value) => update({ [key]: value })} timeZone={draft.timeZone} {...extra} /> : <label className="day-field">{t(`dayPlanning.${label}`)}<input type={type} value={draft[key]} onChange={(e) => update({ [key]: e.target.value })} {...extra} /></label>;
     const select = (key, label, options, extra = {}) => <label className="day-field">{t(`dayPlanning.${label}`)}<select aria-label={t(`dayPlanning.${label}`)} value={draft[key]} onChange={(e) => update({ [key]: e.target.value })} {...extra}>{options.map(([value, text]) => <option key={value} value={value}>{text}</option>)}</select></label>;
     const weekdays = Array.from({ length: 7 }, (_, index) => ({ value: index + 1, label: new Intl.DateTimeFormat(i18n.language, { weekday: 'short', timeZone: 'UTC' }).format(new Date(`2026-09-${21 + index}T12:00:00Z`)) }));
     return <section className="day-editor day-panel">
@@ -167,7 +168,7 @@ export default function DayEventEditor({ event, occurrenceKey, seed, zone, user,
                     <datalist id="day-timezones">{[...new Set([zone, 'Europe/Warsaw', 'Europe/London', 'America/New_York', 'UTC'])].map((value) => <option key={value} value={value} />)}</datalist>
                 </div>
                 <label className="day-check"><input type="checkbox" checked={draft.allDay} onChange={(e) => update({ allDay: e.target.checked, end: e.target.checked && draft.start.slice(0, 10) === draft.end.slice(0, 10) ? `${addDays(draft.start.slice(0, 10), 1)}T00:00` : draft.end })} />{t('dayPlanning.allDay')}</label>
-                <div className="day-row">{['start', 'end'].map((key) => <label className="day-field" key={key}>{t(`dayPlanning.${draft.allDay && key === 'end' ? 'exclusiveEnd' : key}`)}<input type={draft.allDay ? 'date' : 'datetime-local'} required value={draft.allDay ? draft[key].slice(0, 10) : draft[key]} onChange={(e) => update({ [key]: draft.allDay ? `${e.target.value}T00:00` : e.target.value })} /></label>)}</div>
+                <div className="day-row">{['start', 'end'].map((key) => <DateTimePickerField key={key} label={t(`dayPlanning.${draft.allDay && key === 'end' ? 'exclusiveEnd' : key}`)} type={draft.allDay ? 'date' : 'datetime-local'} required value={draft.allDay ? draft[key].slice(0, 10) : draft[key]} onChange={(value) => update({ [key]: draft.allDay ? `${value}T00:00` : value })} timeZone={draft.timeZone} />)}</div>
                 {!occurrenceKey && <div className="day-recurrence">
                     <div className="day-row">{select('frequency', 'repeat', [['', t('dayPlanning.once')], ['DAILY', t('dayPlanning.daily')], ['WEEKLY', t('dayPlanning.weekly')]])}{draft.frequency && field('interval', draft.frequency === 'DAILY' ? 'everyDays' : 'everyWeeks', 'number', { min: 1, max: 99, required: true })}</div>
                     {draft.frequency === 'WEEKLY' && <fieldset className="day-choice-group"><legend>{t('dayPlanning.weekdays')}</legend><div className="day-chips">{weekdays.map((day) => <label key={day.value} className="day-choice"><input type="checkbox" checked={draft.byDay.includes(day.value)} onChange={() => toggle('byDay', day.value)} />{day.label}</label>)}</div></fieldset>}
