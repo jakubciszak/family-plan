@@ -179,6 +179,9 @@ final readonly class DayPlanningService
 
     private function validateDefinition(array $definition, Uuid $caller, array $retained): void
     {
+        if (($definition['ownerParticipates'] ?? true) === false) {
+            $this->access->assertManagesTeam($caller, $definition['teamId']);
+        }
         $this->access->people($caller, $definition['teamId'], $definition['participantIds']);
         foreach ($definition['tagIds'] as $id) {
             $tag = $this->tags->find(Uuid::fromString($id));

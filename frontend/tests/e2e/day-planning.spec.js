@@ -141,6 +141,37 @@ test('plans with the author included and creates from a real suggested slot', as
     expect(query.windowStart).toBe('16:00');
 });
 
+test('lets a team admin write an event only into somebody else\'s calendar', async ({ page }) => {
+    const state = await setup(page, { event: null, teamRole: 'admin' });
+    await page.getByRole('button', { name: 'Nowe wydarzenie', exact: true }).click();
+    await page.getByLabel('Zespół wydarzenia', { exact: true }).selectOption('team-1');
+    await page.getByLabel('Tytuł wydarzenia', { exact: true }).fill('Dentysta');
+    await page.getByLabel('Ty', { exact: true }).uncheck();
+    await expect(page.getByRole('alert').filter({ hasText: 'przynajmniej jednego uczestnika' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Zapisz', exact: true })).toBeDisabled();
+    await page.getByLabel('Bartek', { exact: true }).check();
+    await page.getByRole('button', { name: 'Zapisz', exact: true }).click();
+    await expect(page.getByRole('status').filter({ hasText: 'Wydarzenie zapisane' })).toBeVisible();
+    const write = state.writes.find((item) => item.path.endsWith('/events'));
+    expect(write.data.ownerParticipates).toBe(false);
+    expect(write.data.participantIds).toEqual(['2']);
+});
+
+test('keeps a plain member inside every event they create', async ({ page }) => {
+    await setup(page, { event: null, teamRole: 'member' });
+    await page.getByRole('button', { name: 'Nowe wydarzenie', exact: true }).click();
+    await page.getByLabel('Zespół wydarzenia', { exact: true }).selectOption('team-1');
+    await expect(page.getByLabel('Ty', { exact: true })).toBeChecked();
+    await expect(page.getByLabel('Ty', { exact: true })).toBeDisabled();
+});
+
+test('names the person who wrote an event into my calendar without joining it', async ({ page }) => {
+    const event = { ...sample(), canEdit: false, ownerId: '2', visibility: 'PRIVATE', participantIds: ['1'], participants: [{ personId: '1', status: 'INCLUDED' }] };
+    await setup(page, { event });
+    await page.getByRole('button', { name: /Plan lekcji, / }).click();
+    await expect(page.getByText('Wpisał(a): Bartek')).toBeVisible();
+});
+
 test('allows invitees to decline one occurrence and rejoin the series without editing', async ({ page }) => {
     const event = { ...sample(), canEdit: false, ownerId: '2', visibility: 'PRIVATE' };
     const state = await setup(page, { event });

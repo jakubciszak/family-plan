@@ -27,6 +27,14 @@ final readonly class PlanningAccess
         }
     }
 
+    public function assertManagesTeam(Uuid $caller, mixed $teamId): void
+    {
+        $this->assertTeam($caller, $teamId);
+        if ($teamId === null || !$this->memberships->isAdmin($caller, Uuid::fromString(CalendarEvent::uuid($teamId)))) {
+            throw new PlanningException('access_denied', 403);
+        }
+    }
+
     public function people(Uuid $caller, mixed $teamId, mixed $ids, bool $includeCaller = false): array
     {
         $this->assertTeam($caller, $teamId);

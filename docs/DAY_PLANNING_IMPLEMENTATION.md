@@ -6,7 +6,7 @@ Implementacja jest na gałęzi `feature/day-planning`, opartej na wydaniu z PR #
 
 Web udostępnia kalendarz dnia i tygodnia, porównanie wybranych osób oraz wspólne terminy. Mobile używa agendy dnia i tygodnia z tymi samymi regułami dostępu i edycji. Oba klienty obsługują tagi osobiste i zespołowe, serie dzienne i tygodniowe, wyjątki, anulowanie i przywracanie wystąpień, uczestnictwo, strefy czasowe, DST oraz jawne potwierdzanie kolizji.
 
-Prywatne szczegóły zna autor i osoby zaproszone do danego wystąpienia. Pozostali członkowie wspólnego zespołu dostają tylko przedział „Zajęty”. Administrator nie ma dodatkowego dostępu. Serwer stosuje te zasady także do bezpośrednich adresów wydarzeń, filtrów, planera i powiadomień.
+Prywatne szczegóły zna autor i osoby zaproszone do danego wystąpienia. Pozostali członkowie wspólnego zespołu dostają tylko przedział „Zajęty”. Administrator nie czyta więcej niż zwykły członek; jedyne, co może dodatkowo, to wpisać wydarzenie w kalendarz osoby ze swojego zespołu, nie uczestnicząc w nim. Serwer stosuje te zasady także do bezpośrednich adresów wydarzeń, filtrów, planera i powiadomień.
 
 `DayPlanning` przechowuje definicje, statusy udziału i wyjątki. Zajętość jest wyliczaną projekcją tych danych dla wskazanego zakresu, bez osobnej trwałej tabeli blokad. Zapewnia to aktualność po zmianie udziału, wyjątku lub członkostwa. Repozytorium korzysta z PostgreSQL JSONB, a zapisy używają transakcji, blokady doradczej, wersjonowania oraz potwierdzeń związanych z konkretną treścią zmiany.
 

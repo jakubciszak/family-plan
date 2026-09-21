@@ -101,18 +101,25 @@ class CalendarEvent
         $rule = $recurrence === null ? null : RecurrenceRule::fromArray($recurrence, $schedule)->describe();
         $visibility = $data['visibility'] ?? 'PRIVATE';
         $blocksTime = $data['blocksTime'] ?? true;
-        if (!in_array($visibility, ['PRIVATE', 'TEAM'], true) || !is_bool($blocksTime)) {
+        $ownerParticipates = $data['ownerParticipates'] ?? true;
+        if (!in_array($visibility, ['PRIVATE', 'TEAM'], true) || !is_bool($blocksTime) || !is_bool($ownerParticipates)) {
             throw PlanningException::invalid('Invalid event visibility or availability.');
         }
         $teamId = $data['teamId'] ?? null;
         if ($teamId !== null) {
             $teamId = self::uuid($teamId);
         }
-        $participantIds = array_values(array_unique(array_merge([$this->ownerId->value()], self::uuidList($data['participantIds'] ?? [], 50))));
-        if ($teamId === null && ($visibility === 'TEAM' || count($participantIds) > 1)) {
+        $invited = self::uuidList($data['participantIds'] ?? [], 50);
+        $participantIds = $ownerParticipates
+            ? array_values(array_unique(array_merge([$this->ownerId->value()], $invited)))
+            : array_values(array_diff($invited, [$this->ownerId->value()]));
+        if ($participantIds === []) {
+            throw PlanningException::invalid('An event the author does not attend needs somebody who does.');
+        }
+        if ($teamId === null && ($visibility === 'TEAM' || count($participantIds) > 1 || !$ownerParticipates)) {
             throw PlanningException::invalid('A team is required to share an event or invite participants.');
         }
-        return ['title' => trim($title), 'description' => $description, 'location' => $location, 'teamId' => $teamId, 'visibility' => $visibility, 'schedule' => $schedule->describe(), 'recurrence' => $rule, 'participantIds' => $participantIds, 'tagIds' => self::uuidList($data['tagIds'] ?? [], 20), 'blocksTime' => $blocksTime];
+        return ['title' => trim($title), 'description' => $description, 'location' => $location, 'teamId' => $teamId, 'visibility' => $visibility, 'schedule' => $schedule->describe(), 'recurrence' => $rule, 'participantIds' => $participantIds, 'tagIds' => self::uuidList($data['tagIds'] ?? [], 20), 'blocksTime' => $blocksTime, 'ownerParticipates' => $ownerParticipates];
     }
 
     public static function uuid(mixed $value): string
@@ -205,6 +212,10 @@ class CalendarEvent
             return;
         }
         if ($this->ownerId->value() === $personId) {
+            if (!$this->ownerParticipates()) {
+                $this->cancel();
+                return;
+            }
             $this->teamId = null;
             $this->definition['teamId'] = null;
             $this->definition['visibility'] = 'PRIVATE';
@@ -220,6 +231,10 @@ class CalendarEvent
             }
         } else {
             $this->removeParticipant($personId);
+            if ($this->allParticipantIds() === []) {
+                $this->cancel();
+                return;
+            }
         }
         $this->touch();
     }
@@ -261,6 +276,7 @@ class CalendarEvent
     public function version(): int { return $this->version; }
     public function cancelled(): bool { return $this->cancelled; }
     public function definition(): array { return $this->definition; }
+    public function ownerParticipates(): bool { return $this->definition['ownerParticipates'] ?? true; }
     public function exceptions(): array { return $this->exceptions; }
 
     public function describe(): array

@@ -57,6 +57,23 @@ test('creates an overnight private recurrence with stable idempotency across fai
   expect(saves.at(-1).body).toMatchObject({ visibility: 'PRIVATE', participantIds: [world.me.id, world.users[1].id], schedule: { localStart: DAY + 'T23:00', durationMinutes: 120 }, recurrence: { frequency: 'WEEKLY', interval: 1 }, conflictConfirmation: 'confirmed-slot' });
 });
 
+test('lets a team admin write an event only into somebody else\'s calendar', async ({ app, page, world }) => {
+  const state = await install(page, world); await open(app); await chooseTeam(page); await button(page, 'Nowe wydarzenie').click();
+  await app.field('Tytuł wydarzenia').fill('Dentysta'); await page.getByRole('checkbox', { name: 'Biorę udział' }).click();
+  await button(page, 'Zapisz').click(); await expect(page.getByRole('alert')).toContainText('przynajmniej jednego uczestnika');
+  await page.getByRole('checkbox', { name: 'Zaproś: Bartek Kowalski' }).click(); await button(page, 'Zapisz').click();
+  await expect(page.getByTestId('day-event-new-event')).toContainText('Dentysta');
+  const save = state.calls.filter((call) => call.method === 'POST' && call.path.endsWith('/events')).at(-1);
+  expect(save.body).toMatchObject({ ownerParticipates: false, participantIds: [world.users[1].id] });
+});
+
+test('names the person who wrote an event into my calendar without joining it', async ({ app, page, world }) => {
+  const state = await install(page, world);
+  state.events = [event(world, { ownerId: world.users[1].id, canEdit: false, participantIds: [world.me.id], participants: [{ personId: world.me.id, status: 'INCLUDED' }] })];
+  await open(app); await page.getByTestId('day-event-' + state.events[0].id).click();
+  await expect(page.getByTestId('day-event-detail')).toContainText('Wpisał(a): Bartek Kowalski');
+});
+
 test('edits a single occurrence with version checks and preserves invitee details after declining', async ({ app, page, world }) => {
   const state = await install(page, world); state.events = [event(world)]; await open(app); await page.getByTestId('day-event-' + state.events[0].id).click(); await button(page, 'Edytuj ten dzień').click();
   await expect(button(page, 'Powtarzanie')).toHaveCount(0); await app.field('Tytuł wydarzenia').fill('Wycieczka szkolna'); await button(page, 'Zapisz').click(); await expect(page.getByText('Wycieczka szkolna', { exact: true })).toBeVisible();
