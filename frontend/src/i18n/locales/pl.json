@@ -723,6 +723,13 @@
     "taskTypePlanHint": "Wybierz plan tego zespołu. Aby użyć prywatnego planu, najpierw zmień go na zespołowy w „Planach działania”."
   },
   "dayPlanning": {
+    "createTag": "Utwórz tag",
+    "savingTag": "Tworzenie tagu…",
+    "cancelTag": "Anuluj tworzenie tagu",
+    "finishTagDraft": "Utwórz tag lub anuluj jego tworzenie, zanim zapiszesz wydarzenie.",
+    "teamTagAdminOnly": "Do wydarzenia zespołowego można dodać tylko tagi zespołu. Nowe tagi zespołu tworzy administrator.",
+    "tagContextChanged": "Tag został utworzony dla poprzednio wybranego zakresu. Sprawdź obecny zespół i wybór tagów.",
+    "tagColors": {"green": "Zielony", "blue": "Niebieski", "purple": "Fioletowy", "orange": "Pomarańczowy", "gold": "Złoty", "red": "Czerwony", "pink": "Różowy", "teal": "Turkusowy", "gray": "Szary", "indigo": "Indygo", "current": "Obecny kolor"},
     "calendarView": "Sposób wyświetlania planu",
     "listView": "Lista",
     "weekView": "Kalendarz tygodniowy",

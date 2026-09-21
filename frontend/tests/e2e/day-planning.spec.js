@@ -17,6 +17,7 @@ async function setup(page, options = {}) {
     await page.addInitScript(() => localStorage.setItem('i18nextLng', 'pl'));
     await page.route('**/api/**', (route) => route.fulfill({ status: 404, json: {} }));
     await setupAuthenticatedSession(page);
+    if (state.teamRole) await page.route('**/api/teams', (route) => route.fulfill({ json: { teams: [{ id: 'team-1', name: 'Family Team', role: state.teamRole }] } }));
     await page.route('**/api/teams/team-1/members', (route) => route.fulfill({ json: { members: [{ userId: '1', name: 'Anna' }, { userId: '2', name: 'Bartek' }] } }));
     await page.route('**/api/day-planning/**', async (route) => {
         const req = route.request();
@@ -31,6 +32,8 @@ async function setup(page, options = {}) {
         if (path.endsWith('/tags') && req.method() === 'GET') return route.fulfill({ json: { tags: state.tags } });
         if (req.method() !== 'GET') state.writes.push({ method: req.method(), path, data: req.postDataJSON(), headers: req.headers() });
         if (path.includes('/tags')) {
+            if (state.tagFailures > 0) { state.tagFailures--; return route.fulfill({ status: 503, json: { message: 'Nie udało się utworzyć tagu.' } }); }
+            if (state.tagWait) await state.tagWait;
             if (req.method() === 'DELETE') { state.tags = state.tags.filter((tag) => !path.endsWith(`/${tag.id}`)); return route.fulfill({ status: 204 }); }
             const tag = { ...req.postDataJSON(), id: req.postDataJSON().id || 'tag-new', canEdit: true };
             state.tags = [...state.tags.filter((item) => item.id !== tag.id), tag];
@@ -392,4 +395,150 @@ test('shows a complete empty weekly grid instead of hiding the calendar', async 
     await expect(page.locator('.day-week-hours span')).toHaveCount(24);
     await expect(page.locator('.day-week-event')).toHaveCount(0);
     await expect(page.getByRole('region', { name: 'Kalendarz tygodniowy', exact: true })).toBeVisible();
+});
+
+
+test('uses named color swatches and preserves an existing custom tag color', async ({ page }) => {
+    const state = await setup(page);
+    await page.getByRole('button', { name: 'Zarządzaj tagami', exact: true }).click();
+    const dialog = page.getByRole('dialog');
+    await expect(dialog.getByRole('radio', { name: 'Zielony', exact: true })).toBeChecked();
+    await dialog.getByRole('radio', { name: 'Niebieski', exact: true }).check();
+    await expect(dialog.getByRole('radio', { name: 'Niebieski', exact: true })).toBeChecked();
+    await expect(dialog.locator('.day-color-option:has(input:checked) .day-color-swatch')).toHaveCSS('background-color', 'rgb(50, 95, 153)');
+    await expect(dialog.locator('.day-color-option:has(input:checked)')).not.toHaveCSS('border-top-color', 'rgba(0, 0, 0, 0)');
+    expect(await dialog.innerText()).not.toMatch(/#[0-9a-f]{6}/i);
+    await page.getByLabel('Nazwa tagu', { exact: true }).fill('  Rower  ');
+    await page.getByRole('button', { name: 'Zapisz', exact: true }).click();
+    await expect(page.getByRole('button', { name: 'Edytuj tag Rower', exact: true })).toBeVisible();
+    expect(state.writes.at(-1).data).toMatchObject({ name: 'Rower', color: '#325f99', scope: 'PERSONAL' });
+    await page.getByRole('button', { name: 'Edytuj tag Praca', exact: true }).click();
+    await expect(dialog.getByRole('radio', { name: 'Obecny kolor', exact: true })).toBeChecked();
+    await dialog.getByRole('radio', { name: 'Niebieski', exact: true }).check();
+    await dialog.getByRole('radio', { name: 'Obecny kolor', exact: true }).check();
+    await expect(dialog.getByRole('radio', { name: 'Obecny kolor', exact: true })).toBeChecked();
+    await page.getByLabel('Nazwa tagu', { exact: true }).fill('Praca w domu');
+    await page.getByRole('button', { name: 'Zapisz', exact: true }).click();
+    await expect(page.getByRole('button', { name: 'Edytuj tag Praca w domu', exact: true })).toBeVisible();
+    expect(state.writes.at(-1).data.color).toBe('#3955af');
+});
+
+test('creates and selects a personal tag inside an event without losing the event draft', async ({ page }) => {
+    const state = await setup(page, { event: null });
+    await page.getByRole('button', { name: 'Nowe wydarzenie', exact: true }).click();
+    await page.getByLabel('Tytuł wydarzenia', { exact: true }).fill('Wieczorna piłka');
+    await page.getByRole('textbox', { name: 'Opis', exact: true }).fill('Weź wodę');
+    await page.getByRole('button', { name: 'Nowy tag', exact: true }).click();
+    await expect(page.getByRole('button', { name: 'Zapisz', exact: true })).toBeDisabled();
+    await page.getByLabel('Nazwa tagu', { exact: true }).fill('  Sport  ');
+    await page.getByRole('radio', { name: 'Fioletowy', exact: true }).check();
+    await page.getByRole('button', { name: 'Utwórz tag', exact: true }).click();
+    await expect(page.getByRole('checkbox', { name: 'Sport', exact: true })).toBeChecked();
+    await expect(page.getByLabel('Tytuł wydarzenia', { exact: true })).toHaveValue('Wieczorna piłka');
+    await expect(page.getByRole('textbox', { name: 'Opis', exact: true })).toHaveValue('Weź wodę');
+    expect(state.writes).toHaveLength(1);
+    expect(state.writes[0].data).toEqual({ name: 'Sport', color: '#86549e', scope: 'PERSONAL', teamId: null });
+    await page.getByRole('button', { name: 'Zapisz', exact: true }).click();
+    await expect(page.getByText('Wydarzenie zapisane.', { exact: true })).toBeVisible();
+    expect(state.writes.at(-1).data).toMatchObject({ title: 'Wieczorna piłka', description: 'Weź wodę', tagIds: ['tag-new'] });
+});
+
+test('preserves a failed tag draft and blocks duplicate creation and event save during retry', async ({ page }) => {
+    let release;
+    const state = await setup(page, { event: null, tagFailures: 1, tagWait: new Promise((resolve) => { release = resolve; }) });
+    await page.getByRole('button', { name: 'Nowe wydarzenie', exact: true }).click();
+    await page.getByLabel('Tytuł wydarzenia', { exact: true }).fill('Nie zgub wydarzenia');
+    await page.getByRole('button', { name: 'Nowy tag', exact: true }).click();
+    await page.getByLabel('Nazwa tagu', { exact: true }).fill('Wakacje');
+    await page.getByRole('radio', { name: 'Złoty', exact: true }).check();
+    await page.getByLabel('Tytuł wydarzenia', { exact: true }).press('Enter');
+    expect(state.writes).toHaveLength(0);
+    await page.getByRole('button', { name: 'Utwórz tag', exact: true }).click();
+    await expect(page.getByRole('alert').filter({ hasText: 'Nie udało się utworzyć tagu.' })).toBeVisible();
+    await expect(page.getByLabel('Nazwa tagu', { exact: true })).toHaveValue('Wakacje');
+    await expect(page.getByRole('radio', { name: 'Złoty', exact: true })).toBeChecked();
+    await page.getByRole('button', { name: 'Utwórz tag', exact: true }).click();
+    await expect(page.getByRole('button', { name: 'Tworzenie tagu…', exact: true })).toBeDisabled();
+    await expect(page.getByRole('button', { name: 'Zapisz', exact: true })).toBeDisabled();
+    await expect(page.getByLabel('Zespół wydarzenia', { exact: true })).toBeDisabled();
+    expect(state.writes).toHaveLength(2);
+    release();
+    await expect(page.getByRole('checkbox', { name: 'Wakacje', exact: true })).toBeChecked();
+    await expect(page.getByRole('button', { name: 'Zapisz', exact: true })).toBeEnabled();
+    await expect(page.getByLabel('Tytuł wydarzenia', { exact: true })).toHaveValue('Nie zgub wydarzenia');
+});
+
+test('restricts team-visible tags to team administrators while preserving a private tag draft', async ({ page }) => {
+    const state = await setup(page, { event: null });
+    await page.getByRole('button', { name: 'Nowe wydarzenie', exact: true }).click();
+    await page.getByLabel('Tytuł wydarzenia', { exact: true }).fill('Wspólny spacer');
+    await page.getByLabel('Zespół wydarzenia', { exact: true }).selectOption('team-1');
+    await page.getByRole('button', { name: 'Nowy tag', exact: true }).click();
+    await page.getByLabel('Nazwa tagu', { exact: true }).fill('Prywatny sport');
+    await expect(page.getByLabel('Zakres tagu', { exact: true }).locator('option')).toHaveCount(1);
+    await expect(page.getByLabel('Zakres tagu', { exact: true })).toHaveValue('PERSONAL');
+    await page.locator('input[name="dayVisibility"][value="TEAM"]').check();
+    await expect(page.getByText('Do wydarzenia zespołowego można dodać tylko tagi zespołu. Nowe tagi zespołu tworzy administrator.', { exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Utwórz tag', exact: true })).toBeDisabled();
+    await expect(page.getByLabel('Zakres tagu', { exact: true })).toHaveCount(0);
+    await page.locator('input[name="dayVisibility"][value="PRIVATE"]').check();
+    await expect(page.getByLabel('Nazwa tagu', { exact: true })).toHaveValue('Prywatny sport');
+    await expect(page.getByRole('button', { name: 'Utwórz tag', exact: true })).toBeEnabled();
+    await page.getByRole('button', { name: 'Anuluj tworzenie tagu', exact: true }).click();
+    await page.locator('input[name="dayVisibility"][value="TEAM"]').check();
+    await expect(page.getByRole('button', { name: 'Nowy tag', exact: true })).toHaveCount(0);
+    expect(state.writes).toHaveLength(0);
+});
+
+test('recomputes allowed tag scopes as an administrator changes the event team and visibility', async ({ page }) => {
+    const state = await setup(page, { event: null, teamRole: 'admin' });
+    await page.getByRole('button', { name: 'Nowe wydarzenie', exact: true }).click();
+    await page.getByLabel('Tytuł wydarzenia', { exact: true }).fill('Wspólna nauka');
+    await page.getByLabel('Zespół wydarzenia', { exact: true }).selectOption('team-1');
+    await page.getByRole('button', { name: 'Nowy tag', exact: true }).click();
+    await page.getByLabel('Nazwa tagu', { exact: true }).fill('Nauka');
+    await page.getByLabel('Zakres tagu', { exact: true }).selectOption('TEAM');
+    await page.getByLabel('Zespół wydarzenia', { exact: true }).selectOption('');
+    await expect(page.getByLabel('Zakres tagu', { exact: true })).toHaveValue('PERSONAL');
+    await expect(page.getByLabel('Zakres tagu', { exact: true }).locator('option[value="TEAM"]')).toHaveCount(0);
+    await page.getByLabel('Zespół wydarzenia', { exact: true }).selectOption('team-1');
+    await page.locator('input[name="dayVisibility"][value="TEAM"]').check();
+    await expect(page.getByLabel('Zakres tagu', { exact: true }).locator('option')).toHaveCount(1);
+    await expect(page.getByLabel('Nazwa tagu', { exact: true })).toHaveValue('Nauka');
+    await page.getByRole('button', { name: 'Utwórz tag', exact: true }).click();
+    await expect(page.getByRole('checkbox', { name: 'Nauka', exact: true })).toBeChecked();
+    expect(state.writes.at(-1).data).toMatchObject({ name: 'Nauka', scope: 'TEAM', teamId: 'team-1' });
+});
+
+test('retains a created tag in the catalog when cancelling an event and fits a narrow dark screen', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.emulateMedia({ colorScheme: 'dark' });
+    const state = await setup(page, { event: null });
+    await page.getByRole('button', { name: 'Nowe wydarzenie', exact: true }).click();
+    await page.getByRole('button', { name: 'Nowy tag', exact: true }).click();
+    await page.getByLabel('Nazwa tagu', { exact: true }).fill('Sztuka');
+    await page.getByRole('radio', { name: 'Różowy', exact: true }).check();
+    const creator = page.getByRole('region', { name: 'Nowy tag', exact: true });
+    await creator.scrollIntoViewIfNeeded();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+    expect(await creator.innerText()).not.toMatch(/#[0-9a-f]{6}/i);
+    await page.screenshot({ path: test.info().outputPath('inline-tag-narrow-dark.png') });
+    await page.getByRole('button', { name: 'Utwórz tag', exact: true }).click();
+    await expect(page.getByRole('checkbox', { name: 'Sztuka', exact: true })).toBeChecked();
+    await page.getByRole('button', { name: 'Anuluj', exact: true }).first().click();
+    await expect(page.getByRole('button', { name: 'Sztuka', exact: true })).toBeVisible();
+    expect(state.writes).toHaveLength(1);
+    expect(state.writes[0].path).toBe('/api/day-planning/tags');
+});
+
+
+test('keeps the selection check readable on a light custom tag color', async ({ page }) => {
+    await setup(page, { tags: [{ id: 'custom', name: 'Jasny tag', color: '#fffce0', scope: 'PERSONAL', teamId: null, canEdit: true }] });
+    await page.getByRole('button', { name: 'Zarządzaj tagami', exact: true }).click();
+    await page.getByRole('button', { name: 'Edytuj tag Jasny tag', exact: true }).click();
+    const selected = page.locator('.day-color-option:has(input:checked) .day-color-swatch');
+    await expect(selected).toHaveCSS('background-color', 'rgb(255, 252, 224)');
+    await expect(selected).toHaveCSS('color', 'rgb(0, 0, 0)');
+    await expect(selected).toContainText('✓');
+    await page.screenshot({ path: test.info().outputPath('tag-palette-light-custom.png') });
 });

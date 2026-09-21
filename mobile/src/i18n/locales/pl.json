@@ -800,7 +800,7 @@
     "editTagTitle": "Edycja tagu",
     "tagName": "Nazwa tagu",
     "tagScope": "Zakres tagu",
-    "tagColor": "Kolor tagu (#RRGGBB)",
+    "tagColor": "Kolor tagu",
     "tagScopes": {
       "PERSONAL": "Osobisty",
       "TEAM": "Zespołowy"
@@ -810,7 +810,7 @@
     "archive": "Archiwizuj",
     "archiveHint": "Tag zniknie ze słownika, ale wcześniejsze przypisania pozostaną.",
     "confirmArchive": "Potwierdź archiwizację",
-    "invalidTag": "Podaj nazwę i kolor w formacie #RRGGBB.",
+    "invalidTag": "Podaj nazwę tagu (maksymalnie 60 znaków).",
     "conflictTitle": "Termin jest zajęty",
     "conflictHint": "Te osoby mają już zajęty czas. Możesz mimo to zapisać wydarzenie.",
     "saveDespiteConflict": "Zapisz mimo kolizji",
@@ -850,6 +850,23 @@
     "simultaneous": "Jednocześnie: {{count}}",
     "continuesBefore": "Ciąg dalszy z poprzedniego dnia",
     "continuesAfter": "Trwa również następnego dnia",
-    "weekEmpty": "Brak wydarzeń w tym tygodniu."
+    "weekEmpty": "Brak wydarzeń w tym tygodniu.",
+    "createTag": "Utwórz tag",
+    "cancelTag": "Anuluj tworzenie tagu",
+    "finishTagFirst": "Utwórz tag lub anuluj jego tworzenie, aby zapisać wydarzenie.",
+    "teamTagAdminHint": "Wydarzenia zespołowe używają tagów zespołu. Nowy tag może dodać administrator zespołu.",
+    "colors": {
+      "green": "Zielony",
+      "blue": "Niebieski",
+      "purple": "Fioletowy",
+      "orange": "Pomarańczowy",
+      "gold": "Złoty",
+      "red": "Czerwony",
+      "pink": "Różowy",
+      "teal": "Turkusowy",
+      "gray": "Szary",
+      "indigo": "Indygo",
+      "current": "Obecny kolor"
+    }
   }
 }

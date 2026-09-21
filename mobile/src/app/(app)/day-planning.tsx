@@ -15,6 +15,7 @@ import { useAuth } from '@/auth/auth-context';
 import ChoicePicker from '@/components/action-plans/choice-picker';
 import EventEditor from '@/components/day-planning/event-editor';
 import TagManager from '@/components/day-planning/tag-manager';
+import { TagColorDot } from '@/components/day-planning/tag-colors';
 import WeekCalendar from '@/components/day-planning/week-calendar';
 import { mondayOf } from '@/day-planning/week-layout';
 import { dayString, isDay, shiftDay } from '@/dates';
@@ -209,7 +210,7 @@ export default function DayPlanningScreen() {
         {!!error && <View><Text accessibilityRole="alert" style={{ color: theme.colors.error }}>{error}</Text>{!editing && <Button onPress={() => refresh()}>{t('common.retry')}</Button>}</View>}
         {stale && editing?.occurrence && <Button onPress={() => void beginEdit(editing.occurrence!, editing.occurrenceOnly)}>{t('dayPlanning.reloadEditor')}</Button>}
         {editing ? <EventEditor key={editing.key} exceptions={editing.occurrenceOnly ? undefined : editing.definition?.exceptions} onRestore={(key) => void restore(key)} initial={editing.draft} teams={teams} userId={currentUser} occurrenceOnly={editing.occurrenceOnly}
-          saving={saving} onSave={(draft) => void save(draft)} onCancel={() => { setEditing(null); setError(''); setStale(false); }} />
+          saving={saving} onTagsChanged={() => setRevision((value) => value + 1)} onSave={(draft) => void save(draft)} onCancel={() => { setEditing(null); setError(''); setStale(false); }} />
           : tagManager ? <TagManager tags={tags} team={teams.find((team) => team.id === teamId)} onChanged={reloadTags} onClose={() => { setTagManager(false); refresh(); }} />
           : selected ? <Card testID="day-event-detail"><Card.Content style={{ gap: 12 }}>
             <Text variant="headlineSmall" accessibilityRole="header">{selected.title}</Text>
@@ -217,7 +218,7 @@ export default function DayPlanningScreen() {
             <Text>{selected.timeZone}</Text><Text>{t(selected.visibility === 'PRIVATE' ? 'dayPlanning.private' : 'dayPlanning.shared')}</Text>
             {selected.description ? <Text selectable>{selected.description}</Text> : null}{selected.location ? <Text selectable>{selected.location}</Text> : null}
             <Text>{selected.participants.map((person) => `${nameFor(person.personId)}${person.status === 'DECLINED' ? ` (${t('dayPlanning.declined')})` : ''}`).join(', ')}</Text>
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>{selected.tags.map((tag) => <Chip key={tag.id}>{tag.name}</Chip>)}</View>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>{selected.tags.map((tag) => <Chip key={tag.id} icon={() => <TagColorDot color={tag.color} />}>{tag.name}</Chip>)}</View>
             {!selected.blocksTime && <Text>{t('dayPlanning.doesNotBlock')}</Text>}
             {selected.canEdit && <>
               {selected.recurring && <Button disabled={saving} onPress={() => void beginEdit(selected, true)}>{t('dayPlanning.editOccurrence')}</Button>}
@@ -279,7 +280,7 @@ export default function DayPlanningScreen() {
               <Text variant="bodySmall">{zone}</Text>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
                 <Chip selected={!tagIds.length} onPress={() => setTagIds([])}>{t('dayPlanning.allTags')}</Chip>
-                {tags.map((tag) => <Chip key={tag.id} selected={tagIds.includes(tag.id)} onPress={() => setTagIds((current) => current.includes(tag.id) ? current.filter((id) => id !== tag.id) : [...current, tag.id])}>{tag.name}</Chip>)}
+                {tags.map((tag) => <Chip key={tag.id} accessibilityLabel={tag.name} icon={() => <TagColorDot color={tag.color} selected={tagIds.includes(tag.id)} />} showSelectedOverlay showSelectedCheck={false} selected={tagIds.includes(tag.id)} onPress={() => setTagIds((current) => current.includes(tag.id) ? current.filter((id) => id !== tag.id) : [...current, tag.id])}>{tag.name}</Chip>)}
               </View>
               {!!tagIds.length && <Text variant="bodySmall">{t('dayPlanning.filterHint')}</Text>}
               <Button accessibilityLabel={t('dayPlanning.manageTags')} icon="tag-outline" onPress={() => setTagManager(true)}>{t('dayPlanning.manageTags')}</Button>
@@ -318,7 +319,7 @@ function AgendaEvent({ event, onOpen, formatInterval }: { event: Occurrence; onO
       <Text>{event.allDay ? t('dayPlanning.allDay') : formatInterval(event.start, event.end)}</Text>
       <Text variant="bodySmall">{t(event.visibility === 'PRIVATE' ? 'dayPlanning.private' : 'dayPlanning.shared')}{event.recurring ? ` · ${t('dayPlanning.recurring')}` : ''}</Text>
       {event.participation === 'DECLINED' && <Text>{t('dayPlanning.declined')}</Text>}
-      <Text>{event.tags.map((tag) => tag.name).join(' · ')}</Text>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>{event.tags.map((tag) => <Chip key={tag.id} icon={() => <TagColorDot color={tag.color} />}>{tag.name}</Chip>)}</View>
     </Card.Content>
   </Card>;
 }
