@@ -29,7 +29,7 @@ final readonly class DoctrinePayoutRepository implements PayoutRepositoryInterfa
         );
     }
 
-    public function ofUser(Uuid $userId, int $limit = 50): array
+    public function ofUser(Uuid $userId, ?int $limit = 50): array
     {
         return $this->entityManager->getRepository(Payout::class)->findBy(
             ['userId' => $userId],

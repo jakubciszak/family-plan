@@ -9,6 +9,7 @@ use App\Allowance\Domain\Repository\PayoutRepositoryInterface;
 use App\Allowance\Domain\Service\MoneyLedger;
 use App\Allowance\Domain\ValueObject\AccountKind;
 use App\Allowance\Domain\ValueObject\Money;
+use App\Allowance\Domain\ValueObject\PayoutStatus;
 use App\Shared\Domain\ValueObject\Uuid;
 
 final readonly class WalletView
@@ -18,6 +19,31 @@ final readonly class WalletView
         private PayoutRepositoryInterface $payouts,
         private string $currency
     ) {
+    }
+
+    public function payoutsOf(Uuid $userId): array
+    {
+        $payouts = $this->payouts->ofUser($userId, null);
+
+        return [
+            'currency' => $this->currency,
+            'pending' => $this->ledger->balances($userId)[AccountKind::PENDING->value]->minorUnits(),
+            'paid' => array_sum(array_map(
+                static fn (Payout $payout) => $payout->status() === PayoutStatus::CONFIRMED
+                    ? $payout->amount()->minorUnits()
+                    : 0,
+                $payouts
+            )),
+            'awaitingConfirmation' => array_values(array_map(
+                static fn (Payout $payout) => [
+                    'id' => $payout->id()->value(),
+                    'amount' => $payout->amount()->minorUnits(),
+                    'note' => $payout->note(),
+                    'offeredAt' => $payout->offeredAt()->format('c'),
+                ],
+                array_filter($payouts, static fn (Payout $payout) => $payout->status() === PayoutStatus::AWAITING_CONFIRMATION)
+            )),
+        ];
     }
 
     public function of(Uuid $userId): array
