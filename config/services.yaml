@@ -269,3 +269,13 @@ services:
 
     App\ActionPlanning\Domain\Repository\ActionPlanRepositoryInterface:
         class: App\ActionPlanning\Infrastructure\Persistence\DoctrineActionPlanRepository
+
+    App\DayPlanning\Domain\Repository\CalendarEventRepositoryInterface:
+        class: App\DayPlanning\Infrastructure\Persistence\DoctrineCalendarEventRepository
+
+    App\DayPlanning\Domain\Repository\CalendarTagRepositoryInterface:
+        class: App\DayPlanning\Infrastructure\Persistence\DoctrineCalendarTagRepository
+
+    App\DayPlanning\Application\Service\ConflictConfirmation:
+        arguments:
+            $secret: '%kernel.secret%'

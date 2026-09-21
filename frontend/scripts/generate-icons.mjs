@@ -12,6 +12,8 @@ const ICONS = {
     calendar: 'calendar_month',
     check: 'check',
     checkCircle: 'check_circle',
+    chevronLeft: 'chevron_left',
+    chevronRight: 'chevron_right',
     close: 'close',
     copy: 'content_copy',
     darkMode: 'dark_mode',

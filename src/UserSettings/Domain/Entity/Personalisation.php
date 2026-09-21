@@ -25,7 +25,7 @@ class Personalisation
 
     public const HOME_START = ['week', 'tasks', 'standings'];
 
-    public const NAV_PLACES = ['tasks', 'action-plans', 'teams', 'allowance', 'personalise', 'task-types', 'bonus-rules', 'account', 'settings'];
+    public const NAV_PLACES = ['tasks', 'day-planning', 'action-plans', 'teams', 'allowance', 'personalise', 'task-types', 'bonus-rules', 'account', 'settings'];
 
     public const DEFAULT_THEME = '#2e7d5b';
 

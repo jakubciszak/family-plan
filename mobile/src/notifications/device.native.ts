@@ -36,7 +36,7 @@ export async function showDeviceNotification(notification: Notification, userId:
   if (!isCurrent()) return;
   await Notifications.scheduleNotificationAsync({
     identifier: notification.id,
-    content: { title: notification.subject ?? 'Family Plan', body: notification.message, data: { notificationId: notification.id, userId }, sound: 'default' },
+    content: { title: notification.subject ?? 'Family Plan', body: notification.message, data: { notificationId: notification.id, userId, ...(notification.parameters?.url === '/day-planning' ? { url: '/day-planning' } : {}) }, sound: 'default' },
     trigger: Platform.OS === 'android' ? { channelId: 'tasks' } : null,
   });
   if (!isCurrent()) await Notifications.dismissNotificationAsync(notification.id);
@@ -44,3 +44,17 @@ export async function showDeviceNotification(notification: Notification, userId:
 }
 
 export const clearDeviceNotifications = () => Notifications.dismissAllNotificationsAsync();
+
+export const subscribeCalendarNotificationOpen = (userId: string, onOpen: () => void) => {
+  let active = true;
+  const handle = (response: Notifications.NotificationResponse | null) => {
+    const data = response?.notification.request.content.data;
+    if (active && data?.userId === userId && data?.url === '/day-planning') {
+      onOpen();
+      void Notifications.clearLastNotificationResponseAsync().catch(() => undefined);
+    }
+  };
+  void Notifications.getLastNotificationResponseAsync().then(handle).catch(() => undefined);
+  const subscription = Notifications.addNotificationResponseReceivedListener(handle);
+  return () => { active = false; subscription.remove(); };
+};

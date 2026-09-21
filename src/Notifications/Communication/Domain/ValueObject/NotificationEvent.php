@@ -23,7 +23,19 @@ final readonly class NotificationEvent
 
     public const TASK_REMOVED = 'task_removed';
 
+    public const CALENDAR_CHANGED = 'calendar_changed';
+
+    public const CALENDAR_REMOVED = 'calendar_removed';
+
     private const CATALOG = [
+        self::CALENDAR_CHANGED => [
+            'defaultChannels' => [NotificationChannels::IN_APP, NotificationChannels::PUSH],
+            'configurable' => true,
+        ],
+        self::CALENDAR_REMOVED => [
+            'defaultChannels' => [NotificationChannels::IN_APP, NotificationChannels::PUSH],
+            'configurable' => true,
+        ],
         self::TASK_ASSIGNED => [
             'defaultChannels' => [NotificationChannels::IN_APP, NotificationChannels::PUSH],
             'configurable' => true,

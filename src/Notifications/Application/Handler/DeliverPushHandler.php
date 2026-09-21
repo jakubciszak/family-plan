@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Notifications\Application\Handler;
 
 use App\Notifications\Application\Command\DeliverPushCommand;
+use App\Notifications\Application\Service\CalendarNotificationAccess;
 use App\Notifications\Domain\Entity\PushSubscription;
 use App\Notifications\Domain\Port\PushDelivery;
 use App\Notifications\Domain\Port\PushSenderInterface;
@@ -20,16 +21,21 @@ final readonly class DeliverPushHandler
     public function __construct(
         private PushSubscriptionRepositoryInterface $subscriptions,
         private PushSenderInterface $sender,
-        private ClockInterface $clock
+        private ClockInterface $clock,
+        private ?CalendarNotificationAccess $calendarAccess = null
     ) {
     }
 
     public function __invoke(DeliverPushCommand $command): void
     {
+        if (isset($command->additionalParameters['_calendar']) && ($this->calendarAccess === null || !$this->calendarAccess->allows($command->userId, $command->additionalParameters))) {
+            return;
+        }
+
         $message = NotificationMessage::create(
             $command->message,
             $command->subject,
-            $command->additionalParameters
+            CalendarNotificationAccess::publicParameters($command->additionalParameters)
         );
 
         foreach ($this->subscriptions->findForUser(Uuid::fromString($command->userId)) as $subscription) {

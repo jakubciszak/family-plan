@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Notifications\Infrastructure\Adapter;
 
 use App\Notifications\Domain\Entity\InAppNotification;
+use App\Notifications\Application\Service\CalendarNotificationAccess;
 use App\Notifications\Domain\Port\NotificationPortInterface;
 use App\Notifications\Domain\Repository\InAppNotificationRepositoryInterface;
 use App\Notifications\Domain\ValueObject\NotificationChannel;
@@ -39,7 +40,7 @@ final readonly class InAppNotificationAdapter implements NotificationPortInterfa
             Uuid::fromString($recipient->value()),
             $message->content(),
             $message->subject(),
-            $message->additionalParameters(),
+            CalendarNotificationAccess::publicParameters($message->additionalParameters()),
             $this->clock->now()
         ));
     }

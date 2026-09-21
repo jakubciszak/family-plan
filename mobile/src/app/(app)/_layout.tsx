@@ -62,6 +62,7 @@ function AuthenticatedLayout() {
           </View>,
         }}>
         <Tabs.Screen name="index" options={{ title: t('nav.tasks'), headerShown: false }} />
+        <Tabs.Screen name="day-planning" options={{ title: t('dayPlanning.title') }} />
         <Tabs.Screen name="action-plans" options={{ title: t('actionPlans.title') }} />
         <Tabs.Screen name="teams" options={{ title: t('nav.teams') }} />
         <Tabs.Screen name="allowance" options={{ title: t('nav.allowance') }} />

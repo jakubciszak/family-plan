@@ -2,6 +2,7 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import TaskList from './pages/TaskList';
 import ActionPlans from './pages/ActionPlans';
+import DayPlanning from './pages/DayPlanning';
 import { storageKey as actionPlanStorageKey } from './services/actionPlanRun';
 import MemberView from './pages/MemberView';
 import Allowance from './pages/Allowance';
@@ -93,7 +94,7 @@ function App() {
     const [user, setUser] = React.useState(null);
     const [userPoints, setUserPoints] = React.useState(0);
     const [weekPoints, setWeekPoints] = React.useState(0);
-    const [currentPage, setCurrentPage] = React.useState('tasks');
+    const [currentPage, setCurrentPage] = React.useState(() => window.location.pathname === '/day-planning' ? 'day-planning' : 'tasks');
     const [showRegister, setShowRegister] = React.useState(false);
     const [inviteToken, setInviteToken] = React.useState(null);
     const [administersTeam, setAdministersTeam] = React.useState(false);
@@ -158,7 +159,7 @@ function App() {
             .then(data => {
                 setUser(data);
                 try {
-                    if (localStorage.getItem(actionPlanStorageKey(data.id))) setCurrentPage('action-plans');
+                    if (window.location.pathname !== '/day-planning' && localStorage.getItem(actionPlanStorageKey(data.id))) setCurrentPage('action-plans');
                 } catch {}
                 setIsAuthenticated(true);
                 refreshTeamAdminFlag();
@@ -219,6 +220,7 @@ function App() {
 
     const allNavItems = {
         tasks: { id: 'tasks', icon: 'tasks', label: t('nav.tasks') },
+        'day-planning': { id: 'day-planning', icon: 'calendar', label: t('dayPlanning.title') },
         'action-plans': { id: 'action-plans', icon: 'actionPlans', label: t('actionPlans.title'), shortLabel: t('actionPlans.shortTitle') },
         teams: { id: 'teams', icon: 'teams', label: t('nav.teams') },
         allowance: { id: 'allowance', icon: 'wallet', label: t('nav.allowance'), shortLabel: t('nav.allowanceShort') },
@@ -229,7 +231,9 @@ function App() {
         settings: { id: 'settings', icon: 'settings', label: t('nav.settings') },
     };
 
-    const chosenNav = own?.navigation?.length ? own.navigation : Object.keys(allNavItems);
+    const chosenNav = own?.navigation?.length
+        ? own.navigation.includes('day-planning') ? own.navigation : [own.navigation[0], 'day-planning', ...own.navigation.slice(1)]
+        : Object.keys(allNavItems);
 
     const navItems = [
         ...chosenNav
@@ -274,6 +278,7 @@ function App() {
 
             </>}
             <main className="app-main">
+                {currentPage === 'day-planning' && <DayPlanning key={user.id} user={user} />}
                 {currentPage === 'action-plans' && <ActionPlans key={user.id} user={user} onFocusChange={setActionFocus}
                     taskPlan={taskPlan} onConsumeTaskPlan={() => setTaskPlan(null)}
                     onTaskCompleted={() => refreshPoints(user.id)}
