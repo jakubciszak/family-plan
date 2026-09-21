@@ -165,3 +165,51 @@
     .day-inline-tag { padding: 12px; }
     .day-inline-tag .day-actions { align-items: stretch; flex-direction: column; }
 }
+
+.day-picker-field { min-width: 0; }
+.day-picker-input { display: flex; align-items: center; min-height: 46px; border: 1px solid var(--md-sys-color-outline); border-radius: 12px; background: var(--md-sys-color-surface); overflow: hidden; }
+.day-picker-input:focus-within { outline: 2px solid var(--md-sys-color-primary); outline-offset: 1px; }
+.day-picker-input > input { width: 100%; min-width: 0; min-height: 44px; border: 0; border-radius: 0; padding: 10px 12px; background: transparent; font-variant-numeric: tabular-nums; outline: none; }
+.day-picker-input > input:focus-visible { outline: none; }
+.day-picker-input > button { display: grid; place-items: center; flex: 0 0 44px; align-self: stretch; border: 0; border-radius: 0; background: var(--md-sys-color-surface-container-low); color: var(--md-sys-color-primary); }
+.day-picker-field--compact { width: 176px; flex: 0 1 176px; }
+.day-picker-field--compact .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+.day-picker-field--compact input { font-size: .85rem; padding: 8px; }
+.day-picker-dialog { border: 0; padding: 0; margin: auto; width: min(420px, calc(100vw - 24px)); max-height: calc(100dvh - 32px); overflow-y: auto; border-radius: 28px; color: var(--md-sys-color-on-surface); background: var(--md-sys-color-surface-container-high); box-shadow: 0 16px 60px #0005; }
+.day-picker-dialog::backdrop { background: #0008; }
+.day-picker-head { padding: 24px 24px 18px; background: var(--md-sys-color-primary-container); color: var(--md-sys-color-on-primary-container); }
+.day-picker-head .day-eyebrow { color: inherit; font-size: .7rem; margin-bottom: 10px !important; }
+.day-picker-head h2 { font-size: 1.8rem; font-weight: 500; }
+.day-picker-selected-time { font-size: 1.1rem; margin-top: 6px !important; font-variant-numeric: tabular-nums; }
+.day-picker-tabs { display: flex; padding: 6px; gap: 6px; border-bottom: 1px solid var(--md-sys-color-outline-variant); }
+.day-picker-tabs button { flex: 1; min-height: 42px; border: 0; border-radius: 20px; color: var(--md-sys-color-on-surface-variant); background: transparent; }
+.day-picker-tabs button[aria-selected=true] { color: var(--md-sys-color-on-secondary-container); background: var(--md-sys-color-secondary-container); font-weight: 600; }
+.day-picker-body { padding: 16px 20px 0; }
+.day-picker-month { display: flex; align-items: center; gap: 4px; margin-bottom: 16px; }
+.day-picker-month select, .day-picker-month input { min-width: 0; min-height: 40px; border: 0; background: var(--md-sys-color-surface-container); color: var(--md-sys-color-on-surface); border-radius: 8px; padding: 6px; }
+.day-picker-month select { flex: 1; }
+.day-picker-month input { width: 76px; }
+.day-picker-arrow { display: grid; place-items: center; width: 36px; height: 40px; flex-shrink: 0; padding: 0; border: 0; border-radius: 20px; background: transparent; color: var(--md-sys-color-on-surface-variant); }
+.day-picker-calendar [role=row] { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 2px; }
+.day-picker-weekdays span { font-size: .7rem; color: var(--md-sys-color-on-surface-variant); text-align: center; padding-bottom: 10px; }
+.day-picker-calendar button { width: 100%; min-height: 42px; border: 1px solid transparent; border-radius: 50%; font-size: .875rem; color: var(--md-sys-color-on-surface); background: transparent; }
+.day-picker-calendar button.is-other-month { color: var(--md-sys-color-on-surface-variant); opacity: .6; }
+.day-picker-calendar button[aria-current=date] { border-color: var(--md-sys-color-primary); }
+.day-picker-calendar button[aria-selected=true] { background: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary); opacity: 1; }
+.day-picker-calendar button:disabled { opacity: .25; }
+.day-picker-today { margin-top: 8px; padding: 9px 14px; min-height: 40px; border: 0; border-radius: 20px; background: transparent; color: var(--md-sys-color-primary); font-weight: 600; }
+.day-picker-time { display: flex; justify-content: center; gap: 12px; padding: 6px 12px; }
+.day-picker-time-column { min-width: 0; flex: 1; }
+.day-picker-time-column h3 { font-size: .8rem; text-align: center; margin-bottom: 12px; color: var(--md-sys-color-on-surface-variant); }
+.day-picker-time-list { display: flex; flex-direction: column; gap: 4px; max-height: 248px; overflow-y: auto; padding: 5px; border: 1px solid var(--md-sys-color-outline-variant); border-radius: 18px; background: var(--md-sys-color-surface-container); scroll-padding: 8px; overscroll-behavior: contain; }
+.day-picker-time-list button { min-height: 46px; flex-shrink: 0; border: 0; border-radius: 12px; color: var(--md-sys-color-on-surface-variant); background: transparent; font-size: 1.4rem; font-variant-numeric: tabular-nums; }
+.day-picker-time-list button[aria-selected=true] { background: var(--md-sys-color-primary-container); color: var(--md-sys-color-on-primary-container); font-weight: 600; }
+.day-picker-colon { font-size: 2rem; align-self: center; padding-top: 22px; }
+.day-picker-actions { display: flex; justify-content: flex-end; gap: 8px; padding: 18px 20px; }
+@media (max-width: 420px) {
+    .day-picker-field--compact { width: 160px; flex-basis: 160px; }
+    .day-picker-head { padding: 20px; }
+    .day-picker-body { padding: 14px 12px 0; }
+    .day-picker-month select { max-width: 116px; }
+    .day-picker-calendar button { min-height: 40px; }
+}

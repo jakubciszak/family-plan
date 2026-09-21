@@ -723,6 +723,7 @@
     "taskTypePlanHint": "Choose a plan from this team. To use a private plan, first share it with the team in Action plans."
   },
   "dayPlanning": {
+    "picker": {"datePlaceholder": "MM/DD/YYYY", "timePlaceholder": "HH:mm", "dateTimePlaceholder": "MM/DD/YYYY HH:mm", "open": "Choose: {{field}}", "parts": "Date and time section", "date": "Date", "time": "Time", "hour": "Hours", "minute": "Minutes", "month": "Month", "year": "Year", "previousMonth": "Previous month", "nextMonth": "Next month", "choose": "Choose", "invalid": "Enter a valid date and time in the shown format."},
     "createTag": "Create tag",
     "savingTag": "Creating tag…",
     "cancelTag": "Cancel tag creation",

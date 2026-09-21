@@ -14,6 +14,7 @@ import { listMembers, listTeams, type Member, type Team } from '@/api/teams';
 import { useAuth } from '@/auth/auth-context';
 import ChoicePicker from '@/components/action-plans/choice-picker';
 import EventEditor from '@/components/day-planning/event-editor';
+import PlanningDateTimeField from '@/components/day-planning/date-time-field';
 import TagManager from '@/components/day-planning/tag-manager';
 import { TagColorDot } from '@/components/day-planning/tag-colors';
 import WeekCalendar from '@/components/day-planning/week-calendar';
@@ -202,7 +203,10 @@ export default function DayPlanningScreen() {
     return `${formatter.format(new Date(start))} – ${formatter.format(new Date(end))}`;
   };
   const dateTitle = (value: string) => new Intl.DateTimeFormat(i18n.language, { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date(`${value}T12:00`));
-  const plannerField = (key: string, value: string, change: (value: string) => void) => <TextInput mode="outlined" label={t(`dayPlanning.${key}`)} accessibilityLabel={t(`dayPlanning.${key}`)} value={value} onChangeText={(next) => { change(next); setSuggestions(null); request.current += 1; setLoading(false); }} />;
+  const changePlanner = (change: (value: string) => void) => (next: string) => { change(next); setSuggestions(null); request.current += 1; setLoading(false); };
+  const plannerField = (key: string, value: string, change: (value: string) => void) => <TextInput mode="outlined" label={t(`dayPlanning.${key}`)} accessibilityLabel={t(`dayPlanning.${key}`)} value={value} onChangeText={changePlanner(change)} disabled={saving || (view === 'PLAN' && loading)} />;
+  const plannerPicker = (key: string, value: string, change: (value: string) => void, mode: 'date' | 'time', minimumDate?: string) =>
+    <PlanningDateTimeField label={t(`dayPlanning.${key}`)} mode={mode} value={value} onChange={changePlanner(change)} minimumDate={minimumDate} disabled={saving || (view === 'PLAN' && loading)} />;
   return <SafeAreaView edges={['left', 'right']} style={{ flex: 1, backgroundColor: ground }}>
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView ref={scroll} nestedScrollEnabled keyboardShouldPersistTaps="handled" contentInsetAdjustmentBehavior="automatic" contentContainerStyle={{ padding: 16, gap: 16, paddingBottom: 36 }}
@@ -261,10 +265,10 @@ export default function DayPlanningScreen() {
                 <IconButton icon="chevron-right" accessibilityLabel={t('dayPlanning.next')} disabled={!isDay(date)} onPress={() => setDate(shiftDay(date, display === 'WEEK' ? 7 : days))} />
               </View>
             </>}
-            {plannerField('calendarDate', date, setDate)}
+            {plannerPicker('calendarDate', date, setDate, 'date')}
             {view === 'PLAN' ? <>
-              {plannerField('planningEnd', planEnd, setPlanEnd)}{plannerField('duration', duration, setDuration)}
-              {plannerField('windowStart', windowStart, setWindowStart)}{plannerField('windowEnd', windowEnd, setWindowEnd)}{plannerField('timeZone', zone, setZone)}
+              {plannerPicker('planningEnd', planEnd, setPlanEnd, 'date', date)}{plannerField('duration', duration, setDuration)}
+              {plannerPicker('windowStart', windowStart, setWindowStart, 'time')}{plannerPicker('windowEnd', windowEnd, setWindowEnd, 'time')}{plannerField('timeZone', zone, setZone)}
               <Text>{t('dayPlanning.plannerHint')}</Text>
               <Button mode="contained" onPress={() => void search()} loading={loading} disabled={loading || !!scopeError}>{t('dayPlanning.findSlots')}</Button>
               {suggestions && <View testID="day-suggestions" style={{ gap: 12 }}>

@@ -33,7 +33,7 @@ const install = async (page, world) => {
   });
   return state;
 };
-const open = async (app) => { await app.signIn(); await app.goTo('Plan dnia'); await app.field('Data (RRRR-MM-DD)').fill(DAY); };
+const open = async (app) => { await app.signIn(); await app.goTo('Plan dnia'); await app.field('Data').fill(DAY); };
 const chooseTeam = async (page) => { await button(page, 'Zespół').click(); await button(page, TEAM.name).click(); };
 
 test('keeps busy placeholders under tag filtering without offering private details', async ({ app, page, world }) => {
@@ -47,7 +47,7 @@ test('keeps busy placeholders under tag filtering without offering private detai
 
 test('creates an overnight private recurrence with stable idempotency across failure and confirmed conflict', async ({ app, page, world }) => {
   const state = await install(page, world); await open(app); await chooseTeam(page); await button(page, 'Nowe wydarzenie').click();
-  await app.field('Tytuł wydarzenia').fill('Nocna podróż'); await app.field('Strefa czasowa IANA').fill('Europe/Warsaw'); await app.field('Godzina początku (GG:MM)').fill('23:00'); await app.field('Data końca (RRRR-MM-DD)').fill('2026-09-22'); await app.field('Godzina końca (GG:MM)').fill('01:00');
+  await app.field('Tytuł wydarzenia').fill('Nocna podróż'); await app.field('Strefa czasowa IANA').fill('Europe/Warsaw'); await app.field('Godzina początku').fill('23:00'); await app.field('Data końca').fill('2026-09-22'); await app.field('Godzina końca').fill('01:00');
   await button(page, 'Powtarzanie').click(); await button(page, 'Co kilka tygodni').click(); await page.getByRole('checkbox', { name: 'Zaproś: Bartek Kowalski' }).click();
   state.failCreate = true; await button(page, 'Zapisz').click(); await expect(page.getByRole('alert')).toContainText('Sprawdź połączenie');
   state.failCreate = false; state.conflict = true; await button(page, 'Zapisz').click(); await button(page, 'Zapisz mimo kolizji').click();
@@ -68,9 +68,9 @@ test('edits a single occurrence with version checks and preserves invitee detail
 
 test('includes the author and all calendars in planning and prefills a selected slot', async ({ app, page, world }) => {
   const state = await install(page, world); await open(app); await chooseTeam(page); await page.getByText('Praca', { exact: true }).click(); await page.getByText('Znajdź termin', { exact: true }).click();
-  await page.getByRole('checkbox', { name: 'Pokaż osobę: Bartek Kowalski' }).click(); await app.field('Ostatni dzień poszukiwań (RRRR-MM-DD)').fill('2026-09-27'); await app.field('Strefa czasowa IANA').fill('Europe/Warsaw'); await button(page, 'Znajdź wspólny termin').click(); await expect(page.getByTestId('day-suggestions')).toBeVisible();
+  await page.getByRole('checkbox', { name: 'Pokaż osobę: Bartek Kowalski' }).click(); await app.field('Ostatni dzień poszukiwań').fill('2026-09-27'); await app.field('Strefa czasowa IANA').fill('Europe/Warsaw'); await button(page, 'Znajdź wspólny termin').click(); await expect(page.getByTestId('day-suggestions')).toBeVisible();
   const query = state.calls.find((call) => call.path.endsWith('/planning/suggestions')).body; expect(query.personIds).toContain(world.me.id); expect(query.personIds).toContain(world.users[1].id); expect(query).not.toHaveProperty('tagIds');
-  await button(page, 'Wybierz termin').click(); await expect(app.field('Godzina początku (GG:MM)')).toHaveValue('15:30'); await expect(app.field('Godzina końca (GG:MM)')).toHaveValue('16:30'); await expect(page.getByRole('checkbox', { name: 'Zaproś: Bartek Kowalski' })).toBeChecked();
+  await button(page, 'Wybierz termin').click(); await expect(app.field('Godzina początku')).toHaveValue('15:30'); await expect(app.field('Godzina końca')).toHaveValue('16:30'); await expect(page.getByRole('checkbox', { name: 'Zaproś: Bartek Kowalski' })).toBeChecked();
 });
 
 test('manages tags and reloads stale versions while preserving rejected drafts', async ({ app, page, world }) => {
@@ -94,7 +94,7 @@ test('shows cancelled exceptions and requires confirmation before resetting a se
   await expect(page.getByText('2026-09-28 09:00 · Anulowane')).toHaveCount(0);
   const restored = state.calls.find((call) => call.method === 'DELETE' && call.path.includes('/exceptions/'));
   expect(restored.headers['if-match']).toBe('"3"');
-  state.needsReset = true; await app.field('Godzina początku (GG:MM)').fill('08:30'); await button(page, 'Zapisz').click();
+  state.needsReset = true; await app.field('Godzina początku').fill('08:30'); await button(page, 'Zapisz').click();
   await expect(page.getByText('Ta zmiana usunie wszystkie wyjątki tej serii, w tym przeniesione i anulowane dni. Pojedyncze wystąpienia będą znów wynikać z nowego harmonogramu.')).toBeVisible();
   await button(page, 'Usuń wyjątki i zapisz').click(); await expect(page.getByTestId('day-event-' + state.events[0].id)).toBeVisible();
   expect(state.calls.filter((call) => call.method === 'PATCH').at(-1).body.resetExceptions).toBe(true);
@@ -103,10 +103,10 @@ test('shows cancelled exceptions and requires confirmation before resetting a se
 test('rejects a nonexistent DST time and lets a user choose the second autumn occurrence', async ({ app, page, world }) => {
   const state = await install(page, world); await open(app); await button(page, 'Nowe wydarzenie').click();
   await app.field('Tytuł wydarzenia').fill('Zmiana czasu'); await app.field('Strefa czasowa IANA').fill('Europe/Warsaw');
-  await app.field('Data początku (RRRR-MM-DD)').fill('2026-03-29'); await app.field('Data końca (RRRR-MM-DD)').fill('2026-03-29');
-  await app.field('Godzina początku (GG:MM)').fill('02:30'); await app.field('Godzina końca (GG:MM)').fill('03:30'); await button(page, 'Zapisz').click();
+  await app.field('Data początku').fill('2026-03-29'); await app.field('Data końca').fill('2026-03-29');
+  await app.field('Godzina początku').fill('02:30'); await app.field('Godzina końca').fill('03:30'); await button(page, 'Zapisz').click();
   await expect(page.getByRole('alert')).toContainText('godzina musi istnieć'); expect(state.calls.filter((call) => call.method === 'POST' && call.path.endsWith('/events'))).toHaveLength(0);
-  await app.field('Data początku (RRRR-MM-DD)').fill('2026-10-25'); await app.field('Data końca (RRRR-MM-DD)').fill('2026-10-25');
+  await app.field('Data początku').fill('2026-10-25'); await app.field('Data końca').fill('2026-10-25');
   await button(page, 'Godzina podczas zmiany czasu').click(); await button(page, 'Drugie wystąpienie godziny (UTC+01:00)').click(); await button(page, 'Zapisz').click();
   expect(state.calls.find((call) => call.method === 'POST' && call.path.endsWith('/events')).body.schedule).toMatchObject({ utcOffset: '+01:00', durationMinutes: 60 });
 });
@@ -127,7 +127,7 @@ test.describe('weekly calendar', () => {
 
   test('switches from the selected day to a Monday–Sunday week and preserves the list range', async ({ app, page, world }) => {
     const state = await install(page, world);
-    await open(app); await app.field('Data (RRRR-MM-DD)').fill('2026-09-23');
+    await open(app); await app.field('Data').fill('2026-09-23');
     await button(page, 'Kalendarz tygodniowy').click();
     await expect(page.getByTestId('day-week-calendar')).toBeVisible();
     await expect(page.getByTestId(/^week-day-/)).toHaveCount(7);
@@ -224,14 +224,14 @@ test.describe('tag colors and inline creation', () => {
   test('creates and selects a personal tag without losing the event draft', async ({ app, page, world }) => {
     const state = await install(page, world); await open(app); await button(page, 'Nowe wydarzenie').click();
     await app.field('Tytuł wydarzenia').fill('Próba chóru'); await app.field('Opis').fill('Nowy utwór');
-    await app.field('Godzina początku (GG:MM)').fill('16:00'); await app.field('Godzina końca (GG:MM)').fill('17:30');
+    await app.field('Godzina początku').fill('16:00'); await app.field('Godzina końca').fill('17:30');
     await button(page, 'Nowy tag').click(); await expect(button(page, 'Zapisz')).toBeDisabled();
     await app.field('Nazwa tagu').fill('  Muzyka  '); await page.getByRole('radio', { name: 'Fioletowy', exact: true }).click();
     await button(page, 'Utwórz tag').click();
     await expect(button(page, 'Muzyka')).toBeVisible();
     await expect(button(page, 'Muzyka').getByText('✓')).toBeVisible();
     await expect(app.field('Tytuł wydarzenia')).toHaveValue('Próba chóru'); await expect(app.field('Opis')).toHaveValue('Nowy utwór');
-    await expect(app.field('Godzina początku (GG:MM)')).toHaveValue('16:00');
+    await expect(app.field('Godzina początku')).toHaveValue('16:00');
     expect(state.calls.find((call) => call.path.endsWith('/tags') && call.method === 'POST').body).toEqual({ name: 'Muzyka', color: '#86549e', scope: 'PERSONAL', teamId: null });
     await button(page, 'Zapisz').click();
     await expect.poll(() => state.calls.find((call) => call.path.endsWith('/events') && call.method === 'POST')?.body.tagIds).toEqual(['new-tag']);
@@ -281,5 +281,63 @@ test.describe('tag colors and inline creation', () => {
     await expect(app.field('Tytuł wydarzenia')).toHaveValue('Spotkanie'); await button(page, 'Zapisz').click();
     await expect.poll(() => state.calls.find((call) => call.path.endsWith('/events') && call.method === 'POST')?.body.tagIds).toEqual([]);
     expect(state.calls.find((call) => call.path.endsWith('/events') && call.method === 'POST').body.teamId).toBe(null);
+  });
+});
+
+test.describe('date and time pickers', () => {
+  test('uses browser pickers, preserves cancellation and saves minute precision with recurrence until', async ({ app, page, world }, testInfo) => {
+    const state = await install(page, world);
+    world.personalisation.themeMode = 'dark';
+    await page.setViewportSize({ width: 320, height: 740 });
+    await open(app);
+    await expect(app.field('Data')).toHaveAttribute('type', 'date');
+    await button(page, 'Nowe wydarzenie').click();
+    await app.field('Tytuł wydarzenia').fill('Próba z minutami');
+    await app.field('Strefa czasowa IANA').fill('Europe/Warsaw');
+    for (const label of ['Data początku', 'Data końca']) await expect(app.field(label)).toHaveAttribute('type', 'date');
+    for (const label of ['Godzina początku', 'Godzina końca']) await expect(app.field(label)).toHaveAttribute('type', 'time');
+    await app.field('Data początku').click();
+    await page.keyboard.press('Escape');
+    await expect(app.field('Data początku')).toHaveValue(DAY);
+    await app.field('Godzina początku').fill('09:37');
+    await app.field('Godzina końca').fill('10:43');
+    await button(page, 'Powtarzanie').click();
+    await button(page, 'Co kilka dni').click();
+    await button(page, 'Zakończenie cyklu').click();
+    await button(page, 'Do wskazanej daty').click();
+    await expect(app.field('Ostatni dzień cyklu')).toHaveAttribute('type', 'date');
+    await app.field('Ostatni dzień cyklu').fill('2026-11-29');
+    await app.field('Data początku').scrollIntoViewIfNeeded();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(320);
+    await page.screenshot({ path: testInfo.outputPath('date-pickers-mobile-dark.png') });
+    await button(page, 'Zapisz').click();
+    await expect(page.getByTestId('day-event-new-event')).toBeVisible();
+    expect(state.calls.find((call) => call.method === 'POST' && call.path.endsWith('/events')).body).toMatchObject({
+      schedule: { localStart: DAY + 'T09:37', durationMinutes: 66, timeZone: 'Europe/Warsaw' },
+      recurrence: { frequency: 'DAILY', until: '2026-11-29' },
+    });
+  });
+
+  test('applies picked planning dates and arbitrary-minute windows and locks fields during a search', async ({ app, page, world }) => {
+    const state = await install(page, world);
+    await open(app);
+    await chooseTeam(page);
+    await page.getByText('Znajdź termin', { exact: true }).click();
+    await app.field('Data').fill('2026-10-25');
+    await app.field('Ostatni dzień poszukiwań').fill('2026-10-31');
+    await app.field('Szukaj od godziny').fill('08:17');
+    await app.field('Szukaj do godziny').fill('19:43');
+    await app.field('Strefa czasowa IANA').fill('Europe/Warsaw');
+    let release;
+    const gate = new Promise((resolve) => { release = resolve; });
+    await page.route('**/api/day-planning/planning/suggestions', async (route) => { await gate; await route.fallback(); });
+    await button(page, 'Znajdź wspólny termin').click();
+    for (const label of ['Data', 'Ostatni dzień poszukiwań', 'Szukaj od godziny', 'Szukaj do godziny']) await expect(app.field(label)).toBeDisabled();
+    release();
+    await expect(page.getByTestId('day-suggestions')).toBeVisible();
+    expect(state.calls.find((call) => call.path.endsWith('/planning/suggestions')).body).toMatchObject({
+      from: '2026-10-24T22:00:00.000Z', to: '2026-10-31T23:00:00.000Z', windowStart: '08:17', windowEnd: '19:43', timeZone: 'Europe/Warsaw',
+    });
+    await expect(app.field('Data')).toBeEnabled();
   });
 });
