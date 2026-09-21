@@ -8,7 +8,7 @@ export default function NativePicker({ value, mode, minimumDate, onValueChange, 
   const { t } = useTranslation();
   const theme = useTheme();
   const props = { initialDate: value.toISOString(), onDateSelected: onValueChange, onDismissRequest: onDismiss,
-    color: theme.colors.primary, confirmButtonLabel: t('common.confirm'), dismissButtonLabel: t('common.cancel') };
+    confirmButtonLabel: t('common.confirm'), dismissButtonLabel: t('common.cancel') };
   return <Host colorScheme={theme.dark ? 'dark' : 'light'} seedColor={theme.colors.primary}>
     {mode === 'date' ? <DatePickerDialog {...props} selectableDates={minimumDate ? { start: minimumDate } : undefined} /> : <TimePickerDialog {...props} is24Hour />}
   </Host>;
