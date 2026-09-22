@@ -22,7 +22,9 @@
     "pushAnnouncement": "Send a notification",
     "pushAnnouncementShort": "Send",
     "schoolTimetable": "School timetable",
-    "schoolTimetableShort": "Timetable"
+    "schoolTimetableShort": "Timetable",
+    "userAccounts": "Accounts & passwords",
+    "userAccountsShort": "Accounts"
   },
   "auth": {
     "login": "Login",
@@ -725,14 +727,42 @@
     "taskTypePlanHint": "Choose a plan from this team. To use a private plan, first share it with the team in Action plans."
   },
   "dayPlanning": {
-    "picker": {"datePlaceholder": "MM/DD/YYYY", "timePlaceholder": "HH:mm", "dateTimePlaceholder": "MM/DD/YYYY HH:mm", "open": "Choose: {{field}}", "parts": "Date and time section", "date": "Date", "time": "Time", "hour": "Hours", "minute": "Minutes", "month": "Month", "year": "Year", "previousMonth": "Previous month", "nextMonth": "Next month", "choose": "Choose", "invalid": "Enter a valid date and time in the shown format."},
+    "picker": {
+      "datePlaceholder": "MM/DD/YYYY",
+      "timePlaceholder": "HH:mm",
+      "dateTimePlaceholder": "MM/DD/YYYY HH:mm",
+      "open": "Choose: {{field}}",
+      "parts": "Date and time section",
+      "date": "Date",
+      "time": "Time",
+      "hour": "Hours",
+      "minute": "Minutes",
+      "month": "Month",
+      "year": "Year",
+      "previousMonth": "Previous month",
+      "nextMonth": "Next month",
+      "choose": "Choose",
+      "invalid": "Enter a valid date and time in the shown format."
+    },
     "createTag": "Create tag",
     "savingTag": "Creating tag…",
     "cancelTag": "Cancel tag creation",
     "finishTagDraft": "Create the tag or cancel its creation before saving the event.",
     "teamTagAdminOnly": "Team events can only use team tags. Only a team administrator can create new team tags.",
     "tagContextChanged": "The tag was created for the previous selection. Check the current team and selected tags.",
-    "tagColors": {"green": "Green", "blue": "Blue", "purple": "Purple", "orange": "Orange", "gold": "Gold", "red": "Red", "pink": "Pink", "teal": "Teal", "gray": "Gray", "indigo": "Indigo", "current": "Current color"},
+    "tagColors": {
+      "green": "Green",
+      "blue": "Blue",
+      "purple": "Purple",
+      "orange": "Orange",
+      "gold": "Gold",
+      "red": "Red",
+      "pink": "Pink",
+      "teal": "Teal",
+      "gray": "Gray",
+      "indigo": "Indigo",
+      "current": "Current color"
+    },
     "calendarView": "Calendar display",
     "listView": "List",
     "weekView": "Weekly calendar",
@@ -877,8 +907,7 @@
     "archivedTag": "Archived tag",
     "tagCatalog": "Tag catalog",
     "personalCatalog": "Personal tags"
-  }
-,
+  },
   "schoolTimetable": {
     "title": "Mobidziennik timetable",
     "description": "Pull the lesson plan of your children from mobidziennik into their calendars.",
@@ -913,5 +942,23 @@
     "tagHint": "Imported lessons carry this tag in the calendar, which makes them easy to filter.",
     "noTag": "No tag",
     "lastImport": "Last import: {{at}}"
+  },
+  "userAccounts": {
+    "title": "Accounts & passwords",
+    "description": "Set a new password for someone who forgot theirs. It takes effect immediately.",
+    "resetPassword": "Set password",
+    "resetHeadline": "New password for {{name}}",
+    "resetWarning": "Once saved, {{email}} can only sign in with the new password. Pass it on over a secure channel and ask them to change it after signing in.",
+    "newPassword": "New password",
+    "confirmPassword": "Repeat password",
+    "confirmReset": "Save password",
+    "passwordTooShort": "Password must be at least {{count}} characters long.",
+    "passwordsDoNotMatch": "Passwords do not match.",
+    "passwordReset": "Password for {{name}} has been set.",
+    "resetError": "Could not set the password.",
+    "forbidden": "Only an administrator can set other people’s passwords.",
+    "loadError": "Could not load the account list.",
+    "accessDeniedTitle": "Access denied",
+    "accessDeniedBody": "This page is available to administrators only."
   }
 }

@@ -6,9 +6,12 @@ namespace App\Presentation\Api;
 
 use App\PointsManagement\Domain\Repository\UserWalletRepositoryInterface;
 use App\PointsManagement\Domain\Service\PointsLedger;
+use App\Presentation\Api\Dto\User\ResetPasswordRequest;
 use App\Shared\Domain\ValueObject\Uuid;
 use App\UserManagement\Application\Command\CreateUserCommand;
+use App\UserManagement\Application\Command\ResetUserPasswordCommand;
 use App\UserManagement\Application\Handler\CreateUserHandler;
+use App\UserManagement\Application\Handler\ResetUserPasswordHandler;
 use App\UserManagement\Domain\Entity\User;
 use App\UserManagement\Domain\Repository\UserRepositoryInterface;
 use OpenApi\Attributes as OA;
@@ -16,7 +19,9 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 #[Route('/api/users', name: 'api_user_')]
 #[OA\Tag(name: 'Users')]
@@ -26,7 +31,8 @@ class UserApiController extends AbstractController
         private readonly UserRepositoryInterface $userRepository,
         private readonly CreateUserHandler $createUserHandler,
         private readonly UserWalletRepositoryInterface $userWalletRepository,
-        private readonly PointsLedger $ledger
+        private readonly PointsLedger $ledger,
+        private readonly ResetUserPasswordHandler $resetUserPassword
     ) {
     }
 
@@ -212,6 +218,39 @@ class UserApiController extends AbstractController
             'balance' => $balance,
             'accounts' => $this->ledger->balances(Uuid::fromString($id)),
         ]);
+    }
+
+    #[Route('/{id}/reset-password', name: 'reset_password', methods: ['POST'])]
+    #[IsGranted('ROLE_ADMIN')]
+    #[OA\Post(
+        path: '/api/users/{id}/reset-password',
+        summary: 'Reset the password of any account (administrators only)',
+        tags: ['Users']
+    )]
+    #[OA\Parameter(
+        name: 'id',
+        in: 'path',
+        required: true,
+        description: 'User UUID',
+        schema: new OA\Schema(type: 'string', format: 'uuid')
+    )]
+    #[OA\RequestBody(
+        required: true,
+        content: new OA\JsonContent(
+            required: ['newPassword'],
+            properties: [
+                new OA\Property(property: 'newPassword', type: 'string', format: 'password', minLength: 8)
+            ]
+        )
+    )]
+    #[OA\Response(response: 200, description: 'Password reset')]
+    #[OA\Response(response: 403, description: 'Caller is not an administrator')]
+    #[OA\Response(response: 404, description: 'User not found')]
+    public function resetPassword(string $id, #[MapRequestPayload] ResetPasswordRequest $request): JsonResponse
+    {
+        ($this->resetUserPassword)(new ResetUserPasswordCommand($id, $request->newPassword));
+
+        return $this->json(['message' => 'Password reset successfully']);
     }
 
     private function serializeUser(User $user): array

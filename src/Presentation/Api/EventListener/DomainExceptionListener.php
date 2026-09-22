@@ -8,6 +8,7 @@ use App\TaskManagement\Domain\Exception\UnauthorizedTaskActionException;
 use App\TeamManagement\Domain\Exception\InvitationNotFoundException;
 use App\TeamManagement\Domain\Exception\TeamNotFoundException;
 use App\TeamManagement\Domain\Exception\UnauthorizedTeamActionException;
+use App\UserManagement\Domain\Exception\UserNotFound;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
@@ -56,6 +57,7 @@ final readonly class DomainExceptionListener
         return match (true) {
             $exception instanceof \App\ActionPlanning\Domain\Exception\ActionPlanNotFound,
             $exception instanceof TeamNotFoundException,
+            $exception instanceof UserNotFound,
             $exception instanceof InvitationNotFoundException => Response::HTTP_NOT_FOUND,
             $exception instanceof UnauthorizedTeamActionException,
             $exception instanceof UnauthorizedTaskActionException => Response::HTTP_FORBIDDEN,

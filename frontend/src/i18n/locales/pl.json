@@ -22,7 +22,9 @@
     "pushAnnouncement": "Wyślij powiadomienie",
     "pushAnnouncementShort": "Wyślij",
     "schoolTimetable": "Plan lekcji",
-    "schoolTimetableShort": "Plan lekcji"
+    "schoolTimetableShort": "Plan lekcji",
+    "userAccounts": "Konta i hasła",
+    "userAccountsShort": "Konta"
   },
   "auth": {
     "login": "Zaloguj",
@@ -725,14 +727,42 @@
     "taskTypePlanHint": "Wybierz plan tego zespołu. Aby użyć prywatnego planu, najpierw zmień go na zespołowy w „Planach działania”."
   },
   "dayPlanning": {
-    "picker": {"datePlaceholder": "DD.MM.RRRR", "timePlaceholder": "GG:mm", "dateTimePlaceholder": "DD.MM.RRRR GG:mm", "open": "Wybierz: {{field}}", "parts": "Część daty i godziny", "date": "Data", "time": "Godzina", "hour": "Godziny", "minute": "Minuty", "month": "Miesiąc", "year": "Rok", "previousMonth": "Poprzedni miesiąc", "nextMonth": "Następny miesiąc", "choose": "Wybierz", "invalid": "Wpisz poprawną datę i godzinę w podanym formacie."},
+    "picker": {
+      "datePlaceholder": "DD.MM.RRRR",
+      "timePlaceholder": "GG:mm",
+      "dateTimePlaceholder": "DD.MM.RRRR GG:mm",
+      "open": "Wybierz: {{field}}",
+      "parts": "Część daty i godziny",
+      "date": "Data",
+      "time": "Godzina",
+      "hour": "Godziny",
+      "minute": "Minuty",
+      "month": "Miesiąc",
+      "year": "Rok",
+      "previousMonth": "Poprzedni miesiąc",
+      "nextMonth": "Następny miesiąc",
+      "choose": "Wybierz",
+      "invalid": "Wpisz poprawną datę i godzinę w podanym formacie."
+    },
     "createTag": "Utwórz tag",
     "savingTag": "Tworzenie tagu…",
     "cancelTag": "Anuluj tworzenie tagu",
     "finishTagDraft": "Utwórz tag lub anuluj jego tworzenie, zanim zapiszesz wydarzenie.",
     "teamTagAdminOnly": "Do wydarzenia zespołowego można dodać tylko tagi zespołu. Nowe tagi zespołu tworzy administrator.",
     "tagContextChanged": "Tag został utworzony dla poprzednio wybranego zakresu. Sprawdź obecny zespół i wybór tagów.",
-    "tagColors": {"green": "Zielony", "blue": "Niebieski", "purple": "Fioletowy", "orange": "Pomarańczowy", "gold": "Złoty", "red": "Czerwony", "pink": "Różowy", "teal": "Turkusowy", "gray": "Szary", "indigo": "Indygo", "current": "Obecny kolor"},
+    "tagColors": {
+      "green": "Zielony",
+      "blue": "Niebieski",
+      "purple": "Fioletowy",
+      "orange": "Pomarańczowy",
+      "gold": "Złoty",
+      "red": "Czerwony",
+      "pink": "Różowy",
+      "teal": "Turkusowy",
+      "gray": "Szary",
+      "indigo": "Indygo",
+      "current": "Obecny kolor"
+    },
     "calendarView": "Sposób wyświetlania planu",
     "listView": "Lista",
     "weekView": "Kalendarz tygodniowy",
@@ -879,8 +909,7 @@
     "archivedTag": "Tag archiwalny",
     "tagCatalog": "Słownik tagów",
     "personalCatalog": "Tagi osobiste"
-  }
-,
+  },
   "schoolTimetable": {
     "title": "Plan lekcji z mobidziennika",
     "description": "Pobierz plan lekcji dzieci z mobidziennika i wrzuć go do ich kalendarzy.",
@@ -915,5 +944,23 @@
     "tagHint": "Lekcje dostaną ten tag w kalendarzu — łatwiej je potem odfiltrować.",
     "noTag": "Bez tagu",
     "lastImport": "Ostatni import: {{at}}"
+  },
+  "userAccounts": {
+    "title": "Konta i hasła",
+    "description": "Ustaw nowe hasło osobie, która swoje zapomniała. Zmiana działa od razu.",
+    "resetPassword": "Ustaw hasło",
+    "resetHeadline": "Nowe hasło dla: {{name}}",
+    "resetWarning": "Po zapisaniu {{email}} zaloguje się wyłącznie nowym hasłem. Przekaż je bezpiecznym kanałem i poproś o zmianę po pierwszym logowaniu.",
+    "newPassword": "Nowe hasło",
+    "confirmPassword": "Powtórz hasło",
+    "confirmReset": "Zapisz hasło",
+    "passwordTooShort": "Hasło musi mieć co najmniej {{count}} znaków.",
+    "passwordsDoNotMatch": "Hasła nie są takie same.",
+    "passwordReset": "Hasło dla {{name}} zostało ustawione.",
+    "resetError": "Nie udało się ustawić hasła.",
+    "forbidden": "Tylko administrator może ustawiać hasła innym.",
+    "loadError": "Nie udało się wczytać listy kont.",
+    "accessDeniedTitle": "Brak dostępu",
+    "accessDeniedBody": "Ta strona jest dostępna tylko dla administratora."
   }
 }
