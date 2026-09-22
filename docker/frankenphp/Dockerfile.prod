@@ -72,8 +72,9 @@ COPY --from=spa_builder /app/dist /app/public
 COPY docker/frankenphp/Caddyfile.prod /etc/frankenphp/Caddyfile
 COPY docker/frankenphp/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 COPY docker/frankenphp/streak-warnings.sh /usr/local/bin/streak-warnings.sh
+COPY docker/frankenphp/school-timetable-sync.sh /usr/local/bin/school-timetable-sync.sh
 
-RUN chmod +x /usr/local/bin/docker-entrypoint.sh /usr/local/bin/streak-warnings.sh \
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh /usr/local/bin/streak-warnings.sh /usr/local/bin/school-timetable-sync.sh \
     && setcap CAP_NET_BIND_SERVICE=+eip /usr/local/bin/frankenphp \
     && mkdir -p /app/config/jwt \
     && chown -R www-data:www-data /app/var /app/config/jwt /data/caddy /config/caddy

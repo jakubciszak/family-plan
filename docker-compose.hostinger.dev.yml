@@ -95,6 +95,22 @@ services:
     networks:
       - family-plan-dev-network
 
+  timetable-sync:
+    image: ghcr.io/jakubciszak/family-plan-app:${IMAGE_TAG:-dev}
+    container_name: family-plan-dev-timetable-sync
+    restart: unless-stopped
+    working_dir: /app
+    command: ["/usr/local/bin/school-timetable-sync.sh"]
+    environment:
+      <<: *dev_app_environment
+      SCHOOL_TIMETABLE_SYNC_INTERVAL: ${SCHOOL_TIMETABLE_SYNC_INTERVAL:-3600}
+      SCHOOL_TIMETABLE_SYNC_WEEKS: ${SCHOOL_TIMETABLE_SYNC_WEEKS:-2}
+    depends_on:
+      database:
+        condition: service_healthy
+    networks:
+      - family-plan-dev-network
+
 volumes:
   database_data_dev:
     driver: local

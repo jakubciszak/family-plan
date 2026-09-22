@@ -53,6 +53,24 @@ services:
       database:
         condition: service_healthy
 
+  timetable-sync:
+    build:
+      context: .
+      dockerfile: docker/frankenphp/Dockerfile
+    working_dir: /app
+    environment:
+      APP_ENV: ${APP_ENV:-dev}
+      RUN_MIGRATIONS: "false"
+      TZ: ${TZ:-Europe/Warsaw}
+      SCHOOL_TIMETABLE_SYNC_INTERVAL: ${SCHOOL_TIMETABLE_SYNC_INTERVAL:-3600}
+      SCHOOL_TIMETABLE_SYNC_WEEKS: ${SCHOOL_TIMETABLE_SYNC_WEEKS:-2}
+    command: ["/bin/sh", "/app/docker/frankenphp/school-timetable-sync.sh"]
+    volumes:
+      - ./:/app
+    depends_on:
+      database:
+        condition: service_healthy
+
   # Frontend React Application (Standalone)
   frontend:
     build:
