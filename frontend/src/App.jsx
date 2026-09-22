@@ -18,6 +18,7 @@ import SchoolTimetable from './pages/SchoolTimetable';
 import TeamManagement from './pages/TeamManagement';
 import TaskTypeManagement from './pages/TaskTypeManagement';
 import Account from './pages/Account';
+import UserAccounts from './pages/UserAccounts';
 import InstallPrompt from './components/InstallPrompt';
 import NotificationCenter from './components/NotificationCenter';
 import AppNavigation from './components/AppNavigation';
@@ -247,6 +248,7 @@ function App() {
         ...(isSuperAdmin ? [
             { id: 'status-change-rules', icon: 'rule', label: t('nav.statusChangeRules'), shortLabel: t('nav.statusChangeRulesShort') },
             { id: 'notification-events', icon: 'notifications', label: t('nav.notificationEvents'), shortLabel: t('nav.notificationEventsShort') },
+            { id: 'user-accounts', icon: 'key', label: t('nav.userAccounts'), shortLabel: t('nav.userAccountsShort') },
         ] : []),
     ];
 
@@ -312,6 +314,7 @@ function App() {
                 {currentPage === 'bonus-rules' && <BonusRulesManagement user={user} />}
                 {currentPage === 'status-change-rules' && <StatusChangeRulesManagement user={user} />}
                 {currentPage === 'notification-events' && <NotificationEvents user={user} />}
+                {currentPage === 'user-accounts' && <UserAccounts user={user} />}
                 {currentPage === 'push-announcement' && <PushAnnouncement manages={manages} />}
                 {currentPage === 'school-timetable' && <SchoolTimetable manages={manages} />}
                 {currentPage === 'account' && <Account user={user} points={weekPoints} />}
