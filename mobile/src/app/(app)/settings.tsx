@@ -1,4 +1,5 @@
 import { requestNotificationPermission } from '@/notifications/device';
+import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Platform, ScrollView, StyleSheet, View } from 'react-native';
@@ -38,7 +39,8 @@ export default function SettingsScreen() {
   const theme = useTheme();
   const ground = useScreenBackground();
   const { own, loading, save } = usePersonalisation();
-  const { user } = useAuth();
+  const { user, manages } = useAuth();
+  const router = useRouter();
 
   const [channelLoad, setChannelLoad] = useState(0);
   const [channelError, setChannelError] = useState(false);
@@ -119,6 +121,25 @@ export default function SettingsScreen() {
           <Text>{t('notifications.deviceHint')}</Text>
           <Button onPress={() => void requestNotificationPermission(true).catch(() => setError(t('common.error')))}>{t('notifications.devicePermission')}</Button>
         </Card.Content></Card>}
+        {manages ? (
+          <Card mode="elevated" style={styles.card}>
+            <Card.Title
+              title={t('schoolTimetable.title')}
+              titleVariant="titleMedium"
+              subtitle={t('schoolTimetable.settingsHint')}
+              subtitleNumberOfLines={3}
+            />
+            <Divider />
+            <List.Item
+              testID="settings-school-timetable"
+              onPress={() => router.push('/school-timetable')}
+              title={t('schoolTimetable.open')}
+              left={(props) => <List.Icon {...props} icon="calendar-import" />}
+              right={(props) => <List.Icon {...props} icon="chevron-right" />}
+            />
+          </Card>
+        ) : null}
+
         <Card mode="elevated" style={styles.card}>
           <Card.Title title={t('theme.appearance')} titleVariant="titleMedium" />
           <Card.Content style={styles.section}>

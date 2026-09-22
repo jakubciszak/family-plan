@@ -14,6 +14,7 @@ import StatusChangeRulesManagement from './pages/StatusChangeRulesManagement';
 import UserSettings from './pages/UserSettings';
 import NotificationEvents from './pages/NotificationEvents';
 import PushAnnouncement from './pages/PushAnnouncement';
+import SchoolTimetable from './pages/SchoolTimetable';
 import TeamManagement from './pages/TeamManagement';
 import TaskTypeManagement from './pages/TaskTypeManagement';
 import Account from './pages/Account';
@@ -241,6 +242,7 @@ function App() {
             .filter((item) => item && (!item.needsManaging || manages)),
         ...(manages ? [
             { id: 'push-announcement', icon: 'send', label: t('nav.pushAnnouncement'), shortLabel: t('nav.pushAnnouncementShort') },
+            { id: 'school-timetable', icon: 'calendar', label: t('nav.schoolTimetable'), shortLabel: t('nav.schoolTimetableShort') },
         ] : []),
         ...(isSuperAdmin ? [
             { id: 'status-change-rules', icon: 'rule', label: t('nav.statusChangeRules'), shortLabel: t('nav.statusChangeRulesShort') },
@@ -311,6 +313,7 @@ function App() {
                 {currentPage === 'status-change-rules' && <StatusChangeRulesManagement user={user} />}
                 {currentPage === 'notification-events' && <NotificationEvents user={user} />}
                 {currentPage === 'push-announcement' && <PushAnnouncement manages={manages} />}
+                {currentPage === 'school-timetable' && <SchoolTimetable manages={manages} />}
                 {currentPage === 'account' && <Account user={user} points={weekPoints} />}
                 {currentPage === 'settings' && <UserSettings user={user} />}
             </main>

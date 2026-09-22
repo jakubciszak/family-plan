@@ -5,6 +5,7 @@
 # https://symfony.com/doc/current/best_practices.html#use-parameters-for-application-configuration
 parameters:
     app.allowance_currency: '%env(ALLOWANCE_CURRENCY)%'
+    school_timetable_zone: 'Europe/Warsaw'
 
 services:
     # default configuration for services in *this* file
@@ -279,3 +280,21 @@ services:
     App\DayPlanning\Application\Service\ConflictConfirmation:
         arguments:
             $secret: '%kernel.secret%'
+
+    App\SchoolTimetable\Domain\Repository\SchoolAccountRepositoryInterface:
+        class: App\SchoolTimetable\Infrastructure\Persistence\DoctrineSchoolAccountRepository
+
+    App\SchoolTimetable\Domain\Repository\ImportedLessonRepositoryInterface:
+        class: App\SchoolTimetable\Infrastructure\Persistence\DoctrineImportedLessonRepository
+
+    App\SchoolTimetable\Domain\Service\TimetableProviderInterface:
+        class: App\SchoolTimetable\Infrastructure\Mobidziennik\MobidziennikProvider
+
+    App\SchoolTimetable\Domain\Service\SecretCipherInterface:
+        class: App\SchoolTimetable\Infrastructure\Security\SodiumSecretCipher
+        arguments:
+            $secret: '%env(default:kernel.secret:SCHOOL_TIMETABLE_SECRET)%'
+
+    App\SchoolTimetable\Application\Service\TimetableImport:
+        arguments:
+            $timeZone: '%env(default:school_timetable_zone:SCHOOL_TIMETABLE_TIME_ZONE)%'

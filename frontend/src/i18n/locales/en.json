@@ -20,7 +20,9 @@
     "allowance": "Pocket money",
     "allowanceShort": "Money",
     "pushAnnouncement": "Send a notification",
-    "pushAnnouncementShort": "Send"
+    "pushAnnouncementShort": "Send",
+    "schoolTimetable": "School timetable",
+    "schoolTimetableShort": "Timetable"
   },
   "auth": {
     "login": "Login",
@@ -875,5 +877,41 @@
     "archivedTag": "Archived tag",
     "tagCatalog": "Tag catalog",
     "personalCatalog": "Personal tags"
+  }
+,
+  "schoolTimetable": {
+    "title": "Mobidziennik timetable",
+    "description": "Pull the lesson plan of your children from mobidziennik into their calendars.",
+    "accessDeniedTitle": "Admins only",
+    "accessDeniedBody": "A team admin sets up and runs the timetable import.",
+    "noTeam": "Create a team you administer first.",
+    "loadError": "The configuration could not be read.",
+    "saveError": "Saving failed.",
+    "signInError": "Mobidziennik rejected the sign in or did not answer. Check the school, login and password (two factor sign in is not supported).",
+    "importError": "The import failed.",
+    "signInTitle": "Mobidziennik sign in",
+    "signInHint": "The parent account that sees the timetables. The password is stored encrypted and never sent back to the browser.",
+    "school": "School identifier",
+    "schoolHint": "The part of the address: https://THIS.mobidziennik.pl",
+    "login": "Login or e-mail",
+    "password": "Password",
+    "passwordKept": "New password (empty keeps the stored one)",
+    "passwordHint": "The stored password is never shown.",
+    "forget": "Remove the sign in",
+    "studentsTitle": "Students",
+    "studentsHint": "Point every timetable at a family member. Without a link its lessons are skipped.",
+    "findStudents": "Read students from mobidziennik",
+    "noStudents": "No students read yet.",
+    "importTitle": "Import a week",
+    "importHint": "Lessons land in the calendar of the child. Importing the same week again replaces the earlier entries.",
+    "thisWeek": "This week",
+    "nextWeek": "Next week",
+    "import": "Import the timetable",
+    "summary": "{{from}} – {{to}}: {{added}} added, {{updated}} changed, {{removed}} removed, {{unchanged}} untouched.",
+    "summaryDetails": "Substitutions: {{substitutions}}. Skipped: {{unlinked}} without a link, {{cancelled}} cancelled.",
+    "tagTitle": "Event tag",
+    "tagHint": "Imported lessons carry this tag in the calendar, which makes them easy to filter.",
+    "noTag": "No tag",
+    "lastImport": "Last import: {{at}}"
   }
 }

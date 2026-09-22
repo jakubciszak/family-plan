@@ -20,7 +20,9 @@
     "allowance": "Kieszonkowe",
     "allowanceShort": "Kasa",
     "pushAnnouncement": "Wyślij powiadomienie",
-    "pushAnnouncementShort": "Wyślij"
+    "pushAnnouncementShort": "Wyślij",
+    "schoolTimetable": "Plan lekcji",
+    "schoolTimetableShort": "Plan lekcji"
   },
   "auth": {
     "login": "Zaloguj",
@@ -877,5 +879,41 @@
     "archivedTag": "Tag archiwalny",
     "tagCatalog": "Słownik tagów",
     "personalCatalog": "Tagi osobiste"
+  }
+,
+  "schoolTimetable": {
+    "title": "Plan lekcji z mobidziennika",
+    "description": "Pobierz plan lekcji dzieci z mobidziennika i wrzuć go do ich kalendarzy.",
+    "accessDeniedTitle": "Tylko dla administratora",
+    "accessDeniedBody": "Plan lekcji konfiguruje i importuje administrator zespołu.",
+    "noTeam": "Najpierw załóż zespół, w którym jesteś administratorem.",
+    "loadError": "Nie udało się wczytać konfiguracji.",
+    "saveError": "Nie udało się zapisać.",
+    "signInError": "Mobidziennik odrzucił logowanie albo nie odpowiada. Sprawdź szkołę, login i hasło (dwuskładnikowe logowanie nie jest obsługiwane).",
+    "importError": "Import się nie powiódł.",
+    "signInTitle": "Dane do mobidziennika",
+    "signInHint": "Konto rodzica, z którego widać plany dzieci. Hasło trafia do bazy zaszyfrowane i nigdy nie wraca do przeglądarki.",
+    "school": "Identyfikator szkoły",
+    "schoolHint": "Człon z adresu: https://TUTAJ.mobidziennik.pl",
+    "login": "Login albo e-mail",
+    "password": "Hasło",
+    "passwordKept": "Nowe hasło (puste = bez zmiany)",
+    "passwordHint": "Zapisane hasło nie jest nigdzie pokazywane.",
+    "forget": "Usuń dane logowania",
+    "studentsTitle": "Uczniowie",
+    "studentsHint": "Wskaż, do kogo w rodzinie należy każdy plan. Bez tego lekcje nie zostaną zaimportowane.",
+    "findStudents": "Pobierz uczniów z mobidziennika",
+    "noStudents": "Jeszcze nie pobrano uczniów.",
+    "importTitle": "Import tygodnia",
+    "importHint": "Lekcje trafiają do kalendarza dziecka. Ponowny import tego samego tygodnia zastępuje poprzednie wpisy.",
+    "thisWeek": "Ten tydzień",
+    "nextWeek": "Następny tydzień",
+    "import": "Importuj plan",
+    "summary": "{{from}} – {{to}}: dodano {{added}}, zmieniono {{updated}}, usunięto {{removed}}, bez zmian {{unchanged}}.",
+    "summaryDetails": "Zastępstwa: {{substitutions}}. Pominięto: {{unlinked}} bez powiązania, {{cancelled}} odwołanych.",
+    "tagTitle": "Tag wydarzeń",
+    "tagHint": "Lekcje dostaną ten tag w kalendarzu — łatwiej je potem odfiltrować.",
+    "noTag": "Bez tagu",
+    "lastImport": "Ostatni import: {{at}}"
   }
 }

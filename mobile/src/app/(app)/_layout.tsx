@@ -73,6 +73,7 @@ function AuthenticatedLayout() {
         <Tabs.Screen name="personalise" options={{ title: t('personalise.title') }} />
         <Tabs.Screen name="account" options={{ title: t('nav.account') }} />
         <Tabs.Screen name="settings" options={{ title: t('nav.settings') }} />
+        <Tabs.Screen name="school-timetable" options={{ title: t('schoolTimetable.title') }} />
         <Tabs.Screen name="member" options={{ title: t('member.tasksSection') }} />
       </Tabs>
 
