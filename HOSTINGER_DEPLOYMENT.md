@@ -76,6 +76,11 @@ wdraża. Pre-release nie idzie automatycznie na produkcję.
 4. Workflow odpytuje produkcję aż `/` zwróci 200, a `/api/auth/me` zwróci 401 (maks. 5 minut).
    Brak zdrowej odpowiedzi w tym czasie oznacza czerwony build.
 
+5. **`android-apk`** rusza razem z `build-and-push`: buduje APK z commita wydania i dołącza go
+   do wydania jako `FamilyPlan-<wersja>.apk`. Podpis i sekrety opisuje
+   [mobile/README.md](mobile/README.md#wydanie-apk). Budowanie APK trwa dłużej niż wdrożenie,
+   a następne wydanie czeka na koniec całego runu.
+
 Migracje bazy i utworzenie super admina uruchamia `docker/frankenphp/docker-entrypoint.sh` przy
 starcie kontenera aplikacji — nie ma osobnego kroku migracyjnego w CI.
 
@@ -97,6 +102,10 @@ Ręczne wdrożenie (`Actions → Deploy to Hostinger → Run workflow`) przyjmuj
 | `v1.2.3` | to konkretne wydanie (także pre-release) |
 | tag bez wydania / szkic | workflow kończy się błędem |
 
+Zaznaczone `apk_only` buduje i dołącza tylko APK, bez obrazu i wdrożenia — na przykład gdy
+APK nie powstał przy publikacji. Podpis w CI działa od pierwszego wydania z
+`mobile/plugins/with-release-signing.js`.
+
 Bramka testów obowiązuje także przy ręcznym uruchomieniu. Jedyne obejście to zaznaczenie
 `skip_checks` — potrzebne wyłącznie przy wycofywaniu starego wydania, któremu GitHub skasował już
 runy (retencja logów Actions to 90 dni). Pominięcie bramki ląduje w podsumowaniu runu.
@@ -107,6 +116,7 @@ runy (retencja logów Actions to 90 dni). Pominięcie bramki ląduje w podsumowa
 |--------|------|
 | `HOSTINGER_API_TOKEN` | Token API Hostingera z uprawnieniami do VPS |
 | `HOSTINGER_VPS_ID` | Numeryczne ID maszyny (`1201847`) |
+| `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD` | Klucz podpisu APK; opis w [mobile/README.md](mobile/README.md#wydanie-apk) |
 
 `GITHUB_TOKEN` jest wstrzykiwany automatycznie i wystarcza do pushu na `ghcr.io`.
 

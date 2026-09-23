@@ -43,6 +43,7 @@
           "port": 19082
         }
       ],
+      "./plugins/with-release-signing",
       "expo-secure-store",
       "expo-localization",
       [
