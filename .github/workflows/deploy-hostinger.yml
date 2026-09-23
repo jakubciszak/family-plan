@@ -14,6 +14,11 @@ on:
         required: false
         default: false
         type: boolean
+      apk_only:
+        description: "Tylko zbuduj APK i dołącz go do wydania, bez wdrażania serwera."
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -180,6 +185,8 @@ jobs:
   build-and-push:
     name: Build and push image
     needs: resolve-release
+    # Bez obrazu nie rusza też deploy, który na niego czeka.
+    if: ${{ !inputs.apk_only }}
     runs-on: ubuntu-latest
 
     steps:
@@ -267,3 +274,188 @@ jobs:
         run: |
           echo "Wdrożone wydanie: ${{ needs.resolve-release.outputs.tag }} (${{ needs.resolve-release.outputs.sha }})" >> "$GITHUB_STEP_SUMMARY"
           echo "${APP_HEALTH_URL}" >> "$GITHUB_STEP_SUMMARY"
+
+  # Równolegle z obrazem: APK z commita wydania, dołączony do wydania jako plik do pobrania.
+  android-apk:
+    name: Build Android APK
+    needs: resolve-release
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    # Dołączenie pliku do wydania wymaga zapisu w repozytorium.
+    permissions:
+      contents: write
+
+    steps:
+      - name: Check signing secrets are available
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          missing=""
+          for name in ANDROID_KEYSTORE_BASE64 ANDROID_KEYSTORE_PASSWORD ANDROID_KEY_ALIAS ANDROID_KEY_PASSWORD; do
+            [ -n "${!name}" ] || missing="${missing} ${name}"
+          done
+          if [ -n "$missing" ]; then
+            echo "Missing repository secrets:${missing}"
+            echo "Telefon przyjmie aktualizację tylko z podpisem zainstalowanej aplikacji."
+            echo "Jak je przygotować: mobile/README.md#wydanie-apk."
+            exit 1
+          fi
+          echo "All signing secrets are present."
+
+      - name: Checkout the released commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.resolve-release.outputs.sha }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: mobile/.node-version
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Install dependencies
+        working-directory: mobile
+        run: npm ci
+
+      - name: Generate the Android project
+        working-directory: mobile
+        env:
+          EXPO_NO_TELEMETRY: 1
+        run: npx expo prebuild --platform android --no-install
+
+      - name: Build the signed APK
+        id: build
+        working-directory: mobile/android
+        env:
+          # Expo wpisuje EXPO_PUBLIC_* do kodu aplikacji podczas budowania — to adres API, z którym łączy się APK.
+          EXPO_PUBLIC_API_URL: ${{ env.APP_HEALTH_URL }}
+          EXPO_NO_TELEMETRY: 1
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+
+          keystore="${RUNNER_TEMP}/release.keystore"
+          certificate="${RUNNER_TEMP}/release.cer"
+          log="${RUNNER_TEMP}/keytool.log"
+          trap 'rm -f "$keystore" "$certificate" "$log"' EXIT
+          if ! printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode --ignore-garbage > "$keystore"; then
+            echo "ANDROID_KEYSTORE_BASE64 nie jest poprawnym base64 pliku keystore."
+            exit 1
+          fi
+
+          # Sprawdza keystore, alias i oba hasła, zanim Gradle spędzi nad buildem kwadrans.
+          # certreq potrzebuje klucza prywatnego, więc zawodzi przy złym haśle klucza.
+          if ! keytool -exportcert -keystore "$keystore" -storepass:env ANDROID_KEYSTORE_PASSWORD \
+              -alias "$ANDROID_KEY_ALIAS" -file "$certificate" > "$log" 2>&1 \
+            || ! keytool -certreq -keystore "$keystore" -storepass:env ANDROID_KEYSTORE_PASSWORD \
+              -alias "$ANDROID_KEY_ALIAS" -keypass:env ANDROID_KEY_PASSWORD -file /dev/null >> "$log" 2>&1; then
+            grep 'keytool error' "$log" || cat "$log"
+            echo "Keystore z ANDROID_KEYSTORE_BASE64 nie pasuje do hasła albo aliasu z sekretów."
+            exit 1
+          fi
+
+          # Skrót certyfikatu z sekretów. Następny krok wymaga, żeby APK miał dokładnie ten podpis.
+          digest=$(sha256sum "$certificate" | cut -d' ' -f1)
+          echo "keystore-digest=${digest}" >> "$GITHUB_OUTPUT"
+
+          # mobile/plugins/with-release-signing.js podpisuje wydanie kluczem z tych właściwości Gradle.
+          export ORG_GRADLE_PROJECT_FAMILY_PLAN_RELEASE_STORE_FILE="$keystore"
+          export ORG_GRADLE_PROJECT_FAMILY_PLAN_RELEASE_STORE_PASSWORD="$ANDROID_KEYSTORE_PASSWORD"
+          export ORG_GRADLE_PROJECT_FAMILY_PLAN_RELEASE_KEY_ALIAS="$ANDROID_KEY_ALIAS"
+          export ORG_GRADLE_PROJECT_FAMILY_PLAN_RELEASE_KEY_PASSWORD="$ANDROID_KEY_PASSWORD"
+
+          # Szablon daje Gradle 2 GB pamięci; runner ma 16 GB, a brak pamięci to częsta przyczyna padających buildów.
+          ./gradlew assembleRelease --no-daemon -Dorg.gradle.jvmargs="-Xmx4g -XX:MaxMetaspaceSize=1g"
+
+      - name: Check the signature and the API address
+        id: apk
+        working-directory: mobile
+        env:
+          EXPO_PUBLIC_API_URL: ${{ env.APP_HEALTH_URL }}
+          KEYSTORE_DIGEST: ${{ steps.build.outputs.keystore-digest }}
+          # Opcjonalna zmienna repozytorium: SHA-256 certyfikatu aplikacji zainstalowanej na telefonach.
+          EXPECTED_DIGEST: ${{ vars.ANDROID_CERT_SHA256 }}
+        run: |
+          set -euo pipefail
+
+          version=$(node -p "require('./app.json').expo.version")
+          code=$(node -p "require('./app.json').expo.android.versionCode")
+          apk="${RUNNER_TEMP}/FamilyPlan-${version}.apk"
+          cp android/app/build/outputs/apk/release/app-release.apk "$apk"
+
+          build_tools=$(find "$ANDROID_HOME/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -n 1)
+          signer=$("$build_tools/apksigner" verify --print-certs "$apk")
+          digest=$(sed -n 's/^Signer #1 certificate SHA-256 digest: //p' <<< "$signer")
+          owner=$(sed -n 's/^Signer #1 certificate DN: //p' <<< "$signer")
+
+          if [ "$digest" != "$KEYSTORE_DIGEST" ]; then
+            echo "APK nie ma podpisu z ANDROID_KEYSTORE_BASE64: ${digest:-brak podpisu} zamiast ${KEYSTORE_DIGEST}."
+            if [ ! -f plugins/with-release-signing.js ]; then
+              echo "To wydanie powstało przed plugins/with-release-signing.js, więc jego APK ma podpis klucza debug."
+            fi
+            exit 1
+          fi
+
+          expected=$(tr -d ': ' <<< "$EXPECTED_DIGEST" | tr 'A-F' 'a-f')
+          if [ -n "$expected" ] && [ "$digest" != "$expected" ]; then
+            echo "Klucz z sekretów (${digest}) nie jest kluczem zainstalowanej aplikacji (ANDROID_CERT_SHA256: ${expected})."
+            echo "Telefony odrzuciłyby taki plik jako aktualizację."
+            exit 1
+          fi
+          if [ -z "$expected" ]; then
+            echo "::notice title=Podpis APK::Certyfikat SHA-256 ${digest}. Wpisz go do zmiennej ANDROID_CERT_SHA256, a kolejne wydania będą pilnować tego klucza."
+          fi
+          case "$owner" in
+            *"CN=Android Debug"*)
+              echo "::warning title=Publiczny klucz debug::APK ma podpis klucza debug z szablonu Expo, który jest publiczny. Zobacz mobile/README.md#wydanie-apk."
+              ;;
+          esac
+
+          bundle="${RUNNER_TEMP}/index.android.bundle"
+          unzip -p "$apk" assets/index.android.bundle > "$bundle"
+          if ! grep -a -q -F "$EXPO_PUBLIC_API_URL" "$bundle"; then
+            echo "Kod aplikacji w APK nie zawiera adresu ${EXPO_PUBLIC_API_URL}, więc nie połączyłby się z produkcją."
+            exit 1
+          fi
+
+          {
+            echo "path=${apk}"
+            echo "version=${version}"
+            echo "code=${code}"
+            echo "digest=${digest}"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Attach the APK to the release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ needs.resolve-release.outputs.tag }}
+          APK: ${{ steps.apk.outputs.path }}
+          VERSION: ${{ steps.apk.outputs.version }}
+          CODE: ${{ steps.apk.outputs.code }}
+          DIGEST: ${{ steps.apk.outputs.digest }}
+        run: |
+          set -euo pipefail
+
+          # --clobber: ponowne uruchomienie podmienia plik o tej samej nazwie.
+          gh release upload "$TAG" "$APK" --clobber
+
+          {
+            echo "### Android"
+            echo "- $(basename "$APK"): wersja ${VERSION}, kod wersji ${CODE}, dołączony do wydania ${TAG}"
+            echo "- API: ${APP_HEALTH_URL}"
+            echo "- Certyfikat SHA-256: \`${DIGEST}\`"
+          } >> "$GITHUB_STEP_SUMMARY"

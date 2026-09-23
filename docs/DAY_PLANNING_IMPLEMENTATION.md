@@ -12,6 +12,18 @@ Prywatne szczegóły zna autor i osoby zaproszone do danego wystąpienia. Pozost
 
 Wyjście z zespołu i odwołanie zaproszeń są atomowe. Push sprawdza uprawnienia ponownie przed dostarczeniem. Błąd powiadomienia po zatwierdzonym zapisie jest logowany i nie zamienia poprawnego zapisu wydarzenia w błąd klienta.
 
+## Interfejs
+
+Web i mobile pokazują na co dzień tylko to, czego rodzina potrzebuje: datę z nawigacją, przełącznik „Dzień | Tydzień”, tagi i plan. Pozostałe opcje pojawiają się dopiero wtedy, gdy mają sens:
+
+- Zakładki „Plan zespołu” i „Znajdź termin” widać tylko u osób należących do zespołu, a wybór zespołu tylko przy kilku zespołach.
+- W planie zespołu domyślnie widać wszystkie osoby; prywatność wyjaśnia jedna notka pod planem.
+- Filtr obejmuje tagi osobiste i tagi wszystkich zespołów użytkownika, bez osobnego słownika. Zarządzanie tagami jest przy filtrze.
+- Strefa wyświetlania jest zawsze widoczna pod planem; nie zajmuje miejsca w pasku narzędzi.
+- W szczegółach wydarzenia cyklicznego zakres zmiany (to wystąpienie albo cała seria) wybiera się raz, a edycja, usunięcie i rezygnacja są wspólnymi przyciskami.
+- W edytorze widoczność i uczestnicy pojawiają się przy wydarzeniu zespołowym; strefa wydarzenia i „Zajmuje czas uczestników” są w „Więcej opcji”.
+- Zaznaczony chip lub zakładka (widok, osoba, tag, dzień tygodnia, a w mobile także strefa) jest wypełniony, a pozostałe mają tylko obrys.
+
 ## Weryfikacja
 
 - Pełny PHPUnit: 824 testy / 3177 asercji.

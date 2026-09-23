@@ -68,7 +68,6 @@ export default function WeekCalendar({ calendar, date, zone, nameFor, onOpen }: 
       : <View key={item.key} accessible accessibilityLabel={accessibilityLabel} style={blockStyle} testID={`week-busy-${segment.day}`}>{content}</View>;
   };
   return <View testID="day-week-calendar" style={{ gap: 8 }}>
-    <Text variant="bodySmall">{t('dayPlanning.weekScrollHint')}</Text>
     {!calendar.events.length && !calendar.busy.length && <Text>{t('dayPlanning.weekEmpty')}</Text>}
     <View style={[styles.calendar, { borderColor: theme.colors.outlineVariant, backgroundColor: theme.colors.surface }]}>
       <View style={{ flexDirection: 'row' }}>

@@ -54,6 +54,11 @@ jobs:
         env:
           DATABASE_URL: postgresql://app:mobile-tests@127.0.0.1:5432/mobile_api?serverVersion=16&charset=utf8
       - run: npx expo export --platform all
+      # Podpis APK w wydaniu zależy od tego pluginu; zmiana szablonu Expo ma wyjść tutaj, nie przy wydaniu.
+      - name: Check release signing in the generated Android project
+        run: |
+          npx expo prebuild --platform android --no-install
+          grep -q "project.hasProperty('FAMILY_PLAN_RELEASE_STORE_FILE')" android/app/build.gradle
       - uses: actions/upload-artifact@v4
         if: always()
         with:

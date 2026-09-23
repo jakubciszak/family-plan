@@ -72,6 +72,75 @@ prywatną zajętość, zaproszenia, cykle, wyjątki i wspólne terminy. Testy ba
 dodatkowo sprawdzają rotację tokenów, uprawnienia i zapis danych.
 Eksport sprawdza bundlowanie Androida, iOS i web; nie zastępuje testu na urządzeniu.
 
+## Wydanie APK
+
+Każde opublikowane wydanie na GitHubie, poza pre-release, dostaje w załącznikach
+`FamilyPlan-<wersja>.apk`. Buduje go job `Build Android APK` w
+`.github/workflows/deploy-hostinger.yml`, równolegle z obrazem serwera i po tej samej bramce
+testów. Wersję i kod wersji bierze z `app.json`, a `EXPO_PUBLIC_API_URL`
+ustawia na produkcję. Zanim dołączy plik, sprawdza jego podpis i adres API w kodzie aplikacji.
+
+Telefon przyjmie nowy APK jako aktualizację tylko z podpisem zainstalowanej aplikacji. Klucz
+trafia do sekretów repozytorium (Settings → Secrets and variables → Actions). Bez nich job kończy
+się błędem.
+
+| Sekret | Zawartość |
+|--------|-----------|
+| `ANDROID_KEYSTORE_BASE64` | plik keystore zakodowany w base64 |
+| `ANDROID_KEYSTORE_PASSWORD` | hasło keystore |
+| `ANDROID_KEY_ALIAS` | alias klucza |
+| `ANDROID_KEY_PASSWORD` | hasło klucza; w keystore PKCS12 to samo co hasło keystore |
+
+```sh
+base64 -i family-plan.keystore | gh secret set ANDROID_KEYSTORE_BASE64
+gh secret set ANDROID_KEYSTORE_PASSWORD
+gh secret set ANDROID_KEY_ALIAS
+gh secret set ANDROID_KEY_PASSWORD
+```
+
+Właściwy jest klucz, którym podpisano APK zainstalowane na telefonach. Certyfikat pliku pokazuje
+`apksigner verify --print-certs FamilyPlan-1.0.9.apk` z Android SDK (`build-tools`). Skrót
+`fac61745dc0903786fb9ede62a962b399f7348f0bb6f899b8332667591033b9c` i `CN=Android Debug`
+oznaczają publiczny klucz debug z szablonu Expo: tak podpisuje `./gradlew assembleRelease` bez
+własnego klucza. Wtedy sekrety wskazują ten klucz: `android/app/debug.keystore` po
+`npx expo prebuild`, alias `androiddebugkey`, oba hasła `android`. Ten klucz zna każdy, więc każdy
+może też podpisać nim aplikację, którą telefon przyjmie jako aktualizację Family Plan. Przejście
+na własny klucz to jednorazowe odinstalowanie aplikacji i ponowne logowanie; dane zostają na
+serwerze.
+
+```sh
+keytool -genkeypair -v -storetype PKCS12 -keystore family-plan.keystore \
+  -alias family-plan -keyalg RSA -keysize 4096 -validity 10000
+```
+
+Keystore i hasła wymagają kopii zapasowej: bez nich kolejne wersje nie zainstalują się jako
+aktualizacja.
+
+Zmienna repozytorium `ANDROID_CERT_SHA256` (zakładka Variables) przyjmuje skrót SHA-256
+certyfikatu, także z dwukropkami, jak w `keytool -list -v`. Gdy jest ustawiona, job nie dołączy
+APK z innym podpisem. Skrót każdego builda jest w podsumowaniu runu.
+
+`Actions → Deploy to Hostinger → Run workflow` z tagiem i zaznaczonym `apk_only` buduje APK dla
+istniejącego wydania bez wdrażania serwera. Wydania sprzed `plugins/with-release-signing.js`
+mają w kodzie tylko klucz debug, więc przy innym kluczu job je odrzuci.
+
+Lokalnie tym samym kluczem podpisuje `plugins/with-release-signing.js`. Wystarczą właściwości
+w `~/.gradle/gradle.properties`:
+
+```properties
+FAMILY_PLAN_RELEASE_STORE_FILE=/pełna/ścieżka/family-plan.keystore
+FAMILY_PLAN_RELEASE_STORE_PASSWORD=…
+FAMILY_PLAN_RELEASE_KEY_ALIAS=family-plan
+FAMILY_PLAN_RELEASE_KEY_PASSWORD=…
+```
+
+```sh
+npx expo prebuild --platform android
+cd android && EXPO_PUBLIC_API_URL=https://family-plan.srv1201847.hstgr.cloud ./gradlew assembleRelease
+```
+
+Bez tych właściwości wydanie nadal podpisuje klucz debug z szablonu.
+
 ## Backend JWT
 
 Po zainstalowaniu zależności PHP uruchom migracje i wygeneruj klucze:

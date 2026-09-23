@@ -121,7 +121,7 @@ function PickerDialog({ label, value, type, min, timeZone, onChoose, onDismiss, 
     </dialog>, document.body);
 }
 
-export default function DateTimePickerField({ label, type = 'date', value = '', onChange, required = false, min, timeZone = browserTimeZone(), compact = false, disabled = false }) {
+export default function DateTimePickerField({ label, type = 'date', value = '', onChange, required = false, min, timeZone = browserTimeZone(), buttonLabel, disabled = false }) {
     const { t, i18n } = useTranslation();
     const locale = i18n.language;
     const id = useId();
@@ -155,9 +155,14 @@ export default function DateTimePickerField({ label, type = 'date', value = '', 
         if (validValue(canonical, type, min)) { setText(displayValue(canonical, type, locale)); onChange(canonical); }
         else { setText(next); if (!required && !next) onChange(''); }
     };
-    return <div className={`day-field day-picker-field${compact ? ' day-picker-field--compact' : ''}`}>
-        <label htmlFor={id} className={compact ? 'sr-only' : ''}>{label}</label>
+    const dialog = open && <PickerDialog label={label} type={type} value={value} min={min} timeZone={timeZone} returnFocus={returnFocus.current} onDismiss={() => setOpen(false)} onChoose={choose} />;
+    if (buttonLabel) return <div className="day-picker-field day-picker-field--button">
+        <button type="button" className="day-date-button" aria-haspopup="dialog" aria-expanded={open} disabled={disabled} onClick={show}><span className="md-visually-hidden">{label}: </span><span>{buttonLabel}</span><Icon name="expand" size={20} /></button>
+        {dialog}
+    </div>;
+    return <div className="day-field day-picker-field">
+        <label htmlFor={id}>{label}</label>
         <div className="day-picker-input"><input id={id} ref={input} type="text" aria-label={label} aria-haspopup="dialog" aria-expanded={open} aria-invalid={!valid && !!text} autoComplete="off" required={required} disabled={disabled} value={text} placeholder={t(`dayPlanning.picker.${type === 'time' ? 'timePlaceholder' : type === 'date' ? 'datePlaceholder' : 'dateTimePlaceholder'}`)} onClick={show} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === 'ArrowDown' && event.altKey) { event.preventDefault(); show(event); } }} onChange={edit} /><button type="button" disabled={disabled} aria-label={t('dayPlanning.picker.open', { field: label })} onClick={show}><Icon name={type === 'time' ? 'schedule' : 'calendar'} size={22} /></button></div>
-        {open && <PickerDialog label={label} type={type} value={value} min={min} timeZone={timeZone} returnFocus={returnFocus.current} onDismiss={() => setOpen(false)} onChoose={choose} />}
+        {dialog}
     </div>;
 }

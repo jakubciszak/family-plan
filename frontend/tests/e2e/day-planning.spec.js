@@ -17,7 +17,9 @@ async function setup(page, options = {}) {
     await page.addInitScript((locale) => localStorage.setItem('i18nextLng', locale), options.locale || 'pl');
     await page.route('**/api/**', (route) => route.fulfill({ status: 404, json: {} }));
     await setupAuthenticatedSession(page);
-    if (state.teamRole) await page.route('**/api/teams', (route) => route.fulfill({ json: { teams: [{ id: 'team-1', name: 'Family Team', role: state.teamRole }] } }));
+    if (state.teams || state.teamRole) await page.route('**/api/teams', (route) => route.fulfill({ json: { teams: state.teams || [{ id: 'team-1', name: 'Family Team', role: state.teamRole }] } }));
+    await page.route('**/api/teams/team-2/members', (route) => route.fulfill({ json: { members: [{ userId: '1', name: 'Anna' }, { userId: '3', name: 'Celina' }] } }));
+    await page.route('**/api/teams/team-solo/members', (route) => route.fulfill({ json: { members: [{ userId: '1', name: 'Anna' }] } }));
     await page.route('**/api/teams/team-1/members', (route) => route.fulfill({ json: { members: [{ userId: '1', name: 'Anna' }, { userId: '2', name: 'Bartek' }] } }));
     await page.route('**/api/day-planning/**', async (route) => {
         const req = route.request();
@@ -29,7 +31,11 @@ async function setup(page, options = {}) {
             const events = (state.events || (state.event ? [state.event] : [])).filter((item) => !selectedTags.length || item.tags?.some((tag) => selectedTags.includes(tag.id)));
             return route.fulfill({ json: { events, busy: url.searchParams.get('teamId') ? state.busy || [{ kind: 'busy', personId: '2', start: '2026-09-21T10:00:00Z', end: '2026-09-21T11:00:00Z' }] : [], coverage: { complete: true } } });
         }
-        if (path.endsWith('/tags') && req.method() === 'GET') return route.fulfill({ json: { tags: state.tags } });
+        if (path.endsWith('/tags') && req.method() === 'GET') {
+            state.tagQueries = [...(state.tagQueries || []), url.searchParams.get('teamId')];
+            const team = url.searchParams.get('teamId');
+            return route.fulfill({ json: { tags: state.scopedTags ? state.tags.filter((tag) => tag.scope === 'PERSONAL' || tag.teamId === team) : state.tags } });
+        }
         if (req.method() !== 'GET') state.writes.push({ method: req.method(), path, data: req.postDataJSON(), headers: req.headers() });
         if (path.includes('/tags')) {
             if (state.tagFailures > 0) { state.tagFailures--; return route.fulfill({ status: 503, json: { message: 'Nie udało się utworzyć tagu.' } }); }
@@ -61,13 +67,14 @@ async function setup(page, options = {}) {
         state.event = { ...sample(), ...payload, id: 'event-1' };
         return route.fulfill({ json: { ...payload, id: 'event-1', ownerId: '1', version: 8 } });
     });
+    await page.clock.install({ time: new Date(options.now || '2026-09-21T08:00:00Z') });
     await page.goto('/');
     await page.getByRole('button', { name: options.locale === 'en' ? 'Day planner' : 'Plan dnia', exact: true }).click();
-    await page.getByLabel(options.locale === 'en' ? 'Calendar date' : 'Data planu', { exact: true }).fill('2026-09-21');
     await page.getByLabel(options.locale === 'en' ? 'Display time zone' : 'Strefa wyświetlania', { exact: true }).selectOption('Europe/Warsaw');
     await expect(page.getByRole('status').filter({ hasText: 'Ładowanie' })).toHaveCount(0);
     return state;
 }
+const dateButton = (page, label = 'Data planu') => page.getByRole('button', { name: new RegExp(`^${label}: `) });
 
 test('keeps anonymous busy blocks under OR tag filters and shows team participants', async ({ page }) => {
     const state = await setup(page);
@@ -128,7 +135,8 @@ test('plans with the author included and creates from a real suggested slot', as
     await page.getByRole('tab', { name: 'Plan zespołu', exact: true }).click();
     await page.getByRole('button', { name: 'Lekcje', exact: true }).click();
     await page.getByRole('tab', { name: 'Znajdź termin', exact: true }).click();
-    await expect(page.getByLabel('Test User · Ty', { exact: true })).toBeDisabled();
+    await expect(page.getByLabel('Ty', { exact: true })).toBeDisabled();
+    await expect(page.getByLabel('Ty', { exact: true })).toBeChecked();
     await page.getByLabel('Szukaj od godziny', { exact: true }).fill('16:00');
     await page.getByRole('button', { name: 'Pokaż wspólne terminy', exact: true }).click();
     await page.getByRole('button', { name: /Wybierz termin/ }).click();
@@ -180,7 +188,7 @@ test('allows invitees to decline one occurrence and rejoin the series without ed
     await page.getByRole('button', { name: 'Rezygnuję z udziału', exact: true }).click();
     await expect(page.getByRole('button', { name: 'Wracam do udziału', exact: true })).toBeVisible();
     expect(state.writes.at(-1).data).toEqual({ status: 'DECLINED', occurrenceKey: '2026-09-21T09:00' });
-    await page.getByLabel('Zakres zmiany', { exact: true }).selectOption('series');
+    await page.getByRole('radio', { name: 'Cała seria', exact: true }).check();
     await page.getByRole('button', { name: 'Wracam do udziału', exact: true }).click();
     await expect(page.getByRole('button', { name: 'Rezygnuję z udziału', exact: true })).toBeVisible();
     expect(state.writes.at(-1).data).toEqual({ status: 'INCLUDED', occurrenceKey: null });
@@ -189,7 +197,7 @@ test('allows invitees to decline one occurrence and rejoin the series without ed
 test('retains unsaved edits on a version conflict and requires refreshing', async ({ page }) => {
     const state = await setup(page, { failure: { status: 412, json: { code: 'version_conflict' } } });
     await page.getByRole('button', { name: /Plan lekcji, / }).click();
-    await page.getByLabel('Zakres zmiany', { exact: true }).selectOption('series');
+    await page.getByRole('radio', { name: 'Cała seria', exact: true }).check();
     await page.getByRole('button', { name: 'Edytuj', exact: true }).click();
     await page.getByLabel('Tytuł wydarzenia', { exact: true }).fill('Nowa nazwa');
     await page.getByRole('button', { name: 'Zapisz', exact: true }).click();
@@ -204,7 +212,7 @@ test('manages personal tags but does not offer team tag administration to a memb
     const state = await setup(page);
     await page.getByRole('button', { name: 'Zarządzaj tagami', exact: true }).click();
     await expect(page.getByRole('button', { name: 'Edytuj tag Lekcje', exact: true })).toHaveCount(0);
-    await expect(page.getByLabel('Zakres tagu', { exact: true }).locator('option[value="TEAM"]')).toHaveCount(0);
+    await expect(page.getByLabel('Zakres tagu', { exact: true })).toHaveCount(0);
     await page.getByLabel('Nazwa tagu', { exact: true }).fill('Sport');
     await page.getByRole('button', { name: 'Zapisz', exact: true }).click();
     await expect(page.getByRole('button', { name: 'Edytuj tag Sport', exact: true })).toBeVisible();
@@ -238,7 +246,7 @@ test('supports a narrow dark agenda and all-day recurrence ending after a count'
 test('restores a cancelled occurrence after a privacy-safe conflict confirmation', async ({ page }) => {
     const state = await setup(page, { definition: { ...definition(), exceptions: { '2026-09-28T09:00': { cancelled: true } } }, restoreConflict: true });
     await page.getByRole('button', { name: /Plan lekcji, / }).click();
-    await page.getByLabel('Zakres zmiany', { exact: true }).selectOption('series');
+    await page.getByRole('radio', { name: 'Cała seria', exact: true }).check();
     await page.getByRole('button', { name: 'Edytuj', exact: true }).click();
     page.once('dialog', (dialog) => dialog.accept());
     await page.getByRole('button', { name: 'Przywróć wystąpienie 2026-09-28 09:00', exact: true }).click();
@@ -283,11 +291,12 @@ test('maps ambiguous Warsaw times to the first occurrence and rejects spring gap
 
 test('navigates a full week and explicitly deletes only one occurrence', async ({ page }) => {
     const state = await setup(page);
-    await page.getByLabel('Zakres', { exact: true }).selectOption('week');
-    await expect(page.locator('.day-agenda-column')).toHaveCount(7);
+    await page.getByRole('button', { name: 'Tydzień', exact: true }).click();
+    await expect(page.locator('.day-week-header')).toHaveCount(7);
+    await expect(dateButton(page)).toHaveText(/: 21–27 września 2026/);
     await expect.poll(() => new Date(state.queries.at(-1).get('to')) - new Date(state.queries.at(-1).get('from'))).toBe(7 * 86400000);
     await page.getByRole('button', { name: 'Następny zakres', exact: true }).click();
-    await expect(page.getByLabel('Data planu', { exact: true })).toHaveValue('28.09.2026');
+    await expect(dateButton(page)).toHaveText(/: 28 września\s–\s4 października 2026/);
     await page.getByRole('button', { name: 'Poprzedni zakres', exact: true }).click();
     await page.getByRole('button', { name: /Plan lekcji, / }).click();
     page.once('dialog', (dialog) => dialog.accept());
@@ -298,7 +307,6 @@ test('navigates a full week and explicitly deletes only one occurrence', async (
 });
 
 test('invalidates open details when a calendar notification arrives', async ({ page }) => {
-    await page.clock.install();
     const state = await setup(page);
     await page.getByRole('button', { name: /Plan lekcji, / }).click();
     state.event = null;
@@ -323,8 +331,7 @@ test('opens the current occurrence before editing and uses its matching version'
 
 test('edits an occurrence spanning the repeated DST hour without changing its duration', async ({ page }) => {
     const event = { ...sample(), occurrenceKey: '2026-10-25T02:30', start: '2026-10-25T00:30:00Z', end: '2026-10-25T01:30:00Z' };
-    const state = await setup(page, { event });
-    await page.getByLabel('Data planu', { exact: true }).fill('2026-10-25');
+    const state = await setup(page, { event, now: '2026-10-25T10:00:00Z' });
     await page.getByRole('button', { name: /Plan lekcji, / }).click();
     await page.getByRole('button', { name: 'Edytuj', exact: true }).click();
     await expect(page.getByLabel('Początek', { exact: true })).toHaveValue('25.10.2026 02:30');
@@ -343,10 +350,10 @@ test('switches a Wednesday list to a full week and places overlapping events sid
         { ...sample(), id: 'meeting', title: 'Spotkanie', tags: [{ id: 'other', name: 'Inne', color: '#5770af' }], start: '2026-09-21T08:00:00Z', end: '2026-09-21T09:00:00Z' },
         { ...sample(), id: 'call', title: 'Rozmowa', tags: [{ id: 'other', name: 'Inne', color: '#5770af' }], start: '2026-09-21T08:30:00Z', end: '2026-09-21T09:30:00Z' },
         { ...sample(), id: 'day-off', title: 'Wolne od szkoły', allDay: true, start: '2026-09-20T22:00:00Z', end: '2026-09-21T22:00:00Z' },
-    ] });
-    await page.getByLabel('Data planu', { exact: true }).fill('2026-09-23');
-    await page.getByRole('button', { name: 'Kalendarz tygodniowy', exact: true }).click();
-    await expect(page.getByRole('button', { name: 'Kalendarz tygodniowy', exact: true })).toHaveAttribute('aria-pressed', 'true');
+    ], now: '2026-09-23T08:00:00Z' });
+    await expect(dateButton(page)).toHaveText(/: Środa, 23 września 2026/);
+    await page.getByRole('button', { name: 'Tydzień', exact: true }).click();
+    await expect(page.getByRole('button', { name: 'Tydzień', exact: true })).toHaveAttribute('aria-pressed', 'true');
     await expect(page.locator('.day-week-header')).toHaveCount(7);
     await expect.poll(() => state.queries.at(-1).get('from')).toBe('2026-09-20T22:00:00.000Z');
     expect(state.queries.at(-1).get('to')).toBe('2026-09-27T22:00:00.000Z');
@@ -370,10 +377,10 @@ test('switches a Wednesday list to a full week and places overlapping events sid
     await expect(page.getByRole('dialog')).toContainText('Spotkanie');
     await page.getByRole('button', { name: 'Zamknij', exact: true }).click();
     await page.getByRole('button', { name: 'Następny zakres', exact: true }).click();
-    await expect(page.getByLabel('Data planu', { exact: true })).toHaveValue('30.09.2026');
     await expect.poll(() => state.queries.at(-1).get('from')).toBe('2026-09-27T22:00:00.000Z');
-    await page.getByRole('button', { name: 'Lista', exact: true }).click();
+    await page.getByRole('button', { name: 'Dzień', exact: true }).click();
     await expect(page.locator('.day-week-grid')).toHaveCount(0);
+    await expect(dateButton(page)).toHaveText(/: Środa, 30 września 2026/);
     await expect.poll(() => state.queries.at(-1).get('from')).toBe('2026-09-29T22:00:00.000Z');
     expect(state.queries.at(-1).get('to')).toBe('2026-09-30T22:00:00.000Z');
 });
@@ -381,7 +388,7 @@ test('switches a Wednesday list to a full week and places overlapping events sid
 test('keeps private busy placeholders in the team week when filtering shared events', async ({ page }) => {
     const state = await setup(page, { busy: [{ kind: 'busy', personId: '2', start: '2026-09-21T07:30:00Z', end: '2026-09-21T08:30:00Z' }] });
     await page.getByRole('tab', { name: 'Plan zespołu', exact: true }).click();
-    await page.getByRole('button', { name: 'Kalendarz tygodniowy', exact: true }).click();
+    await page.getByRole('button', { name: 'Tydzień', exact: true }).click();
     const busy = page.locator('.day-week-event.day-event--busy');
     await expect(busy).toHaveCount(1);
     await expect(busy).toContainText('Zajęty');
@@ -396,7 +403,7 @@ test('keeps private busy placeholders in the team week when filtering shared eve
     expect(state.queries.at(-1).getAll('personIds[]')).toEqual(['1', '2']);
     expect(new Date(state.queries.at(-1).get('to')) - new Date(state.queries.at(-1).get('from'))).toBe(7 * 86400000);
     await page.getByRole('button', { name: 'Następny zakres', exact: true }).click();
-    await expect(page.getByLabel('Data planu', { exact: true })).toHaveValue('28.09.2026');
+    await expect(dateButton(page)).toHaveText(/: 28 września\s–\s4 października 2026/);
 });
 
 test('separates all-day events, splits overnight events and scrolls a narrow dark week', async ({ page }) => {
@@ -406,7 +413,7 @@ test('separates all-day events, splits overnight events and scrolls a narrow dar
         { ...sample(), id: 'holiday', title: 'Urlop', allDay: true, start: '2026-09-20T22:00:00Z', end: '2026-09-23T22:00:00Z' },
         { ...sample(), id: 'night', title: 'Nocna podróż', start: '2026-09-21T21:00:00Z', end: '2026-09-22T01:00:00Z' },
     ] });
-    await page.getByRole('button', { name: 'Kalendarz tygodniowy', exact: true }).click();
+    await page.getByRole('button', { name: 'Tydzień', exact: true }).click();
     await expect(page.locator('.day-week-allday .day-week-event')).toHaveCount(3);
     await expect(page.locator('.day-week-timeline .day-week-event')).toHaveCount(2);
     await expect(page.locator('.day-week-timeline[data-date="2026-09-21"]')).toContainText('Nocna podróż');
@@ -421,7 +428,7 @@ test('separates all-day events, splits overnight events and scrolls a narrow dar
 
 test('shows a complete empty weekly grid instead of hiding the calendar', async ({ page }) => {
     await setup(page, { event: null });
-    await page.getByRole('button', { name: 'Kalendarz tygodniowy', exact: true }).click();
+    await page.getByRole('button', { name: 'Tydzień', exact: true }).click();
     await expect(page.locator('.day-week-header')).toHaveCount(7);
     await expect(page.locator('.day-week-hours span')).toHaveCount(24);
     await expect(page.locator('.day-week-event')).toHaveCount(0);
@@ -577,7 +584,7 @@ test('keeps the selection check readable on a light custom tag color', async ({ 
 
 test('date picker supports keyboard navigation, cancellation and focus return without changing the calendar early', async ({ page }) => {
     const state = await setup(page);
-    const trigger = page.getByRole('button', { name: 'Wybierz: Data planu', exact: true });
+    const trigger = dateButton(page);
     const initialQueries = state.queries.length;
     await trigger.click();
     const dialog = page.getByRole('dialog', { name: 'Data planu', exact: true });
@@ -593,7 +600,7 @@ test('date picker supports keyboard navigation, cancellation and focus return wi
     await page.keyboard.press('Escape');
     await expect(dialog).toHaveCount(0);
     await expect(trigger).toBeFocused();
-    await expect(page.getByLabel('Data planu', { exact: true })).toHaveValue('21.09.2026');
+    await expect(trigger).toHaveText(/: Poniedziałek, 21 września 2026/);
     await trigger.click();
     await dialog.getByRole('gridcell', { name: /21 września 2026/ }).press('PageDown');
     await expect(dialog.getByRole('gridcell', { name: /21 października 2026/ })).toBeFocused();
@@ -604,7 +611,7 @@ test('date picker supports keyboard navigation, cancellation and focus return wi
     await expect(sunday).toBeFocused();
     await sunday.press('Enter');
     await dialog.getByRole('button', { name: 'Wybierz', exact: true }).click();
-    await expect(page.getByLabel('Data planu', { exact: true })).toHaveValue('25.10.2026');
+    await expect(trigger).toHaveText(/: Niedziela, 25 października 2026/);
     await expect.poll(() => state.queries.at(-1).get('from')).toBe('2026-10-24T22:00:00.000Z');
 });
 
@@ -677,11 +684,11 @@ test('all-day and recurrence date pickers preserve exclusive end dates and enfor
 test('planning date and time-window pickers apply values only when confirmed', async ({ page }) => {
     const state = await setup(page);
     await page.getByRole('tab', { name: 'Plan zespołu', exact: true }).click();
-    await page.getByRole('button', { name: 'Wybierz: Data planu', exact: true }).click();
+    await dateButton(page).click();
     await expect(page.getByRole('dialog', { name: 'Data planu', exact: true })).toBeVisible();
     await page.getByRole('dialog').getByRole('button', { name: 'Anuluj', exact: true }).click();
     await page.getByRole('tab', { name: 'Znajdź termin', exact: true }).click();
-    await page.getByRole('button', { name: 'Wybierz: Data planu', exact: true }).click();
+    await page.getByRole('button', { name: 'Wybierz: Od dnia', exact: true }).click();
     await page.getByRole('dialog').getByRole('gridcell', { name: /22 września 2026/ }).click();
     await page.getByRole('dialog').getByRole('button', { name: 'Wybierz', exact: true }).click();
     for (const [field, hour, minute] of [['Szukaj od godziny', '16', '37'], ['Szukaj do godziny', '18', '41']]) {
@@ -699,12 +706,12 @@ test('planning date and time-window pickers apply values only when confirmed', a
 
 test('date picker localizes English labels and uses Sunday as the first column', async ({ page }) => {
     await setup(page, { locale: 'en' });
-    await page.getByRole('button', { name: 'Choose: Calendar date', exact: true }).click();
+    await dateButton(page, 'Calendar date').click();
     const dialog = page.getByRole('dialog', { name: 'Calendar date', exact: true });
     await expect(dialog.getByRole('columnheader').first()).toHaveText('Sun');
     await dialog.getByRole('gridcell', { name: /September 23, 2026/ }).click();
     await dialog.getByRole('button', { name: 'Choose', exact: true }).click();
-    await expect(page.getByLabel('Calendar date', { exact: true })).toHaveValue('09/23/2026');
+    await expect(dateButton(page, 'Calendar date')).toHaveText(/: Wednesday, September 23, 2026/);
 });
 
 test('date picker fits a narrow dark viewport and traps keyboard focus until cancelled', async ({ page }) => {
@@ -732,13 +739,18 @@ test('date picker fits a narrow dark viewport and traps keyboard focus until can
 
 test('date picker rejects impossible typed dates without replacing the calendar query', async ({ page }) => {
     const state = await setup(page);
-    const field = page.getByLabel('Data planu', { exact: true });
+    await page.getByRole('tab', { name: 'Znajdź termin', exact: true }).click();
+    const field = page.getByLabel('Od dnia', { exact: true });
     await field.fill('2026-02-30');
     await expect(field).toHaveAttribute('aria-invalid', 'true');
     expect(await field.evaluate((element) => element.checkValidity())).toBe(false);
+    await page.getByRole('tab', { name: 'Mój plan', exact: true }).click();
+    await expect(dateButton(page)).toHaveText(/: Poniedziałek, 21 września 2026/);
     expect(state.queries.at(-1).get('from')).toBe('2026-09-20T22:00:00.000Z');
-    await field.fill('2028-02-29');
-    await expect(field).toHaveAttribute('aria-invalid', 'false');
+    await page.getByRole('tab', { name: 'Znajdź termin', exact: true }).click();
+    await page.getByLabel('Od dnia', { exact: true }).fill('2028-02-29');
+    await expect(page.getByLabel('Od dnia', { exact: true })).toHaveAttribute('aria-invalid', 'false');
+    await page.getByRole('tab', { name: 'Mój plan', exact: true }).click();
     await expect.poll(() => state.queries.at(-1).get('from')).toBe('2028-02-28T23:00:00.000Z');
 });
 
@@ -767,4 +779,100 @@ test('an open picker cannot modify a field disabled by its parent fieldset', asy
     await expect(dialog).toHaveCount(0);
     await expect(page.getByLabel('Początek', { exact: true })).toHaveValue('21.09.2026 09:00');
     expect(state.writes).toHaveLength(0);
+});
+
+test('shows only the essential controls and filters by tags from every catalog', async ({ page }) => {
+    const state = await setup(page, { scopedTags: true });
+    const planPage = page.locator('section.day-planning');
+    await expect(planPage.getByRole('tab')).toHaveCount(3);
+    await expect(planPage.getByRole('combobox')).toHaveCount(1);
+    await expect(page.getByLabel('Strefa wyświetlania', { exact: true })).toHaveValue('Europe/Warsaw');
+    await expect(page.getByRole('button', { name: 'Dzień', exact: true })).toHaveAttribute('aria-pressed', 'true');
+    const filter = page.getByRole('group', { name: 'Tagi', exact: true });
+    await expect(filter.getByRole('button', { name: 'Lekcje', exact: true })).toBeVisible();
+    await expect(filter.getByRole('button', { name: 'Praca', exact: true })).toBeVisible();
+    expect(new Set(state.tagQueries)).toEqual(new Set([null, 'team-1']));
+    await expect(page.getByRole('button', { name: 'Wyczyść', exact: true })).toHaveCount(0);
+    await filter.getByRole('button', { name: 'Lekcje', exact: true }).click();
+    await expect.poll(() => state.queries.at(-1).getAll('tagIds[]')).toEqual(['school']);
+    await page.getByRole('button', { name: 'Wyczyść', exact: true }).click();
+    await expect.poll(() => state.queries.at(-1).getAll('tagIds[]')).toEqual([]);
+    await expect(page.getByText('Prywatne wydarzenia innych osób widać tylko jako „Zajęty”.')).toHaveCount(0);
+    await page.getByRole('tab', { name: 'Plan zespołu', exact: true }).click();
+    await expect(page.getByLabel('Zespół', { exact: true })).toHaveCount(0);
+    await expect(page.getByRole('group', { name: 'Osoby', exact: true }).getByRole('checkbox')).toHaveCount(2);
+    await expect(page.getByText('Prywatne wydarzenia innych osób widać tylko jako „Zajęty”.')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Ty', exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Bartek', exact: true })).toBeVisible();
+});
+
+test('keeps a person without a team in one personal view', async ({ page }) => {
+    await setup(page, { teams: [], event: { ...sample(), teamId: null, visibility: 'PRIVATE', participantIds: ['1'], participants: [{ personId: '1', status: 'INCLUDED' }] } });
+    await expect(page.getByRole('tab')).toHaveCount(0);
+    await expect(page.getByRole('button', { name: /Plan lekcji, / })).toBeVisible();
+    await page.getByRole('button', { name: 'Nowe wydarzenie', exact: true }).click();
+    await expect(page.getByLabel('Tytuł wydarzenia', { exact: true })).toBeVisible();
+    await expect(page.getByLabel('Zespół wydarzenia', { exact: true })).toHaveCount(0);
+    await expect(page.getByRole('group', { name: 'Widoczność', exact: true })).toHaveCount(0);
+    await expect(page.getByRole('group', { name: 'Uczestnicy', exact: true })).toHaveCount(0);
+});
+
+test('offers a team picker only to people in several teams', async ({ page }) => {
+    const state = await setup(page, { teams: [{ id: 'team-1', name: 'Family Team', role: 'member' }, { id: 'team-2', name: 'Klub sportowy', role: 'member' }] });
+    await page.getByRole('tab', { name: 'Plan zespołu', exact: true }).click();
+    await expect(page.getByLabel('Zespół', { exact: true })).toHaveValue('team-1');
+    await expect(page.getByLabel('Bartek', { exact: true })).toBeChecked();
+    await page.getByLabel('Bartek', { exact: true }).uncheck();
+    await expect.poll(() => state.queries.at(-1).getAll('personIds[]')).toEqual(['1']);
+    await page.getByLabel('Zespół', { exact: true }).selectOption('team-2');
+    await expect(page.getByLabel('Celina', { exact: true })).toBeChecked();
+    await expect(page.getByLabel('Bartek', { exact: true })).toHaveCount(0);
+    await expect.poll(() => state.queries.at(-1).get('teamId')).toBe('team-2');
+    expect(state.queries.at(-1).getAll('personIds[]')).toEqual(['1', '3']);
+});
+
+test('keeps rarely used event options folded away until they are needed', async ({ page }) => {
+    const state = await setup(page, { event: null });
+    await page.getByRole('button', { name: 'Nowe wydarzenie', exact: true }).click();
+    await expect(page.getByRole('group', { name: 'Widoczność', exact: true })).toHaveCount(0);
+    await expect(page.getByRole('group', { name: 'Uczestnicy', exact: true })).toHaveCount(0);
+    await expect(page.getByLabel('Strefa wydarzenia', { exact: true })).toBeHidden();
+    await expect(page.getByLabel('Zajmuje czas uczestników', { exact: true })).toBeHidden();
+    await page.getByLabel('Tytuł wydarzenia', { exact: true }).fill('Lot do Londynu');
+    await page.getByText('Więcej opcji', { exact: true }).click();
+    await page.getByLabel('Strefa wydarzenia', { exact: true }).fill('Europe/London');
+    await page.getByLabel('Zajmuje czas uczestników', { exact: true }).uncheck();
+    await page.getByLabel('Zespół wydarzenia', { exact: true }).selectOption('team-1');
+    await expect(page.getByRole('group', { name: 'Widoczność', exact: true })).toBeVisible();
+    await expect(page.getByText('Szczegóły widzisz Ty i zaproszeni. Pozostali widzą tylko „Zajęty”.', { exact: true })).toBeVisible();
+    await page.getByRole('radio', { name: 'Dla zespołu', exact: true }).check();
+    await expect(page.getByText('Szczegóły zobaczą wszyscy członkowie zespołu Family Team.', { exact: true })).toBeVisible();
+    await expect(page.getByRole('group', { name: 'Uczestnicy', exact: true }).getByRole('checkbox')).toHaveCount(2);
+    await page.getByRole('button', { name: 'Zapisz', exact: true }).click();
+    await expect(page.getByText('Wydarzenie zapisane.', { exact: true })).toBeVisible();
+    expect(state.writes.at(-1).data).toMatchObject({ title: 'Lot do Londynu', teamId: 'team-1', visibility: 'TEAM', blocksTime: false, schedule: { kind: 'TIMED', localStart: '2026-09-21T09:00', durationMinutes: 60, timeZone: 'Europe/London' } });
+});
+
+test('creates team tags for any team the user administers', async ({ page }) => {
+    const state = await setup(page, { teams: [{ id: 'team-1', name: 'Family Team', role: 'admin' }, { id: 'team-2', name: 'Klub sportowy', role: 'admin' }] });
+    await page.getByRole('button', { name: 'Zarządzaj tagami', exact: true }).click();
+    const scope = page.getByLabel('Zakres tagu', { exact: true });
+    await expect(scope.locator('option')).toHaveText(['Tag osobisty', 'Tag zespołu Family Team', 'Tag zespołu Klub sportowy']);
+    await expect(page.locator('.day-tag-list').getByText('Tag zespołu Family Team', { exact: true })).toBeVisible();
+    await page.getByLabel('Nazwa tagu', { exact: true }).fill('Mecz');
+    await scope.selectOption('team-2');
+    await page.getByRole('button', { name: 'Zapisz', exact: true }).click();
+    await expect(page.getByRole('button', { name: 'Edytuj tag Mecz', exact: true })).toBeVisible();
+    expect(state.writes.at(-1).data).toMatchObject({ name: 'Mecz', scope: 'TEAM', teamId: 'team-2' });
+});
+
+test('opens the team plan on a team where somebody else is waiting', async ({ page }) => {
+    const state = await setup(page, { teams: [{ id: 'team-solo', name: 'Moja rodzina', role: 'admin' }, { id: 'team-1', name: 'Family Team', role: 'member' }] });
+    await page.getByRole('tab', { name: 'Plan zespołu', exact: true }).click();
+    await expect(page.getByLabel('Zespół', { exact: true })).toHaveValue('team-1');
+    await expect(page.getByLabel('Bartek', { exact: true })).toBeChecked();
+    await expect.poll(() => state.queries.at(-1).get('teamId')).toBe('team-1');
+    await page.getByLabel('Zespół', { exact: true }).selectOption('team-solo');
+    await expect(page.getByLabel('Bartek', { exact: true })).toHaveCount(0);
+    await expect.poll(() => state.queries.at(-1).get('teamId')).toBe('team-solo');
 });
