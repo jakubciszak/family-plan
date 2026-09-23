@@ -35,9 +35,10 @@ test('mobile date and time pickers, inline tags, private availability, weekly ex
   await page.goto('/day-planning');
   await expect(page.getByLabel('Data', { exact: true })).toHaveAttribute('type', 'date');
   await page.getByLabel('Data', { exact: true }).fill('2026-09-21');
-  await button(page, 'Zespół').click(); await button(page, team.name).click();
+  await expect(button(page, 'Zespół')).toHaveCount(0);
   await button(page, 'Nowe wydarzenie').click();
   await page.getByLabel('Tytuł wydarzenia', { exact: true }).fill('Wspólna nauka mobile');
+  await button(page, 'Zespół wydarzenia').click(); await button(page, team.name).click();
   await expect(page.getByLabel('Data początku', { exact: true })).toHaveAttribute('type', 'date');
   await expect(page.getByLabel('Godzina początku', { exact: true })).toHaveAttribute('type', 'time');
   await page.getByLabel('Godzina początku', { exact: true }).fill('09:07');
@@ -64,7 +65,7 @@ test('mobile date and time pickers, inline tags, private availability, weekly ex
   const invited = await call('get', `/api/day-planning/events/${saved.id}/occurrences/${encodeURIComponent(saved.occurrenceKey)}`, undefined, friend.headers);
   expect(invited.title).toBe('Wspólna nauka mobile');
   expect(invited.canEdit).toBe(false);
-  await page.getByTestId(`day-event-${saved.id}`).click(); await button(page, 'Edytuj ten dzień').click();
+  await page.getByTestId(`day-event-${saved.id}`).click(); await expect(button(page, 'Tylko ten dzień')).toBeVisible(); await button(page, 'Edytuj').click();
   await page.getByLabel('Tytuł wydarzenia', { exact: true }).fill('Nauka w bibliotece mobile');
   await page.getByLabel('Godzina początku', { exact: true }).fill('13:37');
   await page.getByLabel('Godzina końca', { exact: true }).fill('14:52');
@@ -73,7 +74,8 @@ test('mobile date and time pickers, inline tags, private availability, weekly ex
   expect(definition.exceptions[saved.occurrenceKey].changes.title).toBe('Nauka w bibliotece mobile');
   expect(definition.exceptions[saved.occurrenceKey].changes.schedule.localStart).toBe('2026-09-21T13:37');
   expect(definition.exceptions[saved.occurrenceKey].changes.schedule.durationMinutes).toBe(75);
-  await button(page, 'Plan zespołu').click(); await page.getByRole('checkbox', { name: 'Pokaż osobę: Mobile Friend' }).click();
+  await button(page, 'Plan zespołu').click(); await expect(button(page, 'Zespół')).toContainText(team.name);
+  await expect(page.getByRole('checkbox', { name: 'Pokaż osobę: Mobile Friend' })).toBeChecked();
   await expect(page.getByTestId('day-busy')).toContainText('Zajęty'); await expect(page.getByText('Ukryty termin znajomego')).toHaveCount(0);
   await page.getByTestId('day-busy').scrollIntoViewIfNeeded(); await page.screenshot({ path: testInfo.outputPath('day-planning-real-mobile-agenda.png') });
   await button(page, 'Znajdź termin').click(); await page.getByLabel('Ostatni dzień poszukiwań', { exact: true }).fill('2026-09-21');

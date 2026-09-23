@@ -8,7 +8,7 @@ import NativePicker from './native-picker';
 import { dayString } from '@/dates';
 import { formatPickerValue, isPickerValue, pickerDate, pickerMinimumDate, pickerValue } from '@/day-planning/picker-values';
 
-export default function PlanningDateTimeField({ label, value, mode, onChange, disabled = false, minimumDate }: PlanningDateTimeFieldProps) {
+export default function PlanningDateTimeField({ label, value, mode, onChange, disabled = false, minimumDate, title }: PlanningDateTimeFieldProps) {
   const { t, i18n } = useTranslation();
   const theme = useTheme();
   const [open, setOpen] = useState(false);
@@ -18,14 +18,22 @@ export default function PlanningDateTimeField({ label, value, mode, onChange, di
   const display = formatPickerValue(value, mode, i18n.language) || t(mode === 'date' ? 'dayPlanning.chooseDate' : 'dayPlanning.chooseTime');
   const minimum = mode === 'date' && minimumDate && isPickerValue(minimumDate, 'date') ? minimumDate : undefined;
   const initial = isPickerValue(value, mode) ? value : minimum ?? (mode === 'date' ? dayString(new Date()) : '09:00');
+  const picker = open && !disabled && <PickerSelection key={`${mode}-${value}-${minimum}`} label={label} value={minimum && initial < minimum ? minimum : initial} mode={mode} minimumDate={minimum}
+    onCancel={() => setOpen(false)} onChange={(next) => { setOpen(false); if (!current.current.disabled && current.current.value === value && current.current.mode === mode && current.current.minimumDate === minimumDate) current.current.onChange(next); }} />;
+  if (title) return <View>
+    <Pressable accessibilityRole="button" accessibilityLabel={label} accessibilityValue={{ text: title }} accessibilityState={{ disabled, expanded: open }} disabled={disabled}
+      onPress={() => setOpen(true)} style={({ pressed }) => ({ minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', borderRadius: 8, paddingRight: 4, backgroundColor: pressed ? theme.colors.surfaceVariant : 'transparent', opacity: disabled ? 0.55 : 1 })}>
+      <Text variant="titleMedium">{title}</Text><Icon source="chevron-down" size={22} color={theme.colors.onSurfaceVariant} />
+    </Pressable>
+    {picker}
+  </View>;
   return <View style={{ gap: 6 }}>
     <Text variant="labelLarge" style={{ color: disabled ? theme.colors.onSurfaceDisabled : theme.colors.onSurfaceVariant }}>{label}</Text>
     <Pressable accessibilityRole="button" accessibilityLabel={label} accessibilityValue={{ text: display }} accessibilityState={{ disabled, expanded: open }} disabled={disabled}
       onPress={() => setOpen(true)} style={({ pressed }) => ({ minHeight: 56, paddingHorizontal: 14, paddingVertical: 12, borderWidth: 1, borderRadius: 8, borderColor: theme.colors.outline, backgroundColor: pressed ? theme.colors.surfaceVariant : theme.colors.surface, flexDirection: 'row', alignItems: 'center', gap: 12, opacity: disabled ? 0.55 : 1 })}>
       <Text style={{ flex: 1 }}>{display}</Text><Icon source={mode === 'date' ? 'calendar-month-outline' : 'clock-outline'} size={24} color={theme.colors.onSurfaceVariant} />
     </Pressable>
-    {open && !disabled && <PickerSelection key={`${mode}-${value}-${minimum}`} label={label} value={minimum && initial < minimum ? minimum : initial} mode={mode} minimumDate={minimum}
-      onCancel={() => setOpen(false)} onChange={(next) => { setOpen(false); if (!current.current.disabled && current.current.value === value && current.current.mode === mode && current.current.minimumDate === minimumDate) current.current.onChange(next); }} />}
+    {picker}
   </View>;
 }
 

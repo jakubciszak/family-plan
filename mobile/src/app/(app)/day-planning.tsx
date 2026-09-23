@@ -1,18 +1,18 @@
 import { subscribeCalendarChanges } from '@/day-planning/changes';
-import PlanningCheckbox from '@/components/day-planning/checkbox';
 import { useFocusEffect } from 'expo-router';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AppState, KeyboardAvoidingView, Platform, RefreshControl, ScrollView, View } from 'react-native';
-import { ActivityIndicator, Button, Card, Chip, Dialog, IconButton, Portal, Text, TextInput, useTheme } from 'react-native-paper';
+import { ActivityIndicator, Button, Card, Chip, Dialog, FAB, Icon, IconButton, Portal, SegmentedButtons, Text, TextInput, useTheme } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ApiError } from '@/api/client';
 import { cancelOccurrence, changeOccurrence, changeParticipation, createEvent, findSuggestions, listCalendarTags, readCalendar, readEvent, readOccurrence, removeEvent, restoreOccurrence, updateEvent,
-  type Calendar, type CalendarTag, type Confirmation, type EventDefinition, type EventDraft, type Occurrence, type PlanningFailure, type Suggestions } from '@/api/day-planning';
+  type Busy, type Calendar, type CalendarTag, type Confirmation, type EventDefinition, type EventDraft, type Occurrence, type PlanningFailure, type Suggestions } from '@/api/day-planning';
 import { listMembers, listTeams, type Member, type Team } from '@/api/teams';
 import { useAuth } from '@/auth/auth-context';
 import ChoicePicker from '@/components/action-plans/choice-picker';
+import ChoiceChip from '@/components/day-planning/choice-chip';
 import EventEditor from '@/components/day-planning/event-editor';
 import PlanningDateTimeField from '@/components/day-planning/date-time-field';
 import TagManager from '@/components/day-planning/tag-manager';
@@ -23,8 +23,14 @@ import { dayString, isDay, shiftDay } from '@/dates';
 import { deviceTimeZone, draftFromDefinition, draftFromOccurrence, isTime, localInstant, localParts, makeRequestKey, rangeFor } from '@/day-planning/time';
 import { useScreenBackground } from '@/personalisation/use-screen-background';
 
+type PlanView = 'MINE' | 'TEAM' | 'PLAN';
 type Editing = { key: string; draft: EventDraft; definition?: EventDefinition; occurrence?: Occurrence; occurrenceOnly: boolean };
 type Confirm = { title: string; text: string; label?: string; action: () => void };
+const loadTags = async (teams: Team[]) => {
+  const catalogs = await Promise.all([listCalendarTags(null), ...teams.map((team) => listCalendarTags(team.id))]);
+  return [...new Map(catalogs.flat().map((tag) => [tag.id, tag])).values()].sort((a, b) => a.name.localeCompare(b.name));
+};
+const capitalize = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
 
 export default function DayPlanningScreen() {
   const { t, i18n } = useTranslation();
@@ -32,27 +38,29 @@ export default function DayPlanningScreen() {
   const theme = useTheme();
   const ground = useScreenBackground();
   const [teams, setTeams] = useState<Team[]>([]);
-  const [teamId, setTeamId] = useState<string | null>(null);
-  const [members, setMembers] = useState<Member[]>([]);
-  const [people, setPeople] = useState<string[]>([]);
+  const [chosenTeam, setChosenTeam] = useState<string | null>(null);
+  const [rosters, setRosters] = useState<Record<string, Member[]>>({});
+  const [picked, setPicked] = useState<{ teamId: string | null; ids: string[] } | null>(null);
   const [tags, setTags] = useState<CalendarTag[]>([]);
   const [tagIds, setTagIds] = useState<string[]>([]);
   const [date, setDate] = useState(dayString(new Date()));
-  const [days, setDays] = useState(1);
-  const [display, setDisplay] = useState<'LIST' | 'WEEK'>('LIST');
-  const [view, setView] = useState('MINE');
+  const [display, setDisplay] = useState<'DAY' | 'WEEK'>('DAY');
+  const [view, setView] = useState<PlanView>('MINE');
   const [calendar, setCalendar] = useState<Calendar | null>(null);
   const [suggestions, setSuggestions] = useState<Suggestions | null>(null);
+  const [showAvailability, setShowAvailability] = useState(false);
   const [planEnd, setPlanEnd] = useState(shiftDay(date, 6));
   const [windowStart, setWindowStart] = useState('08:00');
   const [windowEnd, setWindowEnd] = useState('20:00');
   const [duration, setDuration] = useState('60');
   const [zone, setZone] = useState(deviceTimeZone);
+  const [zoneMenu, setZoneMenu] = useState(false);
   const [error, setError] = useState('');
   const [scopeError, setScopeError] = useState('');
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [selected, setSelected] = useState<Occurrence | null>(null);
+  const [scope, setScope] = useState<'OCCURRENCE' | 'SERIES'>('OCCURRENCE');
   const [organizer, setOrganizer] = useState<{ personId: string; name: string } | null>(null);
   const [editing, setEditing] = useState<Editing | null>(null);
   const [tagManager, setTagManager] = useState(false);
@@ -64,7 +72,13 @@ export default function DayPlanningScreen() {
   const attempt = useRef({ payload: '', key: makeRequestKey() });
   const scroll = useRef<ScrollView>(null);
   const currentUser = user?.id ?? '';
-  const nameFor = (id: string) => id === currentUser ? user?.name ?? t('dayPlanning.me') : members.find((member) => member.userId === id)?.userName ?? t('dayPlanning.teamMember');
+  const teamId = teams.some((team) => team.id === chosenTeam) ? chosenTeam : (teams.find((team) => (rosters[team.id] ?? []).some((member) => member.userId !== currentUser)) ?? teams[0])?.id ?? null;
+  const members = teamId ? rosters[teamId] ?? [] : [];
+  const directory = useMemo(() => Object.values(rosters).flat(), [rosters]);
+  const people = (picked?.teamId === teamId ? picked.ids : members.map((member) => member.userId)).filter((id) => members.some((member) => member.userId === id));
+  const peopleKey = people.join(',');
+  const teamKey = view === 'MINE' ? '' : `${teamId ?? ''}|${peopleKey}`;
+  const nameFor = (id: string) => id === currentUser ? user?.name ?? t('dayPlanning.me') : directory.find((member) => member.userId === id)?.userName ?? t('dayPlanning.teamMember');
   const message = (failure: unknown) => {
     if (failure instanceof ApiError) {
       if (failure.status === 412) return t('dayPlanning.stale');
@@ -74,7 +88,11 @@ export default function DayPlanningScreen() {
     }
     return t('dayPlanning.requestError');
   };
-  const reloadTags = useCallback(async () => { setTags(await listCalendarTags(teamId)); }, [teamId]);
+  const reloadTags = useCallback(async () => {
+    const next = await loadTags(teams);
+    setTags(next);
+    setTagIds((current) => current.filter((id) => next.some((tag) => tag.id === id)));
+  }, [teams]);
   useFocusEffect(useCallback(() => {
     focused.current = true;
     setRevision((value) => value + 1);
@@ -92,49 +110,59 @@ export default function DayPlanningScreen() {
   }, []));
   useEffect(() => {
     let active = true;
-    void Promise.resolve().then(() => { if (active) { setMembers([]); setTags([]); setScopeError(''); } });
-    Promise.all([teamId ? listMembers(teamId) : Promise.resolve([]), listCalendarTags(teamId), listTeams()])
-      .then(([nextMembers, nextTags, nextTeams]) => { if (active) { setMembers(nextMembers); setTags(nextTags); setTeams(nextTeams); } })
-      .catch(() => { if (active) setScopeError(t('dayPlanning.scopeError')); });
+    void Promise.resolve().then(() => { if (active) setScopeError(''); });
+    listTeams().then(async (nextTeams) => {
+      const [nextTags, nextRosters] = await Promise.all([loadTags(nextTeams), Promise.all(nextTeams.map((team) => listMembers(team.id)))]);
+      if (!active) return;
+      setTeams(nextTeams);
+      setTags(nextTags);
+      setTagIds((current) => current.filter((id) => nextTags.some((tag) => tag.id === id)));
+      setRosters(Object.fromEntries(nextTeams.map((team, index) => [team.id, nextRosters[index]])));
+      if (!nextTeams.length) setView('MINE');
+    }).catch(() => { if (active) setScopeError(t('dayPlanning.scopeError')); });
     return () => { active = false; };
-  }, [teamId, revision, t]);
+  }, [revision, t]);
   useEffect(() => {
     const sequence = ++request.current;
     void Promise.resolve().then(() => { if (sequence === request.current) { setCalendar(null); setSuggestions(null); setLoading(false); } });
     if (!focused.current || view === 'PLAN' || !isDay(date)) return;
-    if (view === 'TEAM' && (!teamId || !people.length)) return;
+    const [queryTeam, queryPeople] = teamKey.split('|');
+    const personIds = queryPeople ? queryPeople.split(',') : [];
+    if (view === 'TEAM' && (!queryTeam || !personIds.length)) return;
     let range: { from: string; to: string };
-    try { range = rangeFor(display === 'WEEK' ? mondayOf(date) : date, display === 'WEEK' ? 7 : days, zone); } catch { void Promise.resolve().then(() => { if (sequence === request.current) setError(t('dayPlanning.invalidTime')); }); return; }
+    try { range = rangeFor(display === 'WEEK' ? mondayOf(date) : date, display === 'WEEK' ? 7 : 1, zone); } catch { void Promise.resolve().then(() => { if (sequence === request.current) setError(t('dayPlanning.invalidTime')); }); return; }
     void Promise.resolve().then(() => { if (sequence === request.current) setLoading(true); });
-    readCalendar(range.from, range.to, view === 'MINE' ? null : teamId, view === 'MINE' ? [] : people, tagIds)
+    readCalendar(range.from, range.to, view === 'MINE' ? null : queryTeam, view === 'MINE' ? [] : personIds, tagIds)
       .then((next) => { if (sequence === request.current) { if (!next.coverage.complete) throw new Error('incomplete'); setCalendar(next); } })
       .catch(() => { if (sequence === request.current) setError(t('dayPlanning.loadError')); })
       .finally(() => { if (sequence === request.current) setLoading(false); });
-  }, [date, days, display, view, teamId, people, tagIds, zone, revision, t]);
+  }, [date, display, view, teamKey, tagIds, zone, revision, t]);
   useEffect(() => { scroll.current?.scrollTo({ y: 0, animated: false }); }, [selected, editing, tagManager]);
-  const chooseTeam = (value: string) => { setTeamId(value || null); setPeople([currentUser]); setTagIds([]); setSuggestions(null); };
-  const personToggle = (id: string) => { setPeople((current) => current.includes(id) ? current.filter((person) => person !== id) : [...current, id]); setSuggestions(null); };
+  const chooseView = (next: PlanView) => { setView(next); setSuggestions(null); setLoading(false); };
+  const chooseTeam = (value: string) => { setChosenTeam(value || null); setSuggestions(null); };
+  const personToggle = (id: string) => { setPicked({ teamId, ids: people.includes(id) ? people.filter((person) => person !== id) : [...people, id] }); setSuggestions(null); };
   const refresh = (clearError = true) => { if (clearError) setError(''); setSelected(null); setSuggestions(null); setRevision((value) => value + 1); };
   const beginCreate = (slot?: { start: string; end: string }) => {
     try { localInstant(date, '09:00', zone); } catch { setError(t('dayPlanning.invalidTime')); return; }
     const start = slot ? localParts(slot.start, zone) : { date, time: '09:00' };
+    const eventTeam = view === 'MINE' ? null : teamId;
     setError(''); setStale(false); attempt.current = { payload: '', key: makeRequestKey() };
-    setEditing({ key: makeRequestKey(), occurrenceOnly: false, draft: { title: '', description: '', location: '', teamId, visibility: 'PRIVATE',
+    setEditing({ key: makeRequestKey(), occurrenceOnly: false, draft: { title: '', description: '', location: '', teamId: eventTeam, visibility: 'PRIVATE',
       schedule: { kind: 'TIMED', localStart: `${start.date}T${start.time}`, durationMinutes: slot ? (Date.parse(slot.end) - Date.parse(slot.start)) / 60000 : 60, timeZone: zone },
-      recurrence: null, participantIds: [...new Set([currentUser, ...(teamId && view === 'PLAN' ? people : [])])], tagIds: [], blocksTime: true, ownerParticipates: true } });
+      recurrence: null, participantIds: [...new Set([currentUser, ...(eventTeam && view === 'PLAN' ? people : [])])], tagIds: [], blocksTime: true, ownerParticipates: true } });
   };
   useEffect(() => {
     const event = selected && !selected.participantIds.includes(selected.ownerId) ? selected : null;
-    if (!event?.teamId || members.some((member) => member.userId === event.ownerId)) return undefined;
+    if (!event?.teamId || directory.some((member) => member.userId === event.ownerId)) return undefined;
     let active = true;
     listMembers(event.teamId)
       .then((roster) => { if (active) setOrganizer({ personId: event.ownerId, name: roster.find((member) => member.userId === event.ownerId)?.userName ?? '' }); })
       .catch(() => {});
     return () => { active = false; };
-  }, [selected, members]);
+  }, [selected, directory]);
   const openDetails = useCallback(async (event: Occurrence) => {
     const sequence = ++request.current;
-    setSelected(null); setError(''); setSaving(true);
+    setSelected(null); setError(''); setSaving(true); setScope('OCCURRENCE');
     try { const next = await readOccurrence(event.id, event.occurrenceKey); if (focused.current && sequence === request.current) setSelected(next); }
     catch (failure) { setError(t(failure instanceof ApiError && [403, 404].includes(failure.status) ? 'dayPlanning.accessLost' : 'dayPlanning.requestError')); setRevision((value) => value + 1); }
     finally { setSaving(false); }
@@ -212,113 +240,148 @@ export default function DayPlanningScreen() {
     const formatter = new Intl.DateTimeFormat(i18n.language, { timeZone, day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
     return `${formatter.format(new Date(start))} – ${formatter.format(new Date(end))}`;
   };
-  const dateTitle = (value: string) => new Intl.DateTimeFormat(i18n.language, { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date(`${value}T12:00`));
+  const formatHours = (start: string, end: string, timeZone = zone) => {
+    if (localParts(start, timeZone).date !== localParts(end, timeZone).date) return formatInterval(start, end, timeZone);
+    const formatter = new Intl.DateTimeFormat(i18n.language, { timeZone, hour: '2-digit', minute: '2-digit' });
+    return `${formatter.format(new Date(start))}–${formatter.format(new Date(end))}`;
+  };
+  const dateTitle = (value: string) => new Intl.DateTimeFormat(i18n.language, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).format(new Date(`${value}T12:00`));
+  const when = (event: Occurrence) => {
+    const start = localParts(event.start, event.timeZone).date;
+    const end = event.allDay ? shiftDay(localParts(event.end, event.timeZone).date, -1) : localParts(event.end, event.timeZone).date;
+    if (event.allDay) return `${capitalize(dateTitle(start))}${end !== start ? ` – ${dateTitle(end)}` : ''} · ${t('dayPlanning.allDay')}`;
+    return start === end ? `${capitalize(dateTitle(start))} · ${formatHours(event.start, event.end, event.timeZone)}` : formatInterval(event.start, event.end, event.timeZone);
+  };
+  const rangeTitle = () => {
+    if (!isDay(date)) return date;
+    if (display === 'DAY') return capitalize(dateTitle(date));
+    const format = new Intl.DateTimeFormat(i18n.language, { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
+    const [first, last] = [mondayOf(date), shiftDay(mondayOf(date), 6)].map((value) => new Date(`${value}T12:00:00Z`));
+    return typeof format.formatRange === 'function' ? format.formatRange(first, last) : `${format.format(first)} – ${format.format(last)}`;
+  };
   const changePlanner = (change: (value: string) => void) => (next: string) => { change(next); setSuggestions(null); request.current += 1; setLoading(false); };
-  const plannerField = (key: string, value: string, change: (value: string) => void) => <TextInput mode="outlined" label={t(`dayPlanning.${key}`)} accessibilityLabel={t(`dayPlanning.${key}`)} value={value} onChangeText={changePlanner(change)} disabled={saving || (view === 'PLAN' && loading)} />;
   const plannerPicker = (key: string, value: string, change: (value: string) => void, mode: 'date' | 'time', minimumDate?: string) =>
     <PlanningDateTimeField label={t(`dayPlanning.${key}`)} mode={mode} value={value} onChange={changePlanner(change)} minimumDate={minimumDate} disabled={saving || (view === 'PLAN' && loading)} />;
+  const zones = [...new Set([deviceTimeZone(), 'Europe/Warsaw', 'Europe/London', 'America/New_York', 'UTC'])];
+  const browsing = !editing && !tagManager && !selected && view !== 'PLAN';
+  const only = !!selected?.recurring && scope === 'OCCURRENCE';
+  const agenda = () => {
+    const range = rangeFor(date, 1, zone);
+    const rows: ({ start: string; end: string; event: Occurrence } | { start: string; end: string; busy: Busy })[] = [
+      ...(calendar?.events ?? []).map((event) => ({ start: event.start, end: event.end, event })),
+      ...(calendar?.busy ?? []).map((busy) => ({ start: busy.start, end: busy.end, busy })),
+    ].filter((item) => Date.parse(item.start) < Date.parse(range.to) && Date.parse(item.end) > Date.parse(range.from)).sort((a, b) => Date.parse(a.start) - Date.parse(b.start));
+    return <View style={{ gap: 8 }} testID={`day-agenda-${date}`}>
+      {!rows.length && <Text>{t(tagIds.length ? 'dayPlanning.emptyFiltered' : 'dayPlanning.empty')}</Text>}
+      {rows.map((row, index) => 'event' in row
+        ? <AgendaEvent key={`${row.event.id}-${row.event.occurrenceKey}`} event={row.event} hours={row.event.allDay ? t('dayPlanning.allDay') : formatHours(row.start, row.end)} names={view === 'TEAM' ? row.event.participantIds.map(nameFor).join(', ') : ''} onOpen={openDetails} />
+        : <Card key={`busy-${row.busy.personId}-${index}`} mode="contained" style={{ backgroundColor: theme.colors.surfaceVariant }} testID="day-busy">
+          <Card.Content style={{ gap: 2, paddingVertical: 10 }}>
+            <Text variant="labelMedium" style={{ color: theme.colors.onSurfaceVariant }}>{formatHours(row.start, row.end)}</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}><Icon source="lock-outline" size={16} color={theme.colors.onSurfaceVariant} /><Text variant="titleMedium" style={{ flexShrink: 1 }}>{t('dayPlanning.busy')} · {nameFor(row.busy.personId)}</Text></View>
+          </Card.Content>
+        </Card>)}
+    </View>;
+  };
   return <SafeAreaView edges={['left', 'right']} style={{ flex: 1, backgroundColor: ground }}>
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <ScrollView ref={scroll} nestedScrollEnabled keyboardShouldPersistTaps="handled" contentInsetAdjustmentBehavior="automatic" contentContainerStyle={{ padding: 16, gap: 16, paddingBottom: 36 }}
+      <ScrollView ref={scroll} nestedScrollEnabled keyboardShouldPersistTaps="handled" contentInsetAdjustmentBehavior="automatic" contentContainerStyle={{ padding: 16, gap: 12, paddingBottom: browsing && display === 'DAY' ? 88 : 36 }}
         refreshControl={<RefreshControl refreshing={loading} onRefresh={() => refresh()} />}>
         {!!error && <View><Text accessibilityRole="alert" style={{ color: theme.colors.error }}>{error}</Text>{!editing && <Button onPress={() => refresh()}>{t('common.retry')}</Button>}</View>}
         {stale && editing?.occurrence && <Button onPress={() => void beginEdit(editing.occurrence!, editing.occurrenceOnly)}>{t('dayPlanning.reloadEditor')}</Button>}
-        {editing ? <EventEditor key={editing.key} exceptions={editing.occurrenceOnly ? undefined : editing.definition?.exceptions} onRestore={(key) => void restore(key)} initial={editing.draft} teams={teams} userId={currentUser} occurrenceOnly={editing.occurrenceOnly}
+        {editing ? <EventEditor key={editing.key} exceptions={editing.occurrenceOnly ? undefined : editing.definition?.exceptions} onRestore={(key) => void restore(key)} initial={editing.draft} teams={teams} userId={currentUser} displayZone={zone} occurrenceOnly={editing.occurrenceOnly}
           saving={saving} onTagsChanged={() => setRevision((value) => value + 1)} onSave={(draft) => void save(draft)} onCancel={() => { setEditing(null); setError(''); setStale(false); }} />
-          : tagManager ? <TagManager tags={tags} team={teams.find((team) => team.id === teamId)} onChanged={reloadTags} onClose={() => { setTagManager(false); refresh(); }} />
+          : tagManager ? <TagManager tags={tags} teams={teams} onChanged={reloadTags} onClose={() => { setTagManager(false); refresh(); }} />
           : selected ? <Card testID="day-event-detail"><Card.Content style={{ gap: 12 }}>
             <Text variant="headlineSmall" accessibilityRole="header">{selected.title}</Text>
-            <Text>{selected.allDay ? `${t('dayPlanning.allDay')} · ` : ''}{selected.allDay ? `${localParts(selected.start, selected.timeZone).date} – ${shiftDay(localParts(selected.end, selected.timeZone).date, -1)}` : formatInterval(selected.start, selected.end, selected.timeZone)}</Text>
-            <Text>{selected.timeZone}</Text><Text>{t(selected.visibility === 'PRIVATE' ? 'dayPlanning.private' : 'dayPlanning.shared')}</Text>
-            {selected.description ? <Text selectable>{selected.description}</Text> : null}{selected.location ? <Text selectable>{selected.location}</Text> : null}
+            <Text variant="titleMedium">{when(selected)}</Text>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', columnGap: 16, rowGap: 6 }}>
+              <Detail icon={selected.visibility === 'PRIVATE' ? 'lock-outline' : 'account-group-outline'} text={t(selected.visibility === 'PRIVATE' ? 'dayPlanning.private' : 'dayPlanning.shared')} />
+              {selected.recurring && <Detail icon="repeat" text={t('dayPlanning.recurring')} />}
+              {!!selected.location && <Detail icon="map-marker-outline" text={selected.location} />}
+              {selected.timeZone !== zone && <Detail icon="earth" text={selected.timeZone} />}
+            </View>
+            {selected.description ? <Text selectable>{selected.description}</Text> : null}
+            {!!selected.tags.length && <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>{selected.tags.map((tag) => <Chip key={tag.id} icon={() => <TagColorDot color={tag.color} />}>{tag.name}</Chip>)}</View>}
+            <Text><Text style={{ fontWeight: '600' }}>{t('dayPlanning.participants')}: </Text>{selected.participants.map((person) => `${nameFor(person.personId)}${person.status === 'DECLINED' ? ` (${t('dayPlanning.declined')})` : ''}`).join(', ')}</Text>
             {!selected.participantIds.includes(selected.ownerId) && <Text>{t('dayPlanning.scheduledBy', { name: (organizer?.personId === selected.ownerId ? organizer.name : '') || nameFor(selected.ownerId) })}</Text>}
-            <Text>{selected.participants.map((person) => `${nameFor(person.personId)}${person.status === 'DECLINED' ? ` (${t('dayPlanning.declined')})` : ''}`).join(', ')}</Text>
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>{selected.tags.map((tag) => <Chip key={tag.id} icon={() => <TagColorDot color={tag.color} />}>{tag.name}</Chip>)}</View>
             {!selected.blocksTime && <Text>{t('dayPlanning.doesNotBlock')}</Text>}
-            {selected.canEdit && <>
-              {selected.recurring && <Button disabled={saving} onPress={() => void beginEdit(selected, true)}>{t('dayPlanning.editOccurrence')}</Button>}
-              <Button disabled={saving} mode="contained-tonal" onPress={() => void beginEdit(selected, false)}>{t(selected.recurring ? 'dayPlanning.editSeries' : 'common.edit')}</Button>
-              {selected.recurring && <Button disabled={saving} onPress={() => remove(selected, true)}>{t('dayPlanning.deleteOccurrence')}</Button>}
-              <Button disabled={saving} onPress={() => remove(selected, false)}>{t(selected.recurring ? 'dayPlanning.deleteSeries' : 'common.delete')}</Button>
-            </>}
-            {selected.canChangeParticipation && <>
-              {selected.recurring && <Button disabled={saving} onPress={() => void perform((confirmed) => changeParticipation(selected.id, selected.participation === 'DECLINED' ? 'INCLUDED' : 'DECLINED', selected.occurrenceKey, confirmed))}>
-                {t(selected.participation === 'DECLINED' ? 'dayPlanning.rejoinOccurrence' : 'dayPlanning.declineOccurrence')}</Button>}
-              <Button disabled={saving} onPress={() => void perform((confirmed) => changeParticipation(selected.id, selected.participation === 'DECLINED' ? 'INCLUDED' : 'DECLINED', null, confirmed))}>
-                {t(selected.participation === 'DECLINED' ? 'dayPlanning.rejoin' : 'dayPlanning.decline')}</Button>
-            </>}
+            {selected.recurring && (selected.canEdit || selected.canChangeParticipation) && <View style={{ gap: 6 }}>
+              <Text variant="labelLarge">{t('dayPlanning.scope')}</Text>
+              <SegmentedButtons value={scope} onValueChange={(value) => setScope(value as 'OCCURRENCE' | 'SERIES')} buttons={(['OCCURRENCE', 'SERIES'] as const).map((value) => ({ value, label: t(`dayPlanning.scopes.${value}`), disabled: saving }))} />
+            </View>}
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+              {selected.canEdit && <><Button mode="contained" icon="pencil-outline" accessibilityLabel={t('common.edit')} disabled={saving} onPress={() => void beginEdit(selected, only)}>{t('common.edit')}</Button>
+                <Button mode="outlined" disabled={saving} onPress={() => remove(selected, only)}>{t('common.delete')}</Button></>}
+              {selected.canChangeParticipation && <Button mode="outlined" disabled={saving} onPress={() => void perform((confirmed) => changeParticipation(selected.id, selected.participation === 'DECLINED' ? 'INCLUDED' : 'DECLINED', only ? selected.occurrenceKey : null, confirmed))}>
+                {t(selected.participation === 'DECLINED' ? 'dayPlanning.rejoin' : 'dayPlanning.decline')}</Button>}
+            </View>
             <Button onPress={() => setSelected(null)}>{t('dayPlanning.backToCalendar')}</Button>
           </Card.Content></Card>
           : <>
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
-              {['MINE', 'TEAM', 'PLAN'].map((value) => <Chip key={value} selected={view === value} onPress={() => { setView(value); setPeople((current) => current.length ? current : [currentUser]); setSuggestions(null); setLoading(false); }}>{t(`dayPlanning.views.${value}`)}</Chip>)}
-            </View>
-            <Button accessibilityLabel={t('dayPlanning.newEvent')} mode="contained" icon="plus" disabled={saving || !isDay(date)} onPress={() => beginCreate()}>{t('dayPlanning.newEvent')}</Button>
-            {!!scopeError && <><Text accessibilityRole="alert">{scopeError}</Text><Button onPress={() => setRevision((value) => value + 1)}>{t('common.retry')}</Button></>}
-            <ChoicePicker label={t('dayPlanning.team')} value={teamId ?? ''} options={[{ value: '', label: t('dayPlanning.noTeam') }, ...teams.map((team) => ({ value: team.id, label: team.name }))]} onChange={chooseTeam} />
-            {view !== 'MINE' && <View>
-              {view === 'PLAN' && <Text>{t('dayPlanning.authorIncluded')}</Text>}
-              {members.map((member) => <PlanningCheckbox key={member.userId} label={member.userName} accessibilityLabel={t('dayPlanning.showPerson', { name: member.userName })}
-                status={people.includes(member.userId) || (view === 'PLAN' && member.userId === currentUser) ? 'checked' : 'unchecked'} disabled={view === 'PLAN' && member.userId === currentUser} onPress={() => personToggle(member.userId)} />)}
-              {view === 'TEAM' && (!teamId || !people.length) && <Text>{t('dayPlanning.selectPeople')}</Text>}
+            {!!teams.length && <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+              {(['MINE', 'TEAM', 'PLAN'] as const).map((value) => <Chip key={value} selected={view === value} showSelectedCheck={false} onPress={() => chooseView(value)}>{t(`dayPlanning.views.${value}`)}</Chip>)}
             </View>}
-            {view !== 'PLAN' && <>
+            {!!scopeError && <View><Text accessibilityRole="alert">{scopeError}</Text><Button onPress={() => setRevision((value) => value + 1)}>{t('common.retry')}</Button></View>}
+            {view !== 'PLAN' && <View style={{ gap: 4 }}>
+              <PlanningDateTimeField label={t('dayPlanning.calendarDate')} mode="date" value={date} onChange={setDate} title={rangeTitle()} />
+              <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 4 }}>
+                <Button mode="outlined" compact onPress={() => setDate(dayString(new Date()))}>{t('dayPlanning.today')}</Button>
+                <IconButton icon="chevron-left" accessibilityLabel={t('dayPlanning.previous')} disabled={!isDay(date)} onPress={() => setDate(shiftDay(date, display === 'WEEK' ? -7 : -1))} />
+                <IconButton icon="chevron-right" accessibilityLabel={t('dayPlanning.next')} disabled={!isDay(date)} onPress={() => setDate(shiftDay(date, display === 'WEEK' ? 7 : 1))} />
+                <SegmentedButtons density="small" style={{ marginLeft: 'auto', minWidth: 168 }} value={display} onValueChange={(value) => setDisplay(value as 'DAY' | 'WEEK')}
+                  buttons={(['DAY', 'WEEK'] as const).map((value) => ({ value, label: t(value === 'DAY' ? 'dayPlanning.day' : 'dayPlanning.week') }))} />
+              </View>
+            </View>}
+            {view !== 'MINE' && <View style={{ gap: 8 }}>
+              {teams.length > 1 && <ChoicePicker label={t('dayPlanning.team')} value={teamId ?? ''} options={teams.map((team) => ({ value: team.id, label: team.name }))} onChange={chooseTeam} />}
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
-                {(['LIST', 'WEEK'] as const).map((value) => <Chip key={value} accessibilityLabel={t(`dayPlanning.display.${value}`)} accessibilityState={{ selected: display === value }} selected={display === value} onPress={() => setDisplay(value)}>{t(`dayPlanning.display.${value}`)}</Chip>)}
+                {members.map((member) => <ChoiceChip key={member.userId} label={member.userName} accessibilityLabel={t('dayPlanning.showPerson', { name: member.userName })}
+                  checked={people.includes(member.userId) || (view === 'PLAN' && member.userId === currentUser)} disabled={view === 'PLAN' && member.userId === currentUser} onPress={() => personToggle(member.userId)} />)}
               </View>
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
-                {display === 'LIST' && <><Chip selected={days === 1} onPress={() => setDays(1)}>{t('dayPlanning.day')}</Chip><Chip selected={days === 7} onPress={() => setDays(7)}>{t('dayPlanning.week')}</Chip></>}
-                <Button onPress={() => setDate(dayString(new Date()))}>{t('dayPlanning.today')}</Button>
-              </View>
-              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <IconButton icon="chevron-left" accessibilityLabel={t('dayPlanning.previous')} disabled={!isDay(date)} onPress={() => setDate(shiftDay(date, display === 'WEEK' ? -7 : -days))} />
-                <Text style={{ flex: 1 }} variant="titleMedium">{isDay(date) ? display === 'WEEK' ? `${dateTitle(mondayOf(date))} – ${dateTitle(shiftDay(mondayOf(date), 6))}` : dateTitle(date) : date}</Text>
-                <IconButton icon="chevron-right" accessibilityLabel={t('dayPlanning.next')} disabled={!isDay(date)} onPress={() => setDate(shiftDay(date, display === 'WEEK' ? 7 : days))} />
-              </View>
-            </>}
-            {plannerPicker('calendarDate', date, setDate, 'date')}
+              {view === 'PLAN' && <Text variant="bodySmall">{t('dayPlanning.authorIncluded')}</Text>}
+              {view === 'TEAM' && !!members.length && !people.length && <Text>{t('dayPlanning.selectPeople')}</Text>}
+            </View>}
             {view === 'PLAN' ? <>
-              {plannerPicker('planningEnd', planEnd, setPlanEnd, 'date', date)}{plannerField('duration', duration, setDuration)}
-              {plannerPicker('windowStart', windowStart, setWindowStart, 'time')}{plannerPicker('windowEnd', windowEnd, setWindowEnd, 'time')}{plannerField('timeZone', zone, setZone)}
-              <Text>{t('dayPlanning.plannerHint')}</Text>
+              {plannerPicker('searchFrom', date, setDate, 'date')}
+              {plannerPicker('planningEnd', planEnd, setPlanEnd, 'date', date)}
+              <TextInput mode="outlined" label={t('dayPlanning.duration')} accessibilityLabel={t('dayPlanning.duration')} keyboardType="number-pad" value={duration} onChangeText={changePlanner(setDuration)} disabled={saving || loading} />
+              <View style={{ flexDirection: 'row', gap: 12 }}>
+                <View style={{ flex: 1 }}>{plannerPicker('windowStart', windowStart, setWindowStart, 'time')}</View>
+                <View style={{ flex: 1 }}>{plannerPicker('windowEnd', windowEnd, setWindowEnd, 'time')}</View>
+              </View>
               <Button mode="contained" onPress={() => void search()} loading={loading} disabled={loading || !!scopeError}>{t('dayPlanning.findSlots')}</Button>
               {suggestions && <View testID="day-suggestions" style={{ gap: 12 }}>
                 {!suggestions.slots.length && <Text>{t('dayPlanning.noSlots')}</Text>}
-                {suggestions.slots.map((slot) => <Card key={slot.start}><Card.Content><Text>{formatInterval(slot.start, slot.end)}</Text></Card.Content><Card.Actions><Button onPress={() => beginCreate(slot)}>{t('dayPlanning.chooseSlot')}</Button></Card.Actions></Card>)}
-                <Text variant="titleMedium">{t('dayPlanning.availability')}</Text>
-                {suggestions.personIds.map((id) => <View key={id} style={{ gap: 4 }}><Text variant="titleSmall">{nameFor(id)}</Text>
+                {suggestions.slots.map((slot) => <Card key={slot.start} mode="outlined"><Card.Content><Text variant="titleMedium">{formatInterval(slot.start, slot.end)}</Text></Card.Content><Card.Actions><Button onPress={() => beginCreate(slot)}>{t('dayPlanning.chooseSlot')}</Button></Card.Actions></Card>)}
+                <Button icon={showAvailability ? 'chevron-up' : 'chevron-down'} contentStyle={{ flexDirection: 'row-reverse' }} style={{ alignSelf: 'flex-start' }} accessibilityLabel={t('dayPlanning.availability')} accessibilityState={{ expanded: showAvailability }} onPress={() => setShowAvailability(!showAvailability)}>{t('dayPlanning.availability')}</Button>
+                {showAvailability && suggestions.personIds.map((id) => <View key={id} style={{ gap: 4 }}><Text variant="titleSmall">{nameFor(id)}</Text>
                   {suggestions.busy.filter((busy) => busy.personId === id).map((busy, index) => <Text key={index}>{t('dayPlanning.busy')} · {formatInterval(busy.start, busy.end)}</Text>)}
                   {!suggestions.busy.some((busy) => busy.personId === id) && <Text>{t('dayPlanning.noKnownBusy')}</Text>}
                 </View>)}
               </View>}
             </> : <>
-              <Text variant="bodySmall">{zone}</Text>
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
-                <Chip selected={!tagIds.length} onPress={() => setTagIds([])}>{t('dayPlanning.allTags')}</Chip>
+              {!!tags.length && <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 6 }}>
                 {tags.map((tag) => <Chip key={tag.id} accessibilityLabel={tag.name} icon={() => <TagColorDot color={tag.color} selected={tagIds.includes(tag.id)} />} showSelectedOverlay showSelectedCheck={false} selected={tagIds.includes(tag.id)} onPress={() => setTagIds((current) => current.includes(tag.id) ? current.filter((id) => id !== tag.id) : [...current, tag.id])}>{tag.name}</Chip>)}
-              </View>
+                {!!tagIds.length && <Button compact onPress={() => setTagIds([])}>{t('dayPlanning.clearFilter')}</Button>}
+                <IconButton icon="pencil-outline" size={20} accessibilityLabel={t('dayPlanning.manageTags')} onPress={() => setTagManager(true)} />
+              </View>}
               {!!tagIds.length && <Text variant="bodySmall">{t('dayPlanning.filterHint')}</Text>}
-              <Button accessibilityLabel={t('dayPlanning.manageTags')} icon="tag-outline" onPress={() => setTagManager(true)}>{t('dayPlanning.manageTags')}</Button>
               {loading && <ActivityIndicator />}
               {calendar && display === 'WEEK' && isDay(date) && <WeekCalendar calendar={calendar} date={date} zone={zone} nameFor={nameFor} onOpen={openDetails} />}
-              {calendar && display === 'LIST' && Array.from({ length: days }, (_, offset) => shiftDay(date, offset)).map((day) => {
-                const range = rangeFor(day, 1, zone);
-                const rows = [
-                  ...calendar.events.map((event) => ({ start: event.start, end: event.end, event })),
-                  ...calendar.busy.map((busy) => ({ start: busy.start, end: busy.end, busy })),
-                ].filter((item) => Date.parse(item.start) < Date.parse(range.to) && Date.parse(item.end) > Date.parse(range.from)).sort((a, b) => Date.parse(a.start) - Date.parse(b.start));
-                return <View key={day} style={{ gap: 10 }} testID={`day-agenda-${day}`}>
-                  {days > 1 && <Text variant="titleLarge">{dateTitle(day)}</Text>}
-                  {!rows.length && <Text>{t('dayPlanning.empty')}</Text>}
-                  {rows.map((row, index) => 'event' in row ? <AgendaEvent key={`${row.event.id}-${row.event.occurrenceKey}`} event={row.event} onOpen={openDetails} formatInterval={formatInterval} /> : <Card key={`busy-${row.busy.personId}-${index}`} style={{ backgroundColor: theme.colors.surfaceVariant }} testID="day-busy">
-                    <Card.Content style={{ gap: 6 }}><Text variant="titleMedium">{t('dayPlanning.busy')} · {nameFor(row.busy.personId)}</Text><Text>{formatInterval(row.start, row.end)}</Text><Text variant="bodySmall">{t('dayPlanning.busyHint')}</Text></Card.Content>
-                  </Card>)}
-                </View>;
-              })}
+              {calendar && display === 'DAY' && agenda()}
             </>}
+            <View style={{ gap: 4, borderTopWidth: 1, borderColor: theme.colors.outlineVariant, paddingTop: 8 }}>
+              <Button compact icon="earth" style={{ alignSelf: 'flex-start' }} accessibilityLabel={`${t('dayPlanning.displayZone')}: ${zone}`} accessibilityState={{ expanded: zoneMenu }} onPress={() => setZoneMenu(!zoneMenu)}>{zone}</Button>
+              {zoneMenu && <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                {zones.map((value) => <Chip key={value} selected={value === zone} showSelectedCheck={false} onPress={() => { setZone(value); setZoneMenu(false); }}>{value}</Chip>)}
+              </View>}
+              {view === 'TEAM' && <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}><Icon source="lock-outline" size={16} color={theme.colors.onSurfaceVariant} /><Text variant="bodySmall" style={{ flex: 1, color: theme.colors.onSurfaceVariant }}>{t('dayPlanning.privacyNote')}</Text></View>}
+            </View>
           </>}
       </ScrollView>
     </KeyboardAvoidingView>
+    {browsing && <FAB icon="plus" accessibilityLabel={t('dayPlanning.newEvent')} disabled={saving || !isDay(date)} onPress={() => beginCreate()} style={{ position: 'absolute', right: 16, bottom: 16 }} />}
     <Portal><Dialog visible={!!confirmation} onDismiss={() => setConfirmation(null)}>
       <Dialog.Title>{confirmation?.title}</Dialog.Title><Dialog.ScrollArea><ScrollView style={{ maxHeight: 300 }}><Text style={{ paddingVertical: 16 }}>{confirmation?.text}</Text></ScrollView></Dialog.ScrollArea>
       <Dialog.Actions style={{ flexWrap: 'wrap' }}><Button onPress={() => setConfirmation(null)}>{t('common.cancel')}</Button><Button onPress={() => { const action = confirmation?.action; setConfirmation(null); action?.(); }}>{confirmation?.label ?? t('common.confirm')}</Button></Dialog.Actions>
@@ -326,15 +389,22 @@ export default function DayPlanningScreen() {
   </SafeAreaView>;
 }
 
-function AgendaEvent({ event, onOpen, formatInterval }: { event: Occurrence; onOpen: (event: Occurrence) => void; formatInterval: (start: string, end: string) => string }) {
+function Detail({ icon, text }: { icon: string; text: string }) {
+  const theme = useTheme();
+  return <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}><Icon source={icon} size={18} color={theme.colors.onSurfaceVariant} /><Text style={{ color: theme.colors.onSurfaceVariant }}>{text}</Text></View>;
+}
+
+function AgendaEvent({ event, hours, names, onOpen }: { event: Occurrence; hours: string; names: string; onOpen: (event: Occurrence) => void }) {
   const { t } = useTranslation();
-  return <Card onPress={() => onOpen(event)} testID={`day-event-${event.id}`}>
-    <Card.Content style={{ gap: 6 }}>
-      <Text variant="titleMedium">{event.title}</Text>
-      <Text>{event.allDay ? t('dayPlanning.allDay') : formatInterval(event.start, event.end)}</Text>
-      <Text variant="bodySmall">{t(event.visibility === 'PRIVATE' ? 'dayPlanning.private' : 'dayPlanning.shared')}{event.recurring ? ` · ${t('dayPlanning.recurring')}` : ''}</Text>
-      {event.participation === 'DECLINED' && <Text>{t('dayPlanning.declined')}</Text>}
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>{event.tags.map((tag) => <Chip key={tag.id} icon={() => <TagColorDot color={tag.color} />}>{tag.name}</Chip>)}</View>
+  const theme = useTheme();
+  const color = event.tags[0]?.color && /^#[a-f\d]{6}$/i.test(event.tags[0].color) ? event.tags[0].color : theme.colors.primary;
+  const details = [...event.tags.map((tag) => tag.name), event.recurring ? t('dayPlanning.recurring') : '', names].filter(Boolean).join(' · ');
+  return <Card mode="outlined" onPress={() => onOpen(event)} testID={`day-event-${event.id}`} style={{ borderLeftWidth: 4, borderLeftColor: color, opacity: event.participation === 'DECLINED' ? 0.7 : 1 }}>
+    <Card.Content style={{ gap: 2, paddingVertical: 10 }}>
+      <Text variant="labelMedium" style={{ color: theme.colors.onSurfaceVariant }}>{hours}</Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>{event.visibility === 'PRIVATE' && <Icon source="lock-outline" size={16} color={theme.colors.onSurfaceVariant} />}<Text variant="titleMedium" style={{ flexShrink: 1 }}>{event.title}</Text></View>
+      {!!details && <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>{details}</Text>}
+      {event.participation === 'DECLINED' && <Text variant="bodySmall">{t('dayPlanning.declined')}</Text>}
     </Card.Content>
   </Card>;
 }

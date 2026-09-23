@@ -1,29 +1,36 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Button, Dialog, Icon, IconButton } from '../components/md3';
+import { Button, Icon, IconButton } from '../components/md3';
 import DayCalendar from '../components/day-planning/DayCalendar';
 import DateTimePickerField from '../components/day-planning/DateTimePickerField';
 import WeekCalendar from '../components/day-planning/WeekCalendar';
+import DayEventDetail from '../components/day-planning/DayEventDetail';
 import DayEventEditor from '../components/day-planning/DayEventEditor';
 import DayTagManager from '../components/day-planning/DayTagManager';
 import service from '../services/dayPlanningService';
 import teamService from '../services/teamService';
-import { addDays, browserTimeZone, dateInZone, displayDate, displayTime, peopleOf, personName, weekStart, zonedIso } from '../services/dayPlanningTime';
+import { addDays, browserTimeZone, capitalize, dateInZone, displayDate, displayTime, peopleOf, personName, weekStart, zonedIso } from '../services/dayPlanningTime';
 import '../styles/day-planning.css';
+
+const durations = [15, 30, 45, 60, 90, 120, 180, 240, 360, 480];
+const byName = (a, b) => a.name.localeCompare(b.name);
+const loadTags = async (teams) => {
+    const catalogs = await Promise.all([service.tags(''), ...teams.map((team) => service.tags(team.id))]);
+    return [...new Map(catalogs.flatMap((data) => data.tags || []).map((tag) => [tag.id, tag])).values()].sort(byName);
+};
 
 export default function DayPlanning({ user }) {
     const { t, i18n } = useTranslation();
     const selfId = String(user.id);
-    const views = [['mine', 'myPlan'], ['team', 'teamPlan'], ['planner', 'findTime']];
     const [zone, setZone] = useState(browserTimeZone);
     const [date, setDate] = useState(() => dateInZone(new Date(), browserTimeZone()));
     const [view, setView] = useState('mine');
     const [period, setPeriod] = useState('day');
-    const [calendarView, setCalendarView] = useState('list');
     const [teams, setTeams] = useState([]);
-    const [teamId, setTeamId] = useState('');
-    const [members, setMembers] = useState([]);
-    const [selected, setSelected] = useState([selfId]);
+    const [teamsReady, setTeamsReady] = useState(false);
+    const [chosenTeam, setChosenTeam] = useState('');
+    const [rosters, setRosters] = useState({});
+    const [picked, setPicked] = useState(null);
     const [tags, setTags] = useState([]);
     const [tagIds, setTagIds] = useState([]);
     const [calendar, setCalendar] = useState({ events: [], busy: [] });
@@ -49,34 +56,45 @@ export default function DayPlanning({ user }) {
     const detailGeneration = useRef(0);
     const [teamsVersion, setTeamsVersion] = useState(0);
     const reload = () => setRefresh((value) => value + 1);
-    const isWeek = view !== 'planner' && (calendarView === 'week' || view === 'mine' && period === 'week');
+    const isWeek = period === 'week';
     const fromDate = isWeek ? weekStart(date) : date;
     const toDate = addDays(fromDate, isWeek ? 7 : 1);
-    const people = useMemo(() => [{ ...user, id: selfId, name: `${personName(user)} · ${t('dayPlanning.you')}` }, ...members.filter((person) => person.id !== selfId)], [user, selfId, members, t]);
-    const shownPeople = view === 'mine' ? people.filter((person) => person.id === selfId) : people.filter((person) => selected.includes(person.id));
-    const team = teams.find((item) => item.id === teamId);
+    const self = useMemo(() => ({ ...user, id: selfId, name: t('dayPlanning.you') }), [user, selfId, t]);
+    const teamId = teams.some((team) => team.id === chosenTeam) ? chosenTeam : (teams.find((team) => (rosters[team.id] || []).some((person) => person.id !== selfId)) || teams[0])?.id || '';
+    const teamPeople = useMemo(() => [self, ...(rosters[teamId] || []).filter((person) => person.id !== selfId)], [self, rosters, teamId, selfId]);
+    const directory = useMemo(() => [self, ...Object.values(rosters).flat()], [self, rosters]);
+    const selectedKey = (picked?.teamId === teamId ? picked.ids : teamPeople.map((person) => person.id)).filter((id) => teamPeople.some((person) => person.id === id)).join(',');
+    const selected = useMemo(() => selectedKey ? selectedKey.split(',') : [], [selectedKey]);
+    const shownPeople = view === 'mine' ? [self] : teamPeople.filter((person) => selected.includes(person.id));
+    const teamQuery = view === 'team' ? `${teamId}|${selectedKey}` : '';
+    const nameOf = (id) => personName(directory.find((person) => person.id === String(id))) || t('dayPlanning.teamMember');
     useEffect(() => {
         let active = true;
-        teamService.getTeams().then((data) => { if (active) { setTeams(data.teams || []); setTeamError(''); } }).catch(() => { if (active) setTeamError(t('dayPlanning.teamError')); });
+        teamService.getTeams()
+            .then((data) => { if (active) { setTeams(data.teams || []); setTeamError(''); } })
+            .catch(() => { if (active) setTeamError(t('dayPlanning.teamError')); })
+            .finally(() => { if (active) setTeamsReady(true); });
         return () => { active = false; };
     }, [teamsVersion, t]);
+    useEffect(() => { if (!teams.length) setView('mine'); }, [teams]);
     useEffect(() => {
+        if (!teamsReady) return undefined;
         let active = true;
-        setMembers([]);
-        setSelected([selfId]);
-        setTags([]);
-        setTagIds([]);
         setCatalogError('');
-        Promise.all([service.tags(teamId), teamId ? teamService.getTeamMembers(teamId) : Promise.resolve({ members: [] })]).then(([tagData, memberData]) => {
+        Promise.all([loadTags(teams), Promise.all(teams.map((team) => teamService.getTeamMembers(team.id)))]).then(([nextTags, rosterData]) => {
             if (!active) return;
-            const nextMembers = peopleOf(memberData);
-            setTags(tagData.tags || []);
-            setMembers(nextMembers);
-            setSelected([...new Set([selfId, ...nextMembers.map((person) => person.id)])]);
-        }).catch(() => { if (active) setCatalogError(t('dayPlanning.catalogError')); });
+            setTags(nextTags);
+            setTagIds((current) => current.filter((id) => nextTags.some((tag) => tag.id === id)));
+            setRosters(Object.fromEntries(teams.map((team, index) => [team.id, peopleOf(rosterData[index])])));
+        }).catch(() => { if (active) { setRosters({}); setCatalogError(t('dayPlanning.catalogError')); } });
         return () => { active = false; };
-    }, [teamId, selfId, teamsVersion, t]);
-    const reloadTags = useCallback(async () => { const data = await service.tags(teamId); setTags(data.tags || []); setTagIds((current) => current.filter((id) => data.tags.some((tag) => tag.id === id))); reload(); }, [teamId]);
+    }, [teams, teamsReady, t]);
+    const reloadTags = useCallback(async () => {
+        const next = await loadTags(teams);
+        setTags(next);
+        setTagIds((current) => current.filter((id) => next.some((tag) => tag.id === id)));
+        reload();
+    }, [teams]);
     useEffect(() => {
         let active = true;
         setCalendar({ events: [], busy: [] });
@@ -88,15 +106,14 @@ export default function DayPlanning({ user }) {
         catch { setError(t('dayPlanning.invalidTime')); setLoading(false); return undefined; }
         service.calendar(query).then((data) => { if (active) setCalendar(data); }).catch((failure) => { if (active) setError(failure.response?.data?.message || t('dayPlanning.loadError')); }).finally(() => { if (active) setLoading(false); });
         return () => { active = false; };
-    }, [fromDate, toDate, view, teamId, selected, tagIds, zone, refresh, t]);
+    }, [fromDate, toDate, view, teamQuery, tagIds, zone, refresh, t]);
     useEffect(() => {
         setSuggestions(null);
         setPlanningError('');
         setPlanning(false);
         planningGeneration.current++;
-    }, [date, teamId, selected, planner, zone]);
+    }, [date, teamId, selectedKey, planner, zone]);
     useEffect(() => {
-        let active = true;
         const invalidate = () => {
             detailGeneration.current++;
             planningGeneration.current++;
@@ -106,31 +123,18 @@ export default function DayPlanning({ user }) {
             setPlanning(false);
             setActionBusy(false);
             reload();
-            if (document.hidden) return;
-            teamService.getTeams().then((data) => {
-                if (!active) return;
-                setTeams(data.teams || []);
-                if (teamId && !data.teams.some((item) => item.id === teamId)) setTeamId('');
-            }).catch(() => {});
-            if (teamId) teamService.getTeamMembers(teamId).then((data) => {
-                if (!active) return;
-                const current = peopleOf(data);
-                setMembers(current);
-                setSelected((ids) => ids.filter((id) => id === selfId || current.some((person) => person.id === id)));
-            }).catch(() => { if (active) { setMembers([]); setSelected([selfId]); } });
+            if (!document.hidden) setTeamsVersion((value) => value + 1);
         };
         window.addEventListener('focus', invalidate);
         window.addEventListener('day-planning:changed', invalidate);
         document.addEventListener('visibilitychange', invalidate);
         return () => {
-            active = false;
             window.removeEventListener('focus', invalidate);
             window.removeEventListener('day-planning:changed', invalidate);
             document.removeEventListener('visibilitychange', invalidate);
         };
-    }, [teamId, selfId]);
-    const chooseView = (next) => { setView(next); if (next !== 'mine' && !teamId && teams.length) setTeamId(teams[0].id); };
-    const togglePerson = (id) => { if (view === 'planner' && id === selfId) return; setSelected((current) => current.includes(id) ? current.filter((value) => value !== id) : [...current, id]); };
+    }, []);
+    const togglePerson = (id) => { if (view === 'planner' && id === selfId) return; setPicked({ teamId, ids: selected.includes(id) ? selected.filter((value) => value !== id) : [...selected, id] }); };
     const startCreate = (slot) => { setNotice(''); setEditing({ seed: { date, teamId: view !== 'mine' ? teamId : '', personIds: slot ? [...new Set([selfId, ...selected])] : [selfId], ...slot } }); };
     const showDetail = async (item) => {
         const generation = ++detailGeneration.current;
@@ -144,7 +148,7 @@ export default function DayPlanning({ user }) {
             if (generation !== detailGeneration.current) return;
             setDetail(data);
             setDetailScope('occurrence');
-            if (data.teamId && !data.participantIds?.includes(data.ownerId) && !people.some((person) => person.id === data.ownerId)) {
+            if (data.teamId && !data.participantIds?.includes(data.ownerId) && !directory.some((person) => person.id === data.ownerId)) {
                 teamService.getTeamMembers(data.teamId)
                     .then((roster) => { if (generation === detailGeneration.current) setOrganizer(personName(peopleOf(roster).find((person) => person.id === data.ownerId)) || ''); })
                     .catch(() => {});
@@ -205,44 +209,72 @@ export default function DayPlanning({ user }) {
         } catch (failure) { if (generation === planningGeneration.current) setPlanningError(failure.response?.data?.message || t('dayPlanning.planningError')); }
         finally { if (generation === planningGeneration.current) setPlanning(false); }
     };
-    const detailStartDate = detail ? dateInZone(detail.start, detail.allDay ? detail.timeZone : zone) : null;
-    const detailEndDate = detail ? detail.allDay ? addDays(dateInZone(detail.end, detail.timeZone), -1) : dateInZone(detail.end, zone) : null;
-    const scopeSelect = detail?.recurring && <label className="day-field">{t('dayPlanning.changeScope')}<select aria-label={t('dayPlanning.changeScope')} value={detailScope} onChange={(e) => { setDetailScope(e.target.value); setParticipationConfirmation(null); }}><option value="occurrence">{t('dayPlanning.thisOccurrence')}</option><option value="series">{t('dayPlanning.wholeSeries')}</option></select></label>;
-    if (editing) return <div className="day-planning"><DayEventEditor key={`${editing.event?.id || 'new'}-${editing.occurrenceKey || 'series'}-${editing.event?.version || 0}`} {...editing} zone={zone} user={user} teams={teams} onTagCreated={(tag) => { if (tag.scope === 'PERSONAL' || tag.teamId === teamId) setTags((current) => [...current.filter((item) => item.id !== tag.id), tag]); }} onClose={() => { setEditing(null); reloadTags().catch(() => setCatalogError(t('dayPlanning.catalogError'))); }} onReload={async () => {
+    const rangeLabel = () => {
+        if (!isWeek) return capitalize(displayDate(date, i18n.language, { weekday: 'long', year: 'numeric' }));
+        const format = new Intl.DateTimeFormat(i18n.language, { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
+        const [first, last] = [fromDate, addDays(toDate, -1)].map((value) => new Date(`${value}T12:00:00Z`));
+        return format.formatRange ? format.formatRange(first, last) : `${format.format(first)} – ${format.format(last)}`;
+    };
+    const durationLabel = (minutes) => minutes < 60 ? t('dayPlanning.durationMinutes', { count: minutes }) : t('dayPlanning.durationHours', { value: new Intl.NumberFormat(i18n.language, { maximumFractionDigits: 1 }).format(minutes / 60) });
+    if (editing) return <div className="day-planning"><DayEventEditor key={`${editing.event?.id || 'new'}-${editing.occurrenceKey || 'series'}-${editing.event?.version || 0}`} {...editing} zone={zone} user={user} teams={teams} onTagCreated={(tag) => setTags((current) => [...current.filter((item) => item.id !== tag.id), tag].sort(byName))} onClose={() => { setEditing(null); reloadTags().catch(() => setCatalogError(t('dayPlanning.catalogError'))); }} onReload={async () => {
         try { const current = editing.occurrenceKey ? await service.occurrence(editing.event.id, editing.occurrenceKey) : await service.definition(editing.event.id); setEditing({ ...editing, event: current }); }
         catch { setEditing(null); setError(t('dayPlanning.noAccess')); reload(); }
     }} onSaved={() => { setEditing(null); setNotice(t('dayPlanning.saved')); reload(); }} /></div>;
+    const views = teams.length ? [['mine', 'myPlan'], ['team', 'teamPlan'], ['planner', 'findTime']] : [];
+    const zones = [...new Set([browserTimeZone(), 'Europe/Warsaw', 'Europe/London', 'America/New_York', 'UTC'])];
     return <section className="day-planning">
-        <header className="day-head"><div><p className="day-eyebrow">{t('dayPlanning.subtitle')}</p><h2>{t('dayPlanning.title')}</h2><p className="day-hint">{t('dayPlanning.intro')}</p></div><Button type="button" icon="add" onClick={() => startCreate()}>{t('dayPlanning.newEvent')}</Button></header>
-        <div className="day-tabs" role="tablist" aria-label={t('dayPlanning.views')}>{views.map(([value, label], index) => <button key={value} type="button" role="tab" id={`day-tab-${value}`} aria-selected={view === value} aria-controls="day-content" tabIndex={view === value ? 0 : -1} onKeyDown={(event) => {
+        <header className="day-head"><h2>{t('dayPlanning.title')}</h2><Button type="button" icon="add" onClick={() => startCreate()}>{t('dayPlanning.newEvent')}</Button></header>
+        {views.length > 0 && <div className="day-tabs" role="tablist" aria-label={t('dayPlanning.views')}>{views.map(([value, label], index) => <button key={value} type="button" role="tab" id={`day-tab-${value}`} aria-selected={view === value} aria-controls="day-content" tabIndex={view === value ? 0 : -1} onKeyDown={(event) => {
             const next = event.key === 'ArrowRight' ? (index + 1) % views.length : event.key === 'ArrowLeft' ? (index + views.length - 1) % views.length : event.key === 'Home' ? 0 : event.key === 'End' ? views.length - 1 : null;
-            if (next !== null) { event.preventDefault(); chooseView(views[next][0]); document.getElementById(`day-tab-${views[next][0]}`)?.focus(); }
-        }} onClick={() => chooseView(value)}>{t(`dayPlanning.${label}`)}</button>)}</div>
+            if (next !== null) { event.preventDefault(); setView(views[next][0]); document.getElementById(`day-tab-${views[next][0]}`)?.focus(); }
+        }} onClick={() => setView(value)}>{t(`dayPlanning.${label}`)}</button>)}</div>}
         {notice && <div role="status" className="day-success">{notice}</div>}
         {teamError && <div role="alert" className="day-alert">{teamError}<Button type="button" variant="text" onClick={() => setTeamsVersion((value) => value + 1)}>{t('dayPlanning.retry')}</Button></div>}
-        <div className="day-toolbar">
-            <div className="day-date-controls"><IconButton icon="chevronLeft" label={t('dayPlanning.previous')} onClick={() => setDate(addDays(date, isWeek ? -7 : -1))} /><DateTimePickerField compact label={t('dayPlanning.date')} required value={date} onChange={setDate} timeZone={zone} /><IconButton icon="chevronRight" label={t('dayPlanning.next')} onClick={() => setDate(addDays(date, isWeek ? 7 : 1))} /><Button type="button" variant="text" onClick={() => setDate(dateInZone(new Date(), zone))}>{t('dayPlanning.today')}</Button></div>
-            <div className="day-toolbar-selects">{view === 'mine' && calendarView === 'list' && <label className="day-compact-field">{t('dayPlanning.period')}<select aria-label={t('dayPlanning.period')} value={period} onChange={(e) => setPeriod(e.target.value)}><option value="day">{t('dayPlanning.day')}</option><option value="week">{t('dayPlanning.week')}</option></select></label>}{<label className="day-compact-field">{t(view === 'mine' ? 'dayPlanning.tagCatalog' : 'dayPlanning.team')}<select aria-label={t(view === 'mine' ? 'dayPlanning.tagCatalog' : 'dayPlanning.team')} value={teamId} onChange={(e) => setTeamId(e.target.value)}><option value="">{t(view === 'mine' ? 'dayPlanning.personalCatalog' : 'dayPlanning.personal')}</option>{teams.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>}<label className="day-compact-field">{t('dayPlanning.displayZone')}<select aria-label={t('dayPlanning.displayZone')} value={zone} onChange={(e) => setZone(e.target.value)}>{[...new Set([browserTimeZone(), 'Europe/Warsaw', 'Europe/London', 'America/New_York', 'UTC'])].map((value) => <option key={value}>{value}</option>)}</select></label></div>
-        </div>
-        {view !== 'planner' && <div className="day-display-switch" role="group" aria-label={t('dayPlanning.calendarView')}>{['list', 'week'].map((value) => <button key={value} type="button" aria-pressed={calendarView === value} onClick={() => setCalendarView(value)}>{t(value === 'list' ? 'dayPlanning.listView' : 'dayPlanning.weekView')}</button>)}</div>}
-        {view !== 'mine' && <fieldset className="day-choice-group day-people"><legend>{t('dayPlanning.participants')}</legend><div className="day-chips">{people.map((person) => <label className="day-choice" key={person.id}><input type="checkbox" checked={view === 'planner' && person.id === selfId || selected.includes(person.id)} disabled={view === 'planner' && person.id === selfId} onChange={() => togglePerson(person.id)} />{personName(person)}</label>)}</div>{view === 'planner' && <p className="day-hint">{t('dayPlanning.authorRequired')}</p>}</fieldset>}
         {catalogError && <div role="alert" className="day-alert">{catalogError}<Button type="button" variant="text" onClick={() => setTeamsVersion((value) => value + 1)}>{t('dayPlanning.retry')}</Button></div>}
-        {view !== 'planner' && <div className="day-filter"><span className="day-filter-label">{t('dayPlanning.tags')}</span><div className="day-chips"><button type="button" className={`day-chip${!tagIds.length ? ' is-selected' : ''}`} aria-pressed={!tagIds.length} onClick={() => setTagIds([])}>{t('dayPlanning.allTags')}</button>{tags.map((tag) => <button key={tag.id} type="button" aria-pressed={tagIds.includes(tag.id)} className={`day-chip${tagIds.includes(tag.id) ? ' is-selected' : ''}`} onClick={() => setTagIds((current) => current.includes(tag.id) ? current.filter((id) => id !== tag.id) : [...current, tag.id])}><span className="day-dot" style={{ background: tag.color }} />{tag.name}</button>)}</div><Button type="button" variant="text" onClick={() => setShowTags(true)}>{t('dayPlanning.manageTags')}</Button></div>}
-        {!!tagIds.length && view !== 'planner' && <p className="day-hint"><Icon name="lock" size={16} /> {t('dayPlanning.filterHint')}</p>}
-        <div id="day-content" role="tabpanel" aria-labelledby={`day-tab-${view}`}>
-            {view !== 'planner' ? <>
-                <h3 className="day-range-title">{displayDate(fromDate, i18n.language, { weekday: 'long' })}{isWeek ? ` – ${displayDate(addDays(toDate, -1), i18n.language)}` : ''}</h3>
-                {loading || actionBusy && !detail ? <p role="status" className="day-loading">{t('common.loading')}</p> : error ? <div role="alert" className="day-alert">{error}<Button type="button" variant="text" onClick={reload}>{t('dayPlanning.retry')}</Button></div> : view === 'team' && !teamId ? <p className="day-empty">{t('dayPlanning.chooseTeam')}</p> : calendarView === 'week' ? <WeekCalendar events={calendar.events || []} busy={calendar.busy || []} date={fromDate} people={shownPeople} zone={zone} onOpen={showDetail} /> : <DayCalendar events={calendar.events || []} busy={calendar.busy || []} date={fromDate} mode={view === 'mine' ? period : 'team'} people={shownPeople} zone={zone} onOpen={showDetail} />}
-                {calendar.coverage?.complete === false && <p role="alert" className="day-alert">{t('dayPlanning.incomplete')}</p>}
-                <p className="day-privacy-note"><Icon name="lock" size={16} />{t('dayPlanning.privacyNote')}</p>
-            </> : <div className="day-planner day-panel">
-                <div className="day-planner-intro"><Icon name="calendar" size={28} /><div><h3>{t('dayPlanning.findTime')}</h3><p className="day-hint">{t('dayPlanning.plannerHint')}</p></div></div>
-                <form onSubmit={findSlots}><fieldset disabled={planning} className="day-fields"><div className="day-row"><label className="day-field">{t('dayPlanning.searchDays')}<select aria-label={t('dayPlanning.searchDays')} value={planner.days} onChange={(e) => setPlanner({ ...planner, days: Number(e.target.value) })}>{[1, 3, 7, 14, 30].map((days) => <option key={days} value={days}>{t('dayPlanning.daysCount', { count: days })}</option>)}</select></label><label className="day-field">{t('dayPlanning.duration')}<input type="number" required min={15} max={720} step={15} value={planner.duration} onChange={(e) => setPlanner({ ...planner, duration: e.target.value })} /></label><DateTimePickerField label={t('dayPlanning.windowStart')} type="time" required value={planner.windowStart} onChange={(value) => setPlanner({ ...planner, windowStart: value })} /><DateTimePickerField label={t('dayPlanning.windowEnd')} type="time" required value={planner.windowEnd} onChange={(value) => setPlanner({ ...planner, windowEnd: value })} /></div><div><Button type="submit" disabled={!!catalogError || planner.windowEnd <= planner.windowStart}>{t(planning ? 'dayPlanning.searching' : 'dayPlanning.search')}</Button></div></fieldset></form>
-                {planningError && <p role="alert" className="day-alert">{planningError}</p>}
-                {suggestions && <div className="day-suggestions" aria-live="polite"><h3>{t('dayPlanning.suggestions')}</h3>{suggestions.coverage?.complete === false ? <p role="alert">{t('dayPlanning.incomplete')}</p> : suggestions.slots.length ? suggestions.slots.map((slot) => <button className="day-slot" key={slot.start} onClick={() => startCreate(slot)}><span><strong>{displayDate(dateInZone(slot.start, zone), i18n.language, { weekday: 'short' })}</strong><span>{displayTime(slot.start, i18n.language, zone)}–{displayTime(slot.end, i18n.language, zone)}</span></span><span>{t('dayPlanning.useSlot')} <Icon name="chevronRight" size={18} /></span></button>) : <p>{t('dayPlanning.noSlots')}</p>}</div>}
+        <div id="day-content" role={views.length ? 'tabpanel' : undefined} aria-labelledby={views.length ? `day-tab-${view}` : undefined}>
+            {view !== 'planner' && <div className="day-toolbar">
+                <div className="day-nav">
+                    <Button type="button" variant="outlined" onClick={() => setDate(dateInZone(new Date(), zone))}>{t('dayPlanning.today')}</Button>
+                    <IconButton icon="chevronLeft" label={t('dayPlanning.previous')} onClick={() => setDate(addDays(date, isWeek ? -7 : -1))} />
+                    <IconButton icon="chevronRight" label={t('dayPlanning.next')} onClick={() => setDate(addDays(date, isWeek ? 7 : 1))} />
+                    <DateTimePickerField label={t('dayPlanning.date')} required value={date} onChange={setDate} timeZone={zone} buttonLabel={rangeLabel()} />
+                </div>
+                <div className="day-segmented" role="group" aria-label={t('dayPlanning.calendarView')}>{['day', 'week'].map((value) => <button key={value} type="button" aria-pressed={period === value} onClick={() => setPeriod(value)}>{t(`dayPlanning.${value}`)}</button>)}</div>
             </div>}
+            {view !== 'mine' && <div className="day-people" role="group" aria-label={t('dayPlanning.people')}>
+                {teams.length > 1 && <select className="day-team-select" aria-label={t('dayPlanning.team')} value={teamId} onChange={(e) => setChosenTeam(e.target.value)}>{teams.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select>}
+                {teamPeople.map((person) => <label className="day-choice" key={person.id}><input type="checkbox" checked={view === 'planner' && person.id === selfId || selected.includes(person.id)} disabled={view === 'planner' && person.id === selfId} onChange={() => togglePerson(person.id)} />{personName(person)}</label>)}
+                {view === 'planner' && <p className="day-hint">{t('dayPlanning.authorRequired')}</p>}
+            </div>}
+            {view !== 'planner' ? <>
+                {tags.length > 0 && <div className="day-filter" role="group" aria-label={t('dayPlanning.tags')}>
+                    {tags.map((tag) => <button key={tag.id} type="button" aria-pressed={tagIds.includes(tag.id)} className={`day-chip${tagIds.includes(tag.id) ? ' is-selected' : ''}`} onClick={() => setTagIds((current) => current.includes(tag.id) ? current.filter((id) => id !== tag.id) : [...current, tag.id])}><span className="day-dot" style={{ background: tag.color }} />{tag.name}</button>)}
+                    {tagIds.length > 0 && <Button type="button" variant="text" onClick={() => setTagIds([])}>{t('dayPlanning.clearFilter')}</Button>}
+                    <IconButton icon="edit" label={t('dayPlanning.manageTags')} onClick={() => setShowTags(true)} />
+                </div>}
+                {tagIds.length > 0 && <p className="day-hint day-filter-hint">{t('dayPlanning.filterHint')}</p>}
+                {loading || actionBusy && !detail ? <p role="status" className="day-loading">{t('common.loading')}</p> : error ? <div role="alert" className="day-alert">{error}<Button type="button" variant="text" onClick={reload}>{t('dayPlanning.retry')}</Button></div> : view === 'team' && !teamId ? <p className="day-empty">{t('dayPlanning.chooseTeam')}</p> : isWeek ? <WeekCalendar events={calendar.events || []} busy={calendar.busy || []} date={fromDate} people={shownPeople} zone={zone} onOpen={showDetail} /> : <DayCalendar events={calendar.events || []} busy={calendar.busy || []} date={fromDate} people={shownPeople} perPerson={view === 'team'} filtered={tagIds.length > 0} zone={zone} onOpen={showDetail} />}
+                {calendar.coverage?.complete === false && <p role="alert" className="day-alert">{t('dayPlanning.incomplete')}</p>}
+            </> : <>
+                <form className="day-planner" onSubmit={findSlots}><fieldset disabled={planning} className="day-fields">
+                    <div className="day-row">
+                        <DateTimePickerField label={t('dayPlanning.searchFrom')} required value={date} onChange={setDate} timeZone={zone} />
+                        <label className="day-field">{t('dayPlanning.searchDays')}<select aria-label={t('dayPlanning.searchDays')} value={planner.days} onChange={(e) => setPlanner({ ...planner, days: Number(e.target.value) })}>{[1, 3, 7, 14, 30].map((days) => <option key={days} value={days}>{t('dayPlanning.daysCount', { count: days })}</option>)}</select></label>
+                        <label className="day-field">{t('dayPlanning.duration')}<select aria-label={t('dayPlanning.duration')} value={planner.duration} onChange={(e) => setPlanner({ ...planner, duration: Number(e.target.value) })}>{durations.map((minutes) => <option key={minutes} value={minutes}>{durationLabel(minutes)}</option>)}</select></label>
+                        <DateTimePickerField label={t('dayPlanning.windowStart')} type="time" required value={planner.windowStart} onChange={(value) => setPlanner({ ...planner, windowStart: value })} />
+                        <DateTimePickerField label={t('dayPlanning.windowEnd')} type="time" required value={planner.windowEnd} onChange={(value) => setPlanner({ ...planner, windowEnd: value })} />
+                    </div>
+                    <div><Button type="submit" disabled={!!catalogError || planner.windowEnd <= planner.windowStart}>{t(planning ? 'dayPlanning.searching' : 'dayPlanning.search')}</Button></div>
+                </fieldset></form>
+                {planningError && <p role="alert" className="day-alert">{planningError}</p>}
+                {suggestions && <div className="day-suggestions" aria-live="polite"><h3>{t('dayPlanning.suggestions')}</h3>{suggestions.coverage?.complete === false ? <p role="alert">{t('dayPlanning.incomplete')}</p> : suggestions.slots.length ? suggestions.slots.map((slot) => <button type="button" className="day-slot" key={slot.start} onClick={() => startCreate(slot)}><span><strong>{capitalize(displayDate(dateInZone(slot.start, zone), i18n.language, { weekday: 'long' }))}</strong><span>{displayTime(slot.start, i18n.language, zone)}–{displayTime(slot.end, i18n.language, zone)}</span></span><span>{t('dayPlanning.useSlot')} <Icon name="chevronRight" size={18} /></span></button>) : <p>{t('dayPlanning.noSlots')}</p>}</div>}
+            </>}
         </div>
-        {detail && <Dialog open onClose={actionBusy ? undefined : () => setDetail(null)} headline={detail.title} actions={<Button type="button" variant="text" disabled={actionBusy} onClick={() => setDetail(null)}>{t('dayPlanning.close')}</Button>}><div className="day-planning day-detail"><p>{detail.allDay ? t('dayPlanning.allDay') : `${displayTime(detail.start, i18n.language, zone)}–${displayTime(detail.end, i18n.language, zone)}`} · {displayDate(detailStartDate, i18n.language)}{detailEndDate !== detailStartDate ? ` – ${displayDate(detailEndDate, i18n.language)}` : ''}</p><p className="day-hint">{detail.timeZone} · {t(detail.visibility === 'PRIVATE' ? 'dayPlanning.private' : 'dayPlanning.teamVisible')}{detail.recurring ? ` · ${t('dayPlanning.repeats')}` : ''}</p>{detail.description && <p className="day-description">{detail.description}</p>}{detail.location && <p>{t('dayPlanning.location')}: {detail.location}</p>}<div className="day-chips">{detail.tags?.map((tag) => <span key={tag.id} className="day-chip"><span className="day-dot" style={{ background: tag.color }} />{tag.name}</span>)}</div>{detail.ownerId && !detail.participantIds?.includes(detail.ownerId) && <p className="day-hint">{t('dayPlanning.scheduledBy', { name: organizer || personName(people.find((item) => item.id === detail.ownerId)) || t('dayPlanning.teamMember') })}</p>}<h3>{t('dayPlanning.participants')}</h3><ul>{detail.participants?.map((person) => <li key={person.personId}>{personName(people.find((item) => item.id === person.personId)) || t('dayPlanning.teamMember')}{person.status === 'DECLINED' ? ` · ${t('dayPlanning.declined')}` : ''}</li>)}</ul>{(detail.canEdit || detail.canChangeParticipation) && scopeSelect}<div className="day-actions">{detail.canEdit && <><Button type="button" disabled={actionBusy} onClick={() => edit(detail, detailScope)}>{t('dayPlanning.edit')}</Button><Button type="button" variant="text" disabled={actionBusy} onClick={deleteEvent}>{t('common.delete')}</Button></>}{detail.canChangeParticipation && <Button type="button" variant="outlined" disabled={actionBusy} onClick={() => participate()}>{t(detail.participation === 'DECLINED' ? 'dayPlanning.rejoin' : 'dayPlanning.decline')}</Button>}</div>{participationConfirmation && <div role="alert" className="day-confirmation"><h3>{t('dayPlanning.conflicts')}</h3><p>{t('dayPlanning.conflictsHint')}</p><Button type="button" disabled={actionBusy} onClick={() => participate(participationConfirmation)}>{t('dayPlanning.confirmRejoin')}</Button><Button type="button" variant="text" disabled={actionBusy} onClick={() => setParticipationConfirmation(null)}>{t('common.cancel')}</Button></div>}{detailError && <div role="alert" className="day-alert">{detailError}<Button type="button" variant="text" disabled={actionBusy} onClick={() => showDetail(detail)}>{t('dayPlanning.reload')}</Button></div>}</div></Dialog>}
-        {showTags && <DayTagManager tags={tags} team={team} onChanged={reloadTags} onClose={() => setShowTags(false)} />}
+        <footer className="day-footer">
+            <label className="day-zone"><Icon name="language" size={18} /><select aria-label={t('dayPlanning.displayZone')} value={zone} onChange={(e) => setZone(e.target.value)}>{zones.map((value) => <option key={value}>{value}</option>)}</select></label>
+            {view === 'team' && <p className="day-privacy-note"><Icon name="lock" size={16} />{t('dayPlanning.privacyNote')}</p>}
+        </footer>
+        {detail && <DayEventDetail detail={detail} zone={zone} nameOf={nameOf} organizer={organizer} scope={detailScope} onScope={(value) => { setDetailScope(value); setParticipationConfirmation(null); }} busy={actionBusy} error={detailError} confirmation={participationConfirmation} onEdit={() => edit(detail, detailScope)} onDelete={deleteEvent} onParticipate={participate} onDismissConfirmation={() => setParticipationConfirmation(null)} onReload={() => showDetail(detail)} onClose={() => setDetail(null)} />}
+        {showTags && <DayTagManager tags={tags} teams={teams} onChanged={reloadTags} onClose={() => setShowTags(false)} />}
     </section>;
 }

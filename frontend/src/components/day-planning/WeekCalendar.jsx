@@ -14,7 +14,7 @@ export default function WeekCalendar({ events, busy, date, people, zone, onOpen 
     const today = dateInZone(new Date(), zone);
     useEffect(() => {
         const first = Math.min(8 * 60, ...days.flatMap((day) => day.timed.map((segment) => segment.startMinute)));
-        if (scroller.current) scroller.current.scrollTop = Math.max(0, first - 60);
+        if (scroller.current) scroller.current.scrollTop = Math.max(0, first - 72);
     }, [date, zone]);
     const names = (item) => people.filter((person) => item.kind === 'busy' ? person.id === item.personId : item.participantIds?.map(String).includes(person.id)).map(personName).join(', ');
     const title = (item) => item.kind === 'busy' ? t('dayPlanning.busy') : item.title;
@@ -35,7 +35,6 @@ export default function WeekCalendar({ events, busy, date, people, zone, onOpen 
             : <button key={`${item.key}-${day}`} type="button" {...attributes} onClick={() => onOpen(item)}>{content(segment, !allDay && duration < 40)}</button>;
     };
     return <>
-        <p className="day-hint day-week-scroll-hint">{t('dayPlanning.weekScrollHint')}</p>
         <div className="day-week-scroll" ref={scroller} role="region" aria-label={t('dayPlanning.weekView')} tabIndex={0}>
             <div className="day-week-grid">
                 <div className="day-week-corner">{zone.split('/').pop()?.replaceAll('_', ' ')}</div>

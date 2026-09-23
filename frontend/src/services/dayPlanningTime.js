@@ -38,5 +38,6 @@ export const minutesOnDate = (value, date, zone) => {
     if (local.slice(0, 10) > date) return 1440;
     return Number(local.slice(11, 13)) * 60 + Number(local.slice(14, 16));
 };
+export const capitalize = (text) => text.charAt(0).toUpperCase() + text.slice(1);
 export const personName = (person) => person?.name || person?.nickname || person?.email || person?.id || '';
 export const peopleOf = (data) => (data.members || []).map((member) => ({ ...member, id: String(member.userId || member.id), name: member.name || member.userName || member.email }));

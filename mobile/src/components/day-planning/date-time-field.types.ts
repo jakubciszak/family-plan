@@ -7,4 +7,5 @@ export type PlanningDateTimeFieldProps = {
   onChange: (value: string) => void;
   disabled?: boolean;
   minimumDate?: string;
+  title?: string;
 };

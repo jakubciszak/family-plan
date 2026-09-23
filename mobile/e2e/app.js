@@ -84,8 +84,16 @@ const test = base.test.extend({
         const onBar = page.getByRole('button', { name: short, exact: true });
 
         if (await onBar.count()) {
-          await onBar.first().click();
-          return;
+          try {
+            await onBar.first().click({ timeout: 5000 });
+            return;
+          } catch {
+            // The bar is rebuilt when personalisation arrives, which can move the place behind "Więcej".
+            if (await onBar.count()) {
+              await onBar.first().click();
+              return;
+            }
+          }
         }
 
         await page.getByRole('button', { name: 'Więcej' }).click();

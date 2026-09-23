@@ -1,9 +1,10 @@
+import ChoiceChip from '@/components/day-planning/choice-chip';
 import PlanningCheckbox from '@/components/day-planning/checkbox';
 import PlanningDateTimeField from '@/components/day-planning/date-time-field';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
-import { Button, Chip, HelperText, Text, TextInput } from 'react-native-paper';
+import { Button, Chip, HelperText, SegmentedButtons, Text, TextInput } from 'react-native-paper';
 
 import { listCalendarTags, type CalendarTag, type EventDefinition, type EventDraft, type Schedule } from '@/api/day-planning';
 import { listMembers, type Member, type Team } from '@/api/teams';
@@ -13,8 +14,8 @@ import { TagColorDot } from '@/components/day-planning/tag-colors';
 import { isDay, shiftDay } from '@/dates';
 import { localInstant, localInstants, localParts, utcOffsetFor } from '@/day-planning/time';
 
-export default function EventEditor({ initial, teams, userId, occurrenceOnly, saving, exceptions, onRestore, onSave, onCancel, onTagsChanged }: {
-  initial: EventDraft; teams: Team[]; userId: string; occurrenceOnly: boolean; saving: boolean;
+export default function EventEditor({ initial, teams, userId, displayZone, occurrenceOnly, saving, exceptions, onRestore, onSave, onCancel, onTagsChanged }: {
+  initial: EventDraft; teams: Team[]; userId: string; displayZone: string; occurrenceOnly: boolean; saving: boolean;
   exceptions?: EventDefinition['exceptions']; onRestore: (key: string) => void;
   onSave: (draft: EventDraft) => void; onCancel: () => void; onTagsChanged: () => void;
 }) {
@@ -52,6 +53,7 @@ export default function EventEditor({ initial, teams, userId, occurrenceOnly, sa
   const [scopeError, setScopeError] = useState(false);
   const [revision, setRevision] = useState(0);
   const [creatingTag, setCreatingTag] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(schedule.timeZone !== displayZone || !initial.blocksTime);
   const isTeamAdmin = teams.some((team) => team.id === draft.teamId && team.role === 'admin');
   const tagScopes: CalendarTag['scope'][] = draft.visibility === 'TEAM' ? (isTeamAdmin ? ['TEAM'] : []) : ['PERSONAL', ...(isTeamAdmin ? ['TEAM' as const] : [])];
   useEffect(() => {
@@ -100,6 +102,7 @@ export default function EventEditor({ initial, teams, userId, occurrenceOnly, sa
         } });
     } catch (failure) {
       const key = failure instanceof RangeError ? 'invalidZone' : failure instanceof Error ? failure.message : 'invalidTime';
+      if (key === 'invalidZone') setMoreOpen(true);
       setError(t(`dayPlanning.${key}`));
     }
   };
@@ -109,22 +112,17 @@ export default function EventEditor({ initial, teams, userId, occurrenceOnly, sa
     <Text variant="headlineSmall" accessibilityRole="header">{t(occurrenceOnly ? 'dayPlanning.editOccurrence' : 'dayPlanning.eventEditor')}</Text>
     {error ? <Text accessibilityRole="alert">{error}</Text> : null}
     {field('eventTitle', draft.title, (value) => change('title', value), { maxLength: 255 })}
-    {field('description', draft.description, (value) => change('description', value), { multiline: true })}
-    {field('location', draft.location, (value) => change('location', value))}
-    <ChoicePicker label={t('dayPlanning.eventTeam')} value={draft.teamId ?? ''} disabled={saving || occurrenceOnly}
-      options={[{ value: '', label: t('dayPlanning.noTeam') }, ...teams.map((team) => ({ value: team.id, label: team.name }))]} onChange={changeTeam} />
+    {!!teams.length && <ChoicePicker label={t('dayPlanning.eventTeam')} value={draft.teamId ?? ''} disabled={saving || occurrenceOnly}
+      options={[{ value: '', label: t('dayPlanning.noTeam') }, ...teams.map((team) => ({ value: team.id, label: team.name }))]} onChange={changeTeam} />}
     <PlanningCheckbox label={t('dayPlanning.allDay')} accessibilityLabel={t('dayPlanning.allDay')} status={allDay ? 'checked' : 'unchecked'} onPress={() => setAllDay(!allDay)} disabled={saving} />
     <PlanningDateTimeField label={t('dayPlanning.startDate')} mode="date" value={startDate} disabled={saving} onChange={(value) => { setStartDate(value); if (endDate === startDate) setEndDate(value); }} />
     {!allDay && <PlanningDateTimeField label={t('dayPlanning.startTime')} mode="time" value={startTime} disabled={saving} onChange={setStartTime} />}
     <PlanningDateTimeField label={t('dayPlanning.endDate')} mode="date" value={endDate} minimumDate={startDate} disabled={saving} onChange={setEndDate} />
     {!allDay && <PlanningDateTimeField label={t('dayPlanning.endTime')} mode="time" value={endTime} disabled={saving} onChange={setEndTime} />}
     {allDay && <Text variant="bodySmall">{t('dayPlanning.inclusiveEnd')}</Text>}
-    {field('timeZone', zone, setZone, { autoCapitalize: 'none', autoCorrect: false })}
     {!allDay && offsets.length > 1 && <ChoicePicker label={t('dayPlanning.clockChoice')} value={selectedOffset} disabled={saving} options={offsets.map((value, index) => ({ value, label: `${t(index === 0 ? 'dayPlanning.firstClockTime' : 'dayPlanning.secondClockTime')} (UTC${value})` }))} onChange={setUtcOffset} />}
     {!allDay && endOffsets.length > 1 && <ChoicePicker label={t('dayPlanning.endClockChoice')} value={selectedEndOffset} disabled={saving} options={endOffsets.map((value, index) => ({ value, label: `${t(index === 0 ? 'dayPlanning.firstClockTime' : 'dayPlanning.secondClockTime')} (UTC${value})` }))} onChange={setEndUtcOffset} />}
-    <Text variant="bodySmall">{t('dayPlanning.timeHint')}</Text>
     {!occurrenceOnly && <>
-      {!!Object.keys(exceptions ?? {}).length && <View style={{ gap: 6 }}><Text variant="titleMedium">{t('dayPlanning.exceptions')}</Text><Text>{t('dayPlanning.restoreHint')}</Text>{Object.entries(exceptions ?? {}).map(([key, exception]) => <View key={key}><Text>{key.replace('T', ' ')} · {t(exception.cancelled ? 'dayPlanning.cancelledException' : 'dayPlanning.changedException')}</Text><Button disabled={saving} onPress={() => onRestore(key)}>{t('dayPlanning.restoreOccurrence')}</Button></View>)}</View>}
       <ChoicePicker label={t('dayPlanning.recurrence')} value={frequency} disabled={saving}
         options={['ONCE', 'DAILY', 'WEEKLY'].map((value) => ({ value, label: t(`dayPlanning.frequency.${value}`) }))} onChange={setFrequency} />
       {frequency !== 'ONCE' && <>
@@ -137,34 +135,46 @@ export default function EventEditor({ initial, teams, userId, occurrenceOnly, sa
           options={['NEVER', 'UNTIL', 'COUNT'].map((value) => ({ value, label: t(`dayPlanning.ending.${value}`) }))} onChange={setEnding} />
         {ending === 'UNTIL' && <PlanningDateTimeField label={t('dayPlanning.until')} mode="date" value={until} minimumDate={startDate} disabled={saving} onChange={setUntil} />}
         {ending === 'COUNT' && field('count', count, setCount, { keyboardType: 'number-pad' })}
-        <Text variant="bodySmall">{t('dayPlanning.recurrenceHint')}</Text>
       </>}
     </>}
-    <ChoicePicker label={t('dayPlanning.visibility')} value={draft.visibility} disabled={saving}
-      options={[{ value: 'PRIVATE', label: t('dayPlanning.private') }, ...(draft.teamId ? [{ value: 'TEAM', label: t('dayPlanning.shared') }] : [])]}
-      onChange={changeVisibility} />
-    <Text>{t(draft.visibility === 'PRIVATE' ? 'dayPlanning.privateHint' : 'dayPlanning.sharedHint')}</Text>
-    <Text variant="titleMedium">{t('dayPlanning.participants')}</Text>
-    <Text variant="bodySmall">{t('dayPlanning.participantsHint')}</Text>
-    {isTeamAdmin && !occurrenceOnly && <><PlanningCheckbox label={t('dayPlanning.attendMyself')} accessibilityLabel={t('dayPlanning.attendMyself')} disabled={saving}
-      status={draft.ownerParticipates ? 'checked' : 'unchecked'} onPress={toggleSelf} /><Text variant="bodySmall">{t('dayPlanning.adminParticipationHint')}</Text></>}
-    {members.filter((member) => member.userId !== userId).map((member) => <PlanningCheckbox key={member.userId}
-      label={member.userName} accessibilityLabel={t('dayPlanning.invitePerson', { name: member.userName })} disabled={saving}
-      status={draft.participantIds.includes(member.userId) ? 'checked' : 'unchecked'} onPress={() => toggle('participantIds', member.userId)} />)}
-    {!draft.teamId && <Text>{t('dayPlanning.chooseTeamToInvite')}</Text>}
-    <Text variant="titleMedium">{t('dayPlanning.tags')}</Text>
+    {!!draft.teamId && <View style={{ gap: 8 }}>
+      <Text variant="labelLarge">{t('dayPlanning.visibility')}</Text>
+      <SegmentedButtons value={draft.visibility} onValueChange={changeVisibility}
+        buttons={[{ value: 'PRIVATE', label: t('dayPlanning.private'), disabled: saving }, { value: 'TEAM', label: t('dayPlanning.shared'), disabled: saving }]} />
+      <Text variant="bodySmall">{t(draft.visibility === 'PRIVATE' ? 'dayPlanning.privateHint' : 'dayPlanning.sharedHint')}</Text>
+    </View>}
+    {!!draft.teamId && <View style={{ gap: 8 }}>
+      <Text variant="labelLarge">{t('dayPlanning.participants')}</Text>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+        {isTeamAdmin && !occurrenceOnly && <ChoiceChip label={t('dayPlanning.attendMyself')} accessibilityLabel={t('dayPlanning.attendMyself')} disabled={saving} checked={draft.ownerParticipates} onPress={toggleSelf} />}
+        {members.filter((member) => member.userId !== userId).map((member) => <ChoiceChip key={member.userId}
+          label={member.userName} accessibilityLabel={t('dayPlanning.invitePerson', { name: member.userName })} disabled={saving}
+          checked={draft.participantIds.includes(member.userId)} onPress={() => toggle('participantIds', member.userId)} />)}
+      </View>
+      <Text variant="bodySmall">{t(isTeamAdmin && !occurrenceOnly ? 'dayPlanning.adminParticipationHint' : 'dayPlanning.participantsHint')}</Text>
+    </View>}
+    <Text variant="labelLarge">{t('dayPlanning.tags')}</Text>
     {scopeError && <><Text accessibilityRole="alert">{t('dayPlanning.scopeError')}</Text><Button onPress={() => setRevision((value) => value + 1)}>{t('common.retry')}</Button></>}
-    <View style={{ flexDirection: 'row', gap: 6, flexWrap: 'wrap' }}>
+    <View style={{ flexDirection: 'row', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
       {tags.filter((tag) => draft.visibility !== 'TEAM' || tag.scope === 'TEAM').map((tag) => <Chip key={tag.id} selected={draft.tagIds.includes(tag.id)} accessibilityLabel={tag.name} showSelectedOverlay showSelectedCheck={false} icon={() => <TagColorDot color={tag.color} selected={draft.tagIds.includes(tag.id)} />} disabled={saving}
         onPress={() => toggle('tagIds', tag.id)}>{tag.name}</Chip>)}
+      {!creatingTag && !!tagScopes.length && <Button icon="plus" compact accessibilityLabel={t('dayPlanning.newTag')} disabled={saving || loadingScope || scopeError} onPress={() => setCreatingTag(true)}>{t('dayPlanning.newTag')}</Button>}
     </View>
-    {!tags.length && !loadingScope && <Text>{t('dayPlanning.noTags')}</Text>}
-    {creatingTag && tagScopes.length ? <TagCreator key={`${draft.teamId ?? ''}-${draft.visibility}`} teamId={draft.teamId} scopes={tagScopes} onCatalogChanged={onTagsChanged}
+    {creatingTag && !!tagScopes.length && <TagCreator key={`${draft.teamId ?? ''}-${draft.visibility}`} teamId={draft.teamId} scopes={tagScopes} onCatalogChanged={onTagsChanged}
       onCreated={(tag) => { setTags((current) => [...current.filter((item) => item.id !== tag.id), tag]); setDraft((current) => ({ ...current, tagIds: [...new Set([...current.tagIds, tag.id])] })); setCreatingTag(false); }}
-      onCancel={() => setCreatingTag(false)} /> : tagScopes.length ? <Button icon="plus" accessibilityLabel={t('dayPlanning.newTag')} disabled={saving || loadingScope || scopeError} onPress={() => setCreatingTag(true)}>{t('dayPlanning.newTag')}</Button> : <Text>{t('dayPlanning.teamTagAdminHint')}</Text>}
+      onCancel={() => setCreatingTag(false)} />}
+    {!tagScopes.length && <Text variant="bodySmall">{t('dayPlanning.teamTagAdminHint')}</Text>}
     {invalidTags && <HelperText type="error">{t('dayPlanning.personalTagsWarning')}</HelperText>}
-    <PlanningCheckbox label={t('dayPlanning.blocksTime')} accessibilityLabel={t('dayPlanning.blocksTime')}
-      status={draft.blocksTime ? 'checked' : 'unchecked'} disabled={saving} onPress={() => change('blocksTime', !draft.blocksTime)} />
+    {field('description', draft.description, (value) => change('description', value), { multiline: true })}
+    {field('location', draft.location, (value) => change('location', value))}
+    <Button icon={moreOpen ? 'chevron-up' : 'chevron-down'} contentStyle={{ flexDirection: 'row-reverse' }} style={{ alignSelf: 'flex-start' }} accessibilityLabel={t('dayPlanning.moreOptions')} accessibilityState={{ expanded: moreOpen }} onPress={() => setMoreOpen(!moreOpen)}>{t('dayPlanning.moreOptions')}</Button>
+    {moreOpen && <View style={{ gap: 12 }}>
+      {field('timeZone', zone, setZone, { autoCapitalize: 'none', autoCorrect: false })}
+      <Text variant="bodySmall">{t('dayPlanning.timeHint')}</Text>
+      <PlanningCheckbox label={t('dayPlanning.blocksTime')} accessibilityLabel={t('dayPlanning.blocksTime')}
+        status={draft.blocksTime ? 'checked' : 'unchecked'} disabled={saving} onPress={() => change('blocksTime', !draft.blocksTime)} />
+    </View>}
+    {!occurrenceOnly && !!Object.keys(exceptions ?? {}).length && <View style={{ gap: 6 }}><Text variant="titleMedium">{t('dayPlanning.exceptions')}</Text><Text>{t('dayPlanning.restoreHint')}</Text>{Object.entries(exceptions ?? {}).map(([key, exception]) => <View key={key}><Text>{key.replace('T', ' ')} · {t(exception.cancelled ? 'dayPlanning.cancelledException' : 'dayPlanning.changedException')}</Text><Button disabled={saving} onPress={() => onRestore(key)}>{t('dayPlanning.restoreOccurrence')}</Button></View>)}</View>}
     <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
       <Button mode="contained" onPress={save} disabled={saving || loadingScope || scopeError || creatingTag} loading={saving}>{t('common.save')}</Button>
       <Button onPress={onCancel} disabled={saving}>{t('common.cancel')}</Button>
