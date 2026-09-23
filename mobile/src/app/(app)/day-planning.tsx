@@ -320,7 +320,7 @@ export default function DayPlanningScreen() {
           </Card.Content></Card>
           : <>
             {!!teams.length && <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
-              {(['MINE', 'TEAM', 'PLAN'] as const).map((value) => <Chip key={value} selected={view === value} showSelectedCheck={false} onPress={() => chooseView(value)}>{t(`dayPlanning.views.${value}`)}</Chip>)}
+              {(['MINE', 'TEAM', 'PLAN'] as const).map((value) => <Chip key={value} mode={view === value ? 'flat' : 'outlined'} selected={view === value} showSelectedCheck={false} onPress={() => chooseView(value)}>{t(`dayPlanning.views.${value}`)}</Chip>)}
             </View>}
             {!!scopeError && <View><Text accessibilityRole="alert">{scopeError}</Text><Button onPress={() => setRevision((value) => value + 1)}>{t('common.retry')}</Button></View>}
             {view !== 'PLAN' && <View style={{ gap: 4 }}>
@@ -362,7 +362,7 @@ export default function DayPlanningScreen() {
               </View>}
             </> : <>
               {!!tags.length && <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 6 }}>
-                {tags.map((tag) => <Chip key={tag.id} accessibilityLabel={tag.name} icon={() => <TagColorDot color={tag.color} selected={tagIds.includes(tag.id)} />} showSelectedOverlay showSelectedCheck={false} selected={tagIds.includes(tag.id)} onPress={() => setTagIds((current) => current.includes(tag.id) ? current.filter((id) => id !== tag.id) : [...current, tag.id])}>{tag.name}</Chip>)}
+                {tags.map((tag) => <Chip key={tag.id} accessibilityLabel={tag.name} icon={() => <TagColorDot color={tag.color} selected={tagIds.includes(tag.id)} />} mode={tagIds.includes(tag.id) ? 'flat' : 'outlined'} showSelectedCheck={false} selected={tagIds.includes(tag.id)} onPress={() => setTagIds((current) => current.includes(tag.id) ? current.filter((id) => id !== tag.id) : [...current, tag.id])}>{tag.name}</Chip>)}
                 {!!tagIds.length && <Button compact onPress={() => setTagIds([])}>{t('dayPlanning.clearFilter')}</Button>}
                 <IconButton icon="pencil-outline" size={20} accessibilityLabel={t('dayPlanning.manageTags')} onPress={() => setTagManager(true)} />
               </View>}
@@ -374,7 +374,7 @@ export default function DayPlanningScreen() {
             <View style={{ gap: 4, borderTopWidth: 1, borderColor: theme.colors.outlineVariant, paddingTop: 8 }}>
               <Button compact icon="earth" style={{ alignSelf: 'flex-start' }} accessibilityLabel={`${t('dayPlanning.displayZone')}: ${zone}`} accessibilityState={{ expanded: zoneMenu }} onPress={() => setZoneMenu(!zoneMenu)}>{zone}</Button>
               {zoneMenu && <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
-                {zones.map((value) => <Chip key={value} selected={value === zone} showSelectedCheck={false} onPress={() => { setZone(value); setZoneMenu(false); }}>{value}</Chip>)}
+                {zones.map((value) => <Chip key={value} mode={value === zone ? 'flat' : 'outlined'} selected={value === zone} showSelectedCheck={false} onPress={() => { setZone(value); setZoneMenu(false); }}>{value}</Chip>)}
               </View>}
               {view === 'TEAM' && <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}><Icon source="lock-outline" size={16} color={theme.colors.onSurfaceVariant} /><Text variant="bodySmall" style={{ flex: 1, color: theme.colors.onSurfaceVariant }}>{t('dayPlanning.privacyNote')}</Text></View>}
             </View>

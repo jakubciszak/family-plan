@@ -128,7 +128,7 @@ export default function EventEditor({ initial, teams, userId, displayZone, occur
       {frequency !== 'ONCE' && <>
         {field('interval', interval, setInterval, { keyboardType: 'number-pad' })}
         {frequency === 'WEEKLY' && <View style={{ flexDirection: 'row', gap: 6, flexWrap: 'wrap' }}>
-          {[1, 2, 3, 4, 5, 6, 7].map((day) => <Chip key={day} selected={byDay.includes(day)} accessibilityLabel={t(`dayPlanning.weekdays.${day}`)}
+          {[1, 2, 3, 4, 5, 6, 7].map((day) => <Chip key={day} mode={byDay.includes(day) ? 'flat' : 'outlined'} selected={byDay.includes(day)} accessibilityLabel={t(`dayPlanning.weekdays.${day}`)}
             onPress={() => setByDay(byDay.includes(day) ? byDay.filter((value) => value !== day) : [...byDay, day])}>{t(`dayPlanning.weekdays.${day}`)}</Chip>)}
         </View>}
         <ChoicePicker label={t('dayPlanning.repeatEnds')} value={ending} disabled={saving}
@@ -156,7 +156,7 @@ export default function EventEditor({ initial, teams, userId, displayZone, occur
     <Text variant="labelLarge">{t('dayPlanning.tags')}</Text>
     {scopeError && <><Text accessibilityRole="alert">{t('dayPlanning.scopeError')}</Text><Button onPress={() => setRevision((value) => value + 1)}>{t('common.retry')}</Button></>}
     <View style={{ flexDirection: 'row', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
-      {tags.filter((tag) => draft.visibility !== 'TEAM' || tag.scope === 'TEAM').map((tag) => <Chip key={tag.id} selected={draft.tagIds.includes(tag.id)} accessibilityLabel={tag.name} showSelectedOverlay showSelectedCheck={false} icon={() => <TagColorDot color={tag.color} selected={draft.tagIds.includes(tag.id)} />} disabled={saving}
+      {tags.filter((tag) => draft.visibility !== 'TEAM' || tag.scope === 'TEAM').map((tag) => <Chip key={tag.id} mode={draft.tagIds.includes(tag.id) ? 'flat' : 'outlined'} selected={draft.tagIds.includes(tag.id)} accessibilityLabel={tag.name} showSelectedCheck={false} icon={() => <TagColorDot color={tag.color} selected={draft.tagIds.includes(tag.id)} />} disabled={saving}
         onPress={() => toggle('tagIds', tag.id)}>{tag.name}</Chip>)}
       {!creatingTag && !!tagScopes.length && <Button icon="plus" compact accessibilityLabel={t('dayPlanning.newTag')} disabled={saving || loadingScope || scopeError} onPress={() => setCreatingTag(true)}>{t('dayPlanning.newTag')}</Button>}
     </View>

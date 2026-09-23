@@ -38,6 +38,14 @@ const eventTeam = async (page) => { await button(page, 'Zespół wydarzenia').cl
 const moreOptions = (page) => button(page, 'Więcej opcji').click();
 const displayZone = async (page, zone) => { await page.getByRole('button', { name: /^Strefa wyświetlania: / }).click(); await button(page, zone).click(); };
 const person = (page, name) => page.getByRole('checkbox', { name: `Pokaż osobę: ${name}` });
+/** The first opaque colour behind a control, past the translucent hover layer; chips fill what is chosen and outline the rest. */
+const fill = (locator) => locator.evaluate((node) => {
+  for (let element = node; element; element = element.parentElement) {
+    const color = getComputedStyle(element).backgroundColor;
+    if (color.startsWith('rgb(')) return color;
+  }
+  return '';
+});
 
 test('keeps busy placeholders under tag filtering without offering private details', async ({ app, page, world }) => {
   const state = await install(page, world); state.events = [event(world)];
@@ -386,6 +394,25 @@ test.describe('simplified day plan', () => {
     await page.getByText('Plan zespołu', { exact: true }).click();
     await expect(page.getByText('Prywatne wydarzenia innych osób widać tylko jako „Zajęty”.')).toBeVisible();
     await expect(page.getByTestId('day-event-' + state.events[0].id)).toContainText('Ala Kowalska, Bartek Kowalski');
+  });
+
+  test('fills the chosen view, tags and zone so they stand out from the rest', async ({ app, page, world }) => {
+    await install(page, world);
+    await open(app);
+    const chosen = await fill(page.getByText('Mój plan', { exact: true }));
+    expect(await fill(page.getByText('Plan zespołu', { exact: true }))).not.toBe(chosen);
+    expect(await fill(button(page, 'Szkoła'))).not.toBe(chosen);
+    await button(page, 'Szkoła').click();
+    await expect.poll(() => fill(button(page, 'Szkoła'))).toBe(chosen);
+    expect(await fill(button(page, 'Praca'))).not.toBe(chosen);
+    await displayZone(page, 'Europe/London');
+    await page.getByRole('button', { name: 'Strefa wyświetlania: Europe/London' }).click();
+    expect(await fill(button(page, 'Europe/London'))).toBe(chosen);
+    expect(await fill(button(page, 'America/New_York'))).not.toBe(chosen);
+    await button(page, 'Nowe wydarzenie').click();
+    expect(await fill(button(page, 'Praca'))).not.toBe(chosen);
+    await button(page, 'Praca').click();
+    await expect.poll(() => fill(button(page, 'Praca'))).toBe(chosen);
   });
 
   test('keeps a person without a team in one personal view', async ({ app, page, world }) => {

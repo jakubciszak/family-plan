@@ -22,6 +22,7 @@ Web i mobile pokazują na co dzień tylko to, czego rodzina potrzebuje: datę z 
 - Strefa wyświetlania jest zawsze widoczna pod planem; nie zajmuje miejsca w pasku narzędzi.
 - W szczegółach wydarzenia cyklicznego zakres zmiany (to wystąpienie albo cała seria) wybiera się raz, a edycja, usunięcie i rezygnacja są wspólnymi przyciskami.
 - W edytorze widoczność i uczestnicy pojawiają się przy wydarzeniu zespołowym; strefa wydarzenia i „Zajmuje czas uczestników” są w „Więcej opcji”.
+- Zaznaczony chip lub zakładka (widok, osoba, tag, dzień tygodnia, a w mobile także strefa) jest wypełniony, a pozostałe mają tylko obrys.
 
 ## Weryfikacja
 
