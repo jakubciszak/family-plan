@@ -2,7 +2,7 @@
   "expo": {
     "name": "Family Plan",
     "slug": "family-plan",
-    "version": "1.0.9",
+    "version": "1.0.10",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "familyplan",
@@ -18,7 +18,7 @@
       },
       "predictiveBackGestureEnabled": false,
       "package": "pl.familyplan.app",
-      "versionCode": 10
+      "versionCode": 11
     },
     "web": {
       "output": "static",
