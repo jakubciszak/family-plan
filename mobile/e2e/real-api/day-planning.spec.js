@@ -49,9 +49,9 @@ test('mobile date and time pickers, inline tags, private availability, weekly ex
   await button(page, 'Utwórz tag').click();
   await expect(page.getByTestId('day-inline-tag')).toHaveCount(0);
   await expect(page.getByLabel('Tytuł wydarzenia', { exact: true })).toHaveValue('Wspólna nauka mobile');
-  const catalog = await call('get', '/api/day-planning/tags', undefined, author.headers);
+  const catalog = await call('get', `/api/day-planning/tags?teamId=${team.id}`, undefined, author.headers);
   const createdTag = catalog.tags.find((tag) => tag.name === 'Nauka z formularza');
-  expect(createdTag).toMatchObject({ color: '#325f99', scope: 'PERSONAL', teamId: null });
+  expect(createdTag).toMatchObject({ color: '#325f99', scope: 'TEAM', teamId: team.id });
   await button(page, 'Powtarzanie').click(); await button(page, 'Co kilka tygodni').click();
   await page.getByRole('checkbox', { name: 'Zaproś: Mobile Friend' }).click();
   await button(page, 'Zapisz').click();
@@ -59,6 +59,7 @@ test('mobile date and time pickers, inline tags, private availability, weekly ex
   const calendar = await call('get', '/api/day-planning/calendar?from=2026-09-21T00%3A00%3A00%2B02%3A00&to=2026-09-22T00%3A00%3A00%2B02%3A00', undefined, author.headers);
   const saved = calendar.events.find((entry) => entry.title === 'Wspólna nauka mobile');
   expect(saved.recurring).toBe(true);
+  expect(saved.visibility).toBe('TEAM');
   expect(Date.parse(saved.start)).toBe(Date.parse('2026-09-21T09:07:00+02:00'));
   expect(Date.parse(saved.end) - Date.parse(saved.start)).toBe(75 * 60000);
   expect(saved.tags).toEqual(expect.arrayContaining([expect.objectContaining({ id: createdTag.id, name: 'Nauka z formularza', color: '#325f99' })]));
