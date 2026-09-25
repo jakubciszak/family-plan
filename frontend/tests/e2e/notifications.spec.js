@@ -92,6 +92,41 @@ test.describe('Notification bubbles', () => {
     await expect.poll(() => api.writes).toEqual([{ method: 'POST', url: '/api/notifications/live/read' }]);
   });
 
+  test('a summary shrinks when somebody else handles part of it and goes once nothing is left', async ({ page }) => {
+    const api = await openApp(page, {
+      unread: [
+        note('a', 60, 'Task waiting for approval', 'Ola waits for approval of "Dishes".'),
+        note('b', 600, 'Task waiting for approval', 'Kuba waits for approval of "Rubbish".'),
+        note('c', 3000, 'Pocket money waiting', 'You have 20.00 zł to collect.', { event: 'payout_offered' }),
+      ],
+    });
+    await expect(bubbles(page)).toContainText('3 notifications while you were away');
+
+    // The other parent approved Ola's task.
+    api.unread = api.unread.filter((item) => item.id !== 'a');
+    await page.clock.runFor(10500);
+    await expect(bubbles(page)).toContainText('2 notifications while you were away');
+
+    api.unread = [];
+    await page.clock.runFor(10500);
+    await expect(bubbles(page)).toHaveCount(0);
+    expect(api.writes).toEqual([]);
+  });
+
+  test('a bubble on screen goes as soon as its notification is handled elsewhere', async ({ page }) => {
+    const api = await openApp(page);
+    await page.clock.runFor(500);
+
+    api.unread = [note('live', 0, 'Task waiting for approval', 'Ola waits for approval of "Dishes".', { createdAt: new Date(NOW.getTime() + 5000).toISOString() })];
+    await page.clock.runFor(10000);
+    await expect(bubbles(page)).toContainText('Ola waits for approval');
+
+    api.unread = [];
+    await page.evaluate(() => window.dispatchEvent(new Event('focus')));
+    await expect(bubbles(page)).toHaveCount(0);
+    expect(api.writes).toEqual([]);
+  });
+
   test('a swipe to either side dismisses it, a short drag snaps it back', async ({ page }) => {
     const api = await openApp(page, { unread: [note('a', 600, 'Task approved', 'You earn 20 points.', { event: 'task_approved' })] });
     const bubble = bubbles(page).first();
@@ -99,10 +134,15 @@ test.describe('Notification bubbles', () => {
     const box = await bubble.boundingBox();
     const y = box.y + box.height / 2;
 
+    // Slowly: a quick short move is a flick, and a flick dismisses too.
     await page.mouse.move(box.x + box.width / 2, y);
     await page.mouse.down();
-    await page.mouse.move(box.x + box.width / 2 + 40, y, { steps: 4 });
+    for (let step = 1; step <= 4; step++) {
+      await page.mouse.move(box.x + box.width / 2 + step * 10, y);
+      await page.waitForTimeout(60);
+    }
     await page.mouse.up();
+    await page.clock.runFor(300);
     await expect(bubble).toBeVisible();
     expect(api.writes).toEqual([]);
 

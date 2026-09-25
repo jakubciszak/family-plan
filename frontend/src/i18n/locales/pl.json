@@ -994,7 +994,7 @@
   "notificationKinds": {
     "title": "Które powiadomienia chcę dostawać",
     "description": "Wyłączony rodzaj nie przychodzi żadnym kanałem: ani w aplikacji, ani na telefon, ani e-mailem. Wiadomości od administratora zespołu przychodzą zawsze.",
-    "loadError": "Nie udało się pobrać listy powiadomień.",
+    "loadError": "Nie udało się pobrać rodzajów powiadomień.",
     "through": "Przez: {{channels}}",
     "offByAdmin": "Administrator aplikacji wyłączył ten rodzaj dla wszystkich.",
     "groups": {

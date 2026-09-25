@@ -986,7 +986,7 @@
   "notificationKinds": {
     "title": "Which notifications I want",
     "description": "A kind you switch off reaches you through no channel: not in the app, not on the phone, not by email. Messages from a team admin always come through.",
-    "loadError": "The list of notifications could not be loaded.",
+    "loadError": "The kinds of notifications could not be loaded.",
     "through": "Through: {{channels}}",
     "offByAdmin": "The application admin switched this kind off for everyone.",
     "groups": {

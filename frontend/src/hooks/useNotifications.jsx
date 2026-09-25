@@ -12,6 +12,48 @@ const NotificationsContext = React.createContext(null);
 const liveBubble = (notification) => ({ key: notification.id, kind: 'live', notification });
 
 /**
+ * Drops what stopped being news while it was on screen: read on another device, handled by somebody else
+ * or out of date. `unread` holds the newest active notifications up to `FETCH_LIMIT`, so one missing from it
+ * is gone for sure only when the list is complete or the notification is newer than the last one listed.
+ * `known` maps every notification seen so far to when it was created.
+ */
+const withoutStale = (bubbles, unread, total, known) => {
+    const active = new Set(unread.map((notification) => notification.id));
+    const complete = unread.length < FETCH_LIMIT || unread.length >= total;
+    const oldest = unread.length > 0 ? unread[unread.length - 1].createdAt : '';
+    const stale = (id) => !active.has(id) && (complete || (known.get(id) ?? '') > oldest);
+    let changed = false;
+
+    const next = bubbles.flatMap((bubble) => {
+        if (bubble.kind === 'live') {
+            if (!stale(bubble.notification.id)) {
+                return [bubble];
+            }
+            changed = true;
+            return [];
+        }
+
+        const ids = bubble.ids.filter((id) => !stale(id));
+        if (ids.length === bubble.ids.length && bubble.count <= total) {
+            return [bubble];
+        }
+        changed = true;
+        if (ids.length === 0) {
+            return [];
+        }
+
+        const count = Math.min(Math.max(ids.length, bubble.count - (bubble.ids.length - ids.length)), Math.max(total, ids.length));
+        const latest = ids.includes(bubble.latest.id)
+            ? bubble.latest
+            : unread.find((notification) => ids.includes(notification.id)) ?? bubble.latest;
+
+        return [{ ...bubble, ids, count, latest }];
+    });
+
+    return changed ? next : bubbles;
+};
+
+/**
  * The browser keeps showing a system notification until somebody closes it. Once the app knows it was
  * read, handled by someone else or expired, it closes it too.
  */
@@ -42,7 +84,7 @@ export function NotificationsProvider({ onNavigate, children }) {
     const [bubbles, setBubbles] = React.useState([]);
     const [inboxOpen, setInboxOpen] = React.useState(false);
     const [revision, setRevision] = React.useState(0);
-    const seen = React.useRef(new Set());
+    const seen = React.useRef(new Map());
     const primed = React.useRef(false);
     const watermark = React.useRef(null);
     const hiddenAt = React.useRef(null);
@@ -81,11 +123,13 @@ export function NotificationsProvider({ onNavigate, children }) {
         return notificationService.getUnread(FETCH_LIMIT)
             .then((data) => {
                 const unread = data.notifications || [];
-                setUnreadCount(data.unreadCount ?? unread.length);
+                const total = data.unreadCount ?? unread.length;
+                setUnreadCount(total);
                 closeSystemNotificationsExcept(new Set(unread.map((notification) => notification.id)));
+                setBubbles((current) => withoutStale(current, unread, total, seen.current));
 
                 const fresh = unread.filter((notification) => !seen.current.has(notification.id));
-                fresh.forEach((notification) => seen.current.add(notification.id));
+                fresh.forEach((notification) => seen.current.set(notification.id, notification.createdAt));
 
                 if (fresh.some((notification) => notification.parameters?.url === '/day-planning')) {
                     window.dispatchEvent(new Event('day-planning:changed'));
