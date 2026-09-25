@@ -319,6 +319,11 @@ final class RecordingNativePushSender implements NativePushSenderInterface
      */
     public array $tokens = [];
 
+    /**
+     * @var list<array{token: string, tags: list<string>}>
+     */
+    public array $retractions = [];
+
     public function isConfigured(): bool
     {
         return $this->configured;
@@ -328,6 +333,13 @@ final class RecordingNativePushSender implements NativePushSenderInterface
     {
         $this->tokens[] = $device->token();
         $this->lastOptions = $options;
+
+        return $this->answer;
+    }
+
+    public function retract(NativePushDevice $device, array $tags): PushDelivery
+    {
+        $this->retractions[] = ['token' => $device->token(), 'tags' => $tags];
 
         return $this->answer;
     }

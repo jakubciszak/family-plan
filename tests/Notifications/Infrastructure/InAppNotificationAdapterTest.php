@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Notifications\Infrastructure;
 
+use App\Notifications\Domain\Port\PushRetractionInterface;
 use App\Notifications\Domain\ValueObject\NotificationChannel;
 use App\Notifications\Domain\ValueObject\NotificationMessage;
 use App\Notifications\Domain\ValueObject\Recipient;
@@ -20,13 +21,16 @@ class InAppNotificationAdapterTest extends TestCase
 
     private InAppNotificationAdapter $adapter;
 
+    private TrayRetractions $retractions;
+
     private DateTimeImmutable $now;
 
     protected function setUp(): void
     {
         $this->notifications = new InMemoryInAppNotificationRepository();
         $this->now = new DateTimeImmutable('2026-09-14 19:00:00');
-        $this->adapter = new InAppNotificationAdapter($this->notifications, new FixedClock($this->now));
+        $this->retractions = new TrayRetractions();
+        $this->adapter = new InAppNotificationAdapter($this->notifications, new FixedClock($this->now), $this->retractions);
     }
 
     public function testItSupportsOnlyTheInAppChannel(): void
@@ -107,6 +111,27 @@ class InAppNotificationAdapterTest extends TestCase
         $this->assertCount(1, $this->notifications->unreadFor($other, 10));
     }
 
+    public function testAReplacedWordThatNoPushFollowsLeavesThePhoneTray(): void
+    {
+        $userId = Uuid::generate();
+        $this->send($userId, 'Przypisano zadanie', ['tag' => 'task-1', 'delivery_channels' => ['in_app', 'push']]);
+
+        $this->send($userId, 'Zadanie zatwierdzone', ['tag' => 'task-1', 'delivery_channels' => ['in_app']]);
+
+        $this->assertSame([[[$userId->value()], ['task-1']]], $this->retractions->calls);
+    }
+
+    public function testAPushWithTheSameTagTakesTheOldPlaceByItself(): void
+    {
+        $userId = Uuid::generate();
+        $this->send($userId, 'Przypisano zadanie', ['tag' => 'task-1', 'delivery_channels' => ['in_app', 'push']]);
+        $this->send($userId, 'Nowy temat', ['tag' => 'task-2', 'delivery_channels' => ['in_app']]);
+
+        $this->send($userId, 'Zadanie zatwierdzone', ['tag' => 'task-1', 'delivery_channels' => ['in_app', 'push']]);
+
+        $this->assertSame([], $this->retractions->calls);
+    }
+
     public function testItKeepsTheIdThePushWasToldAbout(): void
     {
         $userId = Uuid::generate();
@@ -128,5 +153,18 @@ class InAppNotificationAdapterTest extends TestCase
             NotificationMessage::create($message, null, $parameters),
             NotificationChannel::inApp()
         );
+    }
+}
+
+final class TrayRetractions implements PushRetractionInterface
+{
+    /**
+     * @var list<array{0: list<string>, 1: list<string>}>
+     */
+    public array $calls = [];
+
+    public function retract(array $userIds, array $tags): void
+    {
+        $this->calls[] = [array_map(static fn (Uuid $userId): string => $userId->value(), $userIds), $tags];
     }
 }

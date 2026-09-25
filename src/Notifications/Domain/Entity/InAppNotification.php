@@ -180,6 +180,14 @@ class InAppNotification
         return $this->topic;
     }
 
+    /**
+     * The tag its push went out with, the name of its entry in a phone's tray.
+     */
+    public function pushTag(): string
+    {
+        return $this->topic ?? $this->id->value();
+    }
+
     public function expiresAt(): ?DateTimeImmutable
     {
         return $this->expiresAt;

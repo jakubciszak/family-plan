@@ -6,6 +6,7 @@ namespace App\Presentation\Api;
 
 use App\Notifications\Communication\Application\Service\NotificationPreferences;
 use App\Notifications\Domain\Entity\InAppNotification;
+use App\Notifications\Domain\Port\PushRetractionInterface;
 use App\Notifications\Domain\Repository\InAppNotificationRepositoryInterface;
 use App\Shared\Domain\Clock\ClockInterface;
 use App\Shared\Domain\ValueObject\Uuid;
@@ -31,7 +32,8 @@ class NotificationApiController extends AbstractController
         private readonly InAppNotificationRepositoryInterface $notifications,
         private readonly UserRepositoryInterface $userRepository,
         private readonly ClockInterface $clock,
-        private readonly NotificationPreferences $preferences
+        private readonly NotificationPreferences $preferences,
+        private readonly PushRetractionInterface $retraction
     ) {
     }
 
@@ -69,8 +71,14 @@ class NotificationApiController extends AbstractController
             return $this->json(['error' => 'Notification not found'], Response::HTTP_NOT_FOUND);
         }
 
-        $notification->markAsRead($this->clock->now());
+        $now = $this->clock->now();
+        $wasNews = $notification->isActive($now);
+        $notification->markAsRead($now);
         $this->notifications->save($notification);
+
+        if ($wasNews) {
+            $this->retraction->retract([$userId], [$notification->pushTag()]);
+        }
 
         return $this->json([
             'notification' => $this->present($notification),
@@ -89,7 +97,12 @@ class NotificationApiController extends AbstractController
         $payload = json_decode($request->getContent() ?: '{}', true);
         $ids = is_array($payload) && is_array($payload['ids'] ?? null) ? $payload['ids'] : null;
 
+        // Read here, so the tray of the phone may drop them too. Only news still has its entry there: an older
+        // notification on the same topic was replaced by the newer one, which may still be unread.
+        $tags = [];
+
         if ($ids === null) {
+            $tags = array_map(static fn (InAppNotification $notification): string => $notification->pushTag(), $this->notifications->unreadFor($userId, self::MAX_LIMIT));
             $marked = $this->notifications->markAllAsRead($userId, $now);
         } else {
             $marked = 0;
@@ -101,10 +114,18 @@ class NotificationApiController extends AbstractController
                     continue;
                 }
 
+                if ($notification->isActive($now)) {
+                    $tags[] = $notification->pushTag();
+                }
+
                 $notification->markAsRead($now);
                 $this->notifications->save($notification);
                 $marked++;
             }
+        }
+
+        if ($tags !== []) {
+            $this->retraction->retract([$userId], $tags);
         }
 
         return $this->json([

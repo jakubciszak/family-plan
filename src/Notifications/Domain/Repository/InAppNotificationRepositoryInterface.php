@@ -33,7 +33,7 @@ interface InAppNotificationRepositoryInterface
     /**
      * Resolves every open notification on the topic, optionally only of one event and one recipient.
      *
-     * @return int how many were resolved
+     * @return list<Uuid> recipients who had one of them, each once
      */
-    public function resolveTopic(string $topic, DateTimeImmutable $resolvedAt, ?string $event = null, ?Uuid $userId = null): int;
+    public function resolveTopic(string $topic, DateTimeImmutable $resolvedAt, ?string $event = null, ?Uuid $userId = null): array;
 }

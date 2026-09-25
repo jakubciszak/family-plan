@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace App\Tests\Api;
 
 use App\Notifications\Application\Service\NotificationFacade;
+use App\Notifications\Domain\Port\PushRetractionInterface;
 use App\Notifications\Domain\Repository\InAppNotificationRepositoryInterface;
+use App\Notifications\Infrastructure\Adapter\PushRetractionAdapter;
 use App\Shared\Domain\ValueObject\Uuid;
 use App\UserManagement\Domain\Entity\User;
 use App\UserManagement\Domain\Repository\UserRepositoryInterface;
@@ -70,6 +72,31 @@ class NotificationApiTest extends ApiTestCase
 
         $this->assertNotNull($data['notification']['readAt']);
         $this->assertSame(0, $data['unreadCount']);
+    }
+
+    public function testReadingNewsTakesItOutOfThePhoneTraysToo(): void
+    {
+        $retractions = $this->recordRetractions();
+        $this->sendTo($this->currentUser, 'Ola czeka na akceptację', null, ['tag' => 'task-7']);
+        $id = $this->notifications()->unreadFor($this->currentUser->id(), 10)[0]->id()->value();
+
+        $this->assertJsonResponse($this->postJson(sprintf('/api/notifications/%s/read', $id), []));
+        $this->assertJsonResponse($this->postJson(sprintf('/api/notifications/%s/read', $id), []));
+
+        $this->assertSame([['users' => [$this->currentUser->id()->value()], 'tags' => ['task-7']]], $retractions->calls);
+    }
+
+    public function testReadingEverythingRetractsOnlyWhatWasStillNews(): void
+    {
+        $retractions = $this->recordRetractions();
+        $this->sendTo($this->currentUser, 'Pierwsze');
+        $this->sendTo($this->currentUser, 'Kuba czekał na akceptację', null, ['tag' => 'task-8', 'event' => 'task_completed']);
+        $this->notifications()->resolveTopic('task-8', new \DateTimeImmutable(), 'task_completed');
+        $first = $this->notifications()->unreadFor($this->currentUser->id(), 10)[0];
+
+        $this->assertJsonResponse($this->postJson('/api/notifications/read-all', []));
+
+        $this->assertSame([['users' => [$this->currentUser->id()->value()], 'tags' => [$first->id()->value()]]], $retractions->calls);
     }
 
     public function testItRefusesToMarkSomebodyElsesNotification(): void
@@ -206,6 +233,19 @@ class NotificationApiTest extends ApiTestCase
             ->sendInApp($user->id()->value(), $message, $subject, $parameters);
     }
 
+    /**
+     * Retractions travel to phones through the queue; here they only get written down.
+     */
+    private function recordRetractions(): RetractionsLog
+    {
+        $this->client->disableReboot();
+        $retractions = new RetractionsLog();
+        static::getContainer()->set(PushRetractionAdapter::class, $retractions);
+        static::getContainer()->set(PushRetractionInterface::class, $retractions);
+
+        return $retractions;
+    }
+
     private function notifications(): InAppNotificationRepositoryInterface
     {
         return static::getContainer()->get(InAppNotificationRepositoryInterface::class);
@@ -224,5 +264,18 @@ class NotificationApiTest extends ApiTestCase
         static::getContainer()->get(UserRepositoryInterface::class)->save($user);
 
         return $user;
+    }
+}
+
+final class RetractionsLog implements PushRetractionInterface
+{
+    /**
+     * @var list<array{users: list<string>, tags: list<string>}>
+     */
+    public array $calls = [];
+
+    public function retract(array $userIds, array $tags): void
+    {
+        $this->calls[] = ['users' => array_map(static fn (Uuid $userId): string => $userId->value(), $userIds), 'tags' => $tags];
     }
 }

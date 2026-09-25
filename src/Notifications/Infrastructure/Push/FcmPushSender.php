@@ -24,6 +24,9 @@ final class FcmPushSender implements NativePushSenderInterface
     /** Android channel the mobile app creates; it has to exist there for the notification to pop up. */
     public const ANDROID_CHANNEL = 'family-plan';
 
+    /** A retraction lives as long as the longest-living push (a payout offer), so it never misses what it retracts. */
+    private const RETRACT_TTL = 172800;
+
     private const SCOPE = 'https://www.googleapis.com/auth/firebase.messaging';
     private const TOKEN_URI = 'https://oauth2.googleapis.com/token';
 
@@ -49,6 +52,31 @@ final class FcmPushSender implements NativePushSenderInterface
 
     public function send(NativePushDevice $device, NotificationMessage $message, PushOptions $options): PushDelivery
     {
+        return $this->post($this->message($device, $message, $options));
+    }
+
+    /**
+     * Data without a title shows nothing on the phone. The app's background task reads the tags and takes
+     * those notifications out of the tray, also while the app is closed.
+     */
+    public function retract(NativePushDevice $device, array $tags): PushDelivery
+    {
+        return $this->post([
+            'token' => $device->token(),
+            'data' => [
+                'type' => 'retract',
+                'tags' => json_encode(array_values($tags), JSON_THROW_ON_ERROR),
+            ],
+            'android' => [
+                // A closed app gets to run its background task only for a high-priority message.
+                'priority' => 'HIGH',
+                'ttl' => self::RETRACT_TTL . 's',
+            ],
+        ]);
+    }
+
+    private function post(array $message): PushDelivery
+    {
         $account = $this->account();
 
         if ($account === null) {
@@ -63,7 +91,7 @@ final class FcmPushSender implements NativePushSenderInterface
                 sprintf('https://fcm.googleapis.com/v1/projects/%s/messages:send', rawurlencode($account['project_id'])),
                 [
                     'auth_bearer' => $this->accessToken($account),
-                    'json' => ['message' => $this->message($device, $message, $options)],
+                    'json' => ['message' => $message],
                 ]
             );
 

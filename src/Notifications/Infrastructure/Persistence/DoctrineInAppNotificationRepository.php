@@ -76,7 +76,7 @@ final readonly class DoctrineInAppNotificationRepository implements InAppNotific
             ->execute();
     }
 
-    public function resolveTopic(string $topic, DateTimeImmutable $resolvedAt, ?string $event = null, ?Uuid $userId = null): int
+    public function resolveTopic(string $topic, DateTimeImmutable $resolvedAt, ?string $event = null, ?Uuid $userId = null): array
     {
         $open = $this->entityManager->createQueryBuilder()
             ->select('n')
@@ -93,19 +93,19 @@ final readonly class DoctrineInAppNotificationRepository implements InAppNotific
             $open->andWhere('n.userId = :userId')->setParameter('userId', $userId);
         }
 
-        $resolved = 0;
+        $recipients = [];
 
         foreach ($open->getQuery()->getResult() as $notification) {
             /** @var InAppNotification $notification */
             $notification->resolve($resolvedAt);
-            $resolved++;
+            $recipients[$notification->userId()->value()] = $notification->userId();
         }
 
-        if ($resolved > 0) {
+        if ($recipients !== []) {
             $this->entityManager->flush();
         }
 
-        return $resolved;
+        return array_values($recipients);
     }
 
     private function unread(Uuid $userId): QueryBuilder

@@ -272,6 +272,9 @@ services:
         arguments:
             $serviceAccount: '%env(FCM_SERVICE_ACCOUNT)%'
 
+    App\Notifications\Domain\Port\PushRetractionInterface:
+        class: App\Notifications\Infrastructure\Adapter\PushRetractionAdapter
+
     App\Notifications\Application\Handler\SendNotificationHandler:
         arguments:
             $adapters: !tagged_iterator notification.adapter

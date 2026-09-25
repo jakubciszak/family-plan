@@ -8,6 +8,7 @@ use App\Allowance\Domain\Event\PayoutSettled;
 use App\Notifications\Application\Service\HandledNotifications;
 use App\Notifications\Communication\EventSubscriber\ResolveHandledNotificationsSubscriber;
 use App\Notifications\Domain\Entity\InAppNotification;
+use App\Notifications\Domain\Port\PushRetractionInterface;
 use App\Notifications\Infrastructure\Persistence\InMemoryInAppNotificationRepository;
 use App\Shared\Domain\ValueObject\Uuid;
 use App\Shared\Infrastructure\Clock\FixedClock;
@@ -21,6 +22,8 @@ class HandledNotificationsTest extends TestCase
 
     private ResolveHandledNotificationsSubscriber $subscriber;
 
+    private RecordingRetraction $retraction;
+
     private DateTimeImmutable $now;
 
     protected function setUp(): void
@@ -28,7 +31,8 @@ class HandledNotificationsTest extends TestCase
         $this->now = new DateTimeImmutable('2026-09-25 18:00:00');
         $clock = new FixedClock($this->now);
         $this->notifications = new InMemoryInAppNotificationRepository($clock);
-        $this->subscriber = new ResolveHandledNotificationsSubscriber(new HandledNotifications($this->notifications, $clock));
+        $this->retraction = new RecordingRetraction();
+        $this->subscriber = new ResolveHandledNotificationsSubscriber(new HandledNotifications($this->notifications, $clock, $this->retraction));
     }
 
     public function testOnceOneParentApprovesTheOtherHasNothingWaiting(): void
@@ -42,6 +46,27 @@ class HandledNotificationsTest extends TestCase
         $this->assertTrue($mum->isResolved());
         $this->assertTrue($dad->isResolved());
         $this->assertSame(0, $this->notifications->countUnreadFor($mum->userId()));
+    }
+
+    public function testThePhonesOfEveryoneWhoWaitedDropTheRequest(): void
+    {
+        $executionId = Uuid::generate();
+        $mum = $this->given(Uuid::generate(), 'task_completed', 'task-' . $executionId->value());
+        $dad = $this->given(Uuid::generate(), 'task_completed', 'task-' . $executionId->value());
+
+        $this->subscriber->taskHandled(new TaskExecutionApproved($executionId, Uuid::generate(), $this->now));
+
+        $this->assertSame([[
+            'users' => [$mum->userId()->value(), $dad->userId()->value()],
+            'tags' => ['task-' . $executionId->value()],
+        ]], $this->retraction->calls);
+    }
+
+    public function testNothingWaitingMeansNothingToRetract(): void
+    {
+        $this->subscriber->taskHandled(new TaskExecutionApproved(Uuid::generate(), Uuid::generate(), $this->now));
+
+        $this->assertSame([], $this->retraction->calls);
     }
 
     public function testOtherNewsAboutTheSameTaskStaysOpen(): void
@@ -65,6 +90,7 @@ class HandledNotificationsTest extends TestCase
         $this->subscriber->payoutSettled(new PayoutSettled($payoutId, $child, PayoutSettled::CONFIRMED, $this->now));
 
         $this->assertTrue($offer->isResolved());
+        $this->assertSame([['users' => [$child->value()], 'tags' => ['payout-' . $payoutId->value()]]], $this->retraction->calls);
     }
 
     private function given(Uuid $userId, string $event, string $tag): InAppNotification
@@ -73,5 +99,18 @@ class HandledNotificationsTest extends TestCase
         $this->notifications->save($notification);
 
         return $notification;
+    }
+}
+
+final class RecordingRetraction implements PushRetractionInterface
+{
+    /**
+     * @var list<array{users: list<string>, tags: list<string>}>
+     */
+    public array $calls = [];
+
+    public function retract(array $userIds, array $tags): void
+    {
+        $this->calls[] = ['users' => array_map(static fn (Uuid $userId): string => $userId->value(), $userIds), 'tags' => $tags];
     }
 }

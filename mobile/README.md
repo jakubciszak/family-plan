@@ -171,8 +171,10 @@ z ustawień weba dociera też do telefonów tego użytkownika.
 Powiadomienia idą kanałem Androida `family-plan` z wysoką ważnością, więc pojawiają się na górze ekranu.
 Zamiast pierwszego kanału `tasks`, który miał tylko ważność listy, aplikacja zakłada nowy, bo ważności
 istniejącego kanału nie da się podnieść. Kiedy aplikacja jest otwarta, systemowe powiadomienie się nie
-pokazuje; zamiast niego jest dymek. Powiadomienie, które ktoś załatwił albo które wygasło, znika
-z traya przy następnym otwarciu aplikacji.
+pokazuje; zamiast niego jest dymek. Powiadomienie, które ktoś załatwił albo które przeczytano w innym
+miejscu, znika z traya od razu: serwer wysyła cichą wiadomość, a zadanie w tle (`src/notifications/background.native.ts`,
+wczytywane przez `index.ts` przed routerem) zamyka je także przy zamkniętej aplikacji. Wygasłe znika przy
+następnym otwarciu aplikacji.
 
 Część telefonów (Xiaomi, Huawei, Oppo, niektóre Samsungi) po zamknięciu aplikacji z listy ostatnich
 wstrzymuje też jej powiadomienia. Jeśli mimo działającego FCM przychodzą dopiero po otwarciu aplikacji,

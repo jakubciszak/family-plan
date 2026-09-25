@@ -13,4 +13,11 @@ interface NativePushSenderInterface
     public function isConfigured(): bool;
 
     public function send(NativePushDevice $device, NotificationMessage $message, PushOptions $options): PushDelivery;
+
+    /**
+     * A silent message that makes the app take the notifications with these tags out of the tray.
+     *
+     * @param list<string> $tags
+     */
+    public function retract(NativePushDevice $device, array $tags): PushDelivery;
 }

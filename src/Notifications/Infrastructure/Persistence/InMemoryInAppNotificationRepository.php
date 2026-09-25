@@ -82,9 +82,9 @@ final class InMemoryInAppNotificationRepository implements InAppNotificationRepo
         return $marked;
     }
 
-    public function resolveTopic(string $topic, DateTimeImmutable $resolvedAt, ?string $event = null, ?Uuid $userId = null): int
+    public function resolveTopic(string $topic, DateTimeImmutable $resolvedAt, ?string $event = null, ?Uuid $userId = null): array
     {
-        $resolved = 0;
+        $recipients = [];
 
         foreach ($this->notifications as $notification) {
             if ($notification->topic() !== $topic || $notification->isResolved()) {
@@ -96,10 +96,10 @@ final class InMemoryInAppNotificationRepository implements InAppNotificationRepo
             }
 
             $notification->resolve($resolvedAt);
-            $resolved++;
+            $recipients[$notification->userId()->value()] = $notification->userId();
         }
 
-        return $resolved;
+        return array_values($recipients);
     }
 
     public function clear(): void

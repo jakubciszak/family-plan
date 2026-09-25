@@ -4,22 +4,13 @@ import * as Notifications from 'expo-notifications';
 import { Linking, Platform } from 'react-native';
 
 import { pushAvailability, registerPhone, unregisterPhone, type Notification } from '@/api/notifications';
+import { tagOf } from '@/notifications/tray';
 
 /** Android channel the server sends to (FcmPushSender::ANDROID_CHANNEL). High importance, so it pops up. */
 const CHANNEL = 'family-plan';
 const TOKEN_KEY = 'push-device-token';
 /** Tags the server gives its notifications; a presented notification without one of them is not ours to tidy. */
 const OUR_TAGS = /^(task|payout|calendar|streak)-|^[0-9a-f]{8}-[0-9a-f]{4}-/i;
-/** While the app is closed the system shows a Firebase notification itself, and expo names it by this, with the tag inside. */
-const SHOWN_BY_SYSTEM = /^expo-notifications:\/\/foreign_notifications\?/;
-
-/** The server's tag of a notification in the tray, whoever put it there. */
-export const tagOf = (identifier: string, data: Record<string, unknown> = {}): string => {
-  if (typeof data.tag === 'string') return data.tag;
-  if (!SHOWN_BY_SYSTEM.test(identifier)) return identifier;
-  const tag = /[?&]tag=([^&]*)/.exec(identifier)?.[1];
-  return tag ? decodeURIComponent(tag) : identifier;
-};
 
 /** 'server-off': the phone is registered, but the server has no Firebase service account to send with yet. */
 export type PhonePush = 'on' | 'no-permission' | 'unavailable' | 'server-off';

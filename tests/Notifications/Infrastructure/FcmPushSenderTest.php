@@ -81,6 +81,28 @@ class FcmPushSenderTest extends TestCase
         $this->assertSame(['channel_id' => 'family-plan', 'tag' => 'task-1'], $message['android']['notification']);
     }
 
+    public function testARetractionIsASilentMessageTheAppReadsTheTagsFrom(): void
+    {
+        $sender = $this->sender([$this->token(), new MockResponse('{"name":"projects/family-plan/messages/2"}')]);
+
+        $delivery = $sender->retract($this->device(), ['task-1', 'payout-2']);
+
+        $this->assertSame(PushDelivery::Delivered, $delivery);
+        $message = json_decode($this->requests[1]['options']['body'], true)['message'];
+        $this->assertSame('phone-token', $message['token']);
+        $this->assertArrayNotHasKey('notification', $message);
+        $this->assertSame(['type' => 'retract', 'tags' => '["task-1","payout-2"]'], $message['data']);
+        $this->assertSame(['priority' => 'HIGH', 'ttl' => '172800s'], $message['android']);
+    }
+
+    public function testARetractionForAPhoneFirebaseDoesNotKnowSaysItIsGone(): void
+    {
+        $unregistered = new MockResponse('{"error":{"code":404,"status":"NOT_FOUND"}}', ['http_code' => 404]);
+
+        $this->assertSame(PushDelivery::Gone, $this->sender([$this->token(), $unregistered])->retract($this->device(), ['task-1']));
+        $this->assertSame(PushDelivery::Failed, $this->sender([], '')->retract($this->device(), ['task-1']));
+    }
+
     public function testTheAccessTokenIsReusedUntilItExpires(): void
     {
         $sender = $this->sender([$this->token(), new MockResponse('{}'), new MockResponse('{}')]);

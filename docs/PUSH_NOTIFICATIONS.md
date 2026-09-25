@@ -40,6 +40,7 @@ powiedzenia:
 | Wygaśnięcie (`expires_at`) | Ostrzeżenie o serii wygasa o północy, informacja z kalendarza po dwóch dniach. Wygasłe nie wraca jako nieprzeczytane. |
 | Czas życia pushu (TTL) | Serwis push trzyma wiadomość dla urządzenia bez sieci godziny, nie domyślne 4 tygodnie: 6–48 h zależnie od zdarzenia (`pushTtl` w `NotificationEvent`), nigdy dłużej niż do `expires_at`. Temat (`Topic` w Web Push, `collapse_key` w FCM) sprawia, że czeka tylko najnowsza wiadomość na ten temat. |
 | Kolejka | Worker nie wyśle pushu, jeśli powiadomienie zostało w międzyczasie załatwione, przeczytane albo wygasło, ani jeśli czekało w kolejce dłużej niż TTL. |
+| Wycofanie z telefonu | Gdy ktoś załatwi prośbę albo odbiorca przeczyta powiadomienie w innym miejscu, worker wysyła na jego telefony cichą wiadomość FCM z tagami (`RetractPushCommand`). Zadanie w tle aplikacji zdejmuje te powiadomienia z traya, także przy zamkniętej aplikacji. Przeglądarka musi coś pokazać przy każdym pushu, więc tam nieaktualne powiadomienia systemowe zamykają się przy następnym otwarciu aplikacji. |
 | Własne działania | Nikt nie dostaje powiadomienia o tym, co sam zrobił, np. dziecko o zadaniu, które samo wzięło z puli. |
 
 `GET /api/notifications?unread=1` zwraca tylko aktywne powiadomienia, od najnowszych. Każde
@@ -206,6 +207,12 @@ Aplikacja mobilna po zalogowaniu i zgodzie na powiadomienia oddaje serwerowi tok
 przeglądarek przez FCM HTTP v1: wiadomość typu `notification` na kanale Androida `family-plan`
 (wysoki priorytet, więc pojawia się od razu), z danymi `url`, `tag`, `notificationId` i `event`.
 Stuknięcie w powiadomienie oznacza je jako przeczytane i otwiera właściwy ekran.
+
+Gdy powiadomienie przestaje być aktualne, telefon dostaje cichą wiadomość bez tytułu:
+`data: { type: "retract", tags: "[\"task-…\"]" }`, z wysokim priorytetem i czasem życia 48 h. Android nie pokazuje
+jej w trayu, tylko uruchamia zadanie `family-plan-retract-notifications` z `expo-task-manager`, także przy
+zamkniętej aplikacji. Zadanie zamyka powiadomienia z tymi tagami. Musi być zdefiniowane, zanim cokolwiek się
+wyrenderuje, dlatego aplikacja startuje z `mobile/index.ts`, który importuje je przed `expo-router/entry`.
 
 Serwer potrzebuje konta serwisowego projektu Firebase w zmiennej `FCM_SERVICE_ACCOUNT` (JSON albo jego
 base64) w kontenerach `app` i `worker`; bez niej telefony po prostu nie dostają pushu. Aplikacja

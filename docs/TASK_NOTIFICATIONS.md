@@ -21,7 +21,8 @@ polityk zgłoszenia i zatwierdzenia. Nie zmienia osobistych ustawień użytkowni
 Historia powiadomień pozostaje dostępna przez `/api/notifications` i listę pod dzwonkiem; oba
 klienty pobierają nieprzeczytane wiadomości co 10 sekund oraz po powrocie do aplikacji.
 Prośba o akceptację znika u wszystkich adminów, gdy ktokolwiek zadanie zatwierdzi, cofnie,
-usunie albo gdy wróci ono do puli. Szczegóły w `docs/PUSH_NOTIFICATIONS.md`.
+usunie albo gdy wróci ono do puli: z listy, z dymków i z traya telefonu. Szczegóły
+w `docs/PUSH_NOTIFICATIONS.md`.
 
 Android prosi o zgodę na alerty po zalogowaniu. W ustawieniach jest przycisk
 ponownego włączenia zgody; po trwałej odmowie otwiera ustawienia systemowe.
