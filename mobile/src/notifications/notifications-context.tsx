@@ -139,7 +139,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
     listUnread(FETCH_LIMIT)
       .then(({ notifications: unread, unreadCount: count }) => {
         setUnreadCount(count);
-        void tidyTray(unread).catch(() => undefined);
+        void tidyTray(unread, unread.length < FETCH_LIMIT || unread.length >= count).catch(() => undefined);
         const known = seen.current;
         setBubbles((current) => withoutStale(current, unread, count, known));
 

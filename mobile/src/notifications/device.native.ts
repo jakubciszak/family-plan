@@ -101,17 +101,21 @@ export const onPushInForeground = (listener: () => void) => {
 /**
  * The system keeps a notification in the tray until somebody swipes it away.
  * Once it was read, handled by someone else or expired, the app takes it away too.
+ *
+ * `active` holds the newest active notifications; when it is not `complete`, an entry older than the last of
+ * them may simply not have fitted in the list, so it stays.
  */
-export async function tidyTray(active: Notification[]): Promise<void> {
+export async function tidyTray(active: Notification[], complete = true): Promise<void> {
   const keep = new Set(active.flatMap((notification) => [notification.id, notification.topic ?? notification.parameters?.tag].filter(Boolean) as string[]));
+  const since = complete || active.length === 0 ? -Infinity : Math.min(...active.map((notification) => Date.parse(notification.createdAt)));
   const shown = await Notifications.getPresentedNotificationsAsync();
 
-  await Promise.all(shown.map(async ({ request }) => {
+  await Promise.all(shown.map(async ({ date, request }) => {
     const data = (request.content.data ?? {}) as Record<string, unknown>;
     const id = typeof data.notificationId === 'string' ? data.notificationId : null;
     const tag = tagOf(request.identifier, data);
 
-    if (id ? keep.has(id) : !OUR_TAGS.test(tag) || keep.has(tag)) return;
+    if (date < since || (id ? keep.has(id) : !OUR_TAGS.test(tag) || keep.has(tag))) return;
     await Notifications.dismissNotificationAsync(request.identifier).catch(() => undefined);
   }));
 }
