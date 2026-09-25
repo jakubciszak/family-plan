@@ -90,4 +90,43 @@ class InAppNotificationAdapterTest extends TestCase
             NotificationChannel::inApp()
         );
     }
+
+    public function testTheNewestWordOnATopicReplacesTheOlderOnes(): void
+    {
+        $userId = Uuid::generate();
+        $other = Uuid::generate();
+        $this->send($userId, 'Przypisano zadanie', ['tag' => 'task-1']);
+        $this->send($other, 'Przypisano zadanie', ['tag' => 'task-1']);
+        $this->send($userId, 'Inne zadanie', ['tag' => 'task-2']);
+
+        $this->send($userId, 'Zadanie zatwierdzone', ['tag' => 'task-1']);
+
+        $messages = array_map(static fn ($n) => $n->message(), $this->notifications->unreadFor($userId, 10));
+        sort($messages);
+        $this->assertSame(['Inne zadanie', 'Zadanie zatwierdzone'], $messages);
+        $this->assertCount(1, $this->notifications->unreadFor($other, 10));
+    }
+
+    public function testItKeepsTheIdThePushWasToldAbout(): void
+    {
+        $userId = Uuid::generate();
+        $id = Uuid::generate();
+
+        $this->send($userId, 'Zadanie czeka', ['notification_id' => $id->value(), 'ttl' => 3600, 'event' => 'task_completed']);
+
+        $stored = $this->notifications->findById($id);
+        $this->assertNotNull($stored);
+        $this->assertSame('task_completed', $stored->event());
+        // Delivery bookkeeping is not something the recipient reads.
+        $this->assertSame(['event' => 'task_completed'], $stored->parameters());
+    }
+
+    private function send(Uuid $userId, string $message, array $parameters): void
+    {
+        $this->adapter->send(
+            Recipient::userId($userId->value()),
+            NotificationMessage::create($message, null, $parameters),
+            NotificationChannel::inApp()
+        );
+    }
 }

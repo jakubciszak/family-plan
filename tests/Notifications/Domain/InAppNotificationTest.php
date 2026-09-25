@@ -95,4 +95,69 @@ class InAppNotificationTest extends TestCase
             new DateTimeImmutable('2026-09-14 10:00:00')
         );
     }
+
+    public function testItKnowsWhatItIsAboutFromItsParameters(): void
+    {
+        $notification = InAppNotification::raise(
+            Uuid::generate(),
+            Uuid::generate(),
+            'Seria zaraz przepadnie',
+            null,
+            ['event' => 'streak_at_risk', 'tag' => 'streak-at-risk', 'expires_at' => '2026-09-15T00:00:00+02:00'],
+            new DateTimeImmutable('2026-09-14 18:00:00')
+        );
+
+        $this->assertSame('streak_at_risk', $notification->event());
+        $this->assertSame('streak-at-risk', $notification->topic());
+        $this->assertSame('2026-09-15T00:00:00+02:00', $notification->expiresAt()?->format(DATE_ATOM));
+    }
+
+    public function testWithoutThoseParametersItIsAboutNothingInParticular(): void
+    {
+        $notification = $this->notificationFor(Uuid::generate());
+
+        $this->assertNull($notification->event());
+        $this->assertNull($notification->topic());
+        $this->assertNull($notification->expiresAt());
+    }
+
+    public function testResolvingItAlsoTakesItOutOfTheUnread(): void
+    {
+        $notification = $this->notificationFor(Uuid::generate());
+        $at = new DateTimeImmutable('2026-09-14 20:00:00');
+
+        $notification->resolve($at);
+
+        $this->assertTrue($notification->isResolved());
+        $this->assertTrue($notification->isRead());
+        $this->assertSame($at->format(DATE_ATOM), $notification->resolvedAt()?->format(DATE_ATOM));
+        $this->assertFalse($notification->isActive($at));
+    }
+
+    public function testResolvingKeepsTheTimeItWasRead(): void
+    {
+        $notification = $this->notificationFor(Uuid::generate());
+        $read = new DateTimeImmutable('2026-09-14 12:00:00');
+        $notification->markAsRead($read);
+
+        $notification->resolve(new DateTimeImmutable('2026-09-14 20:00:00'));
+
+        $this->assertSame($read->format(DATE_ATOM), $notification->readAt()?->format(DATE_ATOM));
+    }
+
+    public function testItStopsBeingNewsWhenItExpires(): void
+    {
+        $notification = InAppNotification::raise(
+            Uuid::generate(),
+            Uuid::generate(),
+            'Seria zaraz przepadnie',
+            null,
+            ['expires_at' => '2026-09-15T00:00:00+00:00'],
+            new DateTimeImmutable('2026-09-14 18:00:00+00:00')
+        );
+
+        $this->assertTrue($notification->isActive(new DateTimeImmutable('2026-09-14 23:59:00+00:00')));
+        $this->assertFalse($notification->isActive(new DateTimeImmutable('2026-09-15 00:00:00+00:00')));
+        $this->assertFalse($notification->isRead());
+    }
 }

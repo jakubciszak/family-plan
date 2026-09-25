@@ -50,7 +50,9 @@ class PushNotificationAdapterTest extends TestCase
         $this->assertSame($userId->value(), $command->userId);
         $this->assertSame('Zadanie czeka', $command->message);
         $this->assertSame('Family Plan', $command->subject);
-        $this->assertSame(['url' => '/tasks'], $command->additionalParameters);
+        $this->assertSame('/tasks', $command->additionalParameters['url']);
+        // The worker can tell how long it waited and drop what a push service would have thrown away by then.
+        $this->assertMatchesRegularExpression('/^\d{4}-\d{2}-\d{2}T/', $command->additionalParameters['queued_at']);
     }
 
     public function testItRefusesChannelsItDoesNotOwn(): void

@@ -6,6 +6,7 @@ namespace App\Tests\Allowance\Domain;
 
 use App\Allowance\Domain\Entity\Payout;
 use App\Allowance\Domain\Event\PayoutOffered;
+use App\Allowance\Domain\Event\PayoutSettled;
 use App\Allowance\Domain\ValueObject\Money;
 use App\Allowance\Domain\ValueObject\PayoutStatus;
 use App\Shared\Domain\Clock\ClockInterface;
@@ -90,14 +91,31 @@ class PayoutTest extends TestCase
         $this->assertSame([], $payout->pullDomainEvents());
     }
 
-    public function testConfirmingDoesNotAnnounceAnything(): void
+    public function testConfirmingTellsThatThePayoutStoppedWaiting(): void
     {
         $payout = $this->offer(2000);
         $payout->pullDomainEvents();
 
         $payout->confirm(Uuid::generate(), $this->clock());
 
-        $this->assertSame([], $payout->pullDomainEvents());
+        $events = $payout->pullDomainEvents();
+        $this->assertCount(1, $events);
+        $this->assertInstanceOf(PayoutSettled::class, $events[0]);
+        $this->assertSame(PayoutSettled::CONFIRMED, $events[0]->outcome());
+        $this->assertTrue($payout->id()->equals($events[0]->payoutId()));
+    }
+
+    public function testCancellingTellsThatThePayoutStoppedWaiting(): void
+    {
+        $payout = $this->offer(2000);
+        $payout->pullDomainEvents();
+
+        $payout->cancel($this->clock());
+
+        $events = $payout->pullDomainEvents();
+        $this->assertCount(1, $events);
+        $this->assertInstanceOf(PayoutSettled::class, $events[0]);
+        $this->assertSame(PayoutSettled::CANCELLED, $events[0]->outcome());
     }
 
     private function offer(int $amount): Payout

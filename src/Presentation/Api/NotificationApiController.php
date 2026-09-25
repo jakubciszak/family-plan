@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Presentation\Api;
 
+use App\Notifications\Communication\Application\Service\NotificationPreferences;
 use App\Notifications\Domain\Entity\InAppNotification;
 use App\Notifications\Domain\Repository\InAppNotificationRepositoryInterface;
 use App\Shared\Domain\Clock\ClockInterface;
@@ -29,13 +30,14 @@ class NotificationApiController extends AbstractController
     public function __construct(
         private readonly InAppNotificationRepositoryInterface $notifications,
         private readonly UserRepositoryInterface $userRepository,
-        private readonly ClockInterface $clock
+        private readonly ClockInterface $clock,
+        private readonly NotificationPreferences $preferences
     ) {
     }
 
     #[Route('', name: 'list', methods: ['GET'])]
     #[OA\Get(path: '/api/notifications', summary: 'Notifications the application holds for the caller', tags: ['Notifications'])]
-    #[OA\Parameter(name: 'unread', in: 'query', required: false, description: 'Only the ones the caller has not seen yet')]
+    #[OA\Parameter(name: 'unread', in: 'query', required: false, description: 'Only the ones the caller has not seen yet and that are still true: handled and expired ones are left out')]
     #[OA\Parameter(name: 'limit', in: 'query', required: false, description: 'How many to return (1-100, 20 by default)')]
     #[OA\Response(response: 200, description: 'Notifications of the caller, newest first, with the unread count')]
     public function list(Request $request): JsonResponse
@@ -77,17 +79,71 @@ class NotificationApiController extends AbstractController
     }
 
     #[Route('/read-all', name: 'read_all', methods: ['POST'])]
-    #[OA\Post(path: '/api/notifications/read-all', summary: 'Mark every notification of the caller as read', tags: ['Notifications'])]
+    #[OA\Post(path: '/api/notifications/read-all', summary: 'Mark every notification of the caller as read, or only the listed ones', tags: ['Notifications'])]
+    #[OA\RequestBody(required: false, content: new OA\JsonContent(properties: [new OA\Property(property: 'ids', type: 'array', items: new OA\Items(type: 'string'))]))]
     #[OA\Response(response: 200, description: 'How many notifications were marked')]
-    public function readAll(): JsonResponse
+    public function readAll(Request $request): JsonResponse
     {
-        $marked = $this->notifications->markAllAsRead($this->callerId(), $this->clock->now());
+        $userId = $this->callerId();
+        $now = $this->clock->now();
+        $payload = json_decode($request->getContent() ?: '{}', true);
+        $ids = is_array($payload) && is_array($payload['ids'] ?? null) ? $payload['ids'] : null;
+
+        if ($ids === null) {
+            $marked = $this->notifications->markAllAsRead($userId, $now);
+        } else {
+            $marked = 0;
+
+            foreach (array_slice(array_unique(array_filter($ids, 'is_string')), 0, self::MAX_LIMIT) as $id) {
+                $notification = Uuid::isValid($id) ? $this->notifications->findById(Uuid::fromString($id)) : null;
+
+                if ($notification === null || !$notification->belongsTo($userId) || $notification->isRead()) {
+                    continue;
+                }
+
+                $notification->markAsRead($now);
+                $this->notifications->save($notification);
+                $marked++;
+            }
+        }
 
         return $this->json([
             'status' => 'success',
             'marked' => $marked,
-            'unreadCount' => 0,
+            'unreadCount' => $this->notifications->countUnreadFor($userId),
         ]);
+    }
+
+    #[Route('/preferences', name: 'preferences', methods: ['GET'])]
+    #[OA\Get(path: '/api/notifications/preferences', summary: 'Kinds of notification the caller can switch on and off', tags: ['Notifications'])]
+    #[OA\Response(response: 200, description: 'Every kind with its group, whether it is on, the channels it travels through and whether it can reach the caller at all')]
+    public function preferences(): JsonResponse
+    {
+        return $this->json(['events' => $this->preferences->of($this->callerId())]);
+    }
+
+    #[Route('/preferences', name: 'change_preferences', methods: ['PUT', 'PATCH'])]
+    #[OA\Put(path: '/api/notifications/preferences', summary: 'Switch kinds of notification on or off for the caller', tags: ['Notifications'])]
+    #[OA\RequestBody(required: true, content: new OA\JsonContent(properties: [new OA\Property(property: 'events', type: 'object', example: ['task_assigned' => false])]))]
+    #[OA\Response(response: 200, description: 'The preferences as they now stand')]
+    #[OA\Response(response: 400, description: 'Unknown kind, one that cannot be switched off, or a value that is not true/false')]
+    public function changePreferences(Request $request): JsonResponse
+    {
+        $payload = json_decode($request->getContent(), true);
+
+        if (!is_array($payload) || !is_array($payload['events'] ?? null)) {
+            return $this->json(['error' => 'Field "events" must be an object of event => true/false'], Response::HTTP_BAD_REQUEST);
+        }
+
+        $userId = $this->callerId();
+
+        try {
+            $this->preferences->change($userId, $payload['events']);
+        } catch (\InvalidArgumentException $e) {
+            return $this->json(['error' => $e->getMessage()], Response::HTTP_BAD_REQUEST);
+        }
+
+        return $this->json(['events' => $this->preferences->of($userId)]);
     }
 
     private function present(InAppNotification $notification): array
@@ -97,8 +153,14 @@ class NotificationApiController extends AbstractController
             'subject' => $notification->subject(),
             'message' => $notification->message(),
             'parameters' => $notification->parameters(),
+            'event' => $notification->event(),
+            'topic' => $notification->topic(),
             'createdAt' => $notification->createdAt()->format(DATE_ATOM),
             'readAt' => $notification->readAt()?->format(DATE_ATOM),
+            'expiresAt' => $notification->expiresAt()?->format(DATE_ATOM),
+            'resolvedAt' => $notification->resolvedAt()?->format(DATE_ATOM),
+            // Still news: not read, not handled by anyone and not out of date.
+            'active' => $notification->isActive($this->clock->now()),
         ];
     }
 

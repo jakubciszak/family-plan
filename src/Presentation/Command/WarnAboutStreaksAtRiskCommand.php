@@ -87,7 +87,7 @@ class WarnAboutStreaksAtRiskCommand extends Command
                     continue;
                 }
 
-                $this->warn($membership->userId(), $rule, $days);
+                $this->warn($membership->userId(), $rule, $days, $today->modify('+1 day'));
             }
         }
 
@@ -115,7 +115,7 @@ class WarnAboutStreaksAtRiskCommand extends Command
         return StreakAtRisk::days($counted, $pointsPerDay, $today, $rule->config()->requiredDays());
     }
 
-    private function warn(Uuid $userId, BonusPointsRule $rule, int $days): void
+    private function warn(Uuid $userId, BonusPointsRule $rule, int $days, DateTimeImmutable $midnight): void
     {
         $this->notifications->notifyUser(
             NotificationEvent::streakAtRisk(),
@@ -131,6 +131,9 @@ class WarnAboutStreaksAtRiskCommand extends Command
                 'rule' => $rule->name(),
                 'url' => '/tasks',
                 'tag' => 'streak-at-risk',
+                // After midnight the streak is either saved or gone, so the warning says nothing true.
+                'expires_at' => $midnight->format(DATE_ATOM),
+                'urgency' => 'high',
             ]
         );
     }

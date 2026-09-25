@@ -4,11 +4,14 @@ declare(strict_types=1);
 
 namespace App\Notifications\Communication\Service;
 
+use App\Notifications\Application\Port\ActorProviderInterface;
 use App\Notifications\Application\Service\NotificationFacade;
 use App\Notifications\Communication\Application\Service\NotificationPolicyProvider;
 use App\Notifications\Communication\Domain\Service\ChannelResolver;
+use App\Notifications\Communication\Domain\ValueObject\EventChoices;
 use App\Notifications\Communication\Domain\ValueObject\NotificationChannels;
 use App\Notifications\Communication\Domain\ValueObject\NotificationEvent;
+use App\Notifications\Domain\ValueObject\DeliveryParameters;
 use App\Shared\Domain\ValueObject\Uuid;
 use App\UserManagement\Domain\Repository\UserRepositoryInterface;
 use App\UserSettings\Domain\Repository\UserSettingsRepositoryInterface;
@@ -24,7 +27,8 @@ final readonly class NotificationOrchestrator
         private UserSettingsRepositoryInterface $userSettingsRepository,
         private NotificationPolicyProvider $policyProvider,
         private ChannelResolver $channelResolver,
-        private ?LoggerInterface $logger = null
+        private ?LoggerInterface $logger = null,
+        private ?ActorProviderInterface $actors = null
     ) {
     }
 
@@ -43,9 +47,24 @@ final readonly class NotificationOrchestrator
             return;
         }
 
+        if ($this->actors?->currentActorId()?->equals($userId)) {
+            $this->logger?->info('Nobody is notified about their own action', ['event' => $event->value()]);
+
+            return;
+        }
+
         $user = $this->userRepository->findById($userId);
         if ($user === null) {
             $this->logger?->warning('User not found for notification', ['user_id' => $userId->value()]);
+
+            return;
+        }
+
+        if (!$this->wants($userId, $event)) {
+            $this->logger?->info('User switched this notification off', [
+                'user_id' => $userId->value(),
+                'event' => $event->value(),
+            ]);
 
             return;
         }
@@ -61,6 +80,9 @@ final readonly class NotificationOrchestrator
             return;
         }
 
+        $additionalParameters['event'] ??= $event->value();
+        $additionalParameters[DeliveryParameters::NOTIFICATION_ID] = Uuid::generate()->value();
+        $additionalParameters[DeliveryParameters::TTL] ??= $event->pushTtl();
         $additionalParameters['delivery_channels'] = $channels->toArray();
 
         foreach ($channels->toArray() as $channel) {
@@ -118,6 +140,18 @@ final readonly class NotificationOrchestrator
                 'error' => $e->getMessage(),
             ]);
         }
+    }
+
+    /**
+     * Whether the user wants this kind of notification at all; everything is on until they switch it off.
+     */
+    public function wants(Uuid $userId, NotificationEvent $event): bool
+    {
+        return EventChoices::from(
+            $this->userSettingsRepository
+                ->findByUserId($userId)
+                ?->getPreferenceByType(PreferenceType::notificationEvents())
+        )->wants($event);
     }
 
     /**

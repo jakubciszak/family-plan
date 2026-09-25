@@ -27,42 +27,72 @@ final readonly class NotificationEvent
 
     public const CALENDAR_REMOVED = 'calendar_removed';
 
+    private const HOUR = 3600;
+
+    /** Order of the groups in the notification settings of a user. */
+    private const GROUPS = ['tasks', 'calendar', 'allowance', 'streaks'];
+
+    /**
+     * defaultChannels: what the application policy starts with; the admin can change them when configurable.
+     * group: where the event sits in the user's notification settings; null keeps it out of them.
+     * adminOnly: only team admins ever receive it.
+     * pushTtl: seconds a push service may keep the message for an offline device.
+     */
     private const CATALOG = [
         self::CALENDAR_CHANGED => [
             'defaultChannels' => [NotificationChannels::IN_APP, NotificationChannels::PUSH],
             'configurable' => true,
+            'group' => 'calendar',
+            'pushTtl' => 12 * self::HOUR,
         ],
         self::CALENDAR_REMOVED => [
             'defaultChannels' => [NotificationChannels::IN_APP, NotificationChannels::PUSH],
             'configurable' => true,
+            'group' => 'calendar',
+            'pushTtl' => 12 * self::HOUR,
         ],
         self::TASK_ASSIGNED => [
             'defaultChannels' => [NotificationChannels::IN_APP, NotificationChannels::PUSH],
             'configurable' => true,
+            'group' => 'tasks',
+            'pushTtl' => 12 * self::HOUR,
         ],
         self::TASK_COMPLETED => [
             'defaultChannels' => [NotificationChannels::EMAIL, NotificationChannels::IN_APP, NotificationChannels::PUSH],
             'configurable' => true,
+            'group' => 'tasks',
+            'adminOnly' => true,
+            'pushTtl' => 12 * self::HOUR,
         ],
         self::TASK_REJECTED => [
             'defaultChannels' => [NotificationChannels::IN_APP, NotificationChannels::PUSH],
             'configurable' => true,
+            'group' => 'tasks',
+            'pushTtl' => 24 * self::HOUR,
         ],
         self::TASK_APPROVED => [
             'defaultChannels' => [NotificationChannels::EMAIL, NotificationChannels::IN_APP, NotificationChannels::PUSH],
             'configurable' => true,
+            'group' => 'tasks',
+            'pushTtl' => 12 * self::HOUR,
         ],
         self::TASK_ABANDONED => [
             'defaultChannels' => [NotificationChannels::IN_APP, NotificationChannels::PUSH],
             'configurable' => true,
+            'group' => 'tasks',
+            'pushTtl' => 12 * self::HOUR,
         ],
         self::TASK_CORRECTED => [
             'defaultChannels' => [NotificationChannels::IN_APP, NotificationChannels::PUSH],
             'configurable' => true,
+            'group' => 'tasks',
+            'pushTtl' => 12 * self::HOUR,
         ],
         self::TASK_REMOVED => [
             'defaultChannels' => [NotificationChannels::IN_APP, NotificationChannels::PUSH],
             'configurable' => true,
+            'group' => 'tasks',
+            'pushTtl' => 12 * self::HOUR,
         ],
         self::USER_WELCOME => [
             'defaultChannels' => [NotificationChannels::EMAIL],
@@ -75,10 +105,14 @@ final readonly class NotificationEvent
         self::PAYOUT_OFFERED => [
             'defaultChannels' => [NotificationChannels::IN_APP, NotificationChannels::PUSH],
             'configurable' => true,
+            'group' => 'allowance',
+            'pushTtl' => 48 * self::HOUR,
         ],
         self::STREAK_AT_RISK => [
             'defaultChannels' => [NotificationChannels::PUSH],
             'configurable' => true,
+            'group' => 'streaks',
+            'pushTtl' => 6 * self::HOUR,
         ],
     ];
 
@@ -150,6 +184,43 @@ final readonly class NotificationEvent
     public function isConfigurable(): bool
     {
         return self::CATALOG[$this->value]['configurable'];
+    }
+
+    /**
+     * Where the event sits in the notification settings of a user; null when the user cannot switch it off.
+     */
+    public function group(): ?string
+    {
+        return self::CATALOG[$this->value]['group'] ?? null;
+    }
+
+    public function isUserChoice(): bool
+    {
+        return $this->group() !== null;
+    }
+
+    public function isAdminOnly(): bool
+    {
+        return self::CATALOG[$this->value]['adminOnly'] ?? false;
+    }
+
+    public function pushTtl(): int
+    {
+        return self::CATALOG[$this->value]['pushTtl'] ?? 12 * self::HOUR;
+    }
+
+    /**
+     * @return list<self>
+     */
+    public static function userChoices(): array
+    {
+        $choices = array_values(array_filter(self::all(), static fn (self $event) => $event->isUserChoice()));
+        $position = array_flip(array_keys(self::CATALOG));
+
+        usort($choices, static fn (self $a, self $b) => [array_search($a->group(), self::GROUPS, true), $position[$a->value]]
+            <=> [array_search($b->group(), self::GROUPS, true), $position[$b->value]]);
+
+        return $choices;
     }
 
     public function equals(self $other): bool

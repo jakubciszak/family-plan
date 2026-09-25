@@ -95,4 +95,16 @@ class UserPreferencesTest extends TestCase
         $this->assertTrue($notifications->isOptionEnabled('email'));
         $this->assertFalse($notifications->isOptionEnabled('sms'));
     }
+
+    public function testUpdatingATypeTheUserNeverSetAddsIt(): void
+    {
+        $preferences = UserPreferences::defaultNotificationPreferences();
+        $events = UserPreference::create(PreferenceType::notificationEvents(), [PreferenceOption::create('task_assigned', false)]);
+
+        $updated = $preferences->update($events);
+
+        $this->assertCount(2, $updated->all());
+        $this->assertFalse($updated->getByType(PreferenceType::notificationEvents())?->isOptionEnabled('task_assigned'));
+        $this->assertNotNull($updated->getByType(PreferenceType::notifications()));
+    }
 }

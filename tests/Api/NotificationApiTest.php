@@ -107,6 +107,90 @@ class NotificationApiTest extends ApiTestCase
         $this->assertCount(1, $this->notifications()->unreadFor($stranger->id(), 10));
     }
 
+    public function testAHandledNotificationIsNoLongerUnread(): void
+    {
+        $this->sendTo($this->currentUser, 'Ola czeka na akceptację', 'Zadanie do akceptacji', ['event' => 'task_completed', 'tag' => 'task-42']);
+        $this->sendTo($this->currentUser, 'Kieszonkowe czeka', null, ['event' => 'payout_offered', 'tag' => 'payout-7']);
+
+        $this->notifications()->resolveTopic('task-42', new \DateTimeImmutable(), 'task_completed');
+
+        $unread = $this->getJson('/api/notifications?unread=1');
+        $this->assertSame(['Kieszonkowe czeka'], array_column($unread['notifications'], 'message'));
+        $this->assertSame(1, $unread['unreadCount']);
+
+        $all = array_column($this->getJson('/api/notifications')['notifications'], null, 'message');
+        $this->assertFalse($all['Ola czeka na akceptację']['active']);
+        $this->assertNotNull($all['Ola czeka na akceptację']['resolvedAt']);
+        $this->assertSame('task_completed', $all['Ola czeka na akceptację']['event']);
+        $this->assertSame('task-42', $all['Ola czeka na akceptację']['topic']);
+        $this->assertTrue($all['Kieszonkowe czeka']['active']);
+    }
+
+    public function testAnExpiredNotificationIsNoLongerUnread(): void
+    {
+        $this->sendTo($this->currentUser, 'Seria zaraz przepadnie', null, ['expires_at' => (new \DateTimeImmutable('-1 minute'))->format(DATE_ATOM)]);
+        $this->sendTo($this->currentUser, 'Jutro też jest dzień', null, ['expires_at' => (new \DateTimeImmutable('+1 day'))->format(DATE_ATOM)]);
+
+        $unread = $this->getJson('/api/notifications?unread=1');
+
+        $this->assertSame(['Jutro też jest dzień'], array_column($unread['notifications'], 'message'));
+    }
+
+    public function testUnreadOnesComeNewestFirst(): void
+    {
+        foreach (['Pierwsze', 'Drugie', 'Trzecie'] as $message) {
+            $this->sendTo($this->currentUser, $message);
+            sleep(1);
+        }
+
+        $unread = $this->getJson('/api/notifications?unread=1&limit=2');
+
+        $this->assertSame(['Trzecie', 'Drugie'], array_column($unread['notifications'], 'message'));
+        $this->assertSame(3, $unread['unreadCount']);
+    }
+
+    public function testTheListedOnesCanBeReadTogether(): void
+    {
+        $stranger = $this->anotherUser();
+        $this->sendTo($this->currentUser, 'Pierwsze');
+        $this->sendTo($this->currentUser, 'Drugie');
+        $this->sendTo($this->currentUser, 'Trzecie');
+        $this->sendTo($stranger, 'Cudze');
+        $mine = array_column($this->getJson('/api/notifications')['notifications'], 'id', 'message');
+        $theirs = $this->notifications()->unreadFor($stranger->id(), 10)[0]->id()->value();
+
+        $response = $this->postJson('/api/notifications/read-all', ['ids' => [$mine['Pierwsze'], $mine['Drugie'], $theirs, 'nonsense']]);
+
+        $data = $this->assertJsonResponse($response);
+        $this->assertSame(2, $data['marked']);
+        $this->assertSame(1, $data['unreadCount']);
+        $this->assertSame(['Trzecie'], array_column($this->getJson('/api/notifications?unread=1')['notifications'], 'message'));
+        $this->assertCount(1, $this->notifications()->unreadFor($stranger->id(), 10));
+    }
+
+    public function testTheCallerChoosesWhichKindsInterestThem(): void
+    {
+        $events = array_column($this->getJson('/api/notifications/preferences')['events'], null, 'event');
+        $this->assertTrue($events['task_assigned']['enabled']);
+        $this->assertSame('tasks', $events['task_assigned']['group']);
+        $this->assertArrayNotHasKey('account_activation', $events);
+
+        $response = $this->putJson('/api/notifications/preferences', ['events' => ['task_assigned' => false, 'streak_at_risk' => false]]);
+
+        $changed = array_column($this->assertJsonResponse($response)['events'], 'enabled', 'event');
+        $this->assertFalse($changed['task_assigned']);
+        $this->assertFalse($changed['streak_at_risk']);
+        $this->assertTrue($changed['calendar_changed']);
+        $this->assertFalse(array_column($this->getJson('/api/notifications/preferences')['events'], 'enabled', 'event')['task_assigned']);
+    }
+
+    public function testAKindThatCannotBeSwitchedOffIsRefused(): void
+    {
+        $this->assertSame(Response::HTTP_BAD_REQUEST, $this->putJson('/api/notifications/preferences', ['events' => ['account_activation' => false]])->getStatusCode());
+        $this->assertSame(Response::HTTP_BAD_REQUEST, $this->putJson('/api/notifications/preferences', ['events' => ['task_assigned' => 'no']])->getStatusCode());
+        $this->assertSame(Response::HTTP_BAD_REQUEST, $this->putJson('/api/notifications/preferences', ['events' => 'all'])->getStatusCode());
+    }
+
     public function testItAnswersAnonymousCallersWithUnauthorized(): void
     {
         $this->client->request('POST', '/api/auth/logout');

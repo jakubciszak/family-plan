@@ -6,9 +6,11 @@ namespace App\Notifications\Infrastructure\Adapter;
 
 use App\Notifications\Application\Command\DeliverPushCommand;
 use App\Notifications\Domain\Port\NotificationPortInterface;
+use App\Notifications\Domain\ValueObject\DeliveryParameters;
 use App\Notifications\Domain\ValueObject\NotificationChannel;
 use App\Notifications\Domain\ValueObject\NotificationMessage;
 use App\Notifications\Domain\ValueObject\Recipient;
+use App\Shared\Domain\Clock\ClockInterface;
 use Symfony\Component\Messenger\MessageBusInterface;
 
 /**
@@ -18,7 +20,8 @@ use Symfony\Component\Messenger\MessageBusInterface;
 final readonly class PushNotificationAdapter implements NotificationPortInterface
 {
     public function __construct(
-        private MessageBusInterface $commandBus
+        private MessageBusInterface $commandBus,
+        private ?ClockInterface $clock = null
     ) {
     }
 
@@ -35,11 +38,14 @@ final readonly class PushNotificationAdapter implements NotificationPortInterfac
             throw new \InvalidArgumentException('Recipient must be a user id for the push channel');
         }
 
+        $parameters = $message->additionalParameters();
+        $parameters[DeliveryParameters::QUEUED_AT] = ($this->clock?->now() ?? new \DateTimeImmutable())->format(DATE_ATOM);
+
         $this->commandBus->dispatch(new DeliverPushCommand(
             $recipient->value(),
             $message->content(),
             $message->subject(),
-            $message->additionalParameters()
+            $parameters
         ));
     }
 

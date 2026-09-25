@@ -8,6 +8,7 @@ use App\Notifications\Domain\Entity\InAppNotification;
 use App\Notifications\Application\Service\CalendarNotificationAccess;
 use App\Notifications\Domain\Port\NotificationPortInterface;
 use App\Notifications\Domain\Repository\InAppNotificationRepositoryInterface;
+use App\Notifications\Domain\ValueObject\DeliveryParameters;
 use App\Notifications\Domain\ValueObject\NotificationChannel;
 use App\Notifications\Domain\ValueObject\NotificationMessage;
 use App\Notifications\Domain\ValueObject\Recipient;
@@ -35,14 +36,24 @@ final readonly class InAppNotificationAdapter implements NotificationPortInterfa
             throw new \InvalidArgumentException('Recipient must be a user id for the in_app channel');
         }
 
-        $this->notifications->save(InAppNotification::raise(
-            Uuid::generate(),
-            Uuid::fromString($recipient->value()),
+        $parameters = $message->additionalParameters();
+        $userId = Uuid::fromString($recipient->value());
+        $now = $this->clock->now();
+        $notification = InAppNotification::raise(
+            DeliveryParameters::notificationId($parameters) ?? Uuid::generate(),
+            $userId,
             $message->content(),
             $message->subject(),
-            CalendarNotificationAccess::publicParameters($message->additionalParameters()),
-            $this->clock->now()
-        ));
+            DeliveryParameters::withoutDeliveryDetails(CalendarNotificationAccess::publicParameters($parameters)),
+            $now
+        );
+
+        // The newest word on a topic replaces the older ones, e.g. "approved" after "assigned" for the same task.
+        if ($notification->topic() !== null) {
+            $this->notifications->resolveTopic($notification->topic(), $now, null, $userId);
+        }
+
+        $this->notifications->save($notification);
     }
 
     public function supports(NotificationChannel $channel): bool
