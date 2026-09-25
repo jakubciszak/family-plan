@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import userSettingsService from '../services/userSettingsService';
+import notificationService from '../services/notificationService';
 import { Button, Chip, Icon, Switch, CircularProgress } from '../components/md3';
 import useThemeMode, { THEME_MODES } from '../hooks/useThemeMode';
 import LanguageSwitcher from '../components/LanguageSwitcher';
 import PushDeviceSetting from '../components/PushDeviceSetting';
+import NotificationKindsSetting from '../components/NotificationKindsSetting';
 import '../styles/settings.css';
 
 const THEME_ICONS = { light: 'lightMode', dark: 'darkMode', system: 'systemMode' };
@@ -25,6 +27,8 @@ function UserSettings({ user }) {
     const { t } = useTranslation();
     const [themeMode, setThemeMode] = useThemeMode();
     const [preferences, setPreferences] = useState(null);
+    const [kinds, setKinds] = useState(null);
+    const [kindsFailed, setKindsFailed] = useState(false);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState(null);
@@ -36,18 +40,24 @@ function UserSettings({ user }) {
         }
 
         const loadSettings = async () => {
-            try {
-                setLoading(true);
-                setError(null);
-                const data = await userSettingsService.getUserSettings(user.id);
-                const notificationPrefs = data.preferences?.find(p => p.type === 'notifications');
+            setLoading(true);
+            setError(null);
+            const [channels, events] = await Promise.allSettled([
+                userSettingsService.getUserSettings(user.id),
+                notificationService.getPreferences(),
+            ]);
+
+            if (channels.status === 'fulfilled') {
+                const notificationPrefs = channels.value.preferences?.find(p => p.type === 'notifications');
                 setPreferences(withEveryChannel(notificationPrefs?.options));
-            } catch (err) {
-                console.error('Failed to load settings:', err);
+            } else {
+                console.error('Failed to load settings:', channels.reason);
                 setPreferences(DEFAULT_PREFERENCES);
-            } finally {
-                setLoading(false);
             }
+
+            setKinds(events.status === 'fulfilled' ? events.value.events || [] : null);
+            setKindsFailed(events.status !== 'fulfilled');
+            setLoading(false);
         };
 
         loadSettings();
@@ -64,6 +74,11 @@ function UserSettings({ user }) {
         setSuccess(false);
     };
 
+    const toggleKind = (event) => {
+        setKinds((current) => current.map((kind) => kind.event === event ? { ...kind, enabled: !kind.enabled } : kind));
+        setSuccess(false);
+    };
+
     const handleSave = async () => {
         try {
             setSaving(true);
@@ -71,6 +86,10 @@ function UserSettings({ user }) {
             setSuccess(false);
 
             await userSettingsService.updateUserSettings(user.id, 'notifications', preferences);
+            if (kinds) {
+                const saved = await notificationService.updatePreferences(Object.fromEntries(kinds.map((kind) => [kind.event, kind.enabled])));
+                setKinds(saved.events || kinds);
+            }
 
             setSuccess(true);
             setTimeout(() => setSuccess(false), 3000);
@@ -159,6 +178,18 @@ function UserSettings({ user }) {
                     ))}
                     <PushDeviceSetting />
                 </div>
+            </section>
+
+            <section className="settings-section">
+                <h3><Icon name="notifications" size={20} />{t('notificationKinds.title')}</h3>
+                <p className="settings-description">{t('notificationKinds.description')}</p>
+                {kindsFailed && (
+                    <div className="alert alert-error" role="alert">
+                        <Icon name="error" size={20} />
+                        <span>{t('notificationKinds.loadError')}</span>
+                    </div>
+                )}
+                {kinds && <NotificationKindsSetting kinds={kinds} onToggle={toggleKind} />}
             </section>
 
             <div className="settings-actions">

@@ -8,6 +8,7 @@ const CHANNEL_ICONS = {
     email: 'mail',
     sms: 'send',
     in_app: 'notifications',
+    push: 'phone',
 };
 
 function NotificationEvents({ user }) {

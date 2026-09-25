@@ -35,12 +35,25 @@ self.addEventListener('push', (event) => {
   }
 
   event.waitUntil(
-    self.registration.showNotification(title, {
-      body,
-      icon: '/icon-192.png',
-      badge: '/icon-192.png',
-      tag: payload.tag || undefined,
-      data: { url: payload.url || '/' },
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windows) => {
+      // Somebody is looking at the app right now: it shows the news as a bubble, a system notification would repeat it.
+      const watching = windows.find((client) => client.visibilityState === 'visible' && client.focused);
+
+      if (watching) {
+        watching.postMessage({ type: 'notifications:arrived' });
+        return undefined;
+      }
+
+      return self.registration.showNotification(title, {
+        body,
+        icon: '/icon-192.png',
+        badge: '/icon-192.png',
+        tag: payload.tag || undefined,
+        // A newer word on the same topic replaces the old one and is announced again.
+        renotify: Boolean(payload.tag),
+        timestamp: Date.now(),
+        data: { url: payload.url || '/', notificationId: payload.notificationId || null },
+      });
     })
   );
 });
@@ -48,23 +61,24 @@ self.addEventListener('push', (event) => {
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
 
-  const target = new URL(event.notification.data?.url || '/', self.location.origin).href;
+  const { url = '/', notificationId = null } = event.notification.data || {};
+  const target = new URL(url, self.location.origin);
+
+  if (notificationId) {
+    target.searchParams.set('notification', notificationId);
+  }
 
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windows) => {
-      for (const client of windows) {
-        if (client.url === target && 'focus' in client) {
-          return client.focus();
-        }
+      const open = windows.find((client) => new URL(client.url).origin === self.location.origin && 'focus' in client);
+
+      if (open) {
+        // The app marks it as read and moves to where it leads, without reloading.
+        open.postMessage({ type: 'notifications:open', id: notificationId, url });
+        return open.focus();
       }
 
-      const open = windows.find((client) => 'focus' in client);
-
-      if (open && 'navigate' in open) {
-        return open.navigate(target).then((client) => client && client.focus());
-      }
-
-      return self.clients.openWindow ? self.clients.openWindow(target) : undefined;
+      return self.clients.openWindow ? self.clients.openWindow(target.href) : undefined;
     })
   );
 });
@@ -86,8 +100,11 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
       fetch(request)
         .then((response) => {
-          const copy = response.clone();
-          caches.open(CACHE).then((cache) => cache.put('/', copy)).catch(() => undefined);
+          // An error page (e.g. a 502 while a new version starts) must not become the offline shell.
+          if (response.ok) {
+            const copy = response.clone();
+            caches.open(CACHE).then((cache) => cache.put('/', copy)).catch(() => undefined);
+          }
           return response;
         })
         .catch(() => caches.match('/').then((cached) => cached || Response.error()))
