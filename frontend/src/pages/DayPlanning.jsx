@@ -1,25 +1,28 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Button, Icon, IconButton } from '../components/md3';
+import { Button, Dialog, Fab, Icon, IconButton } from '../components/md3';
 import DayCalendar from '../components/day-planning/DayCalendar';
 import DateTimePickerField from '../components/day-planning/DateTimePickerField';
+import MonthCalendar from '../components/day-planning/MonthCalendar';
 import WeekCalendar from '../components/day-planning/WeekCalendar';
 import DayEventDetail from '../components/day-planning/DayEventDetail';
 import DayEventEditor from '../components/day-planning/DayEventEditor';
 import DayTagManager from '../components/day-planning/DayTagManager';
 import service from '../services/dayPlanningService';
 import teamService from '../services/teamService';
-import { addDays, browserTimeZone, capitalize, dateInZone, displayDate, displayTime, peopleOf, personName, weekStart, zonedIso } from '../services/dayPlanningTime';
+import { addDays, addMonths, browserTimeZone, capitalize, dateInZone, displayDate, displayTime, peopleOf, personName, weekStart, zonedIso } from '../services/dayPlanningTime';
+import { monthWeeks } from '../services/weekCalendarLayout';
 import '../styles/day-planning.css';
 
 const durations = [15, 30, 45, 60, 90, 120, 180, 240, 360, 480];
+const periods = ['day', 'week', 'month'];
 const byName = (a, b) => a.name.localeCompare(b.name);
 const loadTags = async (teams) => {
     const catalogs = await Promise.all([service.tags(''), ...teams.map((team) => service.tags(team.id))]);
     return [...new Map(catalogs.flatMap((data) => data.tags || []).map((tag) => [tag.id, tag])).values()].sort(byName);
 };
 
-export default function DayPlanning({ user }) {
+export default function DayPlanning({ user, onFullscreenChange }) {
     const { t, i18n } = useTranslation();
     const selfId = String(user.id);
     const [zone, setZone] = useState(browserTimeZone);
@@ -55,10 +58,14 @@ export default function DayPlanning({ user }) {
     const planningGeneration = useRef(0);
     const detailGeneration = useRef(0);
     const [teamsVersion, setTeamsVersion] = useState(0);
+    const [fullscreen, setFullscreen] = useState(false);
+    const [dayList, setDayList] = useState(null);
+    const wantsFullscreen = useRef(false);
+    const ownsNativeFullscreen = useRef(false);
     const reload = () => setRefresh((value) => value + 1);
-    const isWeek = period === 'week';
-    const fromDate = isWeek ? weekStart(date) : date;
-    const toDate = addDays(fromDate, isWeek ? 7 : 1);
+    const month = period === 'month' ? monthWeeks(date) : null;
+    const fromDate = period === 'week' ? weekStart(date) : month ? month.start : date;
+    const toDate = period === 'week' ? addDays(fromDate, 7) : month ? month.end : addDays(date, 1);
     const self = useMemo(() => ({ ...user, id: selfId, name: t('dayPlanning.you') }), [user, selfId, t]);
     const teamId = teams.some((team) => team.id === chosenTeam) ? chosenTeam : (teams.find((team) => (rosters[team.id] || []).some((person) => person.id !== selfId)) || teams[0])?.id || '';
     const teamPeople = useMemo(() => [self, ...(rosters[teamId] || []).filter((person) => person.id !== selfId)], [self, rosters, teamId, selfId]);
@@ -118,6 +125,7 @@ export default function DayPlanning({ user }) {
             detailGeneration.current++;
             planningGeneration.current++;
             setDetail(null);
+            setDayList(null);
             setCalendar({ events: [], busy: [] });
             setSuggestions(null);
             setPlanning(false);
@@ -134,8 +142,58 @@ export default function DayPlanning({ user }) {
             document.removeEventListener('visibilitychange', invalidate);
         };
     }, []);
+    const enterFullscreen = () => {
+        wantsFullscreen.current = true;
+        setFullscreen(true);
+        const root = document.documentElement;
+        if (document.fullscreenElement || !root.requestFullscreen) return;
+        root.requestFullscreen({ navigationUI: 'hide' }).then(() => {
+            if (wantsFullscreen.current) ownsNativeFullscreen.current = true;
+            else document.exitFullscreen().catch(() => {});
+        }).catch(() => {});
+    };
+    const leaveFullscreen = useCallback(() => {
+        wantsFullscreen.current = false;
+        setFullscreen(false);
+        if (ownsNativeFullscreen.current && document.fullscreenElement) document.exitFullscreen().catch(() => {});
+        ownsNativeFullscreen.current = false;
+    }, []);
+    useEffect(() => {
+        if (!fullscreen) return undefined;
+        const root = document.documentElement;
+        const onChange = () => { if (!document.fullscreenElement && ownsNativeFullscreen.current) leaveFullscreen(); };
+        const onKey = (event) => { if (event.key === 'Escape' && !event.defaultPrevented && !document.querySelector('.md-scrim, dialog[open]')) leaveFullscreen(); };
+        root.classList.add('day-fullscreen-open');
+        document.addEventListener('fullscreenchange', onChange);
+        document.addEventListener('keydown', onKey);
+        return () => {
+            root.classList.remove('day-fullscreen-open');
+            document.removeEventListener('fullscreenchange', onChange);
+            document.removeEventListener('keydown', onKey);
+        };
+    }, [fullscreen, leaveFullscreen]);
+    useEffect(() => () => { if (ownsNativeFullscreen.current && document.fullscreenElement) document.exitFullscreen().catch(() => {}); }, []);
+    useEffect(() => {
+        onFullscreenChange?.(fullscreen);
+        return () => onFullscreenChange?.(false);
+    }, [fullscreen, onFullscreenChange]);
+    const closeDayList = useCallback(() => setDayList(null), []);
+    const shift = (direction) => setDate(period === 'month' ? addMonths(date, direction) : addDays(date, period === 'week' ? 7 * direction : direction));
+    const showDay = (value) => { setDayList(null); setDate(value); setPeriod('day'); };
     const togglePerson = (id) => { if (view === 'planner' && id === selfId) return; setPicked({ teamId, ids: selected.includes(id) ? selected.filter((value) => value !== id) : [...selected, id] }); };
-    const startCreate = (slot) => { setNotice(''); setEditing({ seed: { date, teamId: view !== 'mine' ? teamId : '', personIds: slot ? [...new Set([selfId, ...selected])] : [selfId], ...slot } }); };
+    const startCreate = (seed = {}) => { setNotice(''); setDayList(null); setEditing({ seed: { date, teamId: view !== 'mine' ? teamId : '', personIds: [selfId], ...seed } }); };
+    const createAt = ({ date: day, minute, allDay }) => {
+        if (allDay || minute === undefined) { startCreate({ date: day, allDay: !!allDay }); return; }
+        const local = (value) => `${day}T${String(Math.floor(value / 60)).padStart(2, '0')}:${String(value % 60).padStart(2, '0')}`;
+        for (const candidate of [minute, minute + 60].filter((value) => value < 1440)) {
+            try {
+                const start = zonedIso(local(candidate), zone);
+                startCreate({ date: day, start, end: new Date(Date.parse(start) + 3600000).toISOString() });
+                return;
+            } catch { /* this hour does not exist on a daylight saving change, so try the next one */ }
+        }
+        startCreate({ date: day });
+    };
     const showDetail = async (item) => {
         const generation = ++detailGeneration.current;
         setDetail(null);
@@ -210,36 +268,51 @@ export default function DayPlanning({ user }) {
         finally { if (generation === planningGeneration.current) setPlanning(false); }
     };
     const rangeLabel = () => {
-        if (!isWeek) return capitalize(displayDate(date, i18n.language, { weekday: 'long', year: 'numeric' }));
+        if (period === 'day') return capitalize(displayDate(date, i18n.language, { weekday: 'long', year: 'numeric' }));
+        if (period === 'month') return capitalize(new Intl.DateTimeFormat(i18n.language, { month: 'long', year: 'numeric', timeZone: 'UTC' }).format(new Date(`${date}T12:00:00Z`)));
         const format = new Intl.DateTimeFormat(i18n.language, { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
         const [first, last] = [fromDate, addDays(toDate, -1)].map((value) => new Date(`${value}T12:00:00Z`));
         return format.formatRange ? format.formatRange(first, last) : `${format.format(first)} – ${format.format(last)}`;
     };
     const durationLabel = (minutes) => minutes < 60 ? t('dayPlanning.durationMinutes', { count: minutes }) : t('dayPlanning.durationHours', { value: new Intl.NumberFormat(i18n.language, { maximumFractionDigits: 1 }).format(minutes / 60) });
-    if (editing) return <div className="day-planning"><DayEventEditor key={`${editing.event?.id || 'new'}-${editing.occurrenceKey || 'series'}-${editing.event?.version || 0}`} {...editing} zone={zone} user={user} teams={teams} onTagCreated={(tag) => setTags((current) => [...current.filter((item) => item.id !== tag.id), tag].sort(byName))} onClose={() => { setEditing(null); reloadTags().catch(() => setCatalogError(t('dayPlanning.catalogError'))); }} onReload={async () => {
+    if (editing) return <div className={`day-planning${fullscreen ? ' is-fullscreen is-editing' : ''}`}><DayEventEditor key={`${editing.event?.id || 'new'}-${editing.occurrenceKey || 'series'}-${editing.event?.version || 0}`} {...editing} zone={zone} user={user} teams={teams} onTagCreated={(tag) => setTags((current) => [...current.filter((item) => item.id !== tag.id), tag].sort(byName))} onClose={() => { setEditing(null); reloadTags().catch(() => setCatalogError(t('dayPlanning.catalogError'))); }} onReload={async () => {
         try { const current = editing.occurrenceKey ? await service.occurrence(editing.event.id, editing.occurrenceKey) : await service.definition(editing.event.id); setEditing({ ...editing, event: current }); }
         catch { setEditing(null); setError(t('dayPlanning.noAccess')); reload(); }
     }} onSaved={() => { setEditing(null); setNotice(t('dayPlanning.saved')); reload(); }} /></div>;
     const views = teams.length ? [['mine', 'myPlan'], ['team', 'teamPlan'], ['planner', 'findTime']] : [];
     const zones = [...new Set([browserTimeZone(), 'Europe/Warsaw', 'Europe/London', 'America/New_York', 'UTC'])];
-    return <section className="day-planning">
-        <header className="day-head"><h2>{t('dayPlanning.title')}</h2><Button type="button" icon="add" onClick={() => startCreate()}>{t('dayPlanning.newEvent')}</Button></header>
-        {views.length > 0 && <div className="day-tabs" role="tablist" aria-label={t('dayPlanning.views')}>{views.map(([value, label], index) => <button key={value} type="button" role="tab" id={`day-tab-${value}`} aria-selected={view === value} aria-controls="day-content" tabIndex={view === value ? 0 : -1} onKeyDown={(event) => {
+    const tabs = views.length > 0 && !fullscreen;
+    const calendarProps = { events: calendar.events || [], busy: calendar.busy || [], people: shownPeople, zone, onOpen: showDetail };
+    const calendarView = () => {
+        if (loading || actionBusy && !detail) return <p role="status" className="day-loading">{t('common.loading')}</p>;
+        if (error) return <div role="alert" className="day-alert">{error}<Button type="button" variant="text" onClick={reload}>{t('dayPlanning.retry')}</Button></div>;
+        if (view === 'team' && !teamId) return <p className="day-empty">{t('dayPlanning.chooseTeam')}</p>;
+        if (period === 'month') return <MonthCalendar {...calendarProps} date={date} onShowDay={showDay} onShowMore={setDayList} onCreate={createAt} />;
+        if (period === 'week') return <WeekCalendar {...calendarProps} date={fromDate} onShowDay={showDay} onCreate={createAt} />;
+        return <DayCalendar {...calendarProps} date={fromDate} perPerson={view === 'team'} filtered={tagIds.length > 0} />;
+    };
+    return <section className={`day-planning${fullscreen ? ' is-fullscreen' : ''}`} aria-label={fullscreen ? t('dayPlanning.title') : undefined}>
+        {!fullscreen && <header className="day-head"><h2>{t('dayPlanning.title')}</h2><Button type="button" icon="add" onClick={() => startCreate()}>{t('dayPlanning.newEvent')}</Button></header>}
+        {tabs && <div className="day-tabs" role="tablist" aria-label={t('dayPlanning.views')}>{views.map(([value, label], index) => <button key={value} type="button" role="tab" id={`day-tab-${value}`} aria-selected={view === value} aria-controls="day-content" tabIndex={view === value ? 0 : -1} onKeyDown={(event) => {
             const next = event.key === 'ArrowRight' ? (index + 1) % views.length : event.key === 'ArrowLeft' ? (index + views.length - 1) % views.length : event.key === 'Home' ? 0 : event.key === 'End' ? views.length - 1 : null;
             if (next !== null) { event.preventDefault(); setView(views[next][0]); document.getElementById(`day-tab-${views[next][0]}`)?.focus(); }
         }} onClick={() => setView(value)}>{t(`dayPlanning.${label}`)}</button>)}</div>}
         {notice && <div role="status" className="day-success">{notice}</div>}
         {teamError && <div role="alert" className="day-alert">{teamError}<Button type="button" variant="text" onClick={() => setTeamsVersion((value) => value + 1)}>{t('dayPlanning.retry')}</Button></div>}
         {catalogError && <div role="alert" className="day-alert">{catalogError}<Button type="button" variant="text" onClick={() => setTeamsVersion((value) => value + 1)}>{t('dayPlanning.retry')}</Button></div>}
-        <div id="day-content" role={views.length ? 'tabpanel' : undefined} aria-labelledby={views.length ? `day-tab-${view}` : undefined}>
+        <div id="day-content" role={tabs ? 'tabpanel' : undefined} aria-labelledby={tabs ? `day-tab-${view}` : undefined}>
             {view !== 'planner' && <div className="day-toolbar">
                 <div className="day-nav">
                     <Button type="button" variant="outlined" onClick={() => setDate(dateInZone(new Date(), zone))}>{t('dayPlanning.today')}</Button>
-                    <IconButton icon="chevronLeft" label={t('dayPlanning.previous')} onClick={() => setDate(addDays(date, isWeek ? -7 : -1))} />
-                    <IconButton icon="chevronRight" label={t('dayPlanning.next')} onClick={() => setDate(addDays(date, isWeek ? 7 : 1))} />
+                    <IconButton icon="chevronLeft" label={t('dayPlanning.previous')} onClick={() => shift(-1)} />
+                    <IconButton icon="chevronRight" label={t('dayPlanning.next')} onClick={() => shift(1)} />
                     <DateTimePickerField label={t('dayPlanning.date')} required value={date} onChange={setDate} timeZone={zone} buttonLabel={rangeLabel()} />
                 </div>
-                <div className="day-segmented" role="group" aria-label={t('dayPlanning.calendarView')}>{['day', 'week'].map((value) => <button key={value} type="button" aria-pressed={period === value} onClick={() => setPeriod(value)}>{t(`dayPlanning.${value}`)}</button>)}</div>
+                <div className="day-toolbar-end">
+                    {fullscreen && views.length > 0 && <select className="day-team-select" aria-label={t('dayPlanning.views')} value={view} onChange={(e) => setView(e.target.value)}>{views.filter(([value]) => value !== 'planner').map(([value, label]) => <option key={value} value={value}>{t(`dayPlanning.${label}`)}</option>)}</select>}
+                    <div className="day-segmented" role="group" aria-label={t('dayPlanning.calendarView')}>{periods.map((value) => <button key={value} type="button" aria-pressed={period === value} onClick={() => setPeriod(value)}>{t(`dayPlanning.${value}`)}</button>)}</div>
+                    <IconButton className="day-fullscreen-toggle" icon={fullscreen ? 'fullscreenExit' : 'fullscreen'} label={t(fullscreen ? 'dayPlanning.exitFullscreen' : 'dayPlanning.fullscreen')} onClick={fullscreen ? leaveFullscreen : enterFullscreen} />
+                </div>
             </div>}
             {view !== 'mine' && <div className="day-people" role="group" aria-label={t('dayPlanning.people')}>
                 {teams.length > 1 && <select className="day-team-select" aria-label={t('dayPlanning.team')} value={teamId} onChange={(e) => setChosenTeam(e.target.value)}>{teams.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select>}
@@ -253,7 +326,7 @@ export default function DayPlanning({ user }) {
                     <IconButton icon="edit" label={t('dayPlanning.manageTags')} onClick={() => setShowTags(true)} />
                 </div>}
                 {tagIds.length > 0 && <p className="day-hint day-filter-hint">{t('dayPlanning.filterHint')}</p>}
-                {loading || actionBusy && !detail ? <p role="status" className="day-loading">{t('common.loading')}</p> : error ? <div role="alert" className="day-alert">{error}<Button type="button" variant="text" onClick={reload}>{t('dayPlanning.retry')}</Button></div> : view === 'team' && !teamId ? <p className="day-empty">{t('dayPlanning.chooseTeam')}</p> : isWeek ? <WeekCalendar events={calendar.events || []} busy={calendar.busy || []} date={fromDate} people={shownPeople} zone={zone} onOpen={showDetail} /> : <DayCalendar events={calendar.events || []} busy={calendar.busy || []} date={fromDate} people={shownPeople} perPerson={view === 'team'} filtered={tagIds.length > 0} zone={zone} onOpen={showDetail} />}
+                <div className="day-calendar-area">{calendarView()}</div>
                 {calendar.coverage?.complete === false && <p role="alert" className="day-alert">{t('dayPlanning.incomplete')}</p>}
             </> : <>
                 <form className="day-planner" onSubmit={findSlots}><fieldset disabled={planning} className="day-fields">
@@ -267,13 +340,17 @@ export default function DayPlanning({ user }) {
                     <div><Button type="submit" disabled={!!catalogError || planner.windowEnd <= planner.windowStart}>{t(planning ? 'dayPlanning.searching' : 'dayPlanning.search')}</Button></div>
                 </fieldset></form>
                 {planningError && <p role="alert" className="day-alert">{planningError}</p>}
-                {suggestions && <div className="day-suggestions" aria-live="polite"><h3>{t('dayPlanning.suggestions')}</h3>{suggestions.coverage?.complete === false ? <p role="alert">{t('dayPlanning.incomplete')}</p> : suggestions.slots.length ? suggestions.slots.map((slot) => <button type="button" className="day-slot" key={slot.start} onClick={() => startCreate(slot)}><span><strong>{capitalize(displayDate(dateInZone(slot.start, zone), i18n.language, { weekday: 'long' }))}</strong><span>{displayTime(slot.start, i18n.language, zone)}–{displayTime(slot.end, i18n.language, zone)}</span></span><span>{t('dayPlanning.useSlot')} <Icon name="chevronRight" size={18} /></span></button>) : <p>{t('dayPlanning.noSlots')}</p>}</div>}
+                {suggestions && <div className="day-suggestions" aria-live="polite"><h3>{t('dayPlanning.suggestions')}</h3>{suggestions.coverage?.complete === false ? <p role="alert">{t('dayPlanning.incomplete')}</p> : suggestions.slots.length ? suggestions.slots.map((slot) => <button type="button" className="day-slot" key={slot.start} onClick={() => startCreate({ ...slot, personIds: [...new Set([selfId, ...selected])] })}><span><strong>{capitalize(displayDate(dateInZone(slot.start, zone), i18n.language, { weekday: 'long' }))}</strong><span>{displayTime(slot.start, i18n.language, zone)}–{displayTime(slot.end, i18n.language, zone)}</span></span><span>{t('dayPlanning.useSlot')} <Icon name="chevronRight" size={18} /></span></button>) : <p>{t('dayPlanning.noSlots')}</p>}</div>}
             </>}
         </div>
-        <footer className="day-footer">
+        {!fullscreen && <footer className="day-footer">
             <label className="day-zone"><Icon name="language" size={18} /><select aria-label={t('dayPlanning.displayZone')} value={zone} onChange={(e) => setZone(e.target.value)}>{zones.map((value) => <option key={value}>{value}</option>)}</select></label>
             {view === 'team' && <p className="day-privacy-note"><Icon name="lock" size={16} />{t('dayPlanning.privacyNote')}</p>}
-        </footer>
+        </footer>}
+        {fullscreen && <Fab className="day-fab" icon="add" label={t('dayPlanning.newEvent')} extended onClick={() => startCreate()} />}
+        {dayList && <Dialog open onClose={closeDayList} headline={capitalize(displayDate(dayList, i18n.language, { weekday: 'long', year: 'numeric' }))} actions={<><Button type="button" variant="text" onClick={() => showDay(dayList)}>{t('dayPlanning.openDay')}</Button><Button type="button" variant="text" onClick={closeDayList}>{t('dayPlanning.close')}</Button></>}>
+            <div className="day-planning day-day-list"><DayCalendar {...calendarProps} date={dayList} perPerson={view === 'team'} filtered={tagIds.length > 0} onOpen={(item) => { setDayList(null); showDetail(item); }} /></div>
+        </Dialog>}
         {detail && <DayEventDetail detail={detail} zone={zone} nameOf={nameOf} organizer={organizer} scope={detailScope} onScope={(value) => { setDetailScope(value); setParticipationConfirmation(null); }} busy={actionBusy} error={detailError} confirmation={participationConfirmation} onEdit={() => edit(detail, detailScope)} onDelete={deleteEvent} onParticipate={participate} onDismissConfirmation={() => setParticipationConfirmation(null)} onReload={() => showDetail(detail)} onClose={() => setDetail(null)} />}
         {showTags && <DayTagManager tags={tags} teams={teams} onChanged={reloadTags} onClose={() => setShowTags(false)} />}
     </section>;

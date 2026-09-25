@@ -11,6 +11,23 @@ export const addDays = (value, days) => {
     return date.toISOString().slice(0, 10);
 };
 export const weekStart = (value) => addDays(value, -((new Date(`${value}T12:00:00Z`).getUTCDay() + 6) % 7));
+export const addMonths = (value, months) => {
+    const [year, month, day] = value.split('-').map(Number);
+    const date = new Date(`${value}T12:00:00Z`);
+    date.setUTCFullYear(year, month - 1 + months, 1);
+    const last = new Date(date);
+    last.setUTCMonth(last.getUTCMonth() + 1, 0);
+    date.setUTCDate(Math.min(day, last.getUTCDate()));
+    return date.toISOString().slice(0, 10);
+};
+export const isoWeekday = (value) => new Date(`${value}T12:00:00Z`).getUTCDay() || 7;
+/** A plain weekly repeat moves with its start date; a custom choice of days keeps them and gains the new day. */
+export const followWeekday = (days, fromDate, toDate) => {
+    const [from, to] = [isoWeekday(fromDate), isoWeekday(toDate)];
+    if (from === to) return days;
+    const next = days.length === 1 && days[0] === from ? [to] : [...days, to];
+    return [...new Set(next)].sort((a, b) => a - b);
+};
 export const zonedIso = (local, timeZone) => {
     const wall = new Date(`${local}:00Z`).getTime();
     let instant = wall;

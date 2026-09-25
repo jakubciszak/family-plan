@@ -8,7 +8,7 @@ import { localParts } from '@/day-planning/time';
 import { layoutWeek, type WeekSegment } from '@/day-planning/week-layout';
 
 type CalendarItem = { key: string; start: string; end: string; allDay?: boolean; timeZone?: string; event?: Occurrence; busy?: Busy };
-type Props = { calendar: Calendar; date: string; zone: string; nameFor: (id: string) => string; onOpen: (event: Occurrence) => void };
+type Props = { calendar: Calendar; date: string; zone: string; nameFor: (id: string) => string; onOpen: (event: Occurrence) => void; onCreate?: (slot: { date: string; hour?: number }) => void };
 const HOUR_HEIGHT = 72;
 const AXIS_WIDTH = 46;
 const HEADER_HEIGHT = 58;
@@ -22,7 +22,7 @@ const inkFor = (color: string) => {
   return channels && channels[0] * 0.2126 + channels[1] * 0.7152 + channels[2] * 0.0722 > 0.179 ? '#171717' : '#ffffff';
 };
 
-export default function WeekCalendar({ calendar, date, zone, nameFor, onOpen }: Props) {
+export default function WeekCalendar({ calendar, date, zone, nameFor, onOpen, onCreate }: Props) {
   const { t, i18n } = useTranslation();
   const theme = useTheme();
   const { width, height: screenHeight } = useWindowDimensions();
@@ -81,7 +81,10 @@ export default function WeekCalendar({ calendar, date, zone, nameFor, onOpen }: 
               <View style={{ height: HEADER_HEIGHT, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 5, backgroundColor: day.date === today ? theme.colors.primaryContainer : theme.colors.surface }}>
                 <Text variant="titleSmall" accessibilityRole="header" style={{ color: day.date === today ? theme.colors.onPrimaryContainer : theme.colors.onSurface }}>{dateFormatter.format(new Date(`${day.date}T12:00:00Z`))}</Text>
               </View>
-              <View testID={`week-all-day-${day.date}`} style={{ height: allDayHeight, paddingTop: 4, borderTopWidth: 1, borderColor: theme.colors.outlineVariant }}>{day.allDay.map((segment) => renderItem(segment, true))}</View>
+              <Pressable testID={`week-all-day-${day.date}`} accessible={false} disabled={!onCreate} onPress={() => onCreate?.({ date: day.date })}
+                style={({ pressed }) => ({ height: allDayHeight, paddingTop: 4, borderTopWidth: 1, borderColor: theme.colors.outlineVariant, backgroundColor: pressed ? theme.colors.surfaceVariant : 'transparent' })}>
+                {day.allDay.map((segment) => renderItem(segment, true))}
+              </Pressable>
             </View>)}
           </View>
         </ScrollView>
@@ -94,6 +97,8 @@ export default function WeekCalendar({ calendar, date, zone, nameFor, onOpen }: 
           <View style={{ flexDirection: 'row' }}>
             {days.map((day) => <View key={day.date} style={{ width: dayWidth, height: gridHeight, borderLeftWidth: 1, borderColor: theme.colors.outlineVariant }}>
               {hours.map((hour) => <View key={hour} pointerEvents="none" style={{ position: 'absolute', left: 0, right: 0, top: (hour - firstHour) * HOUR_HEIGHT, borderTopWidth: 1, borderColor: theme.colors.outlineVariant }} />)}
+              {onCreate && hours.slice(0, -1).map((hour) => <Pressable key={`slot-${hour}`} testID={`week-slot-${day.date}-${hour}`} accessible={false} onPress={() => onCreate({ date: day.date, hour })}
+                style={({ pressed }) => ({ position: 'absolute', left: 0, right: 0, top: (hour - firstHour) * HOUR_HEIGHT + 1, height: HOUR_HEIGHT - 1, backgroundColor: pressed ? theme.colors.surfaceVariant : 'transparent' })} />)}
               {day.timed.map((segment) => renderItem(segment, false))}
             </View>)}
           </View>

@@ -56,7 +56,7 @@ test('keeps busy placeholders under tag filtering without offering private detai
   await page.getByTestId('day-busy').click(); expect(state.calls.filter((call) => call.path.includes('/occurrences/'))).toHaveLength(0);
 });
 
-test('creates an overnight private recurrence with stable idempotency across failure and confirmed conflict', async ({ app, page, world }) => {
+test('creates an overnight team recurrence with stable idempotency across failure and confirmed conflict', async ({ app, page, world }) => {
   const state = await install(page, world); await open(app); await button(page, 'Nowe wydarzenie').click();
   await app.field('Tytuł wydarzenia').fill('Nocna podróż'); await eventTeam(page); await moreOptions(page); await app.field('Strefa czasowa IANA').fill('Europe/Warsaw'); await app.field('Godzina początku').fill('23:00'); await app.field('Data końca').fill('2026-09-22'); await app.field('Godzina końca').fill('01:00');
   await button(page, 'Powtarzanie').click(); await button(page, 'Co kilka tygodni').click(); await page.getByRole('checkbox', { name: 'Zaproś: Bartek Kowalski' }).click();
@@ -65,7 +65,7 @@ test('creates an overnight private recurrence with stable idempotency across fai
   await expect(page.getByTestId('day-event-new-event')).toContainText('Nocna podróż');
   const saves = state.calls.filter((call) => call.method === 'POST' && call.path.endsWith('/events'));
   expect(new Set(saves.map((call) => call.headers['idempotency-key'])).size).toBe(1);
-  expect(saves.at(-1).body).toMatchObject({ visibility: 'PRIVATE', participantIds: [world.me.id, world.users[1].id], schedule: { localStart: DAY + 'T23:00', durationMinutes: 120 }, recurrence: { frequency: 'WEEKLY', interval: 1 }, conflictConfirmation: 'confirmed-slot' });
+  expect(saves.at(-1).body).toMatchObject({ teamId: TEAM.id, visibility: 'TEAM', participantIds: [world.me.id, world.users[1].id], schedule: { localStart: DAY + 'T23:00', durationMinutes: 120 }, recurrence: { frequency: 'WEEKLY', interval: 1, byDay: [1] }, conflictConfirmation: 'confirmed-slot' });
 });
 
 test('lets a team admin write an event only into somebody else\'s calendar', async ({ app, page, world }) => {
@@ -197,6 +197,30 @@ test.describe('weekly calendar', () => {
     await expect(page.getByTestId('day-week-calendar')).toBeVisible();
   });
 
+  test('starts an event from a tapped hour or the all-day strip and still opens tapped events', async ({ app, page, world }) => {
+    const state = await install(page, world);
+    state.events = [event(world, { id: 'all-day', title: 'Dzień wolny', allDay: true, start: '2026-09-20T22:00:00Z', end: DAY + 'T22:00:00Z' })];
+    await open(app); await button(page, 'Tydzień').click();
+    await page.getByTestId(`week-event-all-day-${DAY}`).click();
+    await expect(page.getByTestId('day-event-detail')).toContainText('Dzień wolny');
+    await button(page, 'Wróć do kalendarza').click();
+    await page.getByTestId('week-slot-2026-09-24-14').click();
+    await expect(page.getByTestId('day-event-editor')).toBeVisible();
+    await expect(app.field('Data początku')).toHaveValue('2026-09-24');
+    await expect(app.field('Godzina początku')).toHaveValue('14:00');
+    await expect(app.field('Godzina końca')).toHaveValue('15:00');
+    await app.field('Tytuł wydarzenia').fill('Dentysta'); await button(page, 'Zapisz').click();
+    await expect(page.getByTestId('day-week-calendar')).toBeVisible();
+    expect(state.calls.filter((call) => call.method === 'POST' && call.path.endsWith('/events')).at(-1).body).toMatchObject({ title: 'Dentysta', teamId: null, schedule: { kind: 'TIMED', localStart: '2026-09-24T14:00', durationMinutes: 60, timeZone: 'Europe/Warsaw' } });
+    await page.getByTestId('week-all-day-2026-09-26').click();
+    await expect(page.getByRole('checkbox', { name: 'Cały dzień', exact: true })).toBeChecked();
+    await expect(app.field('Data początku')).toHaveValue('2026-09-26');
+    await expect(app.field('Data końca')).toHaveValue('2026-09-26');
+    await app.field('Tytuł wydarzenia').fill('Wyjazd'); await button(page, 'Zapisz').click();
+    await expect(page.getByTestId('day-week-calendar')).toBeVisible();
+    expect(state.calls.filter((call) => call.method === 'POST' && call.path.endsWith('/events')).at(-1).body.schedule).toEqual({ kind: 'ALL_DAY', startDate: '2026-09-26', endDate: '2026-09-27', timeZone: 'Europe/Warsaw' });
+  });
+
   test('keeps noninteractive busy blocks visible in the team week under tag filtering', async ({ app, page, world }) => {
     const state = await install(page, world); state.events = [event(world)];
     state.busy = [{ kind: 'busy', personId: world.users[1].id, start: DAY + 'T07:30:00Z', end: DAY + 'T08:30:00Z' }];
@@ -207,6 +231,7 @@ test.describe('weekly calendar', () => {
     await expect(busy).toContainText('Zajęty · Bartek Kowalski');
     await expect(busy).not.toHaveAttribute('role', 'button');
     await busy.click(); expect(state.calls.filter((call) => call.path.includes('/occurrences/'))).toHaveLength(0);
+    await expect(page.getByTestId('day-event-editor')).toHaveCount(0);
     await page.getByText('Praca', { exact: true }).click();
     await expect(page.getByTestId(/^week-event-/)).toHaveCount(0); await expect(busy).toBeVisible();
     await expect(busy).not.toContainText('Plan lekcji');
@@ -284,11 +309,12 @@ test.describe('tag colors and inline creation', () => {
     expect(state.calls.filter((call) => call.path.endsWith('/tags') && call.method === 'POST')).toHaveLength(2);
   });
 
-  test('restricts team tag creation to team administrators and hides personal tags on shared events', async ({ app, page, world }) => {
+  test('restricts team tag creation to team administrators and hides personal tags on team events', async ({ app, page, world }) => {
     const state = await install(page, world); world.teams[0].role = 'member';
-    await open(app); await button(page, 'Nowe wydarzenie').click(); await eventTeam(page);
+    await open(app); await button(page, 'Nowe wydarzenie').click();
     await button(page, 'Nowy tag').click(); await expect(button(page, 'Zakres tagu')).toHaveCount(0); await expect(page.getByTestId('day-inline-tag')).toContainText('Osobisty');
-    await button(page, 'Anuluj tworzenie tagu').click(); await button(page, 'Cały zespół').click();
+    await button(page, 'Anuluj tworzenie tagu').click(); await eventTeam(page);
+    await expect(button(page, 'Cały zespół')).toHaveCount(0);
     await expect(button(page, 'Praca')).toHaveCount(0); await expect(button(page, 'Szkoła')).toBeVisible();
     await expect(button(page, 'Nowy tag')).toHaveCount(0); await expect(page.getByText('Wydarzenia zespołowe używają tagów zespołu. Nowy tag może dodać administrator zespołu.')).toBeVisible();
     expect(state.calls.filter((call) => call.path.endsWith('/tags') && call.method === 'POST')).toHaveLength(0);
@@ -297,7 +323,7 @@ test.describe('tag colors and inline creation', () => {
   test('creates a team tag with colors on a narrow dark phone and keeps it out of a changed event scope', async ({ app, page, world }, testInfo) => {
     const state = await install(page, world); world.personalisation.themeMode = 'dark'; await page.setViewportSize({ width: 320, height: 740 });
     await open(app); await button(page, 'Nowe wydarzenie').click(); await app.field('Tytuł wydarzenia').fill('Spotkanie'); await eventTeam(page);
-    await button(page, 'Cały zespół').click(); await button(page, 'Nowy tag').click();
+    await button(page, 'Nowy tag').click();
     await app.field('Nazwa tagu').fill('Rodzinne'); await page.getByRole('radio', { name: 'Pomarańczowy', exact: true }).click();
     await page.getByRole('radio', { name: 'Pomarańczowy', exact: true }).scrollIntoViewIfNeeded();
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(320);
@@ -452,5 +478,57 @@ test.describe('simplified day plan', () => {
     await expect(person(page, 'Bartek Kowalski')).toHaveCount(0);
     await expect.poll(() => state.calls.filter((call) => call.path.endsWith('/calendar')).at(-1).query.get('teamId')).toBe(club.id);
     expect(state.calls.filter((call) => call.path.endsWith('/calendar')).at(-1).query.getAll('personIds[]').sort()).toEqual([world.me.id, '55555555-5555-4555-8555-555555555555'].sort());
+  });
+});
+
+test.describe('event form rules', () => {
+  const weekday = (page, name) => page.getByRole('button', { name, exact: true });
+  /** Paper marks a chosen chip with a check icon; RN Web does not expose aria-selected on buttons. */
+  const chosen = (page, name) => expect(weekday(page, name).getByRole('img')).toHaveCount(1);
+  const notChosen = (page, name) => expect(weekday(page, name).getByRole('img')).toHaveCount(0);
+
+  test('checks the weekday of the chosen start date for a weekly repeat and moves the end with it', async ({ app, page, world }) => {
+    const state = await install(page, world); await open(app); await button(page, 'Nowe wydarzenie').click();
+    await app.field('Tytuł wydarzenia').fill('Basen');
+    await app.field('Data początku').fill('2026-09-23');
+    await expect(app.field('Data końca')).toHaveValue('2026-09-23');
+    await button(page, 'Powtarzanie').click(); await button(page, 'Co kilka tygodni').click();
+    await chosen(page, 'Śr'); await notChosen(page, 'Pon');
+    await app.field('Data początku').fill('2026-09-25');
+    await chosen(page, 'Pt'); await notChosen(page, 'Śr');
+    await expect(app.field('Data końca')).toHaveValue('2026-09-25');
+    await weekday(page, 'Wt').click();
+    await app.field('Data początku').fill('2026-09-26');
+    for (const name of ['Wt', 'Pt', 'Sob']) await chosen(page, name);
+    for (const name of ['Pon', 'Śr', 'Czw', 'Ndz']) await notChosen(page, name);
+    await button(page, 'Zapisz').click();
+    await expect(page.getByTestId('day-event-new-event')).toBeVisible();
+    expect(state.calls.find((call) => call.method === 'POST' && call.path.endsWith('/events')).body).toMatchObject({
+      schedule: { localStart: '2026-09-26T09:00', durationMinutes: 60 }, recurrence: { frequency: 'WEEKLY', byDay: [2, 5, 6] },
+    });
+  });
+
+  test('always shares a team event with its team and says who sees the details', async ({ app, page, world }) => {
+    const state = await install(page, world); await open(app); await button(page, 'Nowe wydarzenie').click();
+    await expect(page.getByTestId('day-event-audience')).toHaveText('Szczegóły widzisz tylko Ty.');
+    await app.field('Tytuł wydarzenia').fill('Kino'); await eventTeam(page);
+    await expect(page.getByTestId('day-event-audience')).toHaveText('Szczegóły wydarzenia widzą wszyscy aktualni członkowie wybranego zespołu.');
+    await expect(button(page, 'Cały zespół')).toHaveCount(0); await expect(button(page, 'Autor i zaproszeni')).toHaveCount(0);
+    await button(page, 'Zapisz').click(); await expect(page.getByTestId('day-event-new-event')).toBeVisible();
+    expect(state.calls.find((call) => call.method === 'POST' && call.path.endsWith('/events')).body).toMatchObject({ title: 'Kino', teamId: TEAM.id, visibility: 'TEAM' });
+  });
+
+  test('shares an older private team event with its team once it is edited', async ({ app, page, world }) => {
+    const state = await install(page, world); state.events = [event(world)];
+    await open(app); await page.getByTestId('day-event-' + state.events[0].id).click();
+    await expect(page.getByTestId('day-event-detail')).toContainText('Autor i zaproszeni');
+    await button(page, 'Edytuj').click();
+    await expect(page.getByTestId('day-event-audience')).toHaveText('Szczegóły wydarzenia widzą wszyscy aktualni członkowie wybranego zespołu.');
+    await app.field('Tytuł wydarzenia').fill('Wycieczka'); await button(page, 'Zapisz').click();
+    await expect(page.getByText('Wycieczka', { exact: true })).toBeVisible();
+    expect(state.calls.find((call) => call.method === 'PUT' && call.path.includes('/exceptions/')).body.changes).toEqual({ title: 'Wycieczka', visibility: 'TEAM' });
+    await page.getByTestId('day-event-' + state.events[0].id).click(); await button(page, 'Cała seria').click(); await button(page, 'Edytuj').click();
+    await button(page, 'Zapisz').click(); await expect(page.getByTestId('day-event-editor')).toHaveCount(0);
+    expect(state.calls.filter((call) => call.method === 'PATCH').at(-1).body).toMatchObject({ teamId: TEAM.id, visibility: 'TEAM' });
   });
 });

@@ -102,6 +102,7 @@ function App() {
     const [administersTeam, setAdministersTeam] = React.useState(false);
     const [taskPlan, setTaskPlan] = React.useState(null);
     const [actionFocus, setActionFocus] = React.useState(false);
+    const [calendarFocus, setCalendarFocus] = React.useState(false);
     const [scrolled, setScrolled] = React.useState(false);
     const [inspectedMember, setInspectedMember] = React.useState(null);
 
@@ -254,7 +255,7 @@ function App() {
 
     return (
         <div className={`app${actionFocus ? ' app--action-focus' : ''}`}>
-            {!actionFocus && <>
+            {!actionFocus && !calendarFocus && <>
             <header className={`app-header${scrolled ? ' app-header--scrolled' : ''}`}>
                 <div className="header-left">
                     <h1>{t('app.title')}</h1>
@@ -282,7 +283,7 @@ function App() {
 
             </>}
             <main className="app-main">
-                {currentPage === 'day-planning' && <DayPlanning key={user.id} user={user} />}
+                {currentPage === 'day-planning' && <DayPlanning key={user.id} user={user} onFullscreenChange={setCalendarFocus} />}
                 {currentPage === 'action-plans' && <ActionPlans key={user.id} user={user} onFocusChange={setActionFocus}
                     taskPlan={taskPlan} onConsumeTaskPlan={() => setTaskPlan(null)}
                     onTaskCompleted={() => refreshPoints(user.id)}

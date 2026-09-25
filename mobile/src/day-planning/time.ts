@@ -10,6 +10,15 @@ export const localParts = (iso: string, timeZone: string) => {
   return { date: `${value('year')}-${value('month')}-${value('day')}`, time: `${value('hour')}:${value('minute')}` };
 };
 export const isTime = (value: string) => /^([01]\d|2[0-3]):[0-5]\d$/.test(value);
+export const isoWeekday = (date: string) => new Date(`${date}T12:00:00Z`).getUTCDay() || 7;
+/** A plain weekly repeat moves with its start date; a custom choice of days keeps them and gains the new day. */
+export const followWeekday = (days: number[], fromDate: string, toDate: string) => {
+  const [from, to] = [isoWeekday(fromDate), isoWeekday(toDate)];
+  if (from === to) return days;
+  return [...new Set(days.length === 1 && days[0] === from ? [to] : [...days, to])].sort((a, b) => a - b);
+};
+/** An event of a team is always shared with that team; without a team it stays private. */
+export const visibilityOf = (teamId: string | null): EventDraft['visibility'] => teamId ? 'TEAM' : 'PRIVATE';
 export const localInstants = (date: string, time: string, timeZone: string): Date[] => {
   if (!isDay(date) || !isTime(time)) throw new Error('invalidTime');
   const local = `${date}T${time}`;
