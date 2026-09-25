@@ -21,6 +21,8 @@ const ICONS = {
     edit: 'edit',
     error: 'error',
     expand: 'keyboard_arrow_down',
+    fullscreen: 'fullscreen',
+    fullscreenExit: 'fullscreen_exit',
     goal: 'flag',
     info: 'info',
     install: 'install_desktop',

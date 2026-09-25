@@ -5,6 +5,15 @@ const shiftDate = (date, amount) => {
 };
 export const mondayOf = (date) => shiftDate(date, -((new Date(`${date}T12:00:00Z`).getUTCDay() + 6) % 7));
 export const weekDates = (date) => Array.from({ length: 7 }, (_, offset) => shiftDate(mondayOf(date), offset));
+/** Monday-first weeks covering the whole month of `date`: `end` is exclusive. */
+export const monthWeeks = (date) => {
+    const first = `${date.slice(0, 7)}-01`;
+    const next = new Date(`${first}T12:00:00Z`);
+    next.setUTCMonth(next.getUTCMonth() + 1);
+    const start = mondayOf(first);
+    const end = shiftDate(mondayOf(shiftDate(next.toISOString().slice(0, 10), -1)), 7);
+    return { start, end, weeks: Math.round((Date.parse(`${end}T12:00:00Z`) - Date.parse(`${start}T12:00:00Z`)) / (7 * 86400000)) };
+};
 const formatParts = (instant, formatter) => {
     const parts = formatter.formatToParts(new Date(instant));
     const part = (type) => parts.find((item) => item.type === type)?.value ?? '0';

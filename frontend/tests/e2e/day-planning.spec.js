@@ -506,46 +506,47 @@ test('preserves a failed tag draft and blocks duplicate creation and event save 
     await expect(page.getByLabel('Tytuł wydarzenia', { exact: true })).toHaveValue('Nie zgub wydarzenia');
 });
 
-test('restricts team-visible tags to team administrators while preserving a private tag draft', async ({ page }) => {
-    const state = await setup(page, { event: null });
+test('keeps a member to team tags on a team event while preserving a personal tag draft', async ({ page }) => {
+    const state = await setup(page, { event: null, scopedTags: true });
     await page.getByRole('button', { name: 'Nowe wydarzenie', exact: true }).click();
     await page.getByLabel('Tytuł wydarzenia', { exact: true }).fill('Wspólny spacer');
-    await page.getByLabel('Zespół wydarzenia', { exact: true }).selectOption('team-1');
     await page.getByRole('button', { name: 'Nowy tag', exact: true }).click();
     await page.getByLabel('Nazwa tagu', { exact: true }).fill('Prywatny sport');
-    await expect(page.getByLabel('Zakres tagu', { exact: true }).locator('option')).toHaveCount(1);
-    await expect(page.getByLabel('Zakres tagu', { exact: true })).toHaveValue('PERSONAL');
-    await page.locator('input[name="dayVisibility"][value="TEAM"]').check();
+    await expect(page.getByRole('region', { name: 'Nowy tag', exact: true })).toContainText('Tag osobisty');
+    await page.getByLabel('Zespół wydarzenia', { exact: true }).selectOption('team-1');
     await expect(page.getByText('Do wydarzenia zespołowego można dodać tylko tagi zespołu. Nowe tagi zespołu tworzy administrator.', { exact: true })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Utwórz tag', exact: true })).toBeDisabled();
+    await expect(page.getByRole('checkbox', { name: 'Lekcje', exact: true })).toBeVisible();
+    await expect(page.getByRole('checkbox', { name: 'Praca', exact: true })).toHaveCount(0);
     await expect(page.getByLabel('Zakres tagu', { exact: true })).toHaveCount(0);
-    await page.locator('input[name="dayVisibility"][value="PRIVATE"]').check();
+    await page.getByLabel('Zespół wydarzenia', { exact: true }).selectOption('');
     await expect(page.getByLabel('Nazwa tagu', { exact: true })).toHaveValue('Prywatny sport');
     await expect(page.getByRole('button', { name: 'Utwórz tag', exact: true })).toBeEnabled();
     await page.getByRole('button', { name: 'Anuluj tworzenie tagu', exact: true }).click();
-    await page.locator('input[name="dayVisibility"][value="TEAM"]').check();
+    await page.getByLabel('Zespół wydarzenia', { exact: true }).selectOption('team-1');
     await expect(page.getByRole('button', { name: 'Nowy tag', exact: true })).toHaveCount(0);
     expect(state.writes).toHaveLength(0);
 });
 
-test('recomputes allowed tag scopes as an administrator changes the event team and visibility', async ({ page }) => {
-    const state = await setup(page, { event: null, teamRole: 'admin' });
+test('gives an administrator a team tag on a team event and a personal tag without a team', async ({ page }) => {
+    const state = await setup(page, { event: null, teamRole: 'admin', scopedTags: true });
     await page.getByRole('button', { name: 'Nowe wydarzenie', exact: true }).click();
     await page.getByLabel('Tytuł wydarzenia', { exact: true }).fill('Wspólna nauka');
     await page.getByLabel('Zespół wydarzenia', { exact: true }).selectOption('team-1');
     await page.getByRole('button', { name: 'Nowy tag', exact: true }).click();
     await page.getByLabel('Nazwa tagu', { exact: true }).fill('Nauka');
-    await page.getByLabel('Zakres tagu', { exact: true }).selectOption('TEAM');
+    const creator = page.getByRole('region', { name: 'Nowy tag', exact: true });
+    await expect(creator).toContainText('Tag zespołu Family Team');
     await page.getByLabel('Zespół wydarzenia', { exact: true }).selectOption('');
-    await expect(page.getByLabel('Zakres tagu', { exact: true })).toHaveValue('PERSONAL');
-    await expect(page.getByLabel('Zakres tagu', { exact: true }).locator('option[value="TEAM"]')).toHaveCount(0);
+    await expect(creator).toContainText('Tag osobisty');
     await page.getByLabel('Zespół wydarzenia', { exact: true }).selectOption('team-1');
-    await page.locator('input[name="dayVisibility"][value="TEAM"]').check();
-    await expect(page.getByLabel('Zakres tagu', { exact: true }).locator('option')).toHaveCount(1);
     await expect(page.getByLabel('Nazwa tagu', { exact: true })).toHaveValue('Nauka');
     await page.getByRole('button', { name: 'Utwórz tag', exact: true }).click();
     await expect(page.getByRole('checkbox', { name: 'Nauka', exact: true })).toBeChecked();
     expect(state.writes.at(-1).data).toMatchObject({ name: 'Nauka', scope: 'TEAM', teamId: 'team-1' });
+    await page.getByRole('button', { name: 'Zapisz', exact: true }).click();
+    await expect(page.getByText('Wydarzenie zapisane.', { exact: true })).toBeVisible();
+    expect(state.writes.at(-1).data).toMatchObject({ title: 'Wspólna nauka', teamId: 'team-1', visibility: 'TEAM', tagIds: ['tag-new'] });
 });
 
 test('retains a created tag in the catalog when cancelling an event and fits a narrow dark screen', async ({ page }) => {
@@ -831,23 +832,24 @@ test('offers a team picker only to people in several teams', async ({ page }) =>
     expect(state.queries.at(-1).getAll('personIds[]')).toEqual(['1', '3']);
 });
 
-test('keeps rarely used event options folded away until they are needed', async ({ page }) => {
+test('keeps rarely used event options folded away and always shares a team event with its team', async ({ page }) => {
     const state = await setup(page, { event: null });
     await page.getByRole('button', { name: 'Nowe wydarzenie', exact: true }).click();
     await expect(page.getByRole('group', { name: 'Widoczność', exact: true })).toHaveCount(0);
     await expect(page.getByRole('group', { name: 'Uczestnicy', exact: true })).toHaveCount(0);
     await expect(page.getByLabel('Strefa wydarzenia', { exact: true })).toBeHidden();
     await expect(page.getByLabel('Zajmuje czas uczestników', { exact: true })).toBeHidden();
+    await expect(page.getByLabel('Zespół wydarzenia', { exact: true })).toHaveAccessibleDescription('Szczegóły widzisz tylko Ty.');
     await page.getByLabel('Tytuł wydarzenia', { exact: true }).fill('Lot do Londynu');
     await page.getByText('Więcej opcji', { exact: true }).click();
     await page.getByLabel('Strefa wydarzenia', { exact: true }).fill('Europe/London');
     await page.getByLabel('Zajmuje czas uczestników', { exact: true }).uncheck();
     await page.getByLabel('Zespół wydarzenia', { exact: true }).selectOption('team-1');
-    await expect(page.getByRole('group', { name: 'Widoczność', exact: true })).toBeVisible();
-    await expect(page.getByText('Szczegóły widzisz Ty i zaproszeni. Pozostali widzą tylko „Zajęty”.', { exact: true })).toBeVisible();
-    await page.getByRole('radio', { name: 'Dla zespołu', exact: true }).check();
-    await expect(page.getByText('Szczegóły zobaczą wszyscy członkowie zespołu Family Team.', { exact: true })).toBeVisible();
+    await expect(page.getByRole('radio')).toHaveCount(0);
+    await expect(page.getByText('Widoczność', { exact: true })).toHaveCount(0);
+    await expect(page.getByLabel('Zespół wydarzenia', { exact: true })).toHaveAccessibleDescription('Szczegóły zobaczą wszyscy członkowie zespołu Family Team.');
     await expect(page.getByRole('group', { name: 'Uczestnicy', exact: true }).getByRole('checkbox')).toHaveCount(2);
+    await page.screenshot({ path: test.info().outputPath('team-event-editor.png'), fullPage: true });
     await page.getByRole('button', { name: 'Zapisz', exact: true }).click();
     await expect(page.getByText('Wydarzenie zapisane.', { exact: true })).toBeVisible();
     expect(state.writes.at(-1).data).toMatchObject({ title: 'Lot do Londynu', teamId: 'team-1', visibility: 'TEAM', blocksTime: false, schedule: { kind: 'TIMED', localStart: '2026-09-21T09:00', durationMinutes: 60, timeZone: 'Europe/London' } });
@@ -875,4 +877,235 @@ test('opens the team plan on a team where somebody else is waiting', async ({ pa
     await page.getByLabel('Zespół', { exact: true }).selectOption('team-solo');
     await expect(page.getByLabel('Bartek', { exact: true })).toHaveCount(0);
     await expect.poll(() => state.queries.at(-1).get('teamId')).toBe('team-solo');
+});
+
+const monthEvents = () => [
+    { ...sample(), id: 'lesson', title: 'Plan lekcji', start: '2026-09-21T07:00:00Z', end: '2026-09-21T08:00:00Z' },
+    { ...sample(), id: 'trip', title: 'Wycieczka klasowa', allDay: true, tags: [{ id: 'trip-tag', name: 'Wyjazdy', color: '#a45132' }], start: '2026-09-22T22:00:00Z', end: '2026-09-25T22:00:00Z' },
+    ...Array.from({ length: 6 }, (_, index) => ({ ...sample(), id: `errand-${index + 1}`, title: `Sprawa ${index + 1}`, tags: [{ id: 'work', name: 'Praca', color: '#325f99' }], start: `2026-09-24T${String(5 + index).padStart(2, '0')}:00:00Z`, end: `2026-09-24T${String(5 + index).padStart(2, '0')}:30:00Z` })),
+    { ...sample(), id: 'night', title: 'Nocny pociąg', start: '2026-09-26T20:00:00Z', end: '2026-09-27T05:00:00Z' },
+    { ...sample(), id: 'october', title: 'Wywiadówka', start: '2026-10-02T15:00:00Z', end: '2026-10-02T16:00:00Z' },
+];
+
+test('opens the calendar on the whole screen and moves between month, day and week like Google Calendar', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    const state = await setup(page, { events: monthEvents() });
+    const screen = page.locator('section.day-planning');
+    await page.getByRole('button', { name: 'Pełny ekran', exact: true }).click();
+    await expect(screen).toHaveClass(/is-fullscreen/);
+    await expect(page.getByRole('button', { name: 'Zamknij pełny ekran', exact: true })).toBeFocused();
+    await expect.poll(() => page.evaluate(() => document.fullscreenElement === document.documentElement)).toBe(true);
+    expect(await screen.boundingBox()).toEqual({ x: 0, y: 0, width: 1440, height: 900 });
+    expect(await page.evaluate(() => [[8, 8], [1432, 892]].every(([x, y]) => document.elementFromPoint(x, y)?.closest('section.day-planning')))).toBe(true);
+    await expect(page.locator('.app-header, nav.app-nav')).toHaveCount(0);
+    await page.locator('body').focus();
+    await page.keyboard.press('Tab');
+    expect(await page.evaluate(() => !!document.activeElement.closest('section.day-planning.is-fullscreen'))).toBe(true);
+    await expect(page.getByRole('tab')).toHaveCount(0);
+    await expect(page.getByLabel('Widoki planu dnia', { exact: true }).locator('option')).toHaveText(['Mój plan', 'Plan zespołu']);
+    await page.getByRole('button', { name: 'Miesiąc', exact: true }).click();
+    const month = page.getByRole('region', { name: 'Kalendarz miesięczny', exact: true });
+    await expect(month).toBeVisible();
+    await expect(dateButton(page)).toHaveText(/: Wrzesień 2026/);
+    await expect.poll(() => state.queries.at(-1).get('from')).toBe('2026-08-30T22:00:00.000Z');
+    expect(state.queries.at(-1).get('to')).toBe('2026-10-04T22:00:00.000Z');
+    await expect(month.locator('.day-month-cell')).toHaveCount(35);
+    await expect(month.locator('.day-month-weekdays span')).toHaveText(['pon.', 'wt.', 'śr.', 'czw.', 'pt.', 'sob.', 'niedz.']);
+    await expect(month.locator('.day-month-cell.is-today')).toHaveAttribute('data-date', '2026-09-21');
+    await expect(month.locator('.day-month-cell.is-outside')).toHaveCount(5);
+    for (const day of ['2026-09-23', '2026-09-24', '2026-09-25']) await expect(month.locator(`[data-date="${day}"]`).getByRole('button', { name: /^Wycieczka klasowa, Cały dzień/ })).toBeVisible();
+    await expect(month.locator('[data-date="2026-09-26"]')).not.toContainText('Wycieczka klasowa');
+    for (const day of ['2026-09-26', '2026-09-27']) await expect(month.locator(`[data-date="${day}"]`)).toContainText('Nocny pociąg');
+    const crowded = month.locator('[data-date="2026-09-24"]');
+    const more = crowded.getByRole('button', { name: /więcej: Czwartek, 24 września 2026$/ });
+    await expect(more).toBeVisible();
+    const box = await crowded.boundingBox();
+    const lastLine = await crowded.locator('li').last().boundingBox();
+    expect(lastLine.y + lastLine.height).toBeLessThanOrEqual(box.y + box.height);
+    await page.screenshot({ path: test.info().outputPath('fullscreen-month-desktop.png') });
+    await more.click();
+    const list = page.getByRole('dialog', { name: 'Czwartek, 24 września 2026', exact: true });
+    await expect(list.getByRole('button', { name: /^Sprawa \d, / })).toHaveCount(6);
+    await list.getByRole('button', { name: /^Sprawa 6, / }).click();
+    await expect(page.getByRole('dialog', { name: 'Sprawa 6', exact: true })).toBeVisible();
+    await page.getByRole('button', { name: 'Zamknij', exact: true }).click();
+    await page.getByRole('button', { name: 'Następny zakres', exact: true }).click();
+    await expect(dateButton(page)).toHaveText(/: Październik 2026/);
+    await expect.poll(() => state.queries.at(-1).get('from')).toBe('2026-09-27T22:00:00.000Z');
+    await month.getByRole('button', { name: /^Pokaż dzień: Piątek, 2 października 2026, 1 wydarzenie$/ }).click();
+    await expect(page.getByRole('button', { name: 'Dzień', exact: true })).toHaveAttribute('aria-pressed', 'true');
+    await expect(dateButton(page)).toHaveText(/: Piątek, 2 października 2026/);
+    await expect(page.getByRole('button', { name: /^Wywiadówka, / })).toBeVisible();
+    await expect(screen).toHaveClass(/is-fullscreen/);
+    await page.screenshot({ path: test.info().outputPath('fullscreen-day-desktop.png') });
+    await page.getByRole('button', { name: 'Zamknij pełny ekran', exact: true }).click();
+    await expect(screen).not.toHaveClass(/is-fullscreen/);
+    await expect(page.getByRole('button', { name: 'Pełny ekran', exact: true })).toBeFocused();
+    await expect(page.getByRole('tab')).toHaveCount(3);
+    await expect(page.locator('.app-header')).toHaveCount(1);
+    expect(await page.evaluate(() => document.fullscreenElement)).toBeNull();
+});
+
+test('keeps editing and the team plan inside the full screen and leaves it with Escape', async ({ page }) => {
+    const state = await setup(page, { event: null });
+    const screen = page.locator('section.day-planning');
+    await page.getByRole('button', { name: 'Pełny ekran', exact: true }).click();
+    await page.getByLabel('Widoki planu dnia', { exact: true }).selectOption('team');
+    await expect(page.getByRole('group', { name: 'Osoby', exact: true }).getByRole('checkbox')).toHaveCount(2);
+    await page.getByRole('button', { name: 'Miesiąc', exact: true }).click();
+    const busy = page.locator('.day-month-cell[data-date="2026-09-21"] .day-event--busy');
+    await expect(busy).toHaveText('12:00Zajęty · Bartek');
+    await expect(busy).toHaveAttribute('aria-label', 'Zajęty, 12:00–13:00, Bartek');
+    expect(await busy.evaluate((element) => element.tagName)).toBe('DIV');
+    await page.getByRole('button', { name: 'Nowe wydarzenie', exact: true }).click();
+    await expect(page.locator('.day-planning.is-fullscreen .day-editor')).toBeVisible();
+    await page.getByLabel('Tytuł wydarzenia', { exact: true }).fill('Kino');
+    await page.getByRole('button', { name: 'Zapisz', exact: true }).click();
+    await expect(page.getByRole('status').filter({ hasText: 'Wydarzenie zapisane' })).toBeVisible();
+    await expect(screen).toHaveClass(/is-fullscreen/);
+    await expect(page.getByRole('region', { name: 'Kalendarz miesięczny', exact: true })).toBeVisible();
+    expect(state.writes.at(-1).data).toMatchObject({ title: 'Kino', teamId: 'team-1' });
+    await page.locator('.day-month-cell[data-date="2026-09-21"]').getByRole('button', { name: /^Kino, 09:00–10:00/ }).click();
+    await expect(page.getByRole('dialog', { name: 'Kino', exact: true })).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    await expect(screen).toHaveClass(/is-fullscreen/);
+    await page.keyboard.press('Escape');
+    await expect(screen).not.toHaveClass(/is-fullscreen/);
+    await expect(page.getByRole('tab', { name: 'Plan zespołu', exact: true })).toHaveAttribute('aria-selected', 'true');
+});
+
+test('fills the screen with the week grid, marks the current time and opens a day from its header', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await setup(page, { now: '2026-09-23T12:30:00Z' });
+    await page.getByRole('button', { name: 'Tydzień', exact: true }).click();
+    const scroller = page.locator('.day-week-scroll');
+    const regular = await scroller.boundingBox();
+    const line = page.locator('.day-week-now');
+    await expect(line).toHaveCount(1);
+    await expect(page.locator('.day-week-timeline[data-date="2026-09-23"] .day-week-now')).toHaveAttribute('style', /top: 870px/);
+    await page.getByRole('button', { name: 'Pełny ekran', exact: true }).click();
+    await expect.poll(async () => (await scroller.boundingBox()).height).toBeGreaterThan(regular.height);
+    const filled = await scroller.boundingBox();
+    expect(filled.y + filled.height).toBeGreaterThan(780);
+    await page.screenshot({ path: test.info().outputPath('fullscreen-week-desktop.png') });
+    await page.getByRole('button', { name: /^Pokaż dzień: Piątek, 25 września 2026$/ }).click();
+    await expect(page.getByRole('button', { name: 'Dzień', exact: true })).toHaveAttribute('aria-pressed', 'true');
+    await expect(dateButton(page)).toHaveText(/: Piątek, 25 września 2026/);
+    await expect.poll(() => page.evaluate(() => !!document.fullscreenElement)).toBe(true);
+    await page.evaluate(() => document.exitFullscreen());
+    await expect(page.locator('section.day-planning')).not.toHaveClass(/is-fullscreen/);
+    await expect(page.locator('.app-header')).toHaveCount(1);
+});
+
+test('fits the full-screen month and a seven-column week on a narrow dark phone', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.emulateMedia({ colorScheme: 'dark' });
+    await setup(page, { events: monthEvents() });
+    await page.getByRole('button', { name: 'Pełny ekran', exact: true }).click();
+    await page.getByRole('button', { name: 'Miesiąc', exact: true }).click();
+    const screen = page.locator('section.day-planning');
+    await expect(page.locator('.day-month-cell')).toHaveCount(35);
+    expect(await screen.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
+    expect(await page.locator('.day-month-cell[data-date="2026-09-24"]').evaluate((element) => element.scrollWidth <= element.clientWidth + 1)).toBe(true);
+    await page.screenshot({ path: test.info().outputPath('fullscreen-month-narrow-dark.png') });
+    await page.getByRole('button', { name: 'Tydzień', exact: true }).click();
+    const scroller = page.locator('.day-week-scroll');
+    await expect(page.locator('.day-week-header')).toHaveCount(7);
+    expect(await scroller.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
+    const monday = await page.locator('.day-week-header').first().boundingBox();
+    const sunday = await page.locator('.day-week-header').last().boundingBox();
+    expect(sunday.x + sunday.width).toBeLessThanOrEqual(390);
+    expect(monday.width).toBeGreaterThan(40);
+    await page.getByRole('button', { name: /^Plan lekcji, / }).scrollIntoViewIfNeeded();
+    await page.screenshot({ path: test.info().outputPath('fullscreen-week-narrow-dark.png') });
+});
+
+test('switches the regular page to a month, names it in English and keeps Monday first', async ({ page }) => {
+    const state = await setup(page, { locale: 'en', events: monthEvents() });
+    await page.getByRole('button', { name: 'Month', exact: true }).click();
+    await expect(dateButton(page, 'Calendar date')).toHaveText(/: September 2026/);
+    await expect(page.locator('.day-month-weekdays span')).toHaveText(['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']);
+    await expect(page.locator('.day-month-cell[data-date="2026-10-01"] .day-month-day')).toHaveText('Oct 1');
+    await page.screenshot({ path: test.info().outputPath('month-regular-desktop.png'), fullPage: true });
+    await page.getByRole('button', { name: 'Previous range', exact: true }).click();
+    await expect(dateButton(page, 'Calendar date')).toHaveText(/: August 2026/);
+    await expect.poll(() => state.queries.at(-1).get('from')).toBe('2026-07-26T22:00:00.000Z');
+    expect(state.queries.at(-1).get('to')).toBe('2026-09-06T22:00:00.000Z');
+    await expect(page.locator('.day-month-cell')).toHaveCount(42);
+    await page.getByRole('button', { name: 'Week', exact: true }).click();
+    await expect(dateButton(page, 'Calendar date')).toHaveText(/: August 17\s?–\s?23, 2026/);
+});
+
+test('checks the weekday of the chosen date for a weekly repeat and keeps the event length', async ({ page }) => {
+    const state = await setup(page, { event: null });
+    await page.getByRole('button', { name: 'Nowe wydarzenie', exact: true }).click();
+    await page.getByLabel('Tytuł wydarzenia', { exact: true }).fill('Basen');
+    await page.getByLabel('Początek', { exact: true }).fill('23.09.2026 17:00');
+    await expect(page.getByLabel('Koniec', { exact: true })).toHaveValue('23.09.2026 18:00');
+    await page.getByLabel('Powtarzanie', { exact: true }).selectOption('WEEKLY');
+    const days = page.getByRole('group', { name: 'Dni tygodnia', exact: true });
+    const checked = () => days.getByRole('checkbox').evaluateAll((boxes) => boxes.filter((box) => box.checked).map((box) => box.parentElement.textContent));
+    await expect.poll(checked).toEqual(['śr.']);
+    await page.getByLabel('Początek', { exact: true }).fill('25.09.2026 17:00');
+    await expect.poll(checked).toEqual(['pt.']);
+    await expect(page.getByLabel('Koniec', { exact: true })).toHaveValue('25.09.2026 18:00');
+    await days.getByLabel('wt.', { exact: true }).check();
+    await page.getByLabel('Początek', { exact: true }).fill('26.09.2026 17:00');
+    await expect.poll(checked).toEqual(['wt.', 'pt.', 'sob.']);
+    await page.getByLabel('Powtarzanie', { exact: true }).selectOption('DAILY');
+    await page.getByLabel('Początek', { exact: true }).fill('27.09.2026 17:00');
+    await page.getByLabel('Powtarzanie', { exact: true }).selectOption('WEEKLY');
+    await expect.poll(checked).toEqual(['wt.', 'pt.', 'sob.', 'niedz.']);
+    await page.getByRole('button', { name: 'Zapisz', exact: true }).click();
+    await expect(page.getByText('Wydarzenie zapisane.', { exact: true })).toBeVisible();
+    expect(state.writes.at(-1).data.schedule).toEqual({ kind: 'TIMED', localStart: '2026-09-27T17:00', durationMinutes: 60, timeZone: 'Europe/Warsaw' });
+    expect(state.writes.at(-1).data.recurrence).toMatchObject({ frequency: 'WEEKLY', byDay: [2, 5, 6, 7] });
+});
+
+test('moves a weekly series to the weekday of its new start date', async ({ page }) => {
+    const state = await setup(page);
+    await page.getByRole('button', { name: /Plan lekcji, / }).click();
+    await page.getByRole('radio', { name: 'Cała seria', exact: true }).check();
+    await page.getByRole('button', { name: 'Edytuj', exact: true }).click();
+    const days = page.getByRole('group', { name: 'Dni tygodnia', exact: true });
+    await expect(days.getByLabel('pon.', { exact: true })).toBeChecked();
+    await page.getByRole('button', { name: 'Wybierz: Początek', exact: true }).click();
+    const dialog = page.getByRole('dialog', { name: 'Początek', exact: true });
+    await dialog.getByRole('gridcell', { name: /24 września 2026/ }).click();
+    await dialog.getByRole('button', { name: 'Wybierz', exact: true }).click();
+    await expect(days.getByLabel('czw.', { exact: true })).toBeChecked();
+    await expect(days.getByLabel('pon.', { exact: true })).not.toBeChecked();
+    await expect(page.getByLabel('Koniec', { exact: true })).toHaveValue('24.09.2026 10:00');
+    await page.getByRole('button', { name: 'Zapisz', exact: true }).click();
+    await expect(page.getByText('Wydarzenie zapisane.', { exact: true })).toBeVisible();
+    expect(state.writes.at(-1)).toMatchObject({ method: 'PATCH', data: { schedule: { localStart: '2026-09-24T09:00', durationMinutes: 60 }, recurrence: { frequency: 'WEEKLY', byDay: [4] } } });
+});
+
+test('shares an older private team series with its team once it is edited', async ({ page }) => {
+    const privateTag = { id: 'work', name: 'Praca', color: '#3955af' };
+    const state = await setup(page, { scopedTags: true, event: { ...sample(), visibility: 'PRIVATE', tags: [privateTag] }, definition: { ...definition(), visibility: 'PRIVATE', tags: [privateTag], tagIds: ['work'] } });
+    await page.getByRole('button', { name: /Plan lekcji, / }).click();
+    await expect(page.getByRole('dialog')).toContainText('Prywatne');
+    await page.getByRole('radio', { name: 'Cała seria', exact: true }).check();
+    await page.getByRole('button', { name: 'Edytuj', exact: true }).click();
+    await expect(page.getByLabel('Zespół wydarzenia', { exact: true })).toHaveAccessibleDescription('Szczegóły zobaczą wszyscy członkowie zespołu Family Team.');
+    await expect(page.getByRole('radio')).toHaveCount(0);
+    await expect(page.getByRole('alert').filter({ hasText: 'Wydarzenie zespołu może mieć tylko tagi tego zespołu.' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Zapisz', exact: true })).toBeDisabled();
+    await page.getByRole('button', { name: 'Usuń niedostępne tagi', exact: true }).click();
+    await page.getByRole('button', { name: 'Zapisz', exact: true }).click();
+    await expect(page.getByText('Wydarzenie zapisane.', { exact: true })).toBeVisible();
+    expect(state.writes.at(-1)).toMatchObject({ method: 'PATCH', data: { teamId: 'team-1', visibility: 'TEAM', tagIds: [] } });
+});
+
+test('shares one edited occurrence of an older private team series with the team', async ({ page }) => {
+    const state = await setup(page, { event: { ...sample(), visibility: 'PRIVATE' }, definition: { ...definition(), visibility: 'PRIVATE' } });
+    await page.getByRole('button', { name: /Plan lekcji, / }).click();
+    await page.getByRole('button', { name: 'Edytuj', exact: true }).click();
+    await page.getByLabel('Tytuł wydarzenia', { exact: true }).fill('Plan lekcji w auli');
+    await page.getByRole('button', { name: 'Zapisz', exact: true }).click();
+    await expect(page.getByText('Wydarzenie zapisane.', { exact: true })).toBeVisible();
+    expect(decodeURIComponent(state.writes.at(-1).path)).toBe('/api/day-planning/events/event-1/exceptions/2026-09-21T09:00');
+    expect(state.writes.at(-1).data).toEqual({ changes: { title: 'Plan lekcji w auli', visibility: 'TEAM' } });
 });

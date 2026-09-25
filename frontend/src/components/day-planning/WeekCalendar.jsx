@@ -1,17 +1,22 @@
-import React, { useEffect, useMemo, useRef } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Icon } from '../md3';
-import { dateInZone, displayDate, displayTime, personName } from '../../services/dayPlanningTime';
+import { capitalize, dateInZone, displayDate, displayTime, minutesOnDate, personName } from '../../services/dayPlanningTime';
 import { layoutWeek } from '../../services/weekCalendarLayout';
 
-export default function WeekCalendar({ events, busy, date, people, zone, onOpen }) {
+export default function WeekCalendar({ events, busy, date, people, zone, onOpen, onShowDay }) {
     const { t, i18n } = useTranslation();
     const scroller = useRef(null);
+    const [now, setNow] = useState(() => Date.now());
+    useEffect(() => {
+        const timer = window.setInterval(() => setNow(Date.now()), 60000);
+        return () => window.clearInterval(timer);
+    }, []);
     const days = useMemo(() => layoutWeek([
         ...events.map((event) => ({ ...event, key: `${event.id}-${event.occurrenceKey}` })),
         ...busy.map((item, index) => ({ kind: 'busy', key: `busy-${index}`, personId: item.personId, start: item.start, end: item.end })),
     ], date, zone), [events, busy, date, zone]);
-    const today = dateInZone(new Date(), zone);
+    const today = dateInZone(now, zone);
     useEffect(() => {
         const first = Math.min(8 * 60, ...days.flatMap((day) => day.timed.map((segment) => segment.startMinute)));
         if (scroller.current) scroller.current.scrollTop = Math.max(0, first - 72);
@@ -38,11 +43,19 @@ export default function WeekCalendar({ events, busy, date, people, zone, onOpen 
         <div className="day-week-scroll" ref={scroller} role="region" aria-label={t('dayPlanning.weekView')} tabIndex={0}>
             <div className="day-week-grid">
                 <div className="day-week-corner">{zone.split('/').pop()?.replaceAll('_', ' ')}</div>
-                {days.map((day) => <div className={`day-week-header${day.date === today ? ' is-today' : ''}`} key={day.date} data-date={day.date}><span>{displayDate(day.date, i18n.language, { weekday: 'short', day: undefined, month: undefined })}</span><strong>{displayDate(day.date, i18n.language, { month: 'short' })}</strong></div>)}
+                {days.map((day) => {
+                    const label = <><span>{displayDate(day.date, i18n.language, { weekday: 'short', day: undefined, month: undefined })}</span><strong>{displayDate(day.date, i18n.language, { month: 'short' })}</strong></>;
+                    return <div className={`day-week-header${day.date === today ? ' is-today' : ''}`} key={day.date} data-date={day.date}>
+                        {onShowDay ? <button type="button" className="day-week-day" aria-label={t('dayPlanning.showDay', { date: capitalize(displayDate(day.date, i18n.language, { weekday: 'long', year: 'numeric' })) })} aria-current={day.date === today ? 'date' : undefined} onClick={() => onShowDay(day.date)}>{label}</button> : label}
+                    </div>;
+                })}
                 <div className="day-week-allday-label">{t('dayPlanning.allDay')}</div>
                 {days.map((day) => <div key={day.date} className="day-week-allday" data-date={day.date}>{day.allDay.map((segment) => render(segment, true))}</div>)}
                 <div className="day-week-hours">{Array.from({ length: 24 }, (_, hour) => <span key={hour} style={{ top: hour * 60 }}>{String(hour).padStart(2, '0')}:00</span>)}</div>
-                {days.map((day) => <div className="day-week-timeline" key={day.date} data-date={day.date}>{day.timed.map((segment) => render(segment))}</div>)}
+                {days.map((day) => <div className="day-week-timeline" key={day.date} data-date={day.date}>
+                    {day.timed.map((segment) => render(segment))}
+                    {day.date === today && <div className="day-week-now" style={{ top: minutesOnDate(now, today, zone) }} aria-hidden="true" />}
+                </div>)}
             </div>
         </div>
     </>;

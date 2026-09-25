@@ -20,7 +20,7 @@ import { TagColorDot } from '@/components/day-planning/tag-colors';
 import WeekCalendar from '@/components/day-planning/week-calendar';
 import { mondayOf } from '@/day-planning/week-layout';
 import { dayString, isDay, shiftDay } from '@/dates';
-import { deviceTimeZone, draftFromDefinition, draftFromOccurrence, isTime, localInstant, localParts, makeRequestKey, rangeFor } from '@/day-planning/time';
+import { deviceTimeZone, draftFromDefinition, draftFromOccurrence, isTime, localInstant, localParts, makeRequestKey, rangeFor, visibilityOf } from '@/day-planning/time';
 import { useScreenBackground } from '@/personalisation/use-screen-background';
 
 type PlanView = 'MINE' | 'TEAM' | 'PLAN';
@@ -147,7 +147,7 @@ export default function DayPlanningScreen() {
     const start = slot ? localParts(slot.start, zone) : { date, time: '09:00' };
     const eventTeam = view === 'MINE' ? null : teamId;
     setError(''); setStale(false); attempt.current = { payload: '', key: makeRequestKey() };
-    setEditing({ key: makeRequestKey(), occurrenceOnly: false, draft: { title: '', description: '', location: '', teamId: eventTeam, visibility: 'PRIVATE',
+    setEditing({ key: makeRequestKey(), occurrenceOnly: false, draft: { title: '', description: '', location: '', teamId: eventTeam, visibility: visibilityOf(eventTeam),
       schedule: { kind: 'TIMED', localStart: `${start.date}T${start.time}`, durationMinutes: slot ? (Date.parse(slot.end) - Date.parse(slot.start)) / 60000 : 60, timeZone: zone },
       recurrence: null, participantIds: [...new Set([currentUser, ...(eventTeam && view === 'PLAN' ? people : [])])], tagIds: [], blocksTime: true, ownerParticipates: true } });
   };

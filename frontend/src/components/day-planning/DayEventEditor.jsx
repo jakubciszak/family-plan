@@ -1,11 +1,16 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useId, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button, IconButton } from '../md3';
 import TagColorPalette from './TagColorPalette';
 import DateTimePickerField from './DateTimePickerField';
 import service from '../../services/dayPlanningService';
 import teamService from '../../services/teamService';
-import { addDays, dateInZone, localDateTime, peopleOf, personName, zonedIso } from '../../services/dayPlanningTime';
+import { addDays, dateInZone, followWeekday, isoWeekday, localDateTime, peopleOf, personName, zonedIso } from '../../services/dayPlanningTime';
+
+/** An event of a team is always shared with that team; without a team it stays private. */
+const visibilityOf = (teamId) => teamId ? 'TEAM' : 'PRIVATE';
+const wallMinutes = (from, to) => (Date.parse(`${to}:00Z`) - Date.parse(`${from}:00Z`)) / 60000;
+const addWallMinutes = (value, minutes) => new Date(Date.parse(`${value}:00Z`) + minutes * 60000).toISOString().slice(0, 16);
 
 const initialDraft = (event, seed = {}, zone, userId) => {
     const schedule = event?.schedule;
@@ -16,7 +21,7 @@ const initialDraft = (event, seed = {}, zone, userId) => {
     const end = event?.end ? localDateTime(event.end, timeZone) : seed?.end ? localDateTime(seed.end, timeZone) : localDateTime(new Date(new Date(schedule?.utcOffset ? `${start}${schedule.utcOffset}` : zonedIso(start, timeZone)).getTime() + duration * 60000), timeZone);
     return {
         title: event?.title || '', description: event?.description || '', location: event?.location || '',
-        teamId: event?.teamId || seed?.teamId || '', visibility: event?.visibility || 'PRIVATE', timeZone,
+        teamId: event?.teamId || seed?.teamId || '', timeZone,
         allDay: schedule?.kind === 'ALL_DAY' || !!event?.allDay,
         start: schedule?.startDate ? `${schedule.startDate}T00:00` : start,
         end: schedule?.endDate ? `${schedule.endDate}T00:00` : end,
@@ -25,7 +30,7 @@ const initialDraft = (event, seed = {}, zone, userId) => {
         tagIds: event?.tagIds || event?.tags?.map((tag) => tag.id) || [],
         blocksTime: event?.blocksTime !== false,
         frequency: event?.recurrence?.frequency || '', interval: event?.recurrence?.interval || 1,
-        byDay: event?.recurrence?.byDay || [new Date(`${start.slice(0, 10)}T12:00:00Z`).getUTCDay() || 7],
+        byDay: event?.recurrence?.byDay || [isoWeekday(start.slice(0, 10))],
         ending: event?.recurrence?.until ? 'until' : event?.recurrence?.count ? 'count' : '',
         until: event?.recurrence?.until || addDays(start.slice(0, 10), 90), count: event?.recurrence?.count || 10,
     };
@@ -53,11 +58,13 @@ export default function DayEventEditor({ event, occurrenceKey, seed, zone, user,
     const tagPending = useRef(false);
     const active = useRef(true);
     const selfId = String(user.id);
+    const teamHint = useId();
     const team = teams.find((item) => item.id === draft.teamId);
     const isTeamAdmin = team?.role === 'admin';
-    const canCreateTag = draft.visibility === 'PRIVATE' || isTeamAdmin;
-    const tagScope = draft.visibility === 'TEAM' || tagDraft?.scope === 'TEAM' && isTeamAdmin ? 'TEAM' : 'PERSONAL';
-    const tagContext = `${draft.teamId}:${draft.visibility}:${isTeamAdmin}`;
+    const visibility = visibilityOf(draft.teamId);
+    const canCreateTag = visibility === 'PRIVATE' || isTeamAdmin;
+    const tagScope = visibility === 'TEAM' ? 'TEAM' : 'PERSONAL';
+    const tagContext = `${draft.teamId}:${isTeamAdmin}`;
     const nobodyAttends = !draft.ownerParticipates && !draft.participantIds.length;
     const currentTagContext = useRef(tagContext);
     currentTagContext.current = tagContext;
@@ -94,14 +101,25 @@ export default function DayEventEditor({ event, occurrenceKey, seed, zone, user,
             .finally(() => { if (active) setLoading(false); });
         return () => { active = false; };
     }, [draft.teamId, catalogVersion]);
-    const update = (changes) => { setDraft((current) => ({ ...current, ...changes })); setConfirmation(null); setError(''); };
+    const update = (changes) => {
+        setDraft((current) => {
+            const next = { ...current, ...changes };
+            const length = wallMinutes(current.start, current.end);
+            if ('start' in changes && !('end' in changes) && length > 0) next.end = addWallMinutes(next.start, length);
+            const [before, after] = [current.start.slice(0, 10), next.start.slice(0, 10)];
+            if (after !== before) next.byDay = followWeekday(next.byDay, before, after);
+            if (next.frequency === 'WEEKLY' && current.frequency !== 'WEEKLY' && !next.byDay.includes(isoWeekday(after))) next.byDay = [...next.byDay, isoWeekday(after)].sort((a, b) => a - b);
+            return next;
+        });
+        setConfirmation(null);
+        setError('');
+    };
     const toggle = (key, value) => update({ [key]: draft[key].includes(value) ? draft[key].filter((item) => item !== value) : [...draft[key], value] });
     const toggleSelf = () => update(draft.ownerParticipates
         ? { ownerParticipates: false, participantIds: draft.participantIds.filter((id) => id !== selfId) }
         : { ownerParticipates: true, participantIds: [...new Set([selfId, ...draft.participantIds])] });
-    const allowedTags = tags.filter((tag) => draft.visibility === 'PRIVATE' || tag.scope === 'TEAM');
-    const retainedTags = draft.teamId === initial.current.teamId && draft.visibility === initial.current.visibility
-        ? initial.current.tagIds.filter((id) => !tags.some((tag) => tag.id === id)) : [];
+    const allowedTags = tags.filter((tag) => visibility === 'PRIVATE' || tag.scope === 'TEAM');
+    const retainedTags = draft.teamId === initial.current.teamId ? initial.current.tagIds.filter((id) => !tags.some((tag) => tag.id === id)) : [];
     const invalidTags = draft.tagIds.some((id) => !allowedTags.some((tag) => tag.id === id) && !retainedTags.includes(id));
     const makePayload = (value) => {
         new Intl.DateTimeFormat('en', { timeZone: value.timeZone }).format(new Date());
@@ -112,7 +130,7 @@ export default function DayEventEditor({ event, occurrenceKey, seed, zone, user,
         if (durationMinutes <= 0) throw new Error('invalid_range');
         return {
             title: value.title.trim(), description: value.description, location: value.location,
-            teamId: value.teamId || null, visibility: value.visibility,
+            teamId: value.teamId || null, visibility: visibilityOf(value.teamId),
             schedule: value.allDay ? { kind: 'ALL_DAY', startDate: start.slice(0, 10), endDate: end.slice(0, 10), timeZone: value.timeZone }
                 : { kind: 'TIMED', localStart: start, durationMinutes, timeZone: value.timeZone, ...(unchangedTime && event.schedule?.utcOffset ? { utcOffset: event.schedule.utcOffset } : {}) },
             participantIds: value.participantIds, tagIds: value.tagIds, blocksTime: value.blocksTime, ownerParticipates: value.ownerParticipates,
@@ -126,7 +144,7 @@ export default function DayEventEditor({ event, occurrenceKey, seed, zone, user,
         try {
             let saved;
             if (occurrenceKey) {
-                const original = makePayload(initial.current);
+                const original = { ...makePayload(initial.current), visibility: event.visibility ?? visibilityOf(initial.current.teamId) };
                 const changes = Object.fromEntries(Object.entries(payload).filter(([key, value]) => !['teamId', 'recurrence', 'ownerParticipates'].includes(key) && JSON.stringify(original[key]) !== JSON.stringify(value)));
                 if (Object.keys(changes).length === 0) { onSaved(event); return; }
                 saved = await service.exception(event.id, occurrenceKey, { changes, ...extra }, event.version);
@@ -171,7 +189,10 @@ export default function DayEventEditor({ event, occurrenceKey, seed, zone, user,
         <form onSubmit={submit}>
             <fieldset disabled={saving || tagSaving} className="day-fields">
                 {field('title', 'eventTitle', 'text', { required: true, maxLength: 200, autoComplete: 'off' })}
-                {teams.length > 0 && <label className="day-field">{t('dayPlanning.eventTeam')}<select aria-label={t('dayPlanning.eventTeam')} value={draft.teamId} disabled={!!occurrenceKey} onChange={(e) => update({ teamId: e.target.value, participantIds: [selfId], ownerParticipates: true, tagIds: [], visibility: e.target.value ? draft.visibility : 'PRIVATE' })}><option value="">{t('dayPlanning.personal')}</option>{teams.map((item) => <option value={item.id} key={item.id}>{item.name}</option>)}</select></label>}
+                {teams.length > 0 && <div className="day-field-stack">
+                    <label className="day-field">{t('dayPlanning.eventTeam')}<select aria-label={t('dayPlanning.eventTeam')} aria-describedby={teamHint} value={draft.teamId} disabled={!!occurrenceKey} onChange={(e) => update({ teamId: e.target.value, participantIds: [selfId], ownerParticipates: true, tagIds: [] })}><option value="">{t('dayPlanning.personal')}</option>{teams.map((item) => <option value={item.id} key={item.id}>{item.name}</option>)}</select></label>
+                    <p id={teamHint} className="day-hint">{t(draft.teamId ? 'dayPlanning.teamExplanation' : 'dayPlanning.personalExplanation', { team: team?.name || '' })}</p>
+                </div>}
                 <div className="day-when">
                     <label className="day-check"><input type="checkbox" checked={draft.allDay} onChange={(e) => update({ allDay: e.target.checked, end: e.target.checked && draft.start.slice(0, 10) === draft.end.slice(0, 10) ? `${addDays(draft.start.slice(0, 10), 1)}T00:00` : draft.end })} />{t('dayPlanning.allDay')}</label>
                     <div className="day-row">{['start', 'end'].map((key) => <DateTimePickerField key={key} label={t(`dayPlanning.${draft.allDay && key === 'end' ? 'exclusiveEnd' : key}`)} type={draft.allDay ? 'date' : 'datetime-local'} required value={draft.allDay ? draft[key].slice(0, 10) : draft[key]} onChange={(value) => update({ [key]: draft.allDay ? `${value}T00:00` : value })} timeZone={draft.timeZone} />)}</div>
@@ -181,24 +202,20 @@ export default function DayEventEditor({ event, occurrenceKey, seed, zone, user,
                     {draft.frequency === 'WEEKLY' && <fieldset className="day-choice-group"><legend>{t('dayPlanning.weekdays')}</legend><div className="day-chips">{weekdays.map((day) => <label key={day.value} className="day-choice"><input type="checkbox" checked={draft.byDay.includes(day.value)} onChange={() => toggle('byDay', day.value)} />{day.label}</label>)}</div></fieldset>}
                     {draft.frequency && <div className="day-row">{select('ending', 'repeatEnd', [['', t('dayPlanning.never')], ['until', t('dayPlanning.until')], ['count', t('dayPlanning.afterCount')]])}{draft.ending === 'until' && field('until', 'untilDate', 'date', { required: true, min: draft.start.slice(0, 10) })}{draft.ending === 'count' && field('count', 'occurrenceCount', 'number', { required: true, min: 1, max: 10000 })}</div>}
                 </div>}
-                {draft.teamId && <fieldset className="day-choice-group"><legend>{t('dayPlanning.visibility')}</legend><div className="day-segmented">{['PRIVATE', 'TEAM'].map((visibility) => <label key={visibility}><input type="radio" name="dayVisibility" value={visibility} checked={draft.visibility === visibility} onChange={() => update({ visibility })} />{t(`dayPlanning.${visibility === 'PRIVATE' ? 'private' : 'teamVisible'}`)}</label>)}</div><p className="day-hint">{t(`dayPlanning.${draft.visibility === 'PRIVATE' ? 'privateExplanation' : 'teamExplanation'}`, { team: team?.name || '' })}</p></fieldset>}
                 {catalogError && <div role="alert" className="day-alert">{t('dayPlanning.catalogError')}<Button type="button" variant="text" onClick={() => setCatalogVersion((value) => value + 1)}>{t('dayPlanning.retry')}</Button></div>}
                 {loading && <p role="status">{t('common.loading')}</p>}
                 {draft.teamId && <fieldset className="day-choice-group"><legend>{t('dayPlanning.participants')}</legend><div className="day-chips">{[user, ...members.filter((person) => person.id !== selfId)].map((person) => String(person.id) === selfId
                     ? <label className="day-choice" key={person.id}><input type="checkbox" checked={draft.ownerParticipates} disabled={!isTeamAdmin || !!occurrenceKey} onChange={toggleSelf} />{t('dayPlanning.you')}</label>
                     : <label className="day-choice" key={person.id}><input type="checkbox" checked={draft.participantIds.includes(String(person.id))} onChange={() => toggle('participantIds', String(person.id))} />{personName(person)}</label>)}</div><p className="day-hint">{t(isTeamAdmin && !occurrenceKey ? 'dayPlanning.adminParticipationHint' : 'dayPlanning.participationHint')}</p>{nobodyAttends && <div role="alert" className="day-alert">{t('dayPlanning.nobodyAttends')}</div>}</fieldset>}
                 <fieldset className="day-choice-group"><legend>{t('dayPlanning.tags')}</legend><div className="day-chips">{[...allowedTags, ...retainedTags.map((id) => ({ id, name: event?.tags?.find((tag) => tag.id === id)?.name || t('dayPlanning.archivedTag'), color: '#808080' }))].map((tag) => <label className="day-choice" key={tag.id}><input type="checkbox" checked={draft.tagIds.includes(tag.id)} onChange={() => toggle('tagIds', tag.id)} /><span className="day-dot" style={{ background: tag.color }} />{tag.name}</label>)}
-                    {!tagDraft && canCreateTag && <Button type="button" variant="text" icon="add" disabled={loading || catalogError} onClick={() => { setTagDraft({ name: '', color: '#226a4c', scope: draft.visibility === 'TEAM' ? 'TEAM' : 'PERSONAL' }); setTagError(''); setConfirmation(null); }}>{t('dayPlanning.newTag')}</Button>}</div>
+                    {!tagDraft && canCreateTag && <Button type="button" variant="text" icon="add" disabled={loading || catalogError} onClick={() => { setTagDraft({ name: '', color: '#226a4c' }); setTagError(''); setConfirmation(null); }}>{t('dayPlanning.newTag')}</Button>}</div>
                     {!loading && invalidTags && <div role="alert" className="day-alert">{t('dayPlanning.replaceTags')}<Button type="button" variant="text" onClick={() => update({ tagIds: draft.tagIds.filter((id) => allowedTags.some((tag) => tag.id === id) || retainedTags.includes(id)) })}>{t('dayPlanning.removeUnavailableTags')}</Button></div>}
                     {!canCreateTag && <p className="day-hint">{t('dayPlanning.teamTagAdminOnly')}</p>}
                     {tagDraft && <section className="day-inline-tag" aria-label={t('dayPlanning.newTag')}>
                         <h3>{t('dayPlanning.newTag')}</h3>
                         <label className="day-field">{t('dayPlanning.tagName')}<input maxLength={60} autoComplete="off" value={tagDraft.name} onChange={(e) => setTagDraft((current) => ({ ...current, name: e.target.value }))} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); createTag(); } }} /></label>
                         <TagColorPalette value={tagDraft.color} onChange={(color) => setTagDraft((current) => ({ ...current, color }))} disabled={tagSaving} />
-                        {canCreateTag && <label className="day-field">{t('dayPlanning.tagScope')}<select aria-label={t('dayPlanning.tagScope')} value={tagScope} onChange={(e) => setTagDraft((current) => ({ ...current, scope: e.target.value }))}>
-                            {draft.visibility === 'PRIVATE' && <option value="PERSONAL">{t('dayPlanning.personalTag')}</option>}
-                            {isTeamAdmin && <option value="TEAM">{t('dayPlanning.teamTag')}</option>}
-                        </select></label>}
+                        <p className="day-hint">{tagScope === 'TEAM' ? t('dayPlanning.teamTagOf', { team: team?.name || '' }) : t('dayPlanning.personalTag')}</p>
                         {tagError && <p role="alert" className="day-alert">{tagError}</p>}
                         <p className="day-hint">{t('dayPlanning.finishTagDraft')}</p>
                         <div className="day-actions"><Button type="button" disabled={tagSaving || !tagDraft.name.trim() || !canCreateTag || loading || catalogError} onClick={createTag}>{t(tagSaving ? 'dayPlanning.savingTag' : 'dayPlanning.createTag')}</Button><Button type="button" variant="text" disabled={tagSaving} onClick={() => { setTagDraft(null); setTagError(''); }}>{t('dayPlanning.cancelTag')}</Button></div>

@@ -4,7 +4,7 @@ Implementacja jest na gałęzi `feature/day-planning`, opartej na wydaniu z PR #
 
 ## Działanie
 
-Web udostępnia kalendarz dnia i tygodnia, porównanie wybranych osób oraz wspólne terminy. Mobile używa agendy dnia i tygodnia z tymi samymi regułami dostępu i edycji. Oba klienty obsługują tagi osobiste i zespołowe, serie dzienne i tygodniowe, wyjątki, anulowanie i przywracanie wystąpień, uczestnictwo, strefy czasowe, DST oraz jawne potwierdzanie kolizji.
+Web udostępnia kalendarz dnia, tygodnia i miesiąca, widok na pełnym ekranie, porównanie wybranych osób oraz wspólne terminy. Mobile używa agendy dnia i tygodnia z tymi samymi regułami dostępu i edycji. Oba klienty obsługują tagi osobiste i zespołowe, serie dzienne i tygodniowe, wyjątki, anulowanie i przywracanie wystąpień, uczestnictwo, strefy czasowe, DST oraz jawne potwierdzanie kolizji.
 
 Prywatne szczegóły zna autor i osoby zaproszone do danego wystąpienia. Pozostali członkowie wspólnego zespołu dostają tylko przedział „Zajęty”. Administrator nie czyta więcej niż zwykły członek; jedyne, co może dodatkowo, to wpisać wydarzenie w kalendarz osoby ze swojego zespołu, nie uczestnicząc w nim. Serwer stosuje te zasady także do bezpośrednich adresów wydarzeń, filtrów, planera i powiadomień.
 
@@ -14,14 +14,18 @@ Wyjście z zespołu i odwołanie zaproszeń są atomowe. Push sprawdza uprawnien
 
 ## Interfejs
 
-Web i mobile pokazują na co dzień tylko to, czego rodzina potrzebuje: datę z nawigacją, przełącznik „Dzień | Tydzień”, tagi i plan. Pozostałe opcje pojawiają się dopiero wtedy, gdy mają sens:
+Web i mobile pokazują na co dzień tylko to, czego rodzina potrzebuje: datę z nawigacją, przełącznik okresu (web: „Dzień | Tydzień | Miesiąc”, mobile: „Dzień | Tydzień”), tagi i plan. Pozostałe opcje pojawiają się dopiero wtedy, gdy mają sens:
 
 - Zakładki „Plan zespołu” i „Znajdź termin” widać tylko u osób należących do zespołu, a wybór zespołu tylko przy kilku zespołach.
 - W planie zespołu domyślnie widać wszystkie osoby; prywatność wyjaśnia jedna notka pod planem.
 - Filtr obejmuje tagi osobiste i tagi wszystkich zespołów użytkownika, bez osobnego słownika. Zarządzanie tagami jest przy filtrze.
 - Strefa wyświetlania jest zawsze widoczna pod planem; nie zajmuje miejsca w pasku narzędzi.
 - W szczegółach wydarzenia cyklicznego zakres zmiany (to wystąpienie albo cała seria) wybiera się raz, a edycja, usunięcie i rezygnacja są wspólnymi przyciskami.
-- W edytorze widoczność i uczestnicy pojawiają się przy wydarzeniu zespołowym; strefa wydarzenia i „Zajmuje czas uczestników” są w „Więcej opcji”.
+- W edytorze uczestnicy pojawiają się przy wydarzeniu zespołowym; strefa wydarzenia i „Zajmuje czas uczestników” są w „Więcej opcji”.
+- Widoczności nie wybiera się osobno. Wydarzenie zespołu widzi cały zespół, a wydarzenie bez zespołu tylko autor; podpowiedź pod polem „Zespół wydarzenia” mówi, kto zobaczy szczegóły. Wydarzenie zespołu ma wyłącznie tagi tego zespołu, więc przy edycji starszego, prywatnego wpisu z tagiem osobistym edytor prosi o jego usunięcie.
+- Przy cyklu tygodniowym zaznaczony jest dzień tygodnia daty początku. Zmiana daty przenosi zwykły cykl na nowy dzień, a przy kilku wybranych dniach dokłada nowy i zostawia pozostałe. Przesunięcie początku przesuwa też koniec, więc wydarzenie zachowuje długość.
+- Web: widok miesiąca pokazuje tygodnie od poniedziałku z wydarzeniami w komórkach dni, także całodniowymi i wielodniowymi. Gdy się nie mieszczą, „+N więcej” otwiera listę dnia, a numer dnia przełącza na widok tego dnia. Nagłówek dnia w tygodniu też otwiera ten dzień, a czerwona linia wskazuje bieżącą godzinę.
+- Web: przycisk „Pełny ekran” przy przełączniku okresu rozciąga kalendarz na cały ekran (także w trybie pełnoekranowym przeglądarki) z tymi samymi filtrami, wyborem „Mój plan | Plan zespołu” i przyciskiem nowego wydarzenia. Edycja otwiera się w tym samym trybie. Wyjście: przycisk „Zamknij pełny ekran” albo Esc. Na telefonie tydzień mieści się bez przewijania w bok.
 - Zaznaczony chip lub zakładka (widok, osoba, tag, dzień tygodnia, a w mobile także strefa) jest wypełniony, a pozostałe mają tylko obrys.
 
 ## Weryfikacja

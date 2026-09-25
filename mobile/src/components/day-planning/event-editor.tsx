@@ -4,7 +4,7 @@ import PlanningDateTimeField from '@/components/day-planning/date-time-field';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
-import { Button, Chip, HelperText, SegmentedButtons, Text, TextInput } from 'react-native-paper';
+import { Button, Chip, HelperText, Text, TextInput } from 'react-native-paper';
 
 import { listCalendarTags, type CalendarTag, type EventDefinition, type EventDraft, type Schedule } from '@/api/day-planning';
 import { listMembers, type Member, type Team } from '@/api/teams';
@@ -12,7 +12,7 @@ import ChoicePicker from '@/components/action-plans/choice-picker';
 import TagCreator from '@/components/day-planning/tag-creator';
 import { TagColorDot } from '@/components/day-planning/tag-colors';
 import { isDay, shiftDay } from '@/dates';
-import { localInstant, localInstants, localParts, utcOffsetFor } from '@/day-planning/time';
+import { followWeekday, isoWeekday, localInstant, localInstants, localParts, utcOffsetFor, visibilityOf } from '@/day-planning/time';
 
 export default function EventEditor({ initial, teams, userId, displayZone, occurrenceOnly, saving, exceptions, onRestore, onSave, onCancel, onTagsChanged }: {
   initial: EventDraft; teams: Team[]; userId: string; displayZone: string; occurrenceOnly: boolean; saving: boolean;
@@ -20,7 +20,7 @@ export default function EventEditor({ initial, teams, userId, displayZone, occur
   onSave: (draft: EventDraft) => void; onCancel: () => void; onTagsChanged: () => void;
 }) {
   const { t } = useTranslation();
-  const [draft, setDraft] = useState(initial);
+  const [draft, setDraft] = useState(() => ({ ...initial, visibility: visibilityOf(initial.teamId) }));
   const schedule = initial.schedule;
   const initialStart = schedule.kind === 'TIMED' ? schedule.localStart.split('T') : [schedule.startDate, '09:00'];
   const initialEndInstant = schedule.kind === 'TIMED' ? new Date(localInstant(initialStart[0], initialStart[1], schedule.timeZone, schedule.utcOffset).getTime() + schedule.durationMinutes * 60000).toISOString() : null;
@@ -42,7 +42,7 @@ export default function EventEditor({ initial, teams, userId, displayZone, occur
   const selectedOffset = offsets.includes(utcOffset) ? utcOffset : offsets[0];
   const [frequency, setFrequency] = useState(initial.recurrence?.frequency ?? 'ONCE');
   const [interval, setInterval] = useState(String(initial.recurrence?.interval ?? 1));
-  const [byDay, setByDay] = useState(initial.recurrence?.byDay ?? [((new Date(`${initialStart[0]}T12:00`).getDay() + 6) % 7) + 1]);
+  const [byDay, setByDay] = useState(initial.recurrence?.byDay ?? [isoWeekday(initialStart[0])]);
   const [ending, setEnding] = useState(initial.recurrence?.until ? 'UNTIL' : initial.recurrence?.count ? 'COUNT' : 'NEVER');
   const [until, setUntil] = useState(initial.recurrence?.until ?? '');
   const [count, setCount] = useState(String(initial.recurrence?.count ?? 10));
@@ -67,8 +67,18 @@ export default function EventEditor({ initial, teams, userId, displayZone, occur
   }, [draft.teamId, revision]);
   const change = <K extends keyof EventDraft>(key: K, value: EventDraft[K]) => setDraft((current) => ({ ...current, [key]: value }));
   const changeTeam = (teamId: string) => { setCreatingTag(false); setDraft((current) => ({ ...current, teamId: teamId || null,
-    visibility: teamId ? current.visibility : 'PRIVATE', participantIds: [userId], ownerParticipates: true, tagIds: [] })); };
-  const changeVisibility = (value: string) => { setCreatingTag(false); setDraft((current) => ({ ...current, visibility: value as EventDraft['visibility'], tagIds: value === 'TEAM' ? current.tagIds.filter((id) => tags.some((tag) => tag.id === id && tag.scope === 'TEAM')) : current.tagIds })); };
+    visibility: visibilityOf(teamId || null), participantIds: [userId], ownerParticipates: true, tagIds: [] })); };
+  const changeStartDate = (value: string) => {
+    if (isDay(value) && isDay(startDate)) {
+      if (isDay(endDate)) setEndDate(shiftDay(endDate, Math.round((Date.parse(`${value}T12:00:00Z`) - Date.parse(`${startDate}T12:00:00Z`)) / 86400000)));
+      setByDay((days) => followWeekday(days, startDate, value));
+    } else if (endDate === startDate) setEndDate(value);
+    setStartDate(value);
+  };
+  const changeFrequency = (value: string) => {
+    if (value === 'WEEKLY' && frequency !== 'WEEKLY' && isDay(startDate)) setByDay((days) => days.includes(isoWeekday(startDate)) ? days : [...days, isoWeekday(startDate)].sort((a, b) => a - b));
+    setFrequency(value);
+  };
   const toggleSelf = () => setDraft((current) => current.ownerParticipates
     ? { ...current, ownerParticipates: false, participantIds: current.participantIds.filter((id) => id !== userId) }
     : { ...current, ownerParticipates: true, participantIds: [...new Set([userId, ...current.participantIds])] });
@@ -114,8 +124,9 @@ export default function EventEditor({ initial, teams, userId, displayZone, occur
     {field('eventTitle', draft.title, (value) => change('title', value), { maxLength: 255 })}
     {!!teams.length && <ChoicePicker label={t('dayPlanning.eventTeam')} value={draft.teamId ?? ''} disabled={saving || occurrenceOnly}
       options={[{ value: '', label: t('dayPlanning.noTeam') }, ...teams.map((team) => ({ value: team.id, label: team.name }))]} onChange={changeTeam} />}
+    {!!teams.length && <Text variant="bodySmall" testID="day-event-audience">{t(draft.teamId ? 'dayPlanning.sharedHint' : 'dayPlanning.personalHint')}</Text>}
     <PlanningCheckbox label={t('dayPlanning.allDay')} accessibilityLabel={t('dayPlanning.allDay')} status={allDay ? 'checked' : 'unchecked'} onPress={() => setAllDay(!allDay)} disabled={saving} />
-    <PlanningDateTimeField label={t('dayPlanning.startDate')} mode="date" value={startDate} disabled={saving} onChange={(value) => { setStartDate(value); if (endDate === startDate) setEndDate(value); }} />
+    <PlanningDateTimeField label={t('dayPlanning.startDate')} mode="date" value={startDate} disabled={saving} onChange={changeStartDate} />
     {!allDay && <PlanningDateTimeField label={t('dayPlanning.startTime')} mode="time" value={startTime} disabled={saving} onChange={setStartTime} />}
     <PlanningDateTimeField label={t('dayPlanning.endDate')} mode="date" value={endDate} minimumDate={startDate} disabled={saving} onChange={setEndDate} />
     {!allDay && <PlanningDateTimeField label={t('dayPlanning.endTime')} mode="time" value={endTime} disabled={saving} onChange={setEndTime} />}
@@ -124,7 +135,7 @@ export default function EventEditor({ initial, teams, userId, displayZone, occur
     {!allDay && endOffsets.length > 1 && <ChoicePicker label={t('dayPlanning.endClockChoice')} value={selectedEndOffset} disabled={saving} options={endOffsets.map((value, index) => ({ value, label: `${t(index === 0 ? 'dayPlanning.firstClockTime' : 'dayPlanning.secondClockTime')} (UTC${value})` }))} onChange={setEndUtcOffset} />}
     {!occurrenceOnly && <>
       <ChoicePicker label={t('dayPlanning.recurrence')} value={frequency} disabled={saving}
-        options={['ONCE', 'DAILY', 'WEEKLY'].map((value) => ({ value, label: t(`dayPlanning.frequency.${value}`) }))} onChange={setFrequency} />
+        options={['ONCE', 'DAILY', 'WEEKLY'].map((value) => ({ value, label: t(`dayPlanning.frequency.${value}`) }))} onChange={changeFrequency} />
       {frequency !== 'ONCE' && <>
         {field('interval', interval, setInterval, { keyboardType: 'number-pad' })}
         {frequency === 'WEEKLY' && <View style={{ flexDirection: 'row', gap: 6, flexWrap: 'wrap' }}>
@@ -137,12 +148,6 @@ export default function EventEditor({ initial, teams, userId, displayZone, occur
         {ending === 'COUNT' && field('count', count, setCount, { keyboardType: 'number-pad' })}
       </>}
     </>}
-    {!!draft.teamId && <View style={{ gap: 8 }}>
-      <Text variant="labelLarge">{t('dayPlanning.visibility')}</Text>
-      <SegmentedButtons value={draft.visibility} onValueChange={changeVisibility}
-        buttons={[{ value: 'PRIVATE', label: t('dayPlanning.private'), disabled: saving }, { value: 'TEAM', label: t('dayPlanning.shared'), disabled: saving }]} />
-      <Text variant="bodySmall">{t(draft.visibility === 'PRIVATE' ? 'dayPlanning.privateHint' : 'dayPlanning.sharedHint')}</Text>
-    </View>}
     {!!draft.teamId && <View style={{ gap: 8 }}>
       <Text variant="labelLarge">{t('dayPlanning.participants')}</Text>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
@@ -160,7 +165,7 @@ export default function EventEditor({ initial, teams, userId, displayZone, occur
         onPress={() => toggle('tagIds', tag.id)}>{tag.name}</Chip>)}
       {!creatingTag && !!tagScopes.length && <Button icon="plus" compact accessibilityLabel={t('dayPlanning.newTag')} disabled={saving || loadingScope || scopeError} onPress={() => setCreatingTag(true)}>{t('dayPlanning.newTag')}</Button>}
     </View>
-    {creatingTag && !!tagScopes.length && <TagCreator key={`${draft.teamId ?? ''}-${draft.visibility}`} teamId={draft.teamId} scopes={tagScopes} onCatalogChanged={onTagsChanged}
+    {creatingTag && !!tagScopes.length && <TagCreator key={draft.teamId ?? ''} teamId={draft.teamId} scopes={tagScopes} onCatalogChanged={onTagsChanged}
       onCreated={(tag) => { setTags((current) => [...current.filter((item) => item.id !== tag.id), tag]); setDraft((current) => ({ ...current, tagIds: [...new Set([...current.tagIds, tag.id])] })); setCreatingTag(false); }}
       onCancel={() => setCreatingTag(false)} />}
     {!tagScopes.length && <Text variant="bodySmall">{t('dayPlanning.teamTagAdminHint')}</Text>}
