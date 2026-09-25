@@ -18,13 +18,13 @@ użytkownika i polityki zdarzeń administratora aplikacji.
 
 Migracja `Version20260918180000` dodaje kanały `in_app` i `push` do istniejących
 polityk zgłoszenia i zatwierdzenia. Nie zmienia osobistych ustawień użytkowników.
-Historia powiadomień pozostaje dostępna przez `/api/notifications`; oba klienty
-pobierają nieprzeczytane wiadomości co 10 sekund oraz po powrocie do aplikacji.
+Historia powiadomień pozostaje dostępna przez `/api/notifications` i listę pod dzwonkiem; oba
+klienty pobierają nieprzeczytane wiadomości co 10 sekund oraz po powrocie do aplikacji.
+Prośba o akceptację znika u wszystkich adminów, gdy ktokolwiek zadanie zatwierdzi, cofnie,
+usunie albo gdy wróci ono do puli. Szczegóły w `docs/PUSH_NOTIFICATIONS.md`.
 
 Android prosi o zgodę na alerty po zalogowaniu. W ustawieniach jest przycisk
 ponownego włączenia zgody; po trwałej odmowie otwiera ustawienia systemowe.
-Odmowa nie blokuje powiadomień wewnątrz aplikacji. Alerty systemowe mobilki są
-lokalne i pojawiają się po pobraniu wiadomości w uruchomionej aplikacji.
-Dostarczanie przy zamkniętej aplikacji wymaga osobnej konfiguracji Firebase/FCM
-oraz rejestracji tokenów urządzeń; ta konfiguracja nie jest częścią wydania.
-Web nadal korzysta z istniejącej konfiguracji Web Push.
+Odmowa nie blokuje powiadomień wewnątrz aplikacji. Przy zamkniętej aplikacji
+powiadomienia przychodzą przez Firebase Cloud Messaging, gdy wydanie ma
+konfigurację Firebase; web korzysta z Web Push.

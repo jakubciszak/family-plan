@@ -384,8 +384,29 @@
   "notifications": {
     "dismiss": "Dismiss",
     "deviceTitle": "Device notifications",
-    "deviceHint": "Allow alerts about new activity while using Family Plan.",
-    "devicePermission": "Enable device notifications"
+    "deviceHint": "Let the app alert you about new events, also while Family Plan is closed.",
+    "devicePermission": "Enable device notifications",
+    "dismissAll": "Dismiss and mark as read",
+    "title": "Notifications",
+    "bellUnread_one": "Notifications: {{count}} unread",
+    "bellUnread_other": "Notifications: {{count}} unread",
+    "backlog_one": "{{count}} notification while you were away",
+    "backlog_other": "{{count}} notifications while you were away",
+    "backlogHint": "Swipe aside or dismiss to mark them as read.",
+    "show": "Show",
+    "markAllRead": "Mark all as read",
+    "empty": "You have no notifications yet.",
+    "loadError": "Notifications could not be loaded.",
+    "handled": "Handled",
+    "outdated": "Out of date",
+    "unread": "Unread",
+    "settings": "Notification settings",
+    "phone": {
+      "on": "Notifications reach this phone even while the app is closed.",
+      "no-permission": "The phone has no permission for notifications, so nothing arrives while the app is closed.",
+      "unavailable": "This version of the app cannot get notifications while it is closed yet. They come with an update.",
+      "server-off": "The phone is registered, but the server has no Firebase set up yet, so nothing arrives while the app is closed. It starts once the administrator sets FCM_SERVICE_ACCOUNT."
+    }
   },
   "notificationEvents": {
     "title": "Event notifications",
@@ -904,5 +925,44 @@
     "tagHint": "Imported lessons carry this tag in the calendar, which makes them easy to filter.",
     "noTag": "No tag",
     "lastImport": "Last import: {{at}}"
+  },
+  "notificationKinds": {
+    "title": "Which notifications I want",
+    "description": "A kind you switch off reaches you through no channel: not in the app, not on the phone, not by email. Messages from a team admin always come through.",
+    "loadError": "The kinds of notifications could not be loaded.",
+    "through": "Through: {{channels}}",
+    "offByAdmin": "The application admin switched this kind off for everyone.",
+    "groups": {
+      "tasks": "Tasks",
+      "calendar": "Day plan",
+      "allowance": "Pocket money",
+      "streaks": "Streak"
+    },
+    "events": {
+      "task_assigned": "A task was assigned to me",
+      "task_completed": "A task waits for my approval",
+      "task_rejected": "My task was returned for correction",
+      "task_approved": "My task was approved",
+      "task_abandoned": "A task went back to the pool",
+      "task_corrected": "The date of my task changed",
+      "task_removed": "A completion of my task was removed",
+      "calendar_changed": "Changes to my events",
+      "calendar_removed": "Cancelled events and removed invitations",
+      "payout_offered": "Pocket money to collect",
+      "streak_at_risk": "My streak is about to break"
+    },
+    "hints": {
+      "task_assigned": "When somebody assigns you a task.",
+      "task_completed": "When a family member submits a finished task. It goes away once anyone approves or returns it.",
+      "task_rejected": "Together with the reason the admin gave.",
+      "task_approved": "Together with the points you earned.",
+      "task_abandoned": "When your task, or one of your team, goes back to the pool.",
+      "task_corrected": "When an admin moves a completion to another day.",
+      "task_removed": "Together with the points taken back.",
+      "calendar_changed": "New and changed events you take part in, without private details.",
+      "calendar_removed": "When an event is cancelled or your invitation removed.",
+      "payout_offered": "When a parent sets money aside for you. It goes away once you confirm you got it.",
+      "streak_at_risk": "A 6 pm reminder while your streak runs and today has no points yet. It expires at midnight."
+    }
   }
 }

@@ -150,6 +150,15 @@ const freshWorld = () => ({
   bonusRules: [],
   statusChangeRules: [],
   notifications: [],
+  notificationKinds: [
+    { event: 'task_assigned', group: 'tasks', enabled: true, channels: ['in_app', 'push'], relevant: true },
+    { event: 'task_completed', group: 'tasks', enabled: true, channels: ['email', 'in_app', 'push'], relevant: false },
+    { event: 'task_approved', group: 'tasks', enabled: true, channels: ['email', 'in_app', 'push'], relevant: true },
+    { event: 'calendar_changed', group: 'calendar', enabled: true, channels: ['in_app', 'push'], relevant: true },
+    { event: 'payout_offered', group: 'allowance', enabled: true, channels: [], relevant: true },
+    { event: 'streak_at_risk', group: 'streaks', enabled: false, channels: ['push'], relevant: true },
+  ],
+  phones: [],
   notificationPolicies: {
     channels: ['email', 'sms', 'in_app'],
     events: [
@@ -363,12 +372,35 @@ const route$ = async (world, call) => {
   }
 
   if (head === 'notifications') {
+    // Like the server: unread means not read, not handled and not expired, newest first.
+    const unread = () => world.notifications
+      .filter((one) => !one.readAt && !one.resolvedAt && one.active !== false)
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+
+    if (rest[0] === 'preferences') {
+      if (method === 'PUT') {
+        world.notificationKinds = world.notificationKinds.map((kind) => ({ ...kind, enabled: body.events[kind.event] ?? kind.enabled }));
+      }
+
+      return ok({ events: world.notificationKinds });
+    }
+
+    if (method === 'POST' && rest[0] === 'read-all') {
+      const ids = body.ids;
+      world.notifications.forEach((one) => {
+        if (!one.readAt && (!ids || ids.includes(one.id))) one.readAt = '2026-01-02T12:00:00+00:00';
+      });
+
+      return ok({ status: 'success', unreadCount: unread().length });
+    }
+
     if (method === 'GET') {
-      const unread = world.notifications.filter((one) => !one.readAt);
+      const limit = Number(query.get('limit') ?? 20);
+      const list = query.get('unread') ? unread() : [...world.notifications].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 
       return ok({
-        notifications: query.get('unread') ? unread : world.notifications,
-        unreadCount: unread.length,
+        notifications: list.slice(0, limit),
+        unreadCount: unread().length,
       });
     }
 
@@ -379,8 +411,17 @@ const route$ = async (world, call) => {
         held.readAt = '2026-01-02T12:00:00+00:00';
       }
 
-      return ok({ notification: held, unreadCount: 0 });
+      return ok({ notification: held, unreadCount: unread().length });
     }
+  }
+
+  if (head === 'push') {
+    if (rest[0] === 'key') return ok({ publicKey: null, available: false, native: false });
+    if (rest[0] === 'devices' && method === 'POST') {
+      world.phones.push(body.token);
+      return ok({ id: 'phone', platform: 'android' }, 201);
+    }
+    if (rest[0] === 'devices' && method === 'DELETE') return ok(null, 204);
   }
 
   if (head === 'notification-policies') {

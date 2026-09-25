@@ -1,4 +1,3 @@
-import { requestNotificationPermission } from '@/notifications/device';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -18,6 +17,7 @@ import {
   useTheme,
 } from 'react-native-paper';
 
+import { readKinds, saveKinds, type NotificationKind } from '@/api/notifications';
 import type { Language, ThemeMode } from '@/api/personalisation';
 import {
   readNotificationChannels,
@@ -25,8 +25,11 @@ import {
   type ChannelChoice,
 } from '@/api/user-settings';
 import { useAuth } from '@/auth/auth-context';
+import { useNotifications } from '@/notifications/notifications-context';
 import { usePersonalisation } from '@/personalisation/personalisation-context';
 import { useScreenBackground } from '@/personalisation/use-screen-background';
+
+const GROUPS: NotificationKind['group'][] = ['tasks', 'calendar', 'allowance', 'streaks'];
 
 const MODE_ICONS: Record<ThemeMode, string> = {
   light: 'white-balance-sunny',
@@ -45,6 +48,11 @@ export default function SettingsScreen() {
   const [channelLoad, setChannelLoad] = useState(0);
   const [channelError, setChannelError] = useState(false);
   const [channels, setChannels] = useState<ChannelChoice[] | null>(null);
+  const [kindsLoad, setKindsLoad] = useState(0);
+  const [kinds, setKinds] = useState<NotificationKind[] | null>(null);
+  const [kindsError, setKindsError] = useState(false);
+  const notifications = useNotifications();
+  const [enabling, setEnabling] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [said, setSaid] = useState<string | null>(null);
@@ -72,6 +80,38 @@ export default function SettingsScreen() {
     };
   }, [user, channelLoad]);
 
+  // Loaded apart from the channels, so retrying one does not undo changes made to the other.
+  useEffect(() => {
+    if (!user) {
+      return undefined;
+    }
+
+    let cancelled = false;
+
+    readKinds()
+      .then((held) => {
+        if (!cancelled) {
+          setKinds(held);
+          setKindsError(false);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setKindsError(true);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user, kindsLoad]);
+
+  const flipKind = (event: string) =>
+    setKinds((current) => current?.map((kind) => (kind.event === event ? { ...kind, enabled: !kind.enabled } : kind)) ?? null);
+
+  const through = (kind: NotificationKind) =>
+    kind.channels.length
+      ? t('notificationKinds.through', { channels: kind.channels.filter((channel) => channel !== 'sms').map((channel) => t(`notificationEvents.channels.${channel}`)).join(', ') })
+      : t('notificationKinds.offByAdmin');
+
   const flip = (name: ChannelChoice['name']) =>
     setChannels(
       (current) =>
@@ -80,8 +120,9 @@ export default function SettingsScreen() {
         ) ?? null,
     );
 
-  const keepChannels = async () => {
-    if (!user || !channels) {
+  // One button keeps both notification cards, whichever of them loaded.
+  const keep = async () => {
+    if (!user || (!channels && !kinds)) {
       return;
     }
 
@@ -89,7 +130,8 @@ export default function SettingsScreen() {
     setError(null);
 
     try {
-      await saveNotificationChannels(user.id, channels);
+      if (channels) await saveNotificationChannels(user.id, channels);
+      if (kinds) setKinds(await saveKinds(kinds));
       setSaid(t('settings.save_success'));
     } catch {
       setError(t('settings.save_error'));
@@ -119,7 +161,23 @@ export default function SettingsScreen() {
         {Platform.OS !== 'web' && <Card mode="elevated"><Card.Content style={styles.section}>
           <Text variant="titleMedium">{t('notifications.deviceTitle')}</Text>
           <Text>{t('notifications.deviceHint')}</Text>
-          <Button onPress={() => void requestNotificationPermission(true).catch(() => setError(t('common.error')))}>{t('notifications.devicePermission')}</Button>
+          {notifications?.phonePush ? (
+            <Text testID="phone-push-state" style={{ color: theme.colors.onSurfaceVariant }}>{t(`notifications.phone.${notifications.phonePush}`)}</Text>
+          ) : null}
+          {notifications?.phonePush !== 'on' ? (
+            <Button
+              loading={enabling}
+              disabled={enabling}
+              onPress={() => {
+                setEnabling(true);
+                void notifications?.enablePhonePush()
+                  .catch(() => setError(t('common.error')))
+                  .finally(() => setEnabling(false));
+              }}
+            >
+              {t('notifications.devicePermission')}
+            </Button>
+          ) : null}
         </Card.Content></Card>}
         {manages ? (
           <Card mode="elevated" style={styles.card}>
@@ -225,21 +283,70 @@ export default function SettingsScreen() {
               )}
             />
           ))}
-
-          {channels !== null ? (
-            <Card.Actions>
-              <Button
-                mode="contained"
-                icon="check"
-                loading={saving}
-                disabled={saving}
-                onPress={() => void keepChannels()}
-              >
-                {saving ? t('settings.saving') : t('settings.save')}
-              </Button>
-            </Card.Actions>
-          ) : null}
         </Card>
+        <Card mode="elevated" style={styles.card}>
+          <Card.Title
+            title={t('notificationKinds.title')}
+            titleVariant="titleMedium"
+            subtitle={t('notificationKinds.description')}
+            subtitleNumberOfLines={4}
+          />
+          <Divider />
+          {kinds === null ? (
+            <Card.Content style={styles.section}>
+              {kindsError ? (
+                <>
+                  <Text>{t('notificationKinds.loadError')}</Text>
+                  <Button testID="notification-kinds-retry" onPress={() => setKindsLoad((value) => value + 1)}>
+                    {t('common.retry')}
+                  </Button>
+                </>
+              ) : (
+                <ActivityIndicator />
+              )}
+            </Card.Content>
+          ) : null}
+          {GROUPS.map((group) => {
+            const inGroup = (kinds ?? []).filter((kind) => kind.group === group && kind.relevant);
+            if (inGroup.length === 0) return null;
+            return (
+              <List.Section key={group} title={t(`notificationKinds.groups.${group}`)} titleStyle={{ color: theme.colors.primary }}>
+                {inGroup.map((kind) => (
+                  <List.Item
+                    key={kind.event}
+                    testID={`notification-kind-${kind.event}`}
+                    accessibilityRole="switch"
+                    accessibilityState={{ checked: kind.enabled }}
+                    onPress={() => flipKind(kind.event)}
+                    title={t(`notificationKinds.events.${kind.event}`)}
+                    titleNumberOfLines={2}
+                    description={`${t(`notificationKinds.hints.${kind.event}`)} ${through(kind)}`}
+                    descriptionNumberOfLines={4}
+                    right={() => (
+                      <View pointerEvents="none">
+                        <Switch value={kind.enabled} />
+                      </View>
+                    )}
+                  />
+                ))}
+              </List.Section>
+            );
+          })}
+        </Card>
+
+        {channels !== null || kinds !== null ? (
+          <View style={styles.actions}>
+            <Button
+              mode="contained"
+              icon="check"
+              loading={saving}
+              disabled={saving}
+              onPress={() => void keep()}
+            >
+              {saving ? t('settings.saving') : t('settings.save')}
+            </Button>
+          </View>
+        ) : null}
       </ScrollView>
 
       <Snackbar visible={Boolean(said)} onDismiss={() => setSaid(null)} duration={3000}>
@@ -273,5 +380,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
+  },
+  actions: {
+    alignItems: 'flex-end',
   },
 });

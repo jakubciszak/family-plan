@@ -52,5 +52,7 @@ test('ustawienia pozwalają ponowić pobranie kanałów po awarii', async ({ app
   await expect(page.getByTestId('notification-channel-retry')).toBeVisible();
   app.world.failing.delete(endpoint);
   await page.getByTestId('notification-channel-retry').click();
+  await expect(page.getByText('SMS', { exact: true })).toBeVisible();
+  await expect(page.getByTestId('notification-channel-retry')).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Zapisz ustawienia' })).toBeVisible();
 });

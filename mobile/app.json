@@ -2,7 +2,7 @@
   "expo": {
     "name": "Family Plan",
     "slug": "family-plan",
-    "version": "1.0.11",
+    "version": "1.0.12",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "familyplan",
@@ -18,7 +18,7 @@
       },
       "predictiveBackGestureEnabled": false,
       "package": "pl.familyplan.app",
-      "versionCode": 12
+      "versionCode": 13
     },
     "web": {
       "output": "static",
@@ -54,7 +54,13 @@
           "enableBackgroundPlayback": false
         }
       ],
-      "expo-notifications"
+      [
+        "expo-notifications",
+        {
+          "color": "#2E7D5B",
+          "defaultChannel": "family-plan"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

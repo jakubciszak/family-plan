@@ -29,6 +29,7 @@ const CHANNEL_ICONS: Record<string, string> = {
   email: 'email-outline',
   sms: 'message-text-outline',
   in_app: 'bell-outline',
+  push: 'cellphone',
 };
 
 export default function NotificationEventsScreen() {

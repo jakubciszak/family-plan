@@ -327,6 +327,47 @@ jobs:
         working-directory: mobile
         run: npm ci
 
+      # Bez tego pliku APK działa jak dotąd, ale powiadomienia nie docierają przy zamkniętej aplikacji.
+      - name: Add the Firebase configuration
+        working-directory: mobile
+        env:
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${GOOGLE_SERVICES_JSON}" ]; then
+            echo "::warning title=Brak Firebase::Sekret GOOGLE_SERVICES_JSON jest pusty, więc APK nie dostanie powiadomień przy zamkniętej aplikacji. Zobacz mobile/README.md#powiadomienia-przy-zamkniętej-aplikacji."
+            echo "- Powiadomienia przy zamkniętej aplikacji: wyłączone (brak GOOGLE_SERVICES_JSON)" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          # Sekret może być surowym JSON-em (także z odstępami na początku) albo jego base64.
+          first=$(printf '%s' "$GOOGLE_SERVICES_JSON" | tr -d '[:space:]' | cut -c1)
+          if [ "$first" = '{' ]; then
+            printf '%s\n' "$GOOGLE_SERVICES_JSON" > google-services.json
+          elif ! printf '%s' "$GOOGLE_SERVICES_JSON" | base64 --decode > google-services.json 2>/dev/null; then
+            echo "::error title=Zły GOOGLE_SERVICES_JSON::Sekret nie jest ani JSON-em, ani poprawnym base64."
+            exit 1
+          fi
+
+          package=$(node -p "require('./app.json').expo.android.package")
+          node -e '
+            const [file, name] = process.argv.slice(1);
+            let config;
+            try {
+              config = JSON.parse(require("fs").readFileSync(file, "utf8"));
+            } catch {
+              console.log("::error title=Zły GOOGLE_SERVICES_JSON::To nie jest poprawny JSON. Wklej cały plik google-services.json albo jego base64.");
+              process.exit(1);
+            }
+            if (!(config.client || []).some((client) => client.client_info?.android_client_info?.package_name === name)) {
+              console.log(`::error title=Zły GOOGLE_SERVICES_JSON::google-services.json nie ma aplikacji Androida ${name}. Dodaj ją w konsoli Firebase i pobierz plik ponownie.`);
+              process.exit(1);
+            }
+          ' google-services.json "$package"
+
+          echo "- Powiadomienia przy zamkniętej aplikacji: włączone (Firebase)" >> "$GITHUB_STEP_SUMMARY"
+
       - name: Generate the Android project
         working-directory: mobile
         env:

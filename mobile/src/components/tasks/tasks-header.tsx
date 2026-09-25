@@ -3,7 +3,7 @@ import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, useWindowDimensions, View } from 'react-native';
-import { IconButton, Menu, Text } from 'react-native-paper';
+import { Badge, IconButton, Menu, Text } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { readCalendar } from '@/api/calendar';
@@ -11,6 +11,7 @@ import apiClient from '@/api/client';
 import { useAuth } from '@/auth/auth-context';
 import Avatar from '@/components/avatar';
 import { currentMonday } from '@/dates';
+import { useNotifications } from '@/notifications/notifications-context';
 import { usePersonalisation } from '@/personalisation/personalisation-context';
 import { useAppTheme } from '@/theme/theme-context';
 
@@ -21,6 +22,8 @@ export default function TasksHeader({ revision }: { revision: number }) {
   const { theme } = useAppTheme();
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
+  const notifications = useNotifications();
+  const unread = notifications?.unreadCount ?? 0;
   const [menu, setMenu] = useState(false);
   const [total, setTotal] = useState(false);
   const [points, setPoints] = useState({ week: 0, balance: 0 });
@@ -88,6 +91,23 @@ export default function TasksHeader({ revision }: { revision: number }) {
             </Text>
           ) : null}
         </Pressable>
+        {notifications ? (
+          <View>
+            <IconButton
+              icon={unread > 0 ? 'bell-badge-outline' : 'bell-outline'}
+              size={20}
+              style={{ margin: 0 }}
+              testID="notification-bell"
+              accessibilityLabel={unread > 0 ? t('notifications.bellUnread', { count: unread }) : t('notifications.title')}
+              onPress={notifications.openInbox}
+            />
+            {unread > 0 ? (
+              <Badge size={16} style={{ position: 'absolute', top: 2, right: 0 }} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+                {unread > 99 ? '99+' : unread}
+              </Badge>
+            ) : null}
+          </View>
+        ) : null}
         <IconButton
           icon="logout"
           size={20}

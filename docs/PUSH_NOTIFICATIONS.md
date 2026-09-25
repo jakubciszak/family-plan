@@ -1,8 +1,9 @@
 # Powiadomienia push
 
-Aplikacja webowa jest PWA, więc może wysyłać powiadomienia na telefon nawet wtedy, gdy nikt nie ma
-jej otwartej. Dzieje się to przez Web Push z VAPID — otwarty standard, ten sam w Chrome, Firefoksie
-i Safari. Nie ma tu Firebase'a ani żadnego SDK producenta.
+Powiadomienie dociera trzema drogami: jako dymek i wpis na liście w otwartej aplikacji, jako
+systemowe powiadomienie przeglądarki (Web Push z VAPID) i jako powiadomienie na telefonie z aplikacją
+mobilną, także przy zamkniętej aplikacji (Firebase Cloud Messaging). Web Push to otwarty standard, ten
+sam w Chrome, Firefoksie i Safari; FCM jest potrzebny tylko dla aplikacji na Androida.
 
 ## Jak to płynie
 
@@ -16,18 +17,53 @@ NotificationOrchestrator ──► polityka zdarzenia (admin) ──► ustawien
 NotificationFacade::sendPush(userId)
         │
         ▼
-PushNotificationAdapter ──► wszystkie urządzenia użytkownika z push_subscriptions
+PushNotificationAdapter ──► kolejka ──► DeliverPushHandler (worker)
         │
-        ▼
-MinishlinkPushSender ──► serwis push przeglądarki (FCM, Mozilla, Apple)
+        ├──► MinishlinkPushSender ──► przeglądarki z push_subscriptions ──► sw.js: showNotification()
         │
-        ▼
-sw.js: zdarzenie 'push' ──► showNotification()
+        └──► FcmPushSender ──► telefony z native_push_devices ──► tray Androida
 ```
 
 Push jest zwykłym kanałem obok `email`, `sms` i `in_app`, więc podlega tym samym dwóm bramkom:
 polityce zdarzenia, którą ustawia admin, i przełącznikowi kanału w ustawieniach użytkownika.
 Trzecią bramką, której pozostałe kanały nie mają, jest zgoda przeglądarki na konkretnym urządzeniu.
+
+## Tylko aktualne powiadomienia
+
+Powiadomienie wie, czego dotyczy, i przestaje wisieć jako nieprzeczytane, gdy nie ma już nic do
+powiedzenia:
+
+| Mechanizm | Co robi |
+|-----------|---------|
+| Temat (`topic`, z parametru `tag`) | `task-<id>`, `payout-<id>`, `streak-at-risk`, `calendar-<hmac>`. Nowsze powiadomienie na ten sam temat zamyka starsze u tego samego odbiorcy: „zatwierdzone” zastępuje „przypisane”. |
+| Załatwienie (`resolved_at`) | Zatwierdzenie, cofnięcie, usunięcie albo oddanie zadania do puli zamyka prośby o akceptację u **wszystkich** adminów. Potwierdzenie albo anulowanie wypłaty zamyka „Kieszonkowe czeka”. Zamknięte liczy się jako przeczytane. |
+| Wygaśnięcie (`expires_at`) | Ostrzeżenie o serii wygasa o północy, informacja z kalendarza po dwóch dniach. Wygasłe nie wraca jako nieprzeczytane. |
+| Czas życia pushu (TTL) | Serwis push trzyma wiadomość dla urządzenia bez sieci godziny, nie domyślne 4 tygodnie: 6–48 h zależnie od zdarzenia (`pushTtl` w `NotificationEvent`), nigdy dłużej niż do `expires_at`. Temat (`Topic` w Web Push, `collapse_key` w FCM) sprawia, że czeka tylko najnowsza wiadomość na ten temat. |
+| Kolejka | Worker nie wyśle pushu, jeśli powiadomienie zostało w międzyczasie załatwione, przeczytane albo wygasło, ani jeśli czekało w kolejce dłużej niż TTL. |
+| Własne działania | Nikt nie dostaje powiadomienia o tym, co sam zrobił, np. dziecko o zadaniu, które samo wzięło z puli. |
+
+`GET /api/notifications?unread=1` zwraca tylko aktywne powiadomienia, od najnowszych. Każde
+powiadomienie ma pola `event`, `topic`, `expiresAt`, `resolvedAt` i `active`.
+
+W otwartej aplikacji (web i mobilka) dymek wyskakuje tylko dla nowości, które przyszły w trakcie
+korzystania, i sam znika po 8 sekundach. To, co zebrało się pod nieobecność (dłużej niż 2 minuty w tle),
+przychodzi jednym dymkiem zbiorczym, a pojedyncza zaległość pokazuje się normalnie. Dymek, który już
+wisi na ekranie, znika albo zbiorczy maleje, gdy jego powiadomienie przestaje być aktualne: ktoś inny
+załatwił sprawę, odbiorca przeczytał je na innym urządzeniu albo wygasło. Porównanie odbywa się
+na znacznikach czasu serwera, więc zegar urządzenia nie ma znaczenia. Dymek zamyka X, Escape albo
+przesunięcie w bok palcem lub myszą. Dzwonek w pasku aplikacji pokazuje liczbę nieprzeczytanych
+i otwiera listę, na której załatwione i nieaktualne są oznaczone. Otwarta i widoczna aplikacja zabiera
+pushowi rolę dymka, a systemowe powiadomienia, które przestały być aktualne, same znikają z traya
+przy następnym odświeżeniu listy.
+
+## Które powiadomienia chcę dostawać
+
+Każdy użytkownik wyłącza w ustawieniach rodzaje, które go nie interesują
+(`GET/PUT /api/notifications/preferences`, typ preferencji `notification_events`). Wyłączony rodzaj nie
+przychodzi żadnym kanałem. To trzecia bramka po polityce administratora i przełącznikach kanałów.
+Wszystko jest domyślnie włączone. Prośby o akceptację widzą w ustawieniach tylko admini zespołów.
+E-maile przy zgłoszeniu i zatwierdzeniu zadania są w polityce domyślnie włączone; administrator
+aplikacji wyłącza je w „Powiadomieniach” (macierz zdarzeń i kanałów).
 
 ## Co wysyła powiadomienie
 
@@ -72,7 +108,8 @@ się nie da — zgoda przeglądarki na urządzeniu. Kto nie ma zapisanego żadne
 dostanie nic, a formularz mówi wprost, ilu domowników da się w ogóle dosięgnąć.
 
 Bez wpisanego tytułu powiadomienie pokazuje „Family Plan". Wysyłka idzie tą samą drogą co reszta —
-przez kolejkę i `DeliverPushHandler`.
+przez kolejkę i `DeliverPushHandler`. Każda wiadomość ma własny tag, więc druga nie zastępuje w trayu
+pierwszej.
 
 ## Kolejka i harmonogram
 
@@ -136,6 +173,13 @@ ten przypadek i zamiast martwego przełącznika pokazuje, co trzeba zrobić.
 | `POST` | `/api/push/test` | Próbne powiadomienie do siebie; 409, gdy nie ma żadnego urządzenia |
 | `GET` | `/api/push/audience` | Kogo nadawca może dosięgnąć, z liczbą urządzeń; 403, gdy nie administruje żadnym zespołem |
 | `POST` | `/api/push/announcements` | Wiadomość napisana przez admina zespołu; bez `userId` idzie do całego kręgu, 404 poza kręgiem, 409 gdy nikt nie ma urządzenia |
+| `POST` | `/api/push/devices` | Telefon z aplikacją: token FCM, platforma `android`, etykieta; ponowne zapisanie przenosi telefon do zalogowanego |
+| `DELETE` | `/api/push/devices?token=…` | Wypisanie telefonu, np. przy wylogowaniu |
+| `GET` | `/api/notifications?unread=1&limit=…` | Aktywne nieprzeczytane, od najnowszych, z `unreadCount` |
+| `POST` | `/api/notifications/read-all` | Oznacza wszystkie jako przeczytane albo tylko te z `{ "ids": [...] }` |
+| `GET`/`PUT` | `/api/notifications/preferences` | Rodzaje powiadomień z grupą, stanem, kanałami i tym, czy w ogóle dotyczą użytkownika |
+
+`GET /api/push/key` mówi też, czy serwer ma skonfigurowany FCM (`native: true`).
 
 Endpoint jest unikalny w całej tabeli, nie na użytkownika. To celowe: jeden telefon to jedna
 subskrypcja, a gdy zaloguje się na nim ktoś inny i włączy powiadomienia, urządzenie przechodzi do
@@ -154,3 +198,16 @@ Do subskrypcji potrzeba HTTPS, więc `localhost:3000` z telefonu nie wystarczy �
 sprawdzić to na środowisku `dev` (patrz `HOSTINGER_DEPLOYMENT.md`). Po włączeniu przełącznika
 w ustawieniach przycisk „Wyślij próbne powiadomienie" wysyła powiadomienie do siebie i jest
 najszybszą drogą, żeby zobaczyć, czy cała ścieżka działa.
+
+## Telefony z aplikacją (FCM)
+
+Aplikacja mobilna po zalogowaniu i zgodzie na powiadomienia oddaje serwerowi token Firebase telefonu
+(`POST /api/push/devices`), a przy wylogowaniu go wypisuje. Worker wysyła do niego to samo co do
+przeglądarek przez FCM HTTP v1: wiadomość typu `notification` na kanale Androida `family-plan`
+(wysoki priorytet, więc pojawia się od razu), z danymi `url`, `tag`, `notificationId` i `event`.
+Stuknięcie w powiadomienie oznacza je jako przeczytane i otwiera właściwy ekran.
+
+Serwer potrzebuje konta serwisowego projektu Firebase w zmiennej `FCM_SERVICE_ACCOUNT` (JSON albo jego
+base64) w kontenerach `app` i `worker`; bez niej telefony po prostu nie dostają pushu. Aplikacja
+potrzebuje `google-services.json` z tego samego projektu przy budowaniu APK (sekret `GOOGLE_SERVICES_JSON`).
+Kroki są w [mobile/README.md](../mobile/README.md#powiadomienia-przy-zamkniętej-aplikacji).

@@ -117,6 +117,7 @@ runy (retencja logów Actions to 90 dni). Pominięcie bramki ląduje w podsumowa
 | `HOSTINGER_API_TOKEN` | Token API Hostingera z uprawnieniami do VPS |
 | `HOSTINGER_VPS_ID` | Numeryczne ID maszyny (`1201847`) |
 | `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD` | Klucz podpisu APK; opis w [mobile/README.md](mobile/README.md#wydanie-apk) |
+| `GOOGLE_SERVICES_JSON` | `google-services.json` projektu Firebase (treść albo base64); bez niego APK nie dostaje powiadomień przy zamkniętej aplikacji |
 
 `GITHUB_TOKEN` jest wstrzykiwany automatycznie i wystarcza do pushu na `ghcr.io`.
 
@@ -147,6 +148,7 @@ Zmienne środowiskowe projektu:
 | `FRANKENPHP_NUM_WORKERS` | Liczba workerów PHP trzymających kernel Symfony w pamięci; domyślnie 4 |
 | `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` | Para kluczy podpisująca powiadomienia push; puste wyłącza kanał push, nie psując reszty |
 | `VAPID_SUBJECT` | Kontakt dla operatora serwisu push (`mailto:` albo URL) |
+| `FCM_SERVICE_ACCOUNT` | Konto serwisowe Firebase (JSON albo base64) do powiadomień na telefony przy zamkniętej aplikacji; puste wyłącza ten kanał. Opis w [mobile/README.md](mobile/README.md#powiadomienia-przy-zamkniętej-aplikacji) |
 
 Klucze VAPID generuje `php bin/console app:generate-vapid-keys` (szczegóły w
 `docs/PUSH_NOTIFICATIONS.md`). Zmiana klucza publicznego unieważnia subskrypcje, które przeglądarki

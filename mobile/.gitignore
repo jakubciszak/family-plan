@@ -50,3 +50,6 @@ example
 /playwright-report/
 
 /test-results-real/
+
+# Firebase project configuration; the release build gets it from the GOOGLE_SERVICES_JSON secret
+google-services.json

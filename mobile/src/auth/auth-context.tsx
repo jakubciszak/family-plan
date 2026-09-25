@@ -8,6 +8,7 @@ import apiClient, {
 } from '@/api/client';
 import { takeUpInvitation } from '@/api/invitations';
 import { clearTokens, readTokens, writeTokens } from '@/api/tokenStore';
+import { clearDeviceNotifications, unregisterFromPush } from '@/notifications/device';
 
 type AuthState = {
   user: AuthenticatedUser | null;
@@ -29,6 +30,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [administersTeam, setAdministersTeam] = useState(false);
 
   const signOut = useCallback(async () => {
+    // While still signed in: the phone stops receiving this account's notifications, and its tray is cleared.
+    await unregisterFromPush().catch(() => undefined);
+    await clearDeviceNotifications().catch(() => undefined);
     await clearTokens();
     setUser(null);
     setAdministersTeam(false);

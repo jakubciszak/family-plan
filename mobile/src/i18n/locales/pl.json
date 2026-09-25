@@ -384,8 +384,33 @@
   "notifications": {
     "dismiss": "Zamknij",
     "deviceTitle": "Powiadomienia na telefonie",
-    "deviceHint": "Zezwól aplikacji na wyświetlanie alertów o nowych zdarzeniach podczas korzystania z Family Plan.",
-    "devicePermission": "Włącz powiadomienia na telefonie"
+    "deviceHint": "Zezwól aplikacji na alerty o nowych zdarzeniach, także wtedy, gdy Family Plan jest zamknięte.",
+    "devicePermission": "Włącz powiadomienia na telefonie",
+    "dismissAll": "Zamknij i oznacz jako przeczytane",
+    "title": "Powiadomienia",
+    "bellUnread_one": "Powiadomienia: {{count}} nieprzeczytane",
+    "bellUnread_few": "Powiadomienia: {{count}} nieprzeczytane",
+    "bellUnread_many": "Powiadomienia: {{count}} nieprzeczytanych",
+    "bellUnread_other": "Powiadomienia: {{count}} nieprzeczytanego",
+    "backlog_one": "{{count}} powiadomienie, gdy Cię nie było",
+    "backlog_few": "{{count}} powiadomienia, gdy Cię nie było",
+    "backlog_many": "{{count}} powiadomień, gdy Cię nie było",
+    "backlog_other": "{{count}} powiadomienia, gdy Cię nie było",
+    "backlogHint": "Przesuń w bok albo zamknij, aby oznaczyć jako przeczytane.",
+    "show": "Pokaż",
+    "markAllRead": "Oznacz wszystkie jako przeczytane",
+    "empty": "Nie masz jeszcze żadnych powiadomień.",
+    "loadError": "Nie udało się pobrać powiadomień.",
+    "handled": "Załatwione",
+    "outdated": "Nieaktualne",
+    "unread": "Nieprzeczytane",
+    "settings": "Ustawienia powiadomień",
+    "phone": {
+      "on": "Powiadomienia przychodzą na ten telefon także przy zamkniętej aplikacji.",
+      "no-permission": "Telefon nie ma zgody na powiadomienia, więc przy zamkniętej aplikacji nic nie przyjdzie.",
+      "unavailable": "Ta wersja aplikacji nie dostaje jeszcze powiadomień przy zamkniętej aplikacji. Pojawią się po aktualizacji.",
+      "server-off": "Telefon jest zapisany, ale serwer nie ma jeszcze skonfigurowanego Firebase, więc przy zamkniętej aplikacji nic nie przyjdzie. Zacznie przychodzić, gdy administrator ustawi FCM_SERVICE_ACCOUNT."
+    }
   },
   "notificationEvents": {
     "title": "Powiadomienia o zdarzeniach",
@@ -904,5 +929,44 @@
     "tagHint": "Lekcje dostaną ten tag w kalendarzu — łatwiej je potem odfiltrować.",
     "noTag": "Bez tagu",
     "lastImport": "Ostatni import: {{at}}"
+  },
+  "notificationKinds": {
+    "title": "Które powiadomienia chcę dostawać",
+    "description": "Wyłączony rodzaj nie przychodzi żadnym kanałem: ani w aplikacji, ani na telefon, ani e-mailem. Wiadomości od administratora zespołu przychodzą zawsze.",
+    "loadError": "Nie udało się pobrać rodzajów powiadomień.",
+    "through": "Przez: {{channels}}",
+    "offByAdmin": "Administrator aplikacji wyłączył ten rodzaj dla wszystkich.",
+    "groups": {
+      "tasks": "Zadania",
+      "calendar": "Plan dnia",
+      "allowance": "Kieszonkowe",
+      "streaks": "Seria"
+    },
+    "events": {
+      "task_assigned": "Przypisano mi zadanie",
+      "task_completed": "Zadanie czeka na moją akceptację",
+      "task_rejected": "Moje zadanie cofnięte do poprawy",
+      "task_approved": "Moje zadanie zatwierdzone",
+      "task_abandoned": "Zadanie oddane do puli",
+      "task_corrected": "Zmieniona data mojego zadania",
+      "task_removed": "Usunięte wykonanie mojego zadania",
+      "calendar_changed": "Zmiany w moich wydarzeniach",
+      "calendar_removed": "Odwołane wydarzenia i usunięte zaproszenia",
+      "payout_offered": "Kieszonkowe do odebrania",
+      "streak_at_risk": "Seria zaraz przepadnie"
+    },
+    "hints": {
+      "task_assigned": "Gdy ktoś przypisze Ci zadanie.",
+      "task_completed": "Gdy domownik zgłosi wykonane zadanie. Znika, gdy ktokolwiek je zatwierdzi albo cofnie.",
+      "task_rejected": "Razem z powodem, który podał administrator.",
+      "task_approved": "Razem z liczbą przyznanych punktów.",
+      "task_abandoned": "Gdy zadanie Twoje albo z Twojego zespołu wróci do puli.",
+      "task_corrected": "Gdy administrator przesunie wykonanie na inny dzień.",
+      "task_removed": "Razem z cofnięciem przyznanych punktów.",
+      "calendar_changed": "Nowe i zmienione wydarzenia, w których bierzesz udział, bez prywatnych szczegółów.",
+      "calendar_removed": "Gdy wydarzenie zostanie odwołane albo usunięte zostanie Twoje zaproszenie.",
+      "payout_offered": "Gdy rodzic odłoży dla Ciebie pieniądze. Znika po potwierdzeniu odbioru.",
+      "streak_at_risk": "Przypomnienie o 18:00, gdy seria trwa, a dziś nie ma jeszcze punktów. Wygasa o północy."
+    }
   }
 }
