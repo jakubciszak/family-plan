@@ -197,6 +197,30 @@ test.describe('weekly calendar', () => {
     await expect(page.getByTestId('day-week-calendar')).toBeVisible();
   });
 
+  test('starts an event from a tapped hour or the all-day strip and still opens tapped events', async ({ app, page, world }) => {
+    const state = await install(page, world);
+    state.events = [event(world, { id: 'all-day', title: 'Dzień wolny', allDay: true, start: '2026-09-20T22:00:00Z', end: DAY + 'T22:00:00Z' })];
+    await open(app); await button(page, 'Tydzień').click();
+    await page.getByTestId(`week-event-all-day-${DAY}`).click();
+    await expect(page.getByTestId('day-event-detail')).toContainText('Dzień wolny');
+    await button(page, 'Wróć do kalendarza').click();
+    await page.getByTestId('week-slot-2026-09-24-14').click();
+    await expect(page.getByTestId('day-event-editor')).toBeVisible();
+    await expect(app.field('Data początku')).toHaveValue('2026-09-24');
+    await expect(app.field('Godzina początku')).toHaveValue('14:00');
+    await expect(app.field('Godzina końca')).toHaveValue('15:00');
+    await app.field('Tytuł wydarzenia').fill('Dentysta'); await button(page, 'Zapisz').click();
+    await expect(page.getByTestId('day-week-calendar')).toBeVisible();
+    expect(state.calls.filter((call) => call.method === 'POST' && call.path.endsWith('/events')).at(-1).body).toMatchObject({ title: 'Dentysta', teamId: null, schedule: { kind: 'TIMED', localStart: '2026-09-24T14:00', durationMinutes: 60, timeZone: 'Europe/Warsaw' } });
+    await page.getByTestId('week-all-day-2026-09-26').click();
+    await expect(page.getByRole('checkbox', { name: 'Cały dzień', exact: true })).toBeChecked();
+    await expect(app.field('Data początku')).toHaveValue('2026-09-26');
+    await expect(app.field('Data końca')).toHaveValue('2026-09-26');
+    await app.field('Tytuł wydarzenia').fill('Wyjazd'); await button(page, 'Zapisz').click();
+    await expect(page.getByTestId('day-week-calendar')).toBeVisible();
+    expect(state.calls.filter((call) => call.method === 'POST' && call.path.endsWith('/events')).at(-1).body.schedule).toEqual({ kind: 'ALL_DAY', startDate: '2026-09-26', endDate: '2026-09-27', timeZone: 'Europe/Warsaw' });
+  });
+
   test('keeps noninteractive busy blocks visible in the team week under tag filtering', async ({ app, page, world }) => {
     const state = await install(page, world); state.events = [event(world)];
     state.busy = [{ kind: 'busy', personId: world.users[1].id, start: DAY + 'T07:30:00Z', end: DAY + 'T08:30:00Z' }];
@@ -207,6 +231,7 @@ test.describe('weekly calendar', () => {
     await expect(busy).toContainText('Zajęty · Bartek Kowalski');
     await expect(busy).not.toHaveAttribute('role', 'button');
     await busy.click(); expect(state.calls.filter((call) => call.path.includes('/occurrences/'))).toHaveLength(0);
+    await expect(page.getByTestId('day-event-editor')).toHaveCount(0);
     await page.getByText('Praca', { exact: true }).click();
     await expect(page.getByTestId(/^week-event-/)).toHaveCount(0); await expect(busy).toBeVisible();
     await expect(busy).not.toContainText('Plan lekcji');

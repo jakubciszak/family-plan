@@ -181,7 +181,19 @@ export default function DayPlanning({ user, onFullscreenChange }) {
     const shift = (direction) => setDate(period === 'month' ? addMonths(date, direction) : addDays(date, period === 'week' ? 7 * direction : direction));
     const showDay = (value) => { setDayList(null); setDate(value); setPeriod('day'); };
     const togglePerson = (id) => { if (view === 'planner' && id === selfId) return; setPicked({ teamId, ids: selected.includes(id) ? selected.filter((value) => value !== id) : [...selected, id] }); };
-    const startCreate = (slot) => { setNotice(''); setEditing({ seed: { date, teamId: view !== 'mine' ? teamId : '', personIds: slot ? [...new Set([selfId, ...selected])] : [selfId], ...slot } }); };
+    const startCreate = (seed = {}) => { setNotice(''); setDayList(null); setEditing({ seed: { date, teamId: view !== 'mine' ? teamId : '', personIds: [selfId], ...seed } }); };
+    const createAt = ({ date: day, minute, allDay }) => {
+        if (allDay || minute === undefined) { startCreate({ date: day, allDay: !!allDay }); return; }
+        const local = (value) => `${day}T${String(Math.floor(value / 60)).padStart(2, '0')}:${String(value % 60).padStart(2, '0')}`;
+        for (const candidate of [minute, minute + 60].filter((value) => value < 1440)) {
+            try {
+                const start = zonedIso(local(candidate), zone);
+                startCreate({ date: day, start, end: new Date(Date.parse(start) + 3600000).toISOString() });
+                return;
+            } catch { /* this hour does not exist on a daylight saving change, so try the next one */ }
+        }
+        startCreate({ date: day });
+    };
     const showDetail = async (item) => {
         const generation = ++detailGeneration.current;
         setDetail(null);
@@ -275,8 +287,8 @@ export default function DayPlanning({ user, onFullscreenChange }) {
         if (loading || actionBusy && !detail) return <p role="status" className="day-loading">{t('common.loading')}</p>;
         if (error) return <div role="alert" className="day-alert">{error}<Button type="button" variant="text" onClick={reload}>{t('dayPlanning.retry')}</Button></div>;
         if (view === 'team' && !teamId) return <p className="day-empty">{t('dayPlanning.chooseTeam')}</p>;
-        if (period === 'month') return <MonthCalendar {...calendarProps} date={date} onShowDay={showDay} onShowMore={setDayList} />;
-        if (period === 'week') return <WeekCalendar {...calendarProps} date={fromDate} onShowDay={showDay} />;
+        if (period === 'month') return <MonthCalendar {...calendarProps} date={date} onShowDay={showDay} onShowMore={setDayList} onCreate={createAt} />;
+        if (period === 'week') return <WeekCalendar {...calendarProps} date={fromDate} onShowDay={showDay} onCreate={createAt} />;
         return <DayCalendar {...calendarProps} date={fromDate} perPerson={view === 'team'} filtered={tagIds.length > 0} />;
     };
     return <section className={`day-planning${fullscreen ? ' is-fullscreen' : ''}`} aria-label={fullscreen ? t('dayPlanning.title') : undefined}>
@@ -328,7 +340,7 @@ export default function DayPlanning({ user, onFullscreenChange }) {
                     <div><Button type="submit" disabled={!!catalogError || planner.windowEnd <= planner.windowStart}>{t(planning ? 'dayPlanning.searching' : 'dayPlanning.search')}</Button></div>
                 </fieldset></form>
                 {planningError && <p role="alert" className="day-alert">{planningError}</p>}
-                {suggestions && <div className="day-suggestions" aria-live="polite"><h3>{t('dayPlanning.suggestions')}</h3>{suggestions.coverage?.complete === false ? <p role="alert">{t('dayPlanning.incomplete')}</p> : suggestions.slots.length ? suggestions.slots.map((slot) => <button type="button" className="day-slot" key={slot.start} onClick={() => startCreate(slot)}><span><strong>{capitalize(displayDate(dateInZone(slot.start, zone), i18n.language, { weekday: 'long' }))}</strong><span>{displayTime(slot.start, i18n.language, zone)}–{displayTime(slot.end, i18n.language, zone)}</span></span><span>{t('dayPlanning.useSlot')} <Icon name="chevronRight" size={18} /></span></button>) : <p>{t('dayPlanning.noSlots')}</p>}</div>}
+                {suggestions && <div className="day-suggestions" aria-live="polite"><h3>{t('dayPlanning.suggestions')}</h3>{suggestions.coverage?.complete === false ? <p role="alert">{t('dayPlanning.incomplete')}</p> : suggestions.slots.length ? suggestions.slots.map((slot) => <button type="button" className="day-slot" key={slot.start} onClick={() => startCreate({ ...slot, personIds: [...new Set([selfId, ...selected])] })}><span><strong>{capitalize(displayDate(dateInZone(slot.start, zone), i18n.language, { weekday: 'long' }))}</strong><span>{displayTime(slot.start, i18n.language, zone)}–{displayTime(slot.end, i18n.language, zone)}</span></span><span>{t('dayPlanning.useSlot')} <Icon name="chevronRight" size={18} /></span></button>) : <p>{t('dayPlanning.noSlots')}</p>}</div>}
             </>}
         </div>
         {!fullscreen && <footer className="day-footer">

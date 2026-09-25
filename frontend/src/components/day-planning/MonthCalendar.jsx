@@ -8,7 +8,7 @@ import { layoutWeek, monthWeeks } from '../../services/weekCalendarLayout';
 const LINE = 20;
 const GAP = 2;
 
-export default function MonthCalendar({ events, busy, date, people, zone, onOpen, onShowDay, onShowMore }) {
+export default function MonthCalendar({ events, busy, date, people, zone, onOpen, onShowDay, onShowMore, onCreate }) {
     const { t, i18n } = useTranslation();
     const { start, weeks } = monthWeeks(date);
     const month = date.slice(0, 7);
@@ -66,7 +66,7 @@ export default function MonthCalendar({ events, busy, date, people, zone, onOpen
                 const shown = day.segments.length > capacity ? day.segments.slice(0, capacity - 1) : day.segments;
                 const hidden = day.segments.length - shown.length;
                 const count = day.segments.length ? `, ${t('dayPlanning.eventsCount', { count: day.segments.length })}` : '';
-                return <div key={day.date} data-date={day.date} className={`day-month-cell${day.date.slice(0, 7) !== month ? ' is-outside' : ''}${day.date === today ? ' is-today' : ''}`}>
+                return <div key={day.date} data-date={day.date} className={`day-month-cell${day.date.slice(0, 7) !== month ? ' is-outside' : ''}${day.date === today ? ' is-today' : ''}`} onClick={(event) => { if (!event.target.closest('button, .day-event--busy')) onCreate?.({ date: day.date }); }}>
                     <button type="button" className="day-month-day" aria-label={`${t('dayPlanning.showDay', { date: long(day.date) })}${count}`} aria-current={day.date === today ? 'date' : undefined} onClick={() => onShowDay(day.date)}>
                         {day.date.endsWith('-01') ? displayDate(day.date, i18n.language, { month: 'short' }) : Number(day.date.slice(8))}
                     </button>

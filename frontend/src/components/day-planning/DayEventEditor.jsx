@@ -22,9 +22,9 @@ const initialDraft = (event, seed = {}, zone, userId) => {
     return {
         title: event?.title || '', description: event?.description || '', location: event?.location || '',
         teamId: event?.teamId || seed?.teamId || '', timeZone,
-        allDay: schedule?.kind === 'ALL_DAY' || !!event?.allDay,
-        start: schedule?.startDate ? `${schedule.startDate}T00:00` : start,
-        end: schedule?.endDate ? `${schedule.endDate}T00:00` : end,
+        allDay: schedule?.kind === 'ALL_DAY' || !!event?.allDay || !!seed?.allDay,
+        start: schedule?.startDate ? `${schedule.startDate}T00:00` : seed?.allDay ? `${start.slice(0, 10)}T00:00` : start,
+        end: schedule?.endDate ? `${schedule.endDate}T00:00` : seed?.allDay ? `${addDays(start.slice(0, 10), 1)}T00:00` : end,
         participantIds,
         ownerParticipates: event ? participantIds.includes(userId) : true,
         tagIds: event?.tagIds || event?.tags?.map((tag) => tag.id) || [],

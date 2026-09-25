@@ -142,14 +142,26 @@ export default function DayPlanningScreen() {
   const chooseTeam = (value: string) => { setChosenTeam(value || null); setSuggestions(null); };
   const personToggle = (id: string) => { setPicked({ teamId, ids: people.includes(id) ? people.filter((person) => person !== id) : [...people, id] }); setSuggestions(null); };
   const refresh = (clearError = true) => { if (clearError) setError(''); setSelected(null); setSuggestions(null); setRevision((value) => value + 1); };
-  const beginCreate = (slot?: { start: string; end: string }) => {
+  const beginCreate = (slot?: { start: string; end: string }, allDayOn?: string) => {
     try { localInstant(date, '09:00', zone); } catch { setError(t('dayPlanning.invalidTime')); return; }
     const start = slot ? localParts(slot.start, zone) : { date, time: '09:00' };
     const eventTeam = view === 'MINE' ? null : teamId;
     setError(''); setStale(false); attempt.current = { payload: '', key: makeRequestKey() };
     setEditing({ key: makeRequestKey(), occurrenceOnly: false, draft: { title: '', description: '', location: '', teamId: eventTeam, visibility: visibilityOf(eventTeam),
-      schedule: { kind: 'TIMED', localStart: `${start.date}T${start.time}`, durationMinutes: slot ? (Date.parse(slot.end) - Date.parse(slot.start)) / 60000 : 60, timeZone: zone },
+      schedule: allDayOn ? { kind: 'ALL_DAY', startDate: allDayOn, endDate: shiftDay(allDayOn, 1), timeZone: zone }
+        : { kind: 'TIMED', localStart: `${start.date}T${start.time}`, durationMinutes: slot ? (Date.parse(slot.end) - Date.parse(slot.start)) / 60000 : 60, timeZone: zone },
       recurrence: null, participantIds: [...new Set([currentUser, ...(eventTeam && view === 'PLAN' ? people : [])])], tagIds: [], blocksTime: true, ownerParticipates: true } });
+  };
+  /** A tap on an empty hour starts an hour-long event there, a tap on the all-day strip an all-day one. */
+  const createAt = ({ date: day, hour }: { date: string; hour?: number }) => {
+    if (hour === undefined) { beginCreate(undefined, day); return; }
+    for (const candidate of [hour, hour + 1].filter((value) => value < 24)) {
+      try {
+        const start = localInstant(day, `${String(candidate).padStart(2, '0')}:00`, zone);
+        beginCreate({ start: start.toISOString(), end: new Date(start.getTime() + 3600000).toISOString() });
+        return;
+      } catch { /* this hour does not exist on a daylight saving change, so try the next one */ }
+    }
   };
   useEffect(() => {
     const event = selected && !selected.participantIds.includes(selected.ownerId) ? selected : null;
@@ -368,7 +380,7 @@ export default function DayPlanningScreen() {
               </View>}
               {!!tagIds.length && <Text variant="bodySmall">{t('dayPlanning.filterHint')}</Text>}
               {loading && <ActivityIndicator />}
-              {calendar && display === 'WEEK' && isDay(date) && <WeekCalendar calendar={calendar} date={date} zone={zone} nameFor={nameFor} onOpen={openDetails} />}
+              {calendar && display === 'WEEK' && isDay(date) && <WeekCalendar calendar={calendar} date={date} zone={zone} nameFor={nameFor} onOpen={openDetails} onCreate={createAt} />}
               {calendar && display === 'DAY' && agenda()}
             </>}
             <View style={{ gap: 4, borderTopWidth: 1, borderColor: theme.colors.outlineVariant, paddingTop: 8 }}>

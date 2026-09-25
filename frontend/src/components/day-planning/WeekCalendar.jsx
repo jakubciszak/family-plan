@@ -4,7 +4,11 @@ import { Icon } from '../md3';
 import { capitalize, dateInZone, displayDate, displayTime, minutesOnDate, personName } from '../../services/dayPlanningTime';
 import { layoutWeek } from '../../services/weekCalendarLayout';
 
-export default function WeekCalendar({ events, busy, date, people, zone, onOpen, onShowDay }) {
+/** Half-hour steps a click in the week grid starts a new event at. */
+const SLOTS = Array.from({ length: 48 }, (_, index) => index * 30);
+const clock = (minute) => `${String(Math.floor(minute / 60)).padStart(2, '0')}:${String(minute % 60).padStart(2, '0')}`;
+
+export default function WeekCalendar({ events, busy, date, people, zone, onOpen, onShowDay, onCreate }) {
     const { t, i18n } = useTranslation();
     const scroller = useRef(null);
     const [now, setNow] = useState(() => Date.now());
@@ -50,9 +54,10 @@ export default function WeekCalendar({ events, busy, date, people, zone, onOpen,
                     </div>;
                 })}
                 <div className="day-week-allday-label">{t('dayPlanning.allDay')}</div>
-                {days.map((day) => <div key={day.date} className="day-week-allday" data-date={day.date}>{day.allDay.map((segment) => render(segment, true))}</div>)}
+                {days.map((day) => <div key={day.date} className="day-week-allday" data-date={day.date} onClick={(event) => { if (event.target === event.currentTarget) onCreate?.({ date: day.date, allDay: true }); }}>{day.allDay.map((segment) => render(segment, true))}</div>)}
                 <div className="day-week-hours">{Array.from({ length: 24 }, (_, hour) => <span key={hour} style={{ top: hour * 60 }}>{String(hour).padStart(2, '0')}:00</span>)}</div>
-                {days.map((day) => <div className="day-week-timeline" key={day.date} data-date={day.date}>
+                {days.map((day) => <div className="day-week-timeline" key={day.date} data-date={day.date} onClick={(event) => { const minute = event.target.dataset.minute; if (minute) onCreate?.({ date: day.date, minute: Number(minute) }); }}>
+                    {onCreate && SLOTS.map((minute) => <div key={minute} className="day-week-slot" style={{ top: minute }} data-minute={minute} data-label={`+ ${clock(minute)}`} aria-hidden="true" />)}
                     {day.timed.map((segment) => render(segment))}
                     {day.date === today && <div className="day-week-now" style={{ top: minutesOnDate(now, today, zone) }} aria-hidden="true" />}
                 </div>)}

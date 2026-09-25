@@ -1109,3 +1109,72 @@ test('shares one edited occurrence of an older private team series with the team
     expect(decodeURIComponent(state.writes.at(-1).path)).toBe('/api/day-planning/events/event-1/exceptions/2026-09-21T09:00');
     expect(state.writes.at(-1).data).toEqual({ changes: { title: 'Plan lekcji w auli', visibility: 'TEAM' } });
 });
+
+test('creates an event on a clicked day of the month and at a clicked half-hour or all-day slot of the week', async ({ page }) => {
+    const state = await setup(page, { events: monthEvents() });
+    await page.getByRole('button', { name: 'Miesiąc', exact: true }).click();
+    await page.locator('.day-month-cell[data-date="2026-09-30"]').hover({ position: { x: 40, y: 80 } });
+    await page.screenshot({ path: test.info().outputPath('month-click-to-create.png') });
+    await page.locator('.day-month-cell[data-date="2026-09-30"]').click({ position: { x: 40, y: 80 } });
+    await expect(page.getByRole('heading', { name: 'Nowe wydarzenie', exact: true })).toBeVisible();
+    await expect(page.getByLabel('Początek', { exact: true })).toHaveValue('30.09.2026 09:00');
+    await expect(page.getByLabel('Koniec', { exact: true })).toHaveValue('30.09.2026 10:00');
+    await page.getByRole('button', { name: 'Anuluj', exact: true }).first().click();
+    await page.locator('.day-month-cell[data-date="2026-09-21"]').getByRole('button', { name: /^Plan lekcji, / }).click();
+    await expect(page.getByRole('dialog', { name: 'Plan lekcji', exact: true })).toBeVisible();
+    await page.getByRole('button', { name: 'Zamknij', exact: true }).click();
+    await page.locator('.day-month-cell[data-date="2026-09-21"]').getByRole('button', { name: /^Pokaż dzień: / }).click();
+    await expect(page.getByRole('heading', { name: 'Nowe wydarzenie', exact: true })).toHaveCount(0);
+    await page.getByRole('button', { name: 'Tydzień', exact: true }).click();
+    const slot = page.locator('.day-week-timeline[data-date="2026-09-24"] .day-week-slot[data-minute="870"]');
+    await slot.hover();
+    expect(await slot.evaluate((element) => getComputedStyle(element, '::after').content)).toBe('"+ 14:30"');
+    await page.screenshot({ path: test.info().outputPath('week-click-to-create.png') });
+    await slot.click();
+    await expect(page.getByLabel('Początek', { exact: true })).toHaveValue('24.09.2026 14:30');
+    await expect(page.getByLabel('Koniec', { exact: true })).toHaveValue('24.09.2026 15:30');
+    await page.getByLabel('Tytuł wydarzenia', { exact: true }).fill('Dentysta');
+    await page.getByRole('button', { name: 'Zapisz', exact: true }).click();
+    await expect(page.getByText('Wydarzenie zapisane.', { exact: true })).toBeVisible();
+    expect(state.writes.at(-1).data).toMatchObject({ title: 'Dentysta', teamId: null, visibility: 'PRIVATE', schedule: { kind: 'TIMED', localStart: '2026-09-24T14:30', durationMinutes: 60, timeZone: 'Europe/Warsaw' } });
+    await page.locator('.day-week-allday[data-date="2026-09-26"]').click();
+    await expect(page.getByLabel('Cały dzień', { exact: true })).toBeChecked();
+    await expect(page.getByLabel('Początek', { exact: true })).toHaveValue('26.09.2026');
+    await expect(page.getByLabel('Koniec (pierwszy dzień poza wydarzeniem)', { exact: true })).toHaveValue('27.09.2026');
+    await page.getByLabel('Tytuł wydarzenia', { exact: true }).fill('Wyjazd');
+    await page.getByRole('button', { name: 'Zapisz', exact: true }).click();
+    await expect(page.getByText('Wydarzenie zapisane.', { exact: true })).toBeVisible();
+    expect(state.writes.at(-1).data.schedule).toEqual({ kind: 'ALL_DAY', startDate: '2026-09-26', endDate: '2026-09-27', timeZone: 'Europe/Warsaw' });
+});
+
+test('starts a team event from the team week and ignores clicks on busy time', async ({ page }) => {
+    await setup(page, { event: null });
+    await page.getByRole('tab', { name: 'Plan zespołu', exact: true }).click();
+    await page.getByRole('button', { name: 'Tydzień', exact: true }).click();
+    await page.locator('.day-week-event.day-event--busy').click();
+    await expect(page.getByRole('heading', { name: 'Nowe wydarzenie', exact: true })).toHaveCount(0);
+    await page.locator('.day-week-timeline[data-date="2026-09-22"] .day-week-slot[data-minute="1080"]').click();
+    await expect(page.getByLabel('Zespół wydarzenia', { exact: true })).toHaveValue('team-1');
+    await expect(page.getByLabel('Początek', { exact: true })).toHaveValue('22.09.2026 18:00');
+    await expect(page.getByLabel('Ty', { exact: true })).toBeChecked();
+    await expect(page.getByLabel('Bartek', { exact: true })).not.toBeChecked();
+});
+
+test('starts a new event from the full-screen month and returns there', async ({ page }) => {
+    await setup(page, { events: monthEvents() });
+    await page.getByRole('button', { name: 'Pełny ekran', exact: true }).click();
+    await page.getByRole('button', { name: 'Miesiąc', exact: true }).click();
+    await page.locator('.day-month-cell[data-date="2026-10-03"]').click({ position: { x: 30, y: 60 } });
+    await expect(page.locator('.day-planning.is-fullscreen .day-editor')).toBeVisible();
+    await expect(page.getByLabel('Początek', { exact: true })).toHaveValue('03.10.2026 09:00');
+    await page.getByRole('button', { name: 'Anuluj', exact: true }).first().click();
+    await expect(page.locator('section.day-planning.is-fullscreen').getByRole('region', { name: 'Kalendarz miesięczny', exact: true })).toBeVisible();
+});
+
+test('skips the missing spring hour when a new event starts from the week grid', async ({ page }) => {
+    await setup(page, { event: null, now: '2027-03-24T08:00:00Z' });
+    await page.getByRole('button', { name: 'Tydzień', exact: true }).click();
+    await page.locator('.day-week-timeline[data-date="2027-03-28"] .day-week-slot[data-minute="150"]').click();
+    await expect(page.getByLabel('Początek', { exact: true })).toHaveValue('28.03.2027 03:30');
+    await expect(page.getByLabel('Koniec', { exact: true })).toHaveValue('28.03.2027 04:30');
+});

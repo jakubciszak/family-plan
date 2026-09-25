@@ -176,6 +176,14 @@ button.day-agenda-event:hover { background: color-mix(in srgb, var(--day-event-c
 .day-week-event--allday > span, .day-week-event--allday > small { display: none; }
 .day-week-event:hover { filter: brightness(.97); }
 .day-week-event:focus-visible { z-index: 1; }
+.day-week-slot { position: absolute; left: 0; right: 0; height: 30px; cursor: pointer; }
+.day-week-allday { cursor: pointer; }
+.day-week-allday > * { cursor: default; }
+@media (hover: hover) {
+    .day-week-slot:hover { background: color-mix(in srgb, var(--md-sys-color-primary) 10%, transparent); }
+    .day-week-slot:hover::after { content: attr(data-label); position: absolute; top: 4px; left: 6px; font-size: .68rem; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--md-sys-color-primary); }
+    .day-week-allday:hover:not(:has(.day-week-event:hover)) { background: color-mix(in srgb, var(--md-sys-color-primary) 8%, var(--md-sys-color-surface)); }
+}
 .day-week-now { position: absolute; left: 0; right: 0; z-index: 2; height: 2px; margin-top: -1px; background: var(--md-sys-color-error); pointer-events: none; }
 .day-week-now::before { content: ''; position: absolute; left: -5px; top: -4px; width: 10px; height: 10px; border-radius: 50%; background: inherit; }
 @media (max-width: 700px) {
@@ -248,7 +256,12 @@ button.day-agenda-event:hover { background: color-mix(in srgb, var(--day-event-c
 .day-month-body { display: grid; grid-template-rows: repeat(var(--day-month-weeks), minmax(0, 1fr)); height: calc(var(--day-month-weeks) * 7.5rem); }
 .day-month-week { min-height: 0; }
 .day-month-week + .day-month-week { border-top: 1px solid var(--md-sys-color-outline-variant); }
-.day-month-cell { display: flex; flex-direction: column; gap: 2px; min-width: 0; min-height: 0; padding: 4px 3px; }
+.day-month-cell { position: relative; display: flex; flex-direction: column; gap: 2px; min-width: 0; min-height: 0; padding: 4px 3px; cursor: pointer; }
+.day-month-cell .day-event--busy { cursor: default; }
+@media (hover: hover) {
+    .day-month-cell:hover:not(:has(button:hover, .day-event--busy:hover)) { background: color-mix(in srgb, var(--md-sys-color-primary) 7%, var(--md-sys-color-surface)); }
+    .day-month-cell:hover:not(:has(button:hover, .day-event--busy:hover))::after { content: '+'; position: absolute; top: 5px; right: 8px; font-size: 1.1rem; font-weight: 500; line-height: 1; color: var(--md-sys-color-primary); pointer-events: none; }
+}
 .day-month-cell + .day-month-cell { border-left: 1px solid var(--md-sys-color-outline-variant); }
 .day-month-cell.is-outside { background: var(--md-sys-color-surface-container-low); }
 .day-month-day { align-self: center; flex-shrink: 0; min-width: 26px; height: 24px; padding: 0 6px; border: 0; border-radius: var(--md-sys-shape-corner-full); background: transparent; color: var(--md-sys-color-on-surface); font-size: .78rem !important; font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
