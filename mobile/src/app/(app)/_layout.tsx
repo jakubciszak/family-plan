@@ -10,6 +10,7 @@ import { useAuth } from '@/auth/auth-context';
 import Backdrop from '@/components/backdrop';
 import NotificationCentre from '@/components/notification-centre';
 import AppTabBar from '@/navigation/app-tab-bar';
+import { NotificationsProvider } from '@/notifications/notifications-context';
 import { usePersonalisation } from '@/personalisation/personalisation-context';
 import { useDressedUp } from '@/personalisation/use-screen-background';
 
@@ -39,6 +40,7 @@ function AuthenticatedLayout() {
   const seeThrough = dressedUp ? 'transparent' : undefined;
 
   return (
+    <NotificationsProvider>
     <View style={[styles.stage, { backgroundColor: theme.colors.background }]}>
       {!focused && <Backdrop backdrop={own?.backdrop} />}
       {error && !focused && <Banner visible={error} actions={[{ label: t('common.retry'), onPress: () => void reload() }]}>
@@ -75,10 +77,12 @@ function AuthenticatedLayout() {
         <Tabs.Screen name="settings" options={{ title: t('nav.settings') }} />
         <Tabs.Screen name="school-timetable" options={{ title: t('schoolTimetable.title') }} />
         <Tabs.Screen name="member" options={{ title: t('member.tasksSection') }} />
+        <Tabs.Screen name="notifications" options={{ title: t('notifications.title') }} />
       </Tabs>
 
       {!focused && <NotificationCentre />}
     </View>
+    </NotificationsProvider>
   );
 }
 

@@ -1,127 +1,87 @@
-import { useRouter } from 'expo-router';
-import { notifyCalendarChanged } from '@/day-planning/changes';
-import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { AppState, StyleSheet } from 'react-native';
-import { Portal, Snackbar, Text } from 'react-native-paper';
+import { StyleSheet, View } from 'react-native';
+import { Portal } from 'react-native-paper';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { useAuth } from '@/auth/auth-context';
-import { readNotificationChannels } from '@/api/user-settings';
-import { clearDeviceNotifications, requestNotificationPermission, showDeviceNotification, subscribeCalendarNotificationOpen } from '@/notifications/device';
+import type { Notification } from '@/api/notifications';
+import NotificationBubble from '@/components/notification-bubble';
+import { BAR_HEIGHT } from '@/navigation/app-tab-bar';
+import { useNotifications } from '@/notifications/notifications-context';
 
-import { listUnread, markAsRead, type Notification } from '@/api/notifications';
+const LIVE_MS = 8000;
 
-const POLL_MS = 10000;
-const SHOW_MS = 6000;
-const AT_ONCE = 3;
+const ICONS: Record<string, string> = {
+  task_completed: 'thumb-up-outline',
+  task_approved: 'check-circle-outline',
+  task_rejected: 'undo',
+  task_assigned: 'format-list-checks',
+  task_abandoned: 'format-list-checks',
+  task_corrected: 'clock-outline',
+  task_removed: 'delete-outline',
+  calendar_changed: 'calendar-blank-outline',
+  calendar_removed: 'calendar-blank-outline',
+  payout_offered: 'wallet-outline',
+  streak_at_risk: 'fire',
+};
 
+export const iconOf = (notification?: Notification) =>
+  ICONS[notification?.event ?? notification?.parameters?.event ?? ''] ?? 'bell-outline';
+
+/** Bubbles for news that arrives while the app is open, and one summary for what piled up before. */
 export default function NotificationCentre() {
-  const { user } = useAuth();
-  const router = useRouter();
   const { t } = useTranslation();
-  const [queue, setQueue] = useState<Notification[]>([]);
-  const alreadySeen = useRef(new Set<string>());
-  const alreadyRead = useRef(new Set<string>());
+  const insets = useSafeAreaInsets();
+  const notifications = useNotifications();
 
-  const dismiss = useCallback((id: string) => {
-    if (alreadyRead.current.has(id)) {
-      return;
-    }
-
-    alreadyRead.current.add(id);
-    setQueue((waiting) => waiting.filter((notification) => notification.id !== id));
-    void markAsRead(id).catch(() => undefined);
-  }, []);
-
-  useEffect(() => {
-    if (!user) return;
-    let cancelled = false;
-    let pending = false;
-    void requestNotificationPermission().catch(() => undefined);
-
-    const poll = () => {
-      if (AppState.currentState !== 'active' || pending) {
-        return;
-      }
-
-      pending = true;
-      Promise.all([listUnread(AT_ONCE), readNotificationChannels(user.id).catch(() => [])])
-        .then(async ([unread, channels]) => {
-          if (cancelled) {
-            return;
-          }
-
-          const fresh = unread.filter(
-            (notification) => !alreadySeen.current.has(notification.id)
-          );
-
-          if (!fresh.length) {
-            return;
-          }
-
-          fresh.forEach((notification) => alreadySeen.current.add(notification.id));
-          setQueue((waiting) => [...waiting, ...fresh]);
-          if (fresh.some((notification) => notification.parameters?.url === '/day-planning')) notifyCalendarChanged();
-          if (channels.find((choice) => choice.name === 'push')?.enabled) {
-            for (const notification of fresh) {
-              if (cancelled) break;
-              if (!notification.parameters?.delivery_channels?.includes('push')) continue;
-              await showDeviceNotification(notification, user.id, () => !cancelled).catch(() => undefined);
-            }
-          }
-        })
-        .catch(() => undefined)
-        .finally(() => { pending = false; });
-    };
-
-    poll();
-    const timer = setInterval(poll, POLL_MS);
-    const subscription = AppState.addEventListener('change', (state) => { if (state === 'active') poll(); });
-
-    return () => {
-      cancelled = true;
-      clearInterval(timer);
-      subscription.remove();
-      void clearDeviceNotifications().catch(() => undefined);
-    };
-  }, [user]);
-
-  useEffect(() => {
-    if (!user) return;
-    return subscribeCalendarNotificationOpen(user.id, () => { notifyCalendarChanged(); router.push('/day-planning'); });
-  }, [user, router]);
-
-  const showing = queue[0];
-
-  if (!showing) {
-    return null;
-  }
+  if (!notifications || notifications.bubbles.length === 0) return null;
 
   return (
     <Portal>
-      <Snackbar
-        visible
-        testID="notification-snackbar"
-        duration={SHOW_MS}
-        onDismiss={() => dismiss(showing.id)}
-        action={showing.parameters?.url === '/day-planning' ? { label: t('dayPlanning.title'), onPress: () => { dismiss(showing.id); router.push('/day-planning'); } } : { label: t('notifications.dismiss'), onPress: () => dismiss(showing.id) }}>
-        {showing.subject ? (
-          <Text variant="bodyMedium">
-            <Text variant="titleSmall" style={styles.subject}>
-              {`${showing.subject}\n`}
-            </Text>
-            {showing.message}
-          </Text>
+      <View pointerEvents="box-none" style={[styles.dock, { bottom: BAR_HEIGHT + insets.bottom + 8 }]}>
+      <View pointerEvents="box-none" accessibilityLiveRegion="polite" style={styles.stack}>
+        {notifications.bubbles.map((bubble) => bubble.kind === 'summary' ? (
+          <NotificationBubble
+            key={bubble.key}
+            testID="notification-summary"
+            icon="bell-outline"
+            title={t('notifications.backlog', { count: bubble.count })}
+            message={bubble.latest.subject || bubble.latest.message}
+            meta={t('notifications.backlogHint')}
+            closeLabel={t('notifications.dismissAll')}
+            action={{ label: t('notifications.show'), onPress: notifications.openInbox }}
+            onOpen={notifications.openInbox}
+            onDismiss={() => notifications.dismiss(bubble)}
+          />
         ) : (
-          showing.message
-        )}
-      </Snackbar>
+          <NotificationBubble
+            key={bubble.key}
+            testID="notification-bubble"
+            icon={iconOf(bubble.notification)}
+            title={bubble.notification.subject}
+            message={bubble.notification.message}
+            autoHideMs={LIVE_MS}
+            closeLabel={t('notifications.dismiss')}
+            onOpen={() => notifications.open(bubble.notification)}
+            onDismiss={() => notifications.dismiss(bubble)}
+          />
+        ))}
+      </View>
+      </View>
     </Portal>
   );
 }
 
 const styles = StyleSheet.create({
-  subject: {
-    fontWeight: '600',
+  dock: {
+    alignItems: 'center',
+    left: 12,
+    position: 'absolute',
+    right: 12,
+  },
+  stack: {
+    flexDirection: 'column-reverse',
+    gap: 8,
+    maxWidth: 560,
+    width: '100%',
   },
 });

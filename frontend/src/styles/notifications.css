@@ -1,41 +1,374 @@
+/* Bubbles sit above the bottom navigation bar on phones, never over it. */
 .notification-center {
   position: fixed;
   left: 50%;
-  bottom: calc(16px + env(safe-area-inset-bottom));
+  bottom: calc(16px + var(--md-layout-nav-bar-height, 0px) + env(safe-area-inset-bottom));
   z-index: 60;
   transform: translateX(-50%);
   display: flex;
   flex-direction: column-reverse;
   gap: 8px;
-  width: min(560px, calc(100vw - 32px));
+  width: min(560px, calc(100vw - 24px));
   pointer-events: none;
 }
 
-.notification-center .md-snackbar {
-  position: static;
-  left: auto;
-  bottom: auto;
-  transform: none;
+/*
+ * Every colour is set on the element that uses it, all from the inverse pair of one palette,
+ * so no text inherits a colour meant for a different background.
+ */
+.notification-bubble {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
   width: 100%;
+  min-height: 56px;
+  padding: 6px 4px 6px 12px;
+  border: 1px solid color-mix(in srgb, var(--md-sys-color-inverse-on-surface) 14%, transparent);
+  border-left: 4px solid var(--md-sys-color-inverse-primary);
+  border-radius: var(--md-sys-shape-corner-medium);
+  background: var(--md-sys-color-inverse-surface);
+  color: var(--md-sys-color-inverse-on-surface);
+  box-shadow: var(--md-sys-elevation-level3);
   pointer-events: auto;
-  animation: notification-center-in var(--md-sys-motion-duration-medium2) var(--md-sys-motion-easing-emphasized-decelerate);
+  touch-action: pan-y;
+  user-select: none;
+  -webkit-user-select: none;
+  transition: transform var(--md-sys-motion-duration-short4) var(--md-sys-motion-easing-standard),
+    opacity var(--md-sys-motion-duration-short4) var(--md-sys-motion-easing-standard);
+  animation: notification-bubble-in var(--md-sys-motion-duration-medium2) var(--md-sys-motion-easing-emphasized-decelerate);
 }
 
-.notification-center__subject {
-  display: block;
-  margin-bottom: 2px;
-  font-weight: 500;
+.notification-bubble.is-dragging {
+  transition: none;
+  cursor: grabbing;
 }
 
-@keyframes notification-center-in {
+.notification-bubble__icon {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  margin-top: 10px;
+  color: var(--md-sys-color-inverse-primary);
+}
+
+.notification-bubble__body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  padding: 8px 8px 8px 4px;
+  border: 0;
+  border-radius: var(--md-sys-shape-corner-small);
+  background: transparent;
+  color: var(--md-sys-color-inverse-on-surface);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.notification-bubble__body:focus-visible,
+.notification-bubble__close:focus-visible,
+.notification-bubble__action:focus-visible {
+  outline: 2px solid var(--md-sys-color-inverse-primary);
+  outline-offset: 1px;
+}
+
+.notification-bubble__title {
+  color: var(--md-sys-color-inverse-on-surface);
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.25rem;
+}
+
+.notification-bubble__message {
+  color: var(--md-sys-color-inverse-on-surface);
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  overflow-wrap: anywhere;
+}
+
+.notification-bubble__meta {
+  color: color-mix(in srgb, var(--md-sys-color-inverse-on-surface) 78%, var(--md-sys-color-inverse-surface));
+  font-size: 0.75rem;
+  line-height: 1rem;
+}
+
+.notification-bubble__actions {
+  display: flex;
+  align-items: center;
+  align-self: center;
+}
+
+.notification-bubble__action {
+  min-height: 40px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: var(--md-sys-shape-corner-full);
+  background: transparent;
+  color: var(--md-sys-color-inverse-primary);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.notification-bubble__close {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--md-sys-color-inverse-on-surface);
+  cursor: pointer;
+}
+
+.notification-bubble__close:hover,
+.notification-bubble__action:hover {
+  background: color-mix(in srgb, var(--md-sys-color-inverse-on-surface) 10%, transparent);
+}
+
+@keyframes notification-bubble-in {
   from {
     opacity: 0;
     transform: translateY(24px);
   }
 }
 
+/* The bell with the number of unread notifications. */
+.notification-bell {
+  position: relative;
+}
+
+.notification-bell__badge {
+  position: absolute;
+  top: 4px;
+  right: 2px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: var(--md-sys-color-error);
+  color: var(--md-sys-color-on-error);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  line-height: 18px;
+  text-align: center;
+  pointer-events: none;
+}
+
+/* The inbox: a panel under the app bar on wide screens, a sheet over the whole screen on phones. */
+.notification-inbox-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  display: flex;
+  justify-content: flex-end;
+  align-items: flex-start;
+  padding: 64px 16px 16px;
+  background: color-mix(in srgb, var(--md-sys-color-scrim, #000) 24%, transparent);
+}
+
+.notification-inbox {
+  display: flex;
+  flex-direction: column;
+  width: min(420px, 100%);
+  max-height: calc(100dvh - 96px);
+  overflow: hidden;
+  border-radius: var(--md-sys-shape-corner-large);
+  background: var(--md-sys-color-surface-container-high);
+  color: var(--md-sys-color-on-surface);
+  box-shadow: var(--md-sys-elevation-level3);
+}
+
+.notification-inbox__header {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 12px 8px 8px 20px;
+}
+
+.notification-inbox__header h2 {
+  flex: 1;
+  margin: 0;
+  color: var(--md-sys-color-on-surface);
+}
+
+.notification-inbox__header h2:focus {
+  outline: none;
+}
+
+.notification-inbox__list {
+  flex: 1;
+  min-height: 120px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.notification-inbox__list ul {
+  margin: 0;
+  padding: 0 8px 8px;
+  list-style: none;
+}
+
+.notification-inbox__item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  width: 100%;
+  padding: 12px;
+  border: 0;
+  border-radius: var(--md-sys-shape-corner-medium);
+  background: transparent;
+  color: var(--md-sys-color-on-surface);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.notification-inbox__item:hover,
+.notification-inbox__item:focus-visible {
+  background: color-mix(in srgb, var(--md-sys-color-on-surface) 8%, transparent);
+  outline: none;
+}
+
+.notification-inbox__item.is-unread {
+  background: color-mix(in srgb, var(--md-sys-color-primary) 10%, transparent);
+}
+
+.notification-inbox__item.is-handled,
+.notification-inbox__item.is-outdated {
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.notification-inbox__icon {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--md-sys-color-secondary-container);
+  color: var(--md-sys-color-on-secondary-container);
+}
+
+.notification-inbox__text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.notification-inbox__subject {
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.notification-inbox__message {
+  font-size: 0.875rem;
+  overflow-wrap: anywhere;
+}
+
+.notification-inbox__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  color: var(--md-sys-color-on-surface-variant);
+  font-size: 0.75rem;
+}
+
+.notification-inbox__state {
+  padding: 0 6px;
+  border-radius: var(--md-sys-shape-corner-extra-small);
+  background: var(--md-sys-color-surface-container-highest);
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.notification-inbox__dot {
+  flex-shrink: 0;
+  width: 10px;
+  height: 10px;
+  margin-top: 6px;
+  border-radius: 50%;
+  background: var(--md-sys-color-primary);
+}
+
+.notification-inbox__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 32px 16px;
+  color: var(--md-sys-color-on-surface-variant);
+  text-align: center;
+}
+
+.notification-inbox__footer {
+  padding: 4px 8px 8px;
+  border-top: 1px solid var(--md-sys-color-outline-variant);
+}
+
+.notification-inbox__settings {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: var(--md-sys-shape-corner-full);
+  background: transparent;
+  color: var(--md-sys-color-primary);
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+@media (max-width: 599px) {
+  .notification-inbox-scrim {
+    padding: 0;
+    background: var(--md-sys-color-surface-container-high);
+  }
+
+  .notification-inbox {
+    width: 100%;
+    max-height: none;
+    height: 100dvh;
+    border-radius: 0;
+    box-shadow: none;
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .notification-center .md-snackbar {
+  .notification-bubble {
     animation: none;
+    transition: none;
+  }
+}
+
+/* The bell has to fit next to the points and the account buttons on a phone. */
+@media (max-width: 599px) {
+  .notification-bell.md-icon-button {
+    width: 40px;
+    height: 40px;
+  }
+}
+
+@media (max-width: 429px) {
+  .user-points__scope {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
   }
 }

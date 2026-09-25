@@ -7,8 +7,11 @@ namespace App\UserSettings\Domain\ValueObject;
 final readonly class PreferenceType
 {
     private const NOTIFICATIONS = 'notifications';
+    /** Which notification events a user wants at all, e.g. task_assigned => false. */
+    private const NOTIFICATION_EVENTS = 'notification_events';
     private const ALLOWED_TYPES = [
         self::NOTIFICATIONS,
+        self::NOTIFICATION_EVENTS,
     ];
 
     private function __construct(
@@ -19,6 +22,11 @@ final readonly class PreferenceType
     public static function notifications(): self
     {
         return new self(self::NOTIFICATIONS);
+    }
+
+    public static function notificationEvents(): self
+    {
+        return new self(self::NOTIFICATION_EVENTS);
     }
 
     public static function fromString(string $value): self

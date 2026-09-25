@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Allowance\Domain\Entity;
 
 use App\Allowance\Domain\Event\PayoutOffered;
+use App\Allowance\Domain\Event\PayoutSettled;
 use App\Allowance\Domain\ValueObject\Money;
 use App\Allowance\Domain\ValueObject\PayoutStatus;
 use App\Shared\Domain\Clock\ClockInterface;
@@ -107,6 +108,7 @@ class Payout
         $this->status = PayoutStatus::CONFIRMED;
         $this->transactionId = $transactionId;
         $this->settledAt = $clock->now();
+        $this->domainEvents[] = new PayoutSettled($this->id, $this->userId, PayoutSettled::CONFIRMED, $this->settledAt);
     }
 
     public function cancel(ClockInterface $clock): void
@@ -115,6 +117,7 @@ class Payout
 
         $this->status = PayoutStatus::CANCELLED;
         $this->settledAt = $clock->now();
+        $this->domainEvents[] = new PayoutSettled($this->id, $this->userId, PayoutSettled::CANCELLED, $this->settledAt);
     }
 
     public function isAwaitingConfirmation(): bool

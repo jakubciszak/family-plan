@@ -61,8 +61,15 @@ final readonly class UserPreferences
         return new self($preferences);
     }
 
+    /**
+     * Replaces the preference of the same type, or adds it when the user never set one.
+     */
     public function update(UserPreference $updatedPreference): self
     {
+        if ($this->getByType($updatedPreference->type()) === null) {
+            return $this->add($updatedPreference);
+        }
+
         $preferences = array_map(
             fn(UserPreference $p) => 
                 $p->type()->equals($updatedPreference->type()) 

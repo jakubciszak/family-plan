@@ -77,6 +77,12 @@ services:
     App\Notifications\Domain\Repository\PushSubscriptionRepositoryInterface:
         class: App\Notifications\Infrastructure\Persistence\DoctrinePushSubscriptionRepository
 
+    App\Notifications\Domain\Repository\NativePushDeviceRepositoryInterface:
+        class: App\Notifications\Infrastructure\Persistence\DoctrineNativePushDeviceRepository
+
+    App\Notifications\Application\Port\ActorProviderInterface:
+        class: App\Notifications\Infrastructure\Security\SecurityActorProvider
+
     App\Notifications\Communication\Domain\Repository\NotificationPolicyRepositoryInterface:
         class: App\Notifications\Communication\Infrastructure\Persistence\DoctrineNotificationPolicyRepository
 
@@ -222,6 +228,10 @@ services:
         tags:
             - { name: kernel.event_subscriber }
 
+    App\Notifications\Communication\EventSubscriber\CalendarEventChangedSubscriber:
+        arguments:
+            $secret: '%kernel.secret%'
+
     # User Registration Event Subscriber
     App\Notifications\Communication\EventSubscriber\UserRegisteredEventSubscriber:
         arguments:
@@ -255,6 +265,15 @@ services:
             $privateKey: '%env(VAPID_PRIVATE_KEY)%'
             $subject: '%env(VAPID_SUBJECT)%'
             $applicationUrl: '%env(APP_URL)%'
+
+    # Phones with the mobile app, through Firebase Cloud Messaging; empty FCM_SERVICE_ACCOUNT keeps it off
+    App\Notifications\Domain\Port\NativePushSenderInterface:
+        class: App\Notifications\Infrastructure\Push\FcmPushSender
+        arguments:
+            $serviceAccount: '%env(FCM_SERVICE_ACCOUNT)%'
+
+    App\Notifications\Domain\Port\PushRetractionInterface:
+        class: App\Notifications\Infrastructure\Adapter\PushRetractionAdapter
 
     App\Notifications\Application\Handler\SendNotificationHandler:
         arguments:

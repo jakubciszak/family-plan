@@ -22,6 +22,7 @@ framework:
 
         routing:
             App\Notifications\Application\Command\DeliverPushCommand: async
+            App\Notifications\Application\Command\RetractPushCommand: async
 
 when@test:
     framework:

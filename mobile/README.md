@@ -141,6 +141,46 @@ cd android && EXPO_PUBLIC_API_URL=https://family-plan.srv1201847.hstgr.cloud ./g
 
 Bez tych właściwości wydanie nadal podpisuje klucz debug z szablonu.
 
+## Powiadomienia przy zamkniętej aplikacji
+
+Gdy aplikacja jest zamknięta, powiadomienia przychodzą przez Firebase Cloud Messaging (FCM). Wymaga to
+jednego projektu Firebase i dwóch kluczy z niego: jednego dla aplikacji, drugiego dla serwera. Bez nich
+wszystko działa jak dotąd, tylko alerty pojawiają się wyłącznie w otwartej aplikacji, a ustawienia
+pokazują „Ta wersja aplikacji nie dostaje jeszcze powiadomień przy zamkniętej aplikacji”.
+
+1. [console.firebase.google.com](https://console.firebase.google.com) → Dodaj projekt (Google Analytics
+   niepotrzebny).
+2. W projekcie: Dodaj aplikację → Android, nazwa pakietu `pl.familyplan.app`. Pobierz
+   `google-services.json`. SHA-1 nie jest potrzebne.
+3. Plik trafia do sekretu repozytorium `GOOGLE_SERVICES_JSON` (Settings → Secrets and variables →
+   Actions): cała treść albo jej base64. Job `Build Android APK` zapisuje go jako
+   `mobile/google-services.json` przed `expo prebuild` i sprawdza, że zawiera pakiet aplikacji. Plik jest
+   w `.gitignore`. Lokalnie wystarczy go położyć w `mobile/`, a `app.config.js` sam dopisze
+   `android.googleServicesFile`.
+4. Ustawienia projektu → Konta usługi → Wygeneruj nowy klucz prywatny. Pobrany JSON (albo jego base64)
+   trafia do zmiennej `FCM_SERVICE_ACCOUNT` projektu `family-plan-project` w Docker Managerze. Compose
+   przekazuje ją do kontenerów `app` i `worker` (`docker-compose.hostinger.yml`). To klucz z prawem
+   wysyłki w imieniu projektu, więc nie trafia do repozytorium ani do aplikacji.
+5. Wydanie z nowym APK. Po jego instalacji i zalogowaniu telefon rejestruje się sam
+   (`POST /api/push/devices`). Ustawienia → Powiadomienia na telefonie pokazują stan, a przycisk
+   „Włącz powiadomienia na telefonie” prosi o zgodę, jeśli jej brakuje.
+
+`GET /api/push/key` zwraca `native: true`, gdy serwer ma konto serwisowe. Próbne powiadomienie
+z ustawień weba dociera też do telefonów tego użytkownika.
+
+Powiadomienia idą kanałem Androida `family-plan` z wysoką ważnością, więc pojawiają się na górze ekranu.
+Zamiast pierwszego kanału `tasks`, który miał tylko ważność listy, aplikacja zakłada nowy, bo ważności
+istniejącego kanału nie da się podnieść. Kiedy aplikacja jest otwarta, systemowe powiadomienie się nie
+pokazuje; zamiast niego jest dymek. Powiadomienie, które ktoś załatwił albo które przeczytano w innym
+miejscu, znika z traya od razu: serwer wysyła cichą wiadomość, a zadanie w tle (`src/notifications/background.native.ts`,
+wczytywane przez `index.ts` przed routerem) zamyka je także przy zamkniętej aplikacji. Wygasłe znika przy
+następnym otwarciu aplikacji.
+
+Część telefonów (Xiaomi, Huawei, Oppo, niektóre Samsungi) po zamknięciu aplikacji z listy ostatnich
+wstrzymuje też jej powiadomienia. Jeśli mimo działającego FCM przychodzą dopiero po otwarciu aplikacji,
+w ustawieniach systemu trzeba zezwolić Family Plan na autostart albo wyłączyć dla niej optymalizację
+baterii.
+
 ## Backend JWT
 
 Po zainstalowaniu zależności PHP uruchom migracje i wygeneruj klucze:

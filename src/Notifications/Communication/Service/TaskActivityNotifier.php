@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Notifications\Communication\Service;
 
+use App\Notifications\Application\Service\HandledNotifications;
 use App\Notifications\Communication\Domain\ValueObject\NotificationEvent;
 use App\TaskManagement\Domain\Entity\TaskExecution;
 use App\TaskManagement\Domain\Repository\TaskTemplateRepositoryInterface;
@@ -14,12 +15,18 @@ final readonly class TaskActivityNotifier
     public function __construct(
         private NotificationOrchestrator $notifications,
         private TaskTemplateRepositoryInterface $templates,
-        private TeamMembershipRepositoryInterface $memberships
+        private TeamMembershipRepositoryInterface $memberships,
+        private ?HandledNotifications $handled = null
     ) {
     }
 
     public function changed(TaskExecution $execution, string $event, string $subject, string $message, bool $notifyAdmins = false): void
     {
+        // A task that leaves the approval queue any other way than approval or rejection, e.g. removed.
+        if ($event === NotificationEvent::TASK_REMOVED || $event === NotificationEvent::TASK_ABANDONED) {
+            $this->handled?->approvalHandled($execution->id());
+        }
+
         $assignee = $execution->assignedUserId();
         if ($assignee === null) {
             return;

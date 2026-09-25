@@ -104,3 +104,14 @@
   font-size: var(--md-sys-typescale-body-large-size);
   font-weight: 500;
 }
+
+.notification-kinds__group + .notification-kinds__group {
+  margin-top: 16px;
+}
+
+.notification-kinds__heading {
+  margin: 8px 0 0;
+  color: var(--md-sys-color-primary);
+  font-size: 0.875rem;
+  font-weight: 600;
+}

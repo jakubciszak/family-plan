@@ -7,7 +7,9 @@ namespace App\Notifications\Infrastructure\Push;
 use App\Notifications\Domain\Entity\PushSubscription;
 use App\Notifications\Domain\Port\PushDelivery;
 use App\Notifications\Domain\Port\PushSenderInterface;
+use App\Notifications\Domain\ValueObject\DeliveryParameters;
 use App\Notifications\Domain\ValueObject\NotificationMessage;
+use App\Notifications\Domain\ValueObject\PushOptions;
 use Minishlink\WebPush\Subscription;
 use Minishlink\WebPush\WebPush;
 use Psr\Log\LoggerInterface;
@@ -25,8 +27,10 @@ final class MinishlinkPushSender implements PushSenderInterface
     ) {
     }
 
-    public function send(PushSubscription $subscription, NotificationMessage $message): PushDelivery
+    public function send(PushSubscription $subscription, NotificationMessage $message, ?PushOptions $options = null): PushDelivery
     {
+        $options ??= PushOptions::from($message->additionalParameters(), new \DateTimeImmutable());
+
         if (!$this->isConfigured()) {
             $this->logger?->info('Push notifications are switched off — no VAPID keys configured');
 
@@ -40,7 +44,12 @@ final class MinishlinkPushSender implements PushSenderInterface
                     'publicKey' => $subscription->publicKey(),
                     'authToken' => $subscription->authToken(),
                 ]),
-                $this->payload($message)
+                $this->payload($message),
+                array_filter([
+                    'TTL' => $options->ttl,
+                    'urgency' => $options->urgency,
+                    'topic' => $options->topic(),
+                ], static fn (mixed $value) => $value !== null)
             );
         } catch (\Throwable $exception) {
             $this->logger?->error('Push notification could not be sent', [
@@ -81,6 +90,8 @@ final class MinishlinkPushSender implements PushSenderInterface
             'body' => $message->content(),
             'url' => is_string($parameters['url'] ?? null) ? $parameters['url'] : $this->applicationUrl,
             'tag' => is_string($parameters['tag'] ?? null) ? $parameters['tag'] : null,
+            'notificationId' => DeliveryParameters::notificationId($parameters)?->value(),
+            'event' => is_string($parameters['event'] ?? null) ? $parameters['event'] : null,
         ], JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE);
     }
 

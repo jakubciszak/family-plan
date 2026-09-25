@@ -7,7 +7,9 @@ namespace App\Notifications\Infrastructure\Adapter;
 use App\Notifications\Domain\Entity\InAppNotification;
 use App\Notifications\Application\Service\CalendarNotificationAccess;
 use App\Notifications\Domain\Port\NotificationPortInterface;
+use App\Notifications\Domain\Port\PushRetractionInterface;
 use App\Notifications\Domain\Repository\InAppNotificationRepositoryInterface;
+use App\Notifications\Domain\ValueObject\DeliveryParameters;
 use App\Notifications\Domain\ValueObject\NotificationChannel;
 use App\Notifications\Domain\ValueObject\NotificationMessage;
 use App\Notifications\Domain\ValueObject\Recipient;
@@ -18,7 +20,8 @@ final readonly class InAppNotificationAdapter implements NotificationPortInterfa
 {
     public function __construct(
         private InAppNotificationRepositoryInterface $notifications,
-        private ClockInterface $clock
+        private ClockInterface $clock,
+        private ?PushRetractionInterface $retraction = null
     ) {
     }
 
@@ -35,14 +38,36 @@ final readonly class InAppNotificationAdapter implements NotificationPortInterfa
             throw new \InvalidArgumentException('Recipient must be a user id for the in_app channel');
         }
 
-        $this->notifications->save(InAppNotification::raise(
-            Uuid::generate(),
-            Uuid::fromString($recipient->value()),
+        $parameters = $message->additionalParameters();
+        $userId = Uuid::fromString($recipient->value());
+        $now = $this->clock->now();
+        $notification = InAppNotification::raise(
+            DeliveryParameters::notificationId($parameters) ?? Uuid::generate(),
+            $userId,
             $message->content(),
             $message->subject(),
-            CalendarNotificationAccess::publicParameters($message->additionalParameters()),
-            $this->clock->now()
-        ));
+            DeliveryParameters::withoutDeliveryDetails(CalendarNotificationAccess::publicParameters($parameters)),
+            $now
+        );
+
+        // The newest word on a topic replaces the older ones, e.g. "approved" after "assigned" for the same task.
+        if ($notification->topic() !== null) {
+            $replaced = $this->notifications->resolveTopic($notification->topic(), $now, null, $userId);
+
+            // A push with the same tag takes the old one's place in the tray. Without a push the old one would stay.
+            if ($replaced !== [] && !self::goesByPush($parameters)) {
+                $this->retraction?->retract([$userId], [$notification->topic()]);
+            }
+        }
+
+        $this->notifications->save($notification);
+    }
+
+    private static function goesByPush(array $parameters): bool
+    {
+        $channels = $parameters['delivery_channels'] ?? [];
+
+        return is_array($channels) && in_array(NotificationChannel::push()->value(), $channels, true);
     }
 
     public function supports(NotificationChannel $channel): bool

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Presentation\Api;
 
+use App\UserManagement\Domain\Repository\UserRepositoryInterface;
+use App\UserManagement\Domain\ValueObject\Email;
 use App\UserSettings\Application\Command\UpdateUserSettingsCommand;
 use App\UserSettings\Domain\Repository\UserSettingsRepositoryInterface;
 use App\Shared\Domain\ValueObject\Uuid;
@@ -21,7 +23,8 @@ class UserSettingsApiController extends AbstractController
 {
     public function __construct(
         private readonly MessageBusInterface $commandBus,
-        private readonly UserSettingsRepositoryInterface $userSettingsRepository
+        private readonly UserSettingsRepositoryInterface $userSettingsRepository,
+        private readonly UserRepositoryInterface $userRepository
     ) {
     }
 
@@ -53,6 +56,10 @@ class UserSettingsApiController extends AbstractController
     )]
     public function getUserSettings(string $userId): JsonResponse
     {
+        if (!$this->mayManage($userId)) {
+            return $this->json(['error' => 'You can only manage your own settings'], Response::HTTP_FORBIDDEN);
+        }
+
         $settings = $this->userSettingsRepository->findByUserId(Uuid::fromString($userId));
         
         if ($settings === null) {
@@ -129,6 +136,10 @@ class UserSettingsApiController extends AbstractController
     )]
     public function updateUserSettings(string $userId, Request $request): JsonResponse
     {
+        if (!$this->mayManage($userId)) {
+            return $this->json(['error' => 'You can only manage your own settings'], Response::HTTP_FORBIDDEN);
+        }
+
         $data = json_decode($request->getContent(), true);
         
         if (!isset($data['preference_type']) || !isset($data['options'])) {
@@ -147,5 +158,24 @@ class UserSettingsApiController extends AbstractController
         $this->commandBus->dispatch($command);
 
         return $this->json(['status' => 'success'], Response::HTTP_OK);
+    }
+
+    /**
+     * Settings belong to their owner; only an administrator of the application may manage someone else's.
+     */
+    private function mayManage(string $userId): bool
+    {
+        if (!Uuid::isValid($userId)) {
+            return false;
+        }
+
+        if ($this->isGranted('ROLE_ADMIN')) {
+            return true;
+        }
+
+        $caller = $this->getUser();
+        $callerId = $caller === null ? null : $this->userRepository->findByEmail(Email::fromString($caller->getUserIdentifier()))?->id();
+
+        return $callerId !== null && $callerId->equals(Uuid::fromString($userId));
     }
 }

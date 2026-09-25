@@ -7,6 +7,7 @@ import Divider from './md3/Divider';
 import LanguageSwitcher from './LanguageSwitcher';
 import Avatar from './Avatar';
 import usePersonalisation from '../hooks/usePersonalisation';
+import { useNotifications } from '../hooks/useNotifications';
 import { THEME_MODES } from '../hooks/useThemeMode';
 
 const THEME_ICONS = { light: 'lightMode', dark: 'darkMode', system: 'systemMode' };
@@ -14,6 +15,8 @@ const THEME_ICONS = { light: 'lightMode', dark: 'darkMode', system: 'systemMode'
 function AppBarActions({ user, points, totalPoints, themeMode, onThemeModeChange, onLogout, onOpenAccount, onOpenPersonalise }) {
     const { t } = useTranslation();
     const { own } = usePersonalisation();
+    const notifications = useNotifications();
+    const unread = notifications?.unreadCount ?? 0;
     const [menuOpen, setMenuOpen] = React.useState(false);
     const [showTotal, setShowTotal] = React.useState(false);
     const containerRef = React.useRef(null);
@@ -67,6 +70,19 @@ function AppBarActions({ user, points, totalPoints, themeMode, onThemeModeChange
                     {showTotal ? t('user.pointsTotal') : t('user.pointsWeek')}
                 </span>
             </button>
+
+            {notifications && (
+                <IconButton
+                    icon="notifications"
+                    className="notification-bell"
+                    label={unread > 0 ? t('notifications.bellUnread', { count: unread }) : t('notifications.title')}
+                    aria-haspopup="dialog"
+                    onClick={notifications.openInbox}
+                >
+                    <Icon name="notifications" size={24} />
+                    {unread > 0 && <span className="notification-bell__badge" aria-hidden="true">{unread > 99 ? '99+' : unread}</span>}
+                </IconButton>
+            )}
 
             <Button
                 variant="text"

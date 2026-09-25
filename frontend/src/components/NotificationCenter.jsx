@@ -1,101 +1,67 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { Snackbar } from './md3';
-import notificationService from '../services/notificationService';
+import NotificationBubble from './NotificationBubble';
+import { useNotifications } from '../hooks/useNotifications';
 import '../styles/notifications.css';
 
-const POLL_INTERVAL_MS = 10000;
-const DISPLAY_MS = 6000;
-const MAX_VISIBLE = 3;
+const LIVE_MS = 8000;
 
+const ICONS = {
+    task_completed: 'approve',
+    task_approved: 'checkCircle',
+    task_rejected: 'undo',
+    task_assigned: 'tasks',
+    task_abandoned: 'tasks',
+    task_corrected: 'schedule',
+    task_removed: 'delete',
+    calendar_changed: 'calendar',
+    calendar_removed: 'calendar',
+    payout_offered: 'wallet',
+    streak_at_risk: 'streak',
+};
+
+export const iconOf = (notification) => ICONS[notification?.event ?? notification?.parameters?.event] ?? 'notifications';
+
+/** Bubbles for news that arrives while the app is open, and one summary for what piled up before. */
 function NotificationCenter() {
     const { t } = useTranslation();
-    const [visible, setVisible] = React.useState([]);
-    const queued = React.useRef(new Set());
+    const notifications = useNotifications();
 
-    const dismiss = React.useCallback((notificationId) => {
-        setVisible((current) => current.filter((notification) => notification.id !== notificationId));
-        notificationService.markAsRead(notificationId).catch(() => undefined);
-    }, []);
-
-    React.useEffect(() => {
-        let cancelled = false;
-
-        const poll = () => {
-            if (document.hidden) {
-                return;
-            }
-
-            notificationService.getUnread(MAX_VISIBLE)
-                .then((data) => {
-                    if (cancelled) {
-                        return;
-                    }
-
-                    const fresh = (data.notifications || [])
-                        .filter((notification) => !queued.current.has(notification.id));
-
-                    if (fresh.length === 0) {
-                        return;
-                    }
-
-                    fresh.forEach((notification) => {
-                        queued.current.add(notification.id);
-                        if (notification.parameters?.url === '/day-planning') window.dispatchEvent(new Event('day-planning:changed'));
-                    });
-                    setVisible((current) => [...current, ...fresh].slice(-MAX_VISIBLE));
-                })
-                .catch(() => undefined);
-        };
-
-        poll();
-        const timer = window.setInterval(poll, POLL_INTERVAL_MS);
-        document.addEventListener('visibilitychange', poll);
-        window.addEventListener('focus', poll);
-
-        return () => {
-            cancelled = true;
-            window.clearInterval(timer);
-            document.removeEventListener('visibilitychange', poll);
-            window.removeEventListener('focus', poll);
-        };
-    }, []);
-
-    React.useEffect(() => {
-        const oldest = visible[0];
-
-        if (!oldest) {
-            return undefined;
-        }
-
-        const timer = window.setTimeout(() => dismiss(oldest.id), DISPLAY_MS);
-
-        return () => window.clearTimeout(timer);
-    }, [visible, dismiss]);
-
-    if (visible.length === 0) {
+    if (!notifications || notifications.bubbles.length === 0) {
         return null;
     }
 
     return (
-        <div className="notification-center">
-            {visible.map((notification) => (
-                <Snackbar
-                    key={notification.id}
-                    duration={0}
-                    message={notification.subject
-                        ? (
-                            <>
-                                <strong className="notification-center__subject">{notification.subject}</strong>
-                                {notification.message}
-                            </>
-                        )
-                        : notification.message}
-                    actionLabel={t('notifications.dismiss')}
-                    onAction={() => dismiss(notification.id)}
-                    onDismiss={() => dismiss(notification.id)}
-                />
-            ))}
+        <div className="notification-center" role="region" aria-label={t('notifications.region')} aria-live="polite">
+            {notifications.bubbles.map((bubble) => bubble.kind === 'summary'
+                ? (
+                    <NotificationBubble
+                        key={bubble.key}
+                        icon="notifications"
+                        title={t('notifications.backlog', { count: bubble.count })}
+                        message={bubble.latest?.subject || bubble.latest?.message}
+                        meta={t('notifications.backlogHint')}
+                        closeLabel={t('notifications.dismissAll')}
+                        onOpen={notifications.openInbox}
+                        onDismiss={() => notifications.dismiss(bubble)}
+                    >
+                        <button type="button" className="notification-bubble__action" onClick={notifications.openInbox}>
+                            {t('notifications.show')}
+                        </button>
+                    </NotificationBubble>
+                )
+                : (
+                    <NotificationBubble
+                        key={bubble.key}
+                        icon={iconOf(bubble.notification)}
+                        title={bubble.notification.subject}
+                        message={bubble.notification.message}
+                        autoHideMs={LIVE_MS}
+                        closeLabel={t('notifications.dismiss')}
+                        onOpen={() => notifications.open(bubble.notification)}
+                        onDismiss={() => notifications.dismiss(bubble)}
+                    />
+                ))}
         </div>
     );
 }

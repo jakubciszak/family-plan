@@ -28,7 +28,7 @@
 
 .notification-events__row {
   display: grid;
-  grid-template-columns: minmax(180px, 1fr) repeat(3, 88px);
+  grid-template-columns: minmax(180px, 1fr) repeat(4, 88px);
   align-items: center;
   gap: 8px;
   padding: 16px 0;

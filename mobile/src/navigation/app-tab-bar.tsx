@@ -11,7 +11,7 @@ import { usePersonalisation } from '@/personalisation/personalisation-context';
 
 import { placesToShow, splitAtBar, type Place } from './places';
 
-const BAR_HEIGHT = 80;
+export const BAR_HEIGHT = 80;
 
 type DestinationProps = {
   icon: string;

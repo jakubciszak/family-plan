@@ -6,8 +6,14 @@ namespace App\Presentation\Api;
 
 use App\Notifications\Application\Service\NotificationFacade;
 use App\Notifications\Application\Service\PushAnnouncements;
+use App\Notifications\Application\Service\PushReach;
+use App\Notifications\Domain\Entity\NativePushDevice;
 use App\Notifications\Domain\Entity\PushSubscription;
+use App\Notifications\Domain\Port\NativePushSenderInterface;
+use App\Notifications\Domain\Repository\NativePushDeviceRepositoryInterface;
 use App\Notifications\Domain\Repository\PushSubscriptionRepositoryInterface;
+use App\Notifications\Domain\ValueObject\DeliveryParameters;
+use App\Presentation\Api\Dto\Push\RegisterNativePushDeviceRequest;
 use App\Presentation\Api\Dto\Push\RegisterPushSubscriptionRequest;
 use App\Presentation\Api\Dto\Push\SendPushAnnouncementRequest;
 use App\Shared\Domain\Clock\ClockInterface;
@@ -37,13 +43,16 @@ class PushSubscriptionApiController extends AbstractController
         private readonly PushAnnouncements $announcements,
         private readonly TeamMates $teamMates,
         private readonly ClockInterface $clock,
-        private readonly string $vapidPublicKey
+        private readonly string $vapidPublicKey,
+        private readonly NativePushDeviceRepositoryInterface $devices,
+        private readonly NativePushSenderInterface $nativeSender,
+        private readonly PushReach $reach
     ) {
     }
 
     #[Route('/key', name: 'key', methods: ['GET'])]
     #[OA\Get(path: '/api/push/key', summary: 'Public key the browser needs to subscribe', tags: ['Push notifications'])]
-    #[OA\Response(response: 200, description: 'VAPID public key, or null when push is not configured on this server')]
+    #[OA\Response(response: 200, description: 'VAPID public key, or null when push is not configured on this server; native tells whether phones with the app can be reached')]
     public function key(): JsonResponse
     {
         $key = trim($this->vapidPublicKey);
@@ -51,7 +60,58 @@ class PushSubscriptionApiController extends AbstractController
         return $this->json([
             'publicKey' => $key === '' ? null : $key,
             'available' => $key !== '',
+            'native' => $this->nativeSender->isConfigured(),
         ]);
+    }
+
+    #[Route('/devices', name: 'register_device', methods: ['POST'])]
+    #[OA\Post(path: '/api/push/devices', summary: 'Start receiving push on this phone, also while the app is closed', tags: ['Push notifications'])]
+    #[OA\Response(response: 201, description: 'Phone registered')]
+    #[OA\Response(response: 200, description: 'Phone was already registered and has been refreshed')]
+    public function registerDevice(#[MapRequestPayload] RegisterNativePushDeviceRequest $request): JsonResponse
+    {
+        $userId = $this->callerId();
+        $token = trim($request->token);
+        $existing = $this->devices->findByToken($token);
+
+        if ($existing !== null) {
+            $existing->handOverTo($userId, $request->deviceLabel);
+            $this->devices->save($existing);
+
+            return $this->json($this->presentDevice($existing));
+        }
+
+        $device = NativePushDevice::register(
+            Uuid::generate(),
+            $userId,
+            $request->platform,
+            $token,
+            $request->deviceLabel,
+            $this->clock->now()
+        );
+
+        $this->devices->save($device);
+
+        return $this->json($this->presentDevice($device), Response::HTTP_CREATED);
+    }
+
+    #[Route('/devices', name: 'unregister_device', methods: ['DELETE'])]
+    #[OA\Delete(path: '/api/push/devices', summary: 'Stop receiving push on this phone, e.g. when signing out', tags: ['Push notifications'])]
+    #[OA\Parameter(name: 'token', in: 'query', required: true, description: 'Token the phone got from Firebase')]
+    #[OA\Response(response: 204, description: 'Phone will not receive push any more')]
+    #[OA\Response(response: 404, description: 'No such phone belongs to the caller')]
+    public function unregisterDevice(Request $request): JsonResponse
+    {
+        $token = trim((string) $request->query->get('token', ''));
+        $device = $token === '' ? null : $this->devices->findByToken($token);
+
+        if ($device === null || !$device->belongsTo($this->callerId())) {
+            return $this->json(['error' => 'Device not found'], Response::HTTP_NOT_FOUND);
+        }
+
+        $this->devices->delete($device);
+
+        return $this->json(null, Response::HTTP_NO_CONTENT);
     }
 
     #[Route('/subscriptions', name: 'list', methods: ['GET'])]
@@ -125,7 +185,7 @@ class PushSubscriptionApiController extends AbstractController
     {
         $userId = $this->callerId();
 
-        if ($this->subscriptions->countForUser($userId) === 0) {
+        if ($this->reach->devicesOf($userId) === 0) {
             return $this->json(
                 ['error' => 'No device is registered for push notifications'],
                 Response::HTTP_CONFLICT
@@ -135,7 +195,8 @@ class PushSubscriptionApiController extends AbstractController
         $this->notifications->sendPush(
             $userId->value(),
             'Powiadomienia push działają.',
-            'Family Plan'
+            'Family Plan',
+            [DeliveryParameters::TTL => 600, DeliveryParameters::URGENCY => 'high']
         );
 
         return $this->json(null, Response::HTTP_ACCEPTED);
@@ -157,7 +218,7 @@ class PushSubscriptionApiController extends AbstractController
             fn (User $user) => [
                 'id' => $user->id()->value(),
                 'name' => $user->name(),
-                'devices' => $this->subscriptions->countForUser($user->id()),
+                'devices' => $this->reach->devicesOf($user->id()),
             ],
             $this->audienceOf($caller)
         );
@@ -265,6 +326,17 @@ class PushSubscriptionApiController extends AbstractController
             'deviceLabel' => $subscription->deviceLabel(),
             'createdAt' => $subscription->createdAt()->format(\DATE_ATOM),
             'lastUsedAt' => $subscription->lastUsedAt()?->format(\DATE_ATOM),
+        ];
+    }
+
+    private function presentDevice(NativePushDevice $device): array
+    {
+        return [
+            'id' => $device->id()->value(),
+            'platform' => $device->platform(),
+            'deviceLabel' => $device->deviceLabel(),
+            'createdAt' => $device->createdAt()->format(\DATE_ATOM),
+            'lastUsedAt' => $device->lastUsedAt()?->format(\DATE_ATOM),
         ];
     }
 

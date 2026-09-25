@@ -120,6 +120,50 @@ class PushSubscriptionApiTest extends ApiTestCase
         $this->assertSame(Response::HTTP_ACCEPTED, $response->getStatusCode());
     }
 
+    public function testTheKeyTellsWhetherPhonesCanBeReached(): void
+    {
+        $key = $this->getJson('/api/push/key');
+
+        // No FCM service account in the test environment.
+        $this->assertFalse($key['native']);
+    }
+
+    public function testAPhoneIsRegisteredForTheCaller(): void
+    {
+        $response = $this->postJson('/api/push/devices', ['token' => 'fcm-token-1', 'platform' => 'android', 'deviceLabel' => 'Pixel']);
+
+        $data = $this->assertJsonResponse($response, Response::HTTP_CREATED);
+        $this->assertSame('android', $data['platform']);
+        $this->assertSame('Pixel', $data['deviceLabel']);
+        $this->assertArrayNotHasKey('token', $data);
+    }
+
+    public function testRegisteringThePhoneAgainRefreshesItAndMovesItToWhoeverSignedIn(): void
+    {
+        $this->postJson('/api/push/devices', ['token' => 'fcm-token-2']);
+        $this->authenticate(Role::USER);
+
+        $response = $this->postJson('/api/push/devices', ['token' => 'fcm-token-2', 'deviceLabel' => 'Pixel']);
+
+        $this->assertJsonResponse($response, Response::HTTP_OK);
+        $this->assertSame(Response::HTTP_NO_CONTENT, $this->deleteJson('/api/push/devices?token=fcm-token-2')->getStatusCode());
+    }
+
+    public function testSomebodyElsesPhoneCannotBeRemoved(): void
+    {
+        $this->postJson('/api/push/devices', ['token' => 'fcm-token-3']);
+        $this->authenticate(Role::USER);
+
+        $this->assertSame(Response::HTTP_NOT_FOUND, $this->deleteJson('/api/push/devices?token=fcm-token-3')->getStatusCode());
+        $this->assertSame(Response::HTTP_NOT_FOUND, $this->deleteJson('/api/push/devices?token=')->getStatusCode());
+    }
+
+    public function testAPhoneNeedsATokenAndAKnownPlatform(): void
+    {
+        $this->assertSame(Response::HTTP_UNPROCESSABLE_ENTITY, $this->postJson('/api/push/devices', ['token' => ' '])->getStatusCode());
+        $this->assertSame(Response::HTTP_UNPROCESSABLE_ENTITY, $this->postJson('/api/push/devices', ['token' => 'x', 'platform' => 'ios'])->getStatusCode());
+    }
+
     /**
      * @return array<string, string|null>
      */

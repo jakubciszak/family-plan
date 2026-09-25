@@ -21,6 +21,8 @@ import Account from './pages/Account';
 import UserAccounts from './pages/UserAccounts';
 import InstallPrompt from './components/InstallPrompt';
 import NotificationCenter from './components/NotificationCenter';
+import NotificationInbox from './components/NotificationInbox';
+import { NotificationsProvider } from './hooks/useNotifications';
 import AppNavigation from './components/AppNavigation';
 import AppBarActions from './components/AppBarActions';
 import useThemeMode from './hooks/useThemeMode';
@@ -254,6 +256,7 @@ function App() {
     ];
 
     return (
+        <NotificationsProvider onNavigate={setCurrentPage}>
         <div className={`app${actionFocus ? ' app--action-focus' : ''}`}>
             {!actionFocus && !calendarFocus && <>
             <header className={`app-header${scrolled ? ' app-header--scrolled' : ''}`}>
@@ -323,7 +326,9 @@ function App() {
             </main>
 
             {!actionFocus && <><NotificationCenter /><InstallPrompt /></>}
+            <NotificationInbox onOpenSettings={() => setCurrentPage('settings')} />
         </div>
+        </NotificationsProvider>
     );
 }
 

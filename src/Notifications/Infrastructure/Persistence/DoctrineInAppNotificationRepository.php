@@ -6,14 +6,18 @@ namespace App\Notifications\Infrastructure\Persistence;
 
 use App\Notifications\Domain\Entity\InAppNotification;
 use App\Notifications\Domain\Repository\InAppNotificationRepositoryInterface;
+use App\Shared\Domain\Clock\ClockInterface;
 use App\Shared\Domain\ValueObject\Uuid;
 use DateTimeImmutable;
 use Doctrine\ORM\EntityManagerInterface;
+use Doctrine\ORM\QueryBuilder;
 
 final readonly class DoctrineInAppNotificationRepository implements InAppNotificationRepositoryInterface
 {
-    public function __construct(private EntityManagerInterface $entityManager)
-    {
+    public function __construct(
+        private EntityManagerInterface $entityManager,
+        private ClockInterface $clock
+    ) {
     }
 
     public function save(InAppNotification $notification): void
@@ -29,14 +33,11 @@ final readonly class DoctrineInAppNotificationRepository implements InAppNotific
 
     public function unreadFor(Uuid $userId, int $limit): array
     {
-        return $this->entityManager->createQueryBuilder()
+        // Newest first: after a long break the latest news matters, not the oldest backlog.
+        return $this->unread($userId)
             ->select('n')
-            ->from(InAppNotification::class, 'n')
-            ->where('n.userId = :userId')
-            ->andWhere('n.readAt IS NULL')
-            ->orderBy('n.createdAt', 'ASC')
+            ->orderBy('n.createdAt', 'DESC')
             ->setMaxResults($limit)
-            ->setParameter('userId', $userId)
             ->getQuery()
             ->getResult();
     }
@@ -56,28 +57,66 @@ final readonly class DoctrineInAppNotificationRepository implements InAppNotific
 
     public function countUnreadFor(Uuid $userId): int
     {
-        return (int) $this->entityManager->createQueryBuilder()
+        return (int) $this->unread($userId)
             ->select('COUNT(n.id)')
-            ->from(InAppNotification::class, 'n')
-            ->where('n.userId = :userId')
-            ->andWhere('n.readAt IS NULL')
-            ->setParameter('userId', $userId)
             ->getQuery()
             ->getSingleScalarResult();
     }
 
     public function markAllAsRead(Uuid $userId, DateTimeImmutable $readAt): int
     {
-        $marked = 0;
+        return $this->entityManager->createQueryBuilder()
+            ->update(InAppNotification::class, 'n')
+            ->set('n.readAt', ':readAt')
+            ->where('n.userId = :userId')
+            ->andWhere('n.readAt IS NULL')
+            ->setParameter('readAt', $readAt, 'datetime_immutable')
+            ->setParameter('userId', $userId)
+            ->getQuery()
+            ->execute();
+    }
 
-        foreach ($this->unreadFor($userId, PHP_INT_MAX) as $notification) {
-            $notification->markAsRead($readAt);
-            $this->entityManager->persist($notification);
-            $marked++;
+    public function resolveTopic(string $topic, DateTimeImmutable $resolvedAt, ?string $event = null, ?Uuid $userId = null): array
+    {
+        $open = $this->entityManager->createQueryBuilder()
+            ->select('n')
+            ->from(InAppNotification::class, 'n')
+            ->where('n.topic = :topic')
+            ->andWhere('n.resolvedAt IS NULL')
+            ->setParameter('topic', $topic);
+
+        if ($event !== null) {
+            $open->andWhere('n.event = :event')->setParameter('event', $event);
         }
 
-        $this->entityManager->flush();
+        if ($userId !== null) {
+            $open->andWhere('n.userId = :userId')->setParameter('userId', $userId);
+        }
 
-        return $marked;
+        $recipients = [];
+
+        foreach ($open->getQuery()->getResult() as $notification) {
+            /** @var InAppNotification $notification */
+            $notification->resolve($resolvedAt);
+            $recipients[$notification->userId()->value()] = $notification->userId();
+        }
+
+        if ($recipients !== []) {
+            $this->entityManager->flush();
+        }
+
+        return array_values($recipients);
+    }
+
+    private function unread(Uuid $userId): QueryBuilder
+    {
+        return $this->entityManager->createQueryBuilder()
+            ->from(InAppNotification::class, 'n')
+            ->where('n.userId = :userId')
+            ->andWhere('n.readAt IS NULL')
+            ->andWhere('n.resolvedAt IS NULL')
+            ->andWhere('n.expiresAt IS NULL OR n.expiresAt > :now')
+            ->setParameter('userId', $userId)
+            ->setParameter('now', $this->clock->now(), 'datetime_immutable');
     }
 }

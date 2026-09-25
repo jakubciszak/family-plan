@@ -15,6 +15,8 @@ interface InAppNotificationRepositoryInterface
     public function findById(Uuid $id): ?InAppNotification;
 
     /**
+     * Unread notifications that still say something true, newest first: resolved and expired ones are left out.
+     *
      * @return InAppNotification[]
      */
     public function unreadFor(Uuid $userId, int $limit): array;
@@ -27,4 +29,11 @@ interface InAppNotificationRepositoryInterface
     public function countUnreadFor(Uuid $userId): int;
 
     public function markAllAsRead(Uuid $userId, DateTimeImmutable $readAt): int;
+
+    /**
+     * Resolves every open notification on the topic, optionally only of one event and one recipient.
+     *
+     * @return list<Uuid> recipients who had one of them, each once
+     */
+    public function resolveTopic(string $topic, DateTimeImmutable $resolvedAt, ?string $event = null, ?Uuid $userId = null): array;
 }

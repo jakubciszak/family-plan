@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Notifications\Communication\Service;
 
+use App\Notifications\Application\Port\ActorProviderInterface;
 use App\Notifications\Application\Service\NotificationFacade;
 use App\Notifications\Communication\Application\Service\NotificationPolicyProvider;
 use App\Notifications\Communication\Domain\Entity\NotificationPolicy;
@@ -151,6 +152,59 @@ class NotificationOrchestratorTest extends TestCase
         $this->assertSame([], $this->sentChannels());
     }
 
+    public function testAKindTheUserSwitchedOffReachesThemThroughNoChannel(): void
+    {
+        $settings = UserSettings::create($this->user->id());
+        $settings->updatePreference(UserPreference::create(PreferenceType::notificationEvents(), [
+            PreferenceOption::create('task_approved', false),
+        ]));
+        $this->settingsRepository->save($settings);
+
+        $this->notifyUser(NotificationEvent::taskApproved());
+        $this->notifyUser(NotificationEvent::payoutOffered());
+
+        $this->assertSame(['in_app', 'push'], $this->sentChannels());
+    }
+
+    public function testNobodyIsToldAboutTheirOwnAction(): void
+    {
+        $orchestrator = new NotificationOrchestrator(
+            new NotificationFacade([$this->adapter]),
+            $this->userRepository,
+            $this->settingsRepository,
+            new NotificationPolicyProvider($this->policyRepository),
+            new ChannelResolver(),
+            null,
+            new FixedActor($this->user->id())
+        );
+
+        $orchestrator->notifyUser(NotificationEvent::taskApproved(), $this->user->id(), 'Gotowe', 'Zadanie');
+
+        $this->assertSame([], $this->sentChannels());
+    }
+
+    public function testEveryChannelGetsTheSameIdEventAndLifetime(): void
+    {
+        $this->notifyUser(NotificationEvent::streakAtRisk());
+
+        $sent = $this->adapter->getSentNotifications();
+        $this->assertSame('streak_at_risk', $sent[0]['parameters']['event']);
+        $this->assertTrue(Uuid::isValid($sent[0]['parameters']['notification_id']));
+        $this->assertSame(21600, $sent[0]['parameters']['ttl']);
+    }
+
+    public function testTwoNotificationsNeverShareAnId(): void
+    {
+        $this->notifyUser(NotificationEvent::payoutOffered());
+        $this->notifyUser(NotificationEvent::payoutOffered());
+
+        $ids = array_unique(array_map(
+            static fn (array $sent) => $sent['parameters']['notification_id'],
+            $this->adapter->getSentNotifications()
+        ));
+        $this->assertCount(2, $ids);
+    }
+
     private function notifyUser(NotificationEvent $event): void
     {
         $this->orchestrator->notifyUser($event, $this->user->id(), 'Gotowe', 'Zadanie');
@@ -191,5 +245,17 @@ class NotificationOrchestratorTest extends TestCase
     private function sentChannels(): array
     {
         return array_column($this->adapter->getSentNotifications(), 'channel');
+    }
+}
+
+final readonly class FixedActor implements ActorProviderInterface
+{
+    public function __construct(private ?Uuid $actor)
+    {
+    }
+
+    public function currentActorId(): ?Uuid
+    {
+        return $this->actor;
     }
 }

@@ -6,13 +6,22 @@ namespace App\Notifications\Infrastructure\Persistence;
 
 use App\Notifications\Domain\Entity\InAppNotification;
 use App\Notifications\Domain\Repository\InAppNotificationRepositoryInterface;
+use App\Shared\Domain\Clock\ClockInterface;
 use App\Shared\Domain\ValueObject\Uuid;
+use App\Shared\Infrastructure\Clock\SystemClock;
 use DateTimeImmutable;
 
 final class InMemoryInAppNotificationRepository implements InAppNotificationRepositoryInterface
 {
     /** @var array<string, InAppNotification> */
     private array $notifications = [];
+
+    private ClockInterface $clock;
+
+    public function __construct(?ClockInterface $clock = null)
+    {
+        $this->clock = $clock ?? new SystemClock();
+    }
 
     public function save(InAppNotification $notification): void
     {
@@ -26,14 +35,15 @@ final class InMemoryInAppNotificationRepository implements InAppNotificationRepo
 
     public function unreadFor(Uuid $userId, int $limit): array
     {
+        $now = $this->clock->now();
         $unread = array_filter(
             $this->ofUser($userId),
-            static fn (InAppNotification $notification) => !$notification->isRead()
+            static fn (InAppNotification $notification) => $notification->isActive($now)
         );
 
         usort(
             $unread,
-            static fn (InAppNotification $a, InAppNotification $b) => $a->createdAt() <=> $b->createdAt()
+            static fn (InAppNotification $a, InAppNotification $b) => $b->createdAt() <=> $a->createdAt()
         );
 
         return array_slice($unread, 0, $limit);
@@ -60,12 +70,36 @@ final class InMemoryInAppNotificationRepository implements InAppNotificationRepo
     {
         $marked = 0;
 
-        foreach ($this->unreadFor($userId, PHP_INT_MAX) as $notification) {
+        foreach ($this->ofUser($userId) as $notification) {
+            if ($notification->isRead()) {
+                continue;
+            }
+
             $notification->markAsRead($readAt);
             $marked++;
         }
 
         return $marked;
+    }
+
+    public function resolveTopic(string $topic, DateTimeImmutable $resolvedAt, ?string $event = null, ?Uuid $userId = null): array
+    {
+        $recipients = [];
+
+        foreach ($this->notifications as $notification) {
+            if ($notification->topic() !== $topic || $notification->isResolved()) {
+                continue;
+            }
+
+            if (($event !== null && $notification->event() !== $event) || ($userId !== null && !$notification->belongsTo($userId))) {
+                continue;
+            }
+
+            $notification->resolve($resolvedAt);
+            $recipients[$notification->userId()->value()] = $notification->userId();
+        }
+
+        return array_values($recipients);
     }
 
     public function clear(): void
