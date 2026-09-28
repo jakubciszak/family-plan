@@ -1,10 +1,11 @@
 import { subscribeCalendarChanges } from '@/day-planning/changes';
 import { useFocusEffect } from 'expo-router';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { StatusBar } from 'expo-status-bar';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { AppState, KeyboardAvoidingView, Platform, RefreshControl, ScrollView, View } from 'react-native';
+import { AppState, BackHandler, KeyboardAvoidingView, Platform, RefreshControl, ScrollView, View } from 'react-native';
 import { ActivityIndicator, Button, Card, Chip, Dialog, FAB, Icon, IconButton, Portal, SegmentedButtons, Text, TextInput, useTheme } from 'react-native-paper';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ApiError } from '@/api/client';
 import { cancelOccurrence, changeOccurrence, changeParticipation, createEvent, findSuggestions, listCalendarTags, readCalendar, readEvent, readOccurrence, removeEvent, restoreOccurrence, updateEvent,
@@ -15,15 +16,18 @@ import ChoicePicker from '@/components/action-plans/choice-picker';
 import ChoiceChip from '@/components/day-planning/choice-chip';
 import EventEditor from '@/components/day-planning/event-editor';
 import PlanningDateTimeField from '@/components/day-planning/date-time-field';
+import MonthCalendar, { MONTH_ROW_MINIMUM } from '@/components/day-planning/month-calendar';
 import TagManager from '@/components/day-planning/tag-manager';
 import { TagColorDot } from '@/components/day-planning/tag-colors';
-import WeekCalendar from '@/components/day-planning/week-calendar';
-import { mondayOf } from '@/day-planning/week-layout';
-import { dayString, isDay, shiftDay } from '@/dates';
+import WeekCalendar, { type CalendarSpot } from '@/components/day-planning/week-calendar';
+import { mondayOf, monthWeeks } from '@/day-planning/week-layout';
+import { addMonths, dayString, isDay, shiftDay } from '@/dates';
 import { deviceTimeZone, draftFromDefinition, draftFromOccurrence, isTime, localInstant, localParts, makeRequestKey, rangeFor, visibilityOf } from '@/day-planning/time';
+import { useFullScreen } from '@/navigation/full-screen';
 import { useScreenBackground } from '@/personalisation/use-screen-background';
 
 type PlanView = 'MINE' | 'TEAM' | 'PLAN';
+type Period = 'DAY' | 'WEEK' | 'MONTH';
 type Editing = { key: string; draft: EventDraft; definition?: EventDefinition; occurrence?: Occurrence; occurrenceOnly: boolean };
 type Confirm = { title: string; text: string; label?: string; action: () => void };
 const loadTags = async (teams: Team[]) => {
@@ -37,6 +41,8 @@ export default function DayPlanningScreen() {
   const { user } = useAuth();
   const theme = useTheme();
   const ground = useScreenBackground();
+  const insets = useSafeAreaInsets();
+  const { fullScreen, setFullScreen } = useFullScreen();
   const [teams, setTeams] = useState<Team[]>([]);
   const [chosenTeam, setChosenTeam] = useState<string | null>(null);
   const [rosters, setRosters] = useState<Record<string, Member[]>>({});
@@ -44,7 +50,10 @@ export default function DayPlanningScreen() {
   const [tags, setTags] = useState<CalendarTag[]>([]);
   const [tagIds, setTagIds] = useState<string[]>([]);
   const [date, setDate] = useState(dayString(new Date()));
-  const [display, setDisplay] = useState<'DAY' | 'WEEK'>('DAY');
+  const [display, setDisplay] = useState<Period>('DAY');
+  const [dayList, setDayList] = useState<string | null>(null);
+  const [viewportHeight, setViewportHeight] = useState(0);
+  const [calendarTop, setCalendarTop] = useState(0);
   const [view, setView] = useState<PlanView>('MINE');
   const [calendar, setCalendar] = useState<Calendar | null>(null);
   const [suggestions, setSuggestions] = useState<Suggestions | null>(null);
@@ -97,17 +106,22 @@ export default function DayPlanningScreen() {
     focused.current = true;
     setRevision((value) => value + 1);
     const unsubscribeChanges = subscribeCalendarChanges(() => {
-      request.current += 1; setCalendar(null); setSuggestions(null); setSelected(null); setEditing(null); setConfirmation(null); setRevision((value) => value + 1);
+      request.current += 1; setCalendar(null); setSuggestions(null); setSelected(null); setEditing(null); setConfirmation(null); setDayList(null); setRevision((value) => value + 1);
     });
     const subscription = AppState.addEventListener('change', (state) => {
       if (state === 'active') { setSelected(null); setEditing(null); setRevision((value) => value + 1); }
-      else { request.current += 1; setCalendar(null); setSuggestions(null); setSelected(null); setEditing(null); }
+      else { request.current += 1; setCalendar(null); setSuggestions(null); setSelected(null); setEditing(null); setDayList(null); }
     });
     return () => {
       focused.current = false; request.current += 1; subscription.remove(); unsubscribeChanges();
-      setCalendar(null); setSuggestions(null); setSelected(null); setEditing(null); setConfirmation(null);
+      setCalendar(null); setSuggestions(null); setSelected(null); setEditing(null); setConfirmation(null); setDayList(null); setFullScreen(false);
     };
-  }, []));
+  }, [setFullScreen]));
+  useEffect(() => {
+    if (!fullScreen) return undefined;
+    const subscription = BackHandler.addEventListener('hardwareBackPress', () => { setFullScreen(false); return true; });
+    return () => subscription.remove();
+  }, [fullScreen, setFullScreen]);
   useEffect(() => {
     let active = true;
     void Promise.resolve().then(() => { if (active) setScopeError(''); });
@@ -130,7 +144,10 @@ export default function DayPlanningScreen() {
     const personIds = queryPeople ? queryPeople.split(',') : [];
     if (view === 'TEAM' && (!queryTeam || !personIds.length)) return;
     let range: { from: string; to: string };
-    try { range = rangeFor(display === 'WEEK' ? mondayOf(date) : date, display === 'WEEK' ? 7 : 1, zone); } catch { void Promise.resolve().then(() => { if (sequence === request.current) setError(t('dayPlanning.invalidTime')); }); return; }
+    try {
+      const month = monthWeeks(date);
+      range = display === 'MONTH' ? rangeFor(month.start, month.weeks * 7, zone) : rangeFor(display === 'WEEK' ? mondayOf(date) : date, display === 'WEEK' ? 7 : 1, zone);
+    } catch { void Promise.resolve().then(() => { if (sequence === request.current) setError(t('dayPlanning.invalidTime')); }); return; }
     void Promise.resolve().then(() => { if (sequence === request.current) setLoading(true); });
     readCalendar(range.from, range.to, view === 'MINE' ? null : queryTeam, view === 'MINE' ? [] : personIds, tagIds)
       .then((next) => { if (sequence === request.current) { if (!next.coverage.complete) throw new Error('incomplete'); setCalendar(next); } })
@@ -142,27 +159,30 @@ export default function DayPlanningScreen() {
   const chooseTeam = (value: string) => { setChosenTeam(value || null); setSuggestions(null); };
   const personToggle = (id: string) => { setPicked({ teamId, ids: people.includes(id) ? people.filter((person) => person !== id) : [...people, id] }); setSuggestions(null); };
   const refresh = (clearError = true) => { if (clearError) setError(''); setSelected(null); setSuggestions(null); setRevision((value) => value + 1); };
-  const beginCreate = (slot?: { start: string; end: string }, allDayOn?: string) => {
-    try { localInstant(date, '09:00', zone); } catch { setError(t('dayPlanning.invalidTime')); return; }
-    const start = slot ? localParts(slot.start, zone) : { date, time: '09:00' };
+  const beginCreate = ({ slot, allDay = false, day = date }: { slot?: { start: string; end: string }; allDay?: boolean; day?: string } = {}) => {
+    try { localInstant(day, '09:00', zone); } catch { setError(t('dayPlanning.invalidTime')); return; }
+    const start = slot ? localParts(slot.start, zone) : { date: day, time: '09:00' };
     const eventTeam = view === 'MINE' ? null : teamId;
-    setError(''); setStale(false); attempt.current = { payload: '', key: makeRequestKey() };
+    setError(''); setStale(false); setDayList(null); attempt.current = { payload: '', key: makeRequestKey() };
     setEditing({ key: makeRequestKey(), occurrenceOnly: false, draft: { title: '', description: '', location: '', teamId: eventTeam, visibility: visibilityOf(eventTeam),
-      schedule: allDayOn ? { kind: 'ALL_DAY', startDate: allDayOn, endDate: shiftDay(allDayOn, 1), timeZone: zone }
+      schedule: allDay ? { kind: 'ALL_DAY', startDate: day, endDate: shiftDay(day, 1), timeZone: zone }
         : { kind: 'TIMED', localStart: `${start.date}T${start.time}`, durationMinutes: slot ? (Date.parse(slot.end) - Date.parse(slot.start)) / 60000 : 60, timeZone: zone },
       recurrence: null, participantIds: [...new Set([currentUser, ...(eventTeam && view === 'PLAN' ? people : [])])], tagIds: [], blocksTime: true, ownerParticipates: true } });
   };
   /** A tap on an empty hour starts an hour-long event there, a tap on the all-day strip an all-day one. */
-  const createAt = ({ date: day, hour }: { date: string; hour?: number }) => {
-    if (hour === undefined) { beginCreate(undefined, day); return; }
+  const createAt = ({ date: day, hour, allDay }: CalendarSpot) => {
+    if (allDay) { beginCreate({ allDay: true, day }); return; }
+    if (hour === undefined) { beginCreate({ day }); return; }
     for (const candidate of [hour, hour + 1].filter((value) => value < 24)) {
       try {
         const start = localInstant(day, `${String(candidate).padStart(2, '0')}:00`, zone);
-        beginCreate({ start: start.toISOString(), end: new Date(start.getTime() + 3600000).toISOString() });
+        beginCreate({ slot: { start: start.toISOString(), end: new Date(start.getTime() + 3600000).toISOString() } });
         return;
       } catch { /* this hour does not exist on a daylight saving change, so try the next one */ }
     }
   };
+  const showDay = (day: string) => { setDayList(null); setDate(day); setDisplay('DAY'); };
+  const shift = (direction: number) => setDate(display === 'MONTH' ? addMonths(date, direction) : shiftDay(date, display === 'WEEK' ? 7 * direction : direction));
   useEffect(() => {
     const event = selected && !selected.participantIds.includes(selected.ownerId) ? selected : null;
     if (!event?.teamId || directory.some((member) => member.userId === event.ownerId)) return undefined;
@@ -267,6 +287,7 @@ export default function DayPlanningScreen() {
   const rangeTitle = () => {
     if (!isDay(date)) return date;
     if (display === 'DAY') return capitalize(dateTitle(date));
+    if (display === 'MONTH') return capitalize(new Intl.DateTimeFormat(i18n.language, { month: 'long', year: 'numeric', timeZone: 'UTC' }).format(new Date(`${date}T12:00:00Z`)));
     const format = new Intl.DateTimeFormat(i18n.language, { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
     const [first, last] = [mondayOf(date), shiftDay(mondayOf(date), 6)].map((value) => new Date(`${value}T12:00:00Z`));
     return typeof format.formatRange === 'function' ? format.formatRange(first, last) : `${format.format(first)} – ${format.format(last)}`;
@@ -276,17 +297,19 @@ export default function DayPlanningScreen() {
     <PlanningDateTimeField label={t(`dayPlanning.${key}`)} mode={mode} value={value} onChange={changePlanner(change)} minimumDate={minimumDate} disabled={saving || (view === 'PLAN' && loading)} />;
   const zones = [...new Set([deviceTimeZone(), 'Europe/Warsaw', 'Europe/London', 'America/New_York', 'UTC'])];
   const browsing = !editing && !tagManager && !selected && view !== 'PLAN';
+  const views: PlanView[] = fullScreen ? ['MINE', 'TEAM'] : ['MINE', 'TEAM', 'PLAN'];
+  const bottomSpace = browsing && (fullScreen || display === 'DAY') ? 88 : 36;
   const only = !!selected?.recurring && scope === 'OCCURRENCE';
-  const agenda = () => {
-    const range = rangeFor(date, 1, zone);
+  const agenda = (day = date, onOpen: (event: Occurrence) => void = openDetails) => {
+    const range = rangeFor(day, 1, zone);
     const rows: ({ start: string; end: string; event: Occurrence } | { start: string; end: string; busy: Busy })[] = [
       ...(calendar?.events ?? []).map((event) => ({ start: event.start, end: event.end, event })),
       ...(calendar?.busy ?? []).map((busy) => ({ start: busy.start, end: busy.end, busy })),
     ].filter((item) => Date.parse(item.start) < Date.parse(range.to) && Date.parse(item.end) > Date.parse(range.from)).sort((a, b) => Date.parse(a.start) - Date.parse(b.start));
-    return <View style={{ gap: 8 }} testID={`day-agenda-${date}`}>
+    return <View style={{ gap: 8 }} testID={`day-agenda-${day}`}>
       {!rows.length && <Text>{t(tagIds.length ? 'dayPlanning.emptyFiltered' : 'dayPlanning.empty')}</Text>}
       {rows.map((row, index) => 'event' in row
-        ? <AgendaEvent key={`${row.event.id}-${row.event.occurrenceKey}`} event={row.event} hours={row.event.allDay ? t('dayPlanning.allDay') : formatHours(row.start, row.end)} names={view === 'TEAM' ? row.event.participantIds.map(nameFor).join(', ') : ''} onOpen={openDetails} />
+        ? <AgendaEvent key={`${row.event.id}-${row.event.occurrenceKey}`} event={row.event} hours={row.event.allDay ? t('dayPlanning.allDay') : formatHours(row.start, row.end)} names={view === 'TEAM' ? row.event.participantIds.map(nameFor).join(', ') : ''} onOpen={onOpen} />
         : <Card key={`busy-${row.busy.personId}-${index}`} mode="contained" style={{ backgroundColor: theme.colors.surfaceVariant }} testID="day-busy">
           <Card.Content style={{ gap: 2, paddingVertical: 10 }}>
             <Text variant="labelMedium" style={{ color: theme.colors.onSurfaceVariant }}>{formatHours(row.start, row.end)}</Text>
@@ -295,9 +318,11 @@ export default function DayPlanningScreen() {
         </Card>)}
     </View>;
   };
-  return <SafeAreaView edges={['left', 'right']} style={{ flex: 1, backgroundColor: ground }}>
+  return <SafeAreaView edges={fullScreen ? ['top', 'bottom', 'left', 'right'] : ['left', 'right']} style={{ flex: 1, backgroundColor: fullScreen ? theme.colors.surface : ground }}>
+    {fullScreen && <StatusBar hidden />}
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <ScrollView ref={scroll} nestedScrollEnabled keyboardShouldPersistTaps="handled" contentInsetAdjustmentBehavior="automatic" contentContainerStyle={{ padding: 16, gap: 12, paddingBottom: browsing && display === 'DAY' ? 88 : 36 }}
+      <ScrollView ref={scroll} nestedScrollEnabled keyboardShouldPersistTaps="handled" contentInsetAdjustmentBehavior="automatic" onLayout={(event) => setViewportHeight(event.nativeEvent.layout.height)}
+        contentContainerStyle={{ padding: 16, gap: 12, paddingTop: fullScreen ? 8 : 16, paddingBottom: bottomSpace }}
         refreshControl={<RefreshControl refreshing={loading} onRefresh={() => refresh()} />}>
         {!!error && <View><Text accessibilityRole="alert" style={{ color: theme.colors.error }}>{error}</Text>{!editing && <Button onPress={() => refresh()}>{t('common.retry')}</Button>}</View>}
         {stale && editing?.occurrence && <Button onPress={() => void beginEdit(editing.occurrence!, editing.occurrenceOnly)}>{t('dayPlanning.reloadEditor')}</Button>}
@@ -332,25 +357,28 @@ export default function DayPlanningScreen() {
           </Card.Content></Card>
           : <>
             {!!teams.length && <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
-              {(['MINE', 'TEAM', 'PLAN'] as const).map((value) => <Chip key={value} mode={view === value ? 'flat' : 'outlined'} selected={view === value} showSelectedCheck={false} onPress={() => chooseView(value)}>{t(`dayPlanning.views.${value}`)}</Chip>)}
+              {views.map((value) => <Chip key={value} mode={view === value ? 'flat' : 'outlined'} selected={view === value} showSelectedCheck={false} onPress={() => chooseView(value)}>{t(`dayPlanning.views.${value}`)}</Chip>)}
             </View>}
             {!!scopeError && <View><Text accessibilityRole="alert">{scopeError}</Text><Button onPress={() => setRevision((value) => value + 1)}>{t('common.retry')}</Button></View>}
             {view !== 'PLAN' && <View style={{ gap: 4 }}>
               <PlanningDateTimeField label={t('dayPlanning.calendarDate')} mode="date" value={date} onChange={setDate} title={rangeTitle()} />
               <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 4 }}>
                 <Button mode="outlined" compact onPress={() => setDate(dayString(new Date()))}>{t('dayPlanning.today')}</Button>
-                <IconButton icon="chevron-left" accessibilityLabel={t('dayPlanning.previous')} disabled={!isDay(date)} onPress={() => setDate(shiftDay(date, display === 'WEEK' ? -7 : -1))} />
-                <IconButton icon="chevron-right" accessibilityLabel={t('dayPlanning.next')} disabled={!isDay(date)} onPress={() => setDate(shiftDay(date, display === 'WEEK' ? 7 : 1))} />
-                <SegmentedButtons density="small" style={{ marginLeft: 'auto', minWidth: 168 }} value={display} onValueChange={(value) => setDisplay(value as 'DAY' | 'WEEK')}
-                  buttons={(['DAY', 'WEEK'] as const).map((value) => ({ value, label: t(value === 'DAY' ? 'dayPlanning.day' : 'dayPlanning.week') }))} />
+                <IconButton icon="chevron-left" accessibilityLabel={t('dayPlanning.previous')} disabled={!isDay(date)} onPress={() => shift(-1)} />
+                <IconButton icon="chevron-right" accessibilityLabel={t('dayPlanning.next')} disabled={!isDay(date)} onPress={() => shift(1)} />
+                <View style={{ marginLeft: 'auto', flexDirection: 'row', alignItems: 'center' }}>
+                  <SegmentedButtons density="small" style={{ minWidth: 252 }} value={display} onValueChange={(value) => setDisplay(value as Period)}
+                    buttons={(['DAY', 'WEEK', 'MONTH'] as const).map((value) => ({ value, label: t(`dayPlanning.${value.toLowerCase()}`) }))} />
+                  <IconButton icon={fullScreen ? 'fullscreen-exit' : 'fullscreen'} accessibilityLabel={t(fullScreen ? 'dayPlanning.exitFullScreen' : 'dayPlanning.fullScreen')} onPress={() => setFullScreen(!fullScreen)} />
+                </View>
               </View>
             </View>}
             {view !== 'MINE' && <View style={{ gap: 8 }}>
               {teams.length > 1 && <ChoicePicker label={t('dayPlanning.team')} value={teamId ?? ''} options={teams.map((team) => ({ value: team.id, label: team.name }))} onChange={chooseTeam} />}
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+              <ChipRow scroll={fullScreen}>
                 {members.map((member) => <ChoiceChip key={member.userId} label={member.userName} accessibilityLabel={t('dayPlanning.showPerson', { name: member.userName })}
                   checked={people.includes(member.userId) || (view === 'PLAN' && member.userId === currentUser)} disabled={view === 'PLAN' && member.userId === currentUser} onPress={() => personToggle(member.userId)} />)}
-              </View>
+              </ChipRow>
               {view === 'PLAN' && <Text variant="bodySmall">{t('dayPlanning.authorIncluded')}</Text>}
               {view === 'TEAM' && !!members.length && !people.length && <Text>{t('dayPlanning.selectPeople')}</Text>}
             </View>}
@@ -365,7 +393,7 @@ export default function DayPlanningScreen() {
               <Button mode="contained" onPress={() => void search()} loading={loading} disabled={loading || !!scopeError}>{t('dayPlanning.findSlots')}</Button>
               {suggestions && <View testID="day-suggestions" style={{ gap: 12 }}>
                 {!suggestions.slots.length && <Text>{t('dayPlanning.noSlots')}</Text>}
-                {suggestions.slots.map((slot) => <Card key={slot.start} mode="outlined"><Card.Content><Text variant="titleMedium">{formatInterval(slot.start, slot.end)}</Text></Card.Content><Card.Actions><Button onPress={() => beginCreate(slot)}>{t('dayPlanning.chooseSlot')}</Button></Card.Actions></Card>)}
+                {suggestions.slots.map((slot) => <Card key={slot.start} mode="outlined"><Card.Content><Text variant="titleMedium">{formatInterval(slot.start, slot.end)}</Text></Card.Content><Card.Actions><Button onPress={() => beginCreate({ slot })}>{t('dayPlanning.chooseSlot')}</Button></Card.Actions></Card>)}
                 <Button icon={showAvailability ? 'chevron-up' : 'chevron-down'} contentStyle={{ flexDirection: 'row-reverse' }} style={{ alignSelf: 'flex-start' }} accessibilityLabel={t('dayPlanning.availability')} accessibilityState={{ expanded: showAvailability }} onPress={() => setShowAvailability(!showAvailability)}>{t('dayPlanning.availability')}</Button>
                 {showAvailability && suggestions.personIds.map((id) => <View key={id} style={{ gap: 4 }}><Text variant="titleSmall">{nameFor(id)}</Text>
                   {suggestions.busy.filter((busy) => busy.personId === id).map((busy, index) => <Text key={index}>{t('dayPlanning.busy')} · {formatInterval(busy.start, busy.end)}</Text>)}
@@ -373,32 +401,46 @@ export default function DayPlanningScreen() {
                 </View>)}
               </View>}
             </> : <>
-              {!!tags.length && <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 6 }}>
+              {!!tags.length && <ChipRow scroll={fullScreen}>
                 {tags.map((tag) => <Chip key={tag.id} accessibilityLabel={tag.name} icon={() => <TagColorDot color={tag.color} selected={tagIds.includes(tag.id)} />} mode={tagIds.includes(tag.id) ? 'flat' : 'outlined'} showSelectedCheck={false} selected={tagIds.includes(tag.id)} onPress={() => setTagIds((current) => current.includes(tag.id) ? current.filter((id) => id !== tag.id) : [...current, tag.id])}>{tag.name}</Chip>)}
                 {!!tagIds.length && <Button compact onPress={() => setTagIds([])}>{t('dayPlanning.clearFilter')}</Button>}
                 <IconButton icon="pencil-outline" size={20} accessibilityLabel={t('dayPlanning.manageTags')} onPress={() => setTagManager(true)} />
-              </View>}
+              </ChipRow>}
               {!!tagIds.length && <Text variant="bodySmall">{t('dayPlanning.filterHint')}</Text>}
               {loading && <ActivityIndicator />}
-              {calendar && display === 'WEEK' && isDay(date) && <WeekCalendar calendar={calendar} date={date} zone={zone} nameFor={nameFor} onOpen={openDetails} onCreate={createAt} />}
+              {calendar && display !== 'DAY' && isDay(date) && <View onLayout={(event) => setCalendarTop(event.nativeEvent.layout.y)} style={fullScreen ? { height: Math.max(display === 'WEEK' ? 360 : 32 + monthWeeks(date).weeks * MONTH_ROW_MINIMUM, viewportHeight - calendarTop - bottomSpace) } : undefined}>
+                {display === 'WEEK' ? <WeekCalendar calendar={calendar} date={date} zone={zone} fullScreen={fullScreen} nameFor={nameFor} onOpen={openDetails} onShowDay={showDay} onCreate={createAt} />
+                  : <MonthCalendar calendar={calendar} date={date} zone={zone} fullScreen={fullScreen} nameFor={nameFor} onOpen={openDetails} onShowDay={showDay} onShowMore={setDayList} onCreate={createAt} />}
+              </View>}
               {calendar && display === 'DAY' && agenda()}
             </>}
-            <View style={{ gap: 4, borderTopWidth: 1, borderColor: theme.colors.outlineVariant, paddingTop: 8 }}>
+            {!fullScreen && <View style={{ gap: 4, borderTopWidth: 1, borderColor: theme.colors.outlineVariant, paddingTop: 8 }}>
               <Button compact icon="earth" style={{ alignSelf: 'flex-start' }} accessibilityLabel={`${t('dayPlanning.displayZone')}: ${zone}`} accessibilityState={{ expanded: zoneMenu }} onPress={() => setZoneMenu(!zoneMenu)}>{zone}</Button>
               {zoneMenu && <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
                 {zones.map((value) => <Chip key={value} mode={value === zone ? 'flat' : 'outlined'} selected={value === zone} showSelectedCheck={false} onPress={() => { setZone(value); setZoneMenu(false); }}>{value}</Chip>)}
               </View>}
               {view === 'TEAM' && <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}><Icon source="lock-outline" size={16} color={theme.colors.onSurfaceVariant} /><Text variant="bodySmall" style={{ flex: 1, color: theme.colors.onSurfaceVariant }}>{t('dayPlanning.privacyNote')}</Text></View>}
-            </View>
+            </View>}
           </>}
       </ScrollView>
     </KeyboardAvoidingView>
-    {browsing && <FAB icon="plus" accessibilityLabel={t('dayPlanning.newEvent')} disabled={saving || !isDay(date)} onPress={() => beginCreate()} style={{ position: 'absolute', right: 16, bottom: 16 }} />}
+    {browsing && <FAB icon="plus" accessibilityLabel={t('dayPlanning.newEvent')} disabled={saving || !isDay(date)} onPress={() => beginCreate()} style={{ position: 'absolute', right: 16, bottom: 16 + (fullScreen ? insets.bottom : 0) }} />}
+    <Portal><Dialog visible={!!dayList} onDismiss={() => setDayList(null)} testID="day-list">
+      <Dialog.Title>{dayList ? capitalize(dateTitle(dayList)) : ''}</Dialog.Title>
+      <Dialog.ScrollArea><ScrollView style={{ maxHeight: 420 }} contentContainerStyle={{ paddingVertical: 16 }}>{dayList && calendar && agenda(dayList, (event) => { setDayList(null); void openDetails(event); })}</ScrollView></Dialog.ScrollArea>
+      <Dialog.Actions style={{ flexWrap: 'wrap' }}><Button onPress={() => { if (dayList) showDay(dayList); }}>{t('dayPlanning.openDay')}</Button><Button onPress={() => setDayList(null)}>{t('common.close')}</Button></Dialog.Actions>
+    </Dialog></Portal>
     <Portal><Dialog visible={!!confirmation} onDismiss={() => setConfirmation(null)}>
       <Dialog.Title>{confirmation?.title}</Dialog.Title><Dialog.ScrollArea><ScrollView style={{ maxHeight: 300 }}><Text style={{ paddingVertical: 16 }}>{confirmation?.text}</Text></ScrollView></Dialog.ScrollArea>
       <Dialog.Actions style={{ flexWrap: 'wrap' }}><Button onPress={() => setConfirmation(null)}>{t('common.cancel')}</Button><Button onPress={() => { const action = confirmation?.action; setConfirmation(null); action?.(); }}>{confirmation?.label ?? t('common.confirm')}</Button></Dialog.Actions>
     </Dialog></Portal>
   </SafeAreaView>;
+}
+
+function ChipRow({ scroll, children }: { scroll: boolean; children: ReactNode }) {
+  return scroll
+    ? <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0, flexShrink: 0 }} contentContainerStyle={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>{children}</ScrollView>
+    : <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 6 }}>{children}</View>;
 }
 
 function Detail({ icon, text }: { icon: string; text: string }) {

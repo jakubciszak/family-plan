@@ -4,7 +4,7 @@ Implementacja jest na gałęzi `feature/day-planning`, opartej na wydaniu z PR #
 
 ## Działanie
 
-Web udostępnia kalendarz dnia, tygodnia i miesiąca, widok na pełnym ekranie, porównanie wybranych osób oraz wspólne terminy. Mobile używa agendy dnia i tygodnia z tymi samymi regułami dostępu i edycji. Oba klienty obsługują tagi osobiste i zespołowe, serie dzienne i tygodniowe, wyjątki, anulowanie i przywracanie wystąpień, uczestnictwo, strefy czasowe, DST oraz jawne potwierdzanie kolizji.
+Web i mobile udostępniają kalendarz dnia, tygodnia i miesiąca, widok na pełnym ekranie, porównanie wybranych osób oraz wspólne terminy, z tymi samymi regułami dostępu i edycji. Oba klienty obsługują tagi osobiste i zespołowe, serie dzienne i tygodniowe, wyjątki, anulowanie i przywracanie wystąpień, uczestnictwo, strefy czasowe, DST oraz jawne potwierdzanie kolizji.
 
 Prywatne szczegóły zna autor i osoby zaproszone do danego wystąpienia. Pozostali członkowie wspólnego zespołu dostają tylko przedział „Zajęty”. Administrator nie czyta więcej niż zwykły członek; jedyne, co może dodatkowo, to wpisać wydarzenie w kalendarz osoby ze swojego zespołu, nie uczestnicząc w nim. Serwer stosuje te zasady także do bezpośrednich adresów wydarzeń, filtrów, planera i powiadomień.
 
@@ -14,7 +14,7 @@ Wyjście z zespołu i odwołanie zaproszeń są atomowe. Push sprawdza uprawnien
 
 ## Interfejs
 
-Web i mobile pokazują na co dzień tylko to, czego rodzina potrzebuje: datę z nawigacją, przełącznik okresu (web: „Dzień | Tydzień | Miesiąc”, mobile: „Dzień | Tydzień”), tagi i plan. Pozostałe opcje pojawiają się dopiero wtedy, gdy mają sens:
+Web i mobile pokazują na co dzień tylko to, czego rodzina potrzebuje: datę z nawigacją, przełącznik okresu „Dzień | Tydzień | Miesiąc”, tagi i plan. Pozostałe opcje pojawiają się dopiero wtedy, gdy mają sens:
 
 - Zakładki „Plan zespołu” i „Znajdź termin” widać tylko u osób należących do zespołu, a wybór zespołu tylko przy kilku zespołach.
 - W planie zespołu domyślnie widać wszystkie osoby; prywatność wyjaśnia jedna notka pod planem.
@@ -24,9 +24,9 @@ Web i mobile pokazują na co dzień tylko to, czego rodzina potrzebuje: datę z 
 - W edytorze uczestnicy pojawiają się przy wydarzeniu zespołowym; strefa wydarzenia i „Zajmuje czas uczestników” są w „Więcej opcji”.
 - Widoczności nie wybiera się osobno. Wydarzenie zespołu widzi cały zespół, a wydarzenie bez zespołu tylko autor; podpowiedź pod polem „Zespół wydarzenia” mówi, kto zobaczy szczegóły. Wydarzenie zespołu ma wyłącznie tagi tego zespołu, więc przy edycji starszego, prywatnego wpisu z tagiem osobistym edytor prosi o jego usunięcie.
 - Przy cyklu tygodniowym zaznaczony jest dzień tygodnia daty początku. Zmiana daty przenosi zwykły cykl na nowy dzień, a przy kilku wybranych dniach dokłada nowy i zostawia pozostałe. Przesunięcie początku przesuwa też koniec, więc wydarzenie zachowuje długość.
-- Web: widok miesiąca pokazuje tygodnie od poniedziałku z wydarzeniami w komórkach dni, także całodniowymi i wielodniowymi. Gdy się nie mieszczą, „+N więcej” otwiera listę dnia, a numer dnia przełącza na widok tego dnia. Nagłówek dnia w tygodniu też otwiera ten dzień, a czerwona linia wskazuje bieżącą godzinę.
-- Kliknięcie pustego miejsca kalendarza zaczyna nowe wydarzenie: w miesiącu w tym dniu (09:00–10:00), w tygodniu od klikniętej półgodziny na godzinę, a w pasku „Cały dzień” całodniowe. Po najechaniu kursorem pole pokazuje „+” lub godzinę startu. W planie zespołu wydarzenie od razu należy do zespołu, a jedynym uczestnikiem jest autor. W mobile tak samo działa dotknięcie pełnej godziny lub paska „Cały dzień” w tygodniu. Kliknięcie wydarzenia nadal otwiera jego szczegóły, a cudza zajętość na nie nie reaguje. Z klawiatury wydarzenie dodaje się przyciskiem „Nowe wydarzenie”.
-- Web: przycisk „Pełny ekran” przy przełączniku okresu rozciąga kalendarz na cały ekran (także w trybie pełnoekranowym przeglądarki) z tymi samymi filtrami, wyborem „Mój plan | Plan zespołu” i przyciskiem nowego wydarzenia. Edycja otwiera się w tym samym trybie. Wyjście: przycisk „Zamknij pełny ekran” albo Esc. Na telefonie tydzień mieści się bez przewijania w bok.
+- Widok miesiąca pokazuje tygodnie od poniedziałku z wydarzeniami w komórkach dni, także całodniowymi i wielodniowymi. Gdy się nie mieszczą, „+N więcej” (na telefonie „+N”) otwiera listę dnia, a numer dnia przełącza na widok tego dnia. Nagłówek dnia w tygodniu też otwiera ten dzień, a czerwona linia wskazuje bieżącą godzinę.
+- Kliknięcie pustego miejsca kalendarza zaczyna nowe wydarzenie: w miesiącu w tym dniu (09:00–10:00), w tygodniu od klikniętej półgodziny na godzinę, a w pasku „Cały dzień” całodniowe. Po najechaniu kursorem pole pokazuje „+” lub godzinę startu. W planie zespołu wydarzenie od razu należy do zespołu, a jedynym uczestnikiem jest autor. W mobile tak samo działa dotknięcie pustego miejsca dnia w miesiącu, a w tygodniu pełnej godziny lub paska „Cały dzień”. Kliknięcie wydarzenia nadal otwiera jego szczegóły, a cudza zajętość na nie nie reaguje. Z klawiatury wydarzenie dodaje się przyciskiem „Nowe wydarzenie”.
+- Przycisk „Pełny ekran” przy przełączniku okresu rozciąga kalendarz na cały ekran z tymi samymi filtrami, wyborem „Mój plan | Plan zespołu” i przyciskiem nowego wydarzenia. Web korzysta przy tym z trybu pełnoekranowego przeglądarki, a mobile chowa pasek stanu, nagłówek aplikacji i dolną nawigację. Edycja otwiera się w tym samym trybie. Wyjście: przycisk „Zamknij pełny ekran”, w webie także Esc, a w mobile systemowy przycisk Wstecz albo przejście na inny ekran. Na telefonie tydzień mieści się bez przewijania w bok.
 - Zaznaczony chip lub zakładka (widok, osoba, tag, dzień tygodnia, a w mobile także strefa) jest wypełniony, a pozostałe mają tylko obrys.
 
 ## Weryfikacja

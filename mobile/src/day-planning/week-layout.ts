@@ -21,6 +21,14 @@ const shiftDate = (date: string, amount: number): string => {
 
 export const mondayOf = (date: string): string => shiftDate(date, -((new Date(`${date}T12:00:00Z`).getUTCDay() + 6) % 7));
 export const weekDates = (date: string): string[] => Array.from({ length: 7 }, (_, offset) => shiftDate(mondayOf(date), offset));
+export const monthWeeks = (date: string): { start: string; end: string; weeks: number } => {
+  const first = `${date.slice(0, 7)}-01`;
+  const next = new Date(`${first}T12:00:00Z`);
+  next.setUTCMonth(next.getUTCMonth() + 1);
+  const start = mondayOf(first);
+  const end = shiftDate(mondayOf(shiftDate(next.toISOString().slice(0, 10), -1)), 7);
+  return { start, end, weeks: Math.round((Date.parse(`${end}T12:00:00Z`) - Date.parse(`${start}T12:00:00Z`)) / (7 * 86400000)) };
+};
 
 const formatParts = (instant: number, formatter: Intl.DateTimeFormat): { date: string; minute: number } => {
   const parts = formatter.formatToParts(new Date(instant));
