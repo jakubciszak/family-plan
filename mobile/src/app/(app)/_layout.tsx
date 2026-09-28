@@ -10,6 +10,7 @@ import { useAuth } from '@/auth/auth-context';
 import Backdrop from '@/components/backdrop';
 import NotificationCentre from '@/components/notification-centre';
 import AppTabBar from '@/navigation/app-tab-bar';
+import { FullScreenProvider, useFullScreen } from '@/navigation/full-screen';
 import { NotificationsProvider } from '@/notifications/notifications-context';
 import { usePersonalisation } from '@/personalisation/personalisation-context';
 import { useDressedUp } from '@/personalisation/use-screen-background';
@@ -18,11 +19,13 @@ export default function AppLayout() {
   const { user, restoring } = useAuth();
   if (restoring) return null;
   if (!user) return <Redirect href="/login" />;
-  return <ActionPlanProvider key={user.id} userId={user.id}><AuthenticatedLayout /></ActionPlanProvider>;
+  return <ActionPlanProvider key={user.id} userId={user.id}><FullScreenProvider><AuthenticatedLayout /></FullScreenProvider></ActionPlanProvider>;
 }
 
 function AuthenticatedLayout() {
   const { focused } = useActionPlans();
+  const { fullScreen } = useFullScreen();
+  const bare = focused || fullScreen;
   const { t } = useTranslation();
   const { user, restoring } = useAuth();
   const { own, error, reload } = usePersonalisation();
@@ -42,15 +45,15 @@ function AuthenticatedLayout() {
   return (
     <NotificationsProvider>
     <View style={[styles.stage, { backgroundColor: theme.colors.background }]}>
-      {!focused && <Backdrop backdrop={own?.backdrop} />}
-      {error && !focused && <Banner visible={error} actions={[{ label: t('common.retry'), onPress: () => void reload() }]}>
+      {!bare && <Backdrop backdrop={own?.backdrop} />}
+      {error && !bare && <Banner visible={error} actions={[{ label: t('common.retry'), onPress: () => void reload() }]}>
         {error ? t('errors.generic') : ''}
       </Banner>}
 
       <Tabs
-        tabBar={(props) => focused ? null : <AppTabBar {...props} />}
+        tabBar={(props) => bare ? null : <AppTabBar {...props} />}
         screenOptions={{
-          headerShown: !focused,
+          headerShown: !bare,
           sceneStyle: { backgroundColor: seeThrough ?? theme.colors.background },
           headerStyle: { backgroundColor: theme.colors.surface },
           headerTitleStyle: { color: theme.colors.onSurface },

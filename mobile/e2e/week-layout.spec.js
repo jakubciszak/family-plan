@@ -1,6 +1,8 @@
 const { test, expect } = require('@playwright/test');
 const mobile = require('../src/day-planning/week-layout');
 const web = require('../../frontend/src/services/weekCalendarLayout');
+const mobileDates = require('../src/dates');
+const webTime = require('../../frontend/src/services/dayPlanningTime');
 
 const interval = (key, start, end, extra = {}) => ({ key, start, end, ...extra });
 const monday = '2026-09-21';
@@ -100,3 +102,22 @@ test('web and mobile agree for crowded weeks and never put overlapping blocks in
     }
   }
 });
+
+for (const [platform, { monthWeeks }, { addMonths }] of [['mobile', mobile, mobileDates], ['web', web, webTime]]) {
+  test.describe(`${platform} monthly layout`, () => {
+    test('covers the whole month with Monday-first weeks and an exclusive end', () => {
+      expect(monthWeeks('2026-09-21')).toEqual({ start: '2026-08-31', end: '2026-10-05', weeks: 5 });
+      expect(monthWeeks('2021-02-14')).toEqual({ start: '2021-02-01', end: '2021-03-01', weeks: 4 });
+      expect(monthWeeks('2026-03-31')).toEqual({ start: '2026-02-23', end: '2026-04-06', weeks: 6 });
+      expect(monthWeeks('2026-12-01')).toEqual({ start: '2026-11-30', end: '2027-01-04', weeks: 5 });
+    });
+
+    test('moves by whole months and keeps the day inside shorter months', () => {
+      expect(addMonths('2026-01-31', 1)).toBe('2026-02-28');
+      expect(addMonths('2024-01-31', 1)).toBe('2024-02-29');
+      expect(addMonths('2026-12-15', 1)).toBe('2027-01-15');
+      expect(addMonths('2026-03-31', -1)).toBe('2026-02-28');
+      expect(addMonths('2026-01-10', -1)).toBe('2025-12-10');
+    });
+  });
+}

@@ -6,6 +6,12 @@ export const shiftDay = (day: string, offset: number): string => {
   return dayString(changed);
 };
 
+export const addMonths = (day: string, months: number): string => {
+  const [year, month, date] = day.split('-').map(Number);
+  const lastDay = new Date(Date.UTC(year, month + months, 0)).getUTCDate();
+  return new Date(Date.UTC(year, month - 1 + months, Math.min(date, lastDay))).toISOString().slice(0, 10);
+};
+
 export const currentMonday = (): string => {
   const today = new Date();
   return shiftDay(dayString(today), -((today.getDay() + 6) % 7));
