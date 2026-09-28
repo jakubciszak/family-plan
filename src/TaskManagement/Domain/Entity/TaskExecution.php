@@ -28,7 +28,7 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Index(columns: ['scheduled_for'])]
 class TaskExecution
 {
-    private const BACKLOG_DAYS = 7;
+    public const BACKLOG_DAYS = 7;
 
     #[ORM\Transient]
     private array $domainEvents = [];

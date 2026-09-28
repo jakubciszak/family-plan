@@ -48,6 +48,11 @@ Para zamiast ułamka dziesiętnego daje dokładne przeliczenie bez zaokrągleń 
 „5 zł za 3 punkty" to dokładnie 500/3, a zaokrąglenie (w górę od połowy) następuje raz, na
 końcu. Punkty poniżej progu nie dają nic; próg jest bramką, nie kwotą wolną.
 
+Punkty za zadania liczą się w tygodniu, w którym zadanie wykonano, a bonusy w tygodniu, na który
+je zaksięgowano. Bonus za serię dni księguje się na dzień, w którym seria się dopełniła, także
+gdy ten dzień dopisano albo zatwierdzono później, najdalej siedem dni wstecz, tak jak dopisywanie
+zadań. Jeśli tamten tydzień jest już zamknięty, bonus trafia na dzień naliczenia.
+
 ## Zamknięcie tygodnia i wypłata
 
 To dwie osobne decyzje, bo w domu wyglądają inaczej. Zamknąć da się wyłącznie tydzień,
