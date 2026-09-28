@@ -439,11 +439,13 @@ jobs:
 
           build_tools=$(find "$ANDROID_HOME/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -n 1)
           signer=$("$build_tools/apksigner" verify --print-certs "$apk")
-          digest=$(sed -n 's/^Signer #1 certificate SHA-256 digest: //p' <<< "$signer")
-          owner=$(sed -n 's/^Signer #1 certificate DN: //p' <<< "$signer")
+          digest=$(sed -n 's/^.*certificate SHA-256 digest: //p' <<< "$signer" | sort -u)
+          owner=$(sed -n 's/^.*certificate DN: //p' <<< "$signer" | sort -u)
 
           if [ "$digest" != "$KEYSTORE_DIGEST" ]; then
             echo "APK nie ma podpisu z ANDROID_KEYSTORE_BASE64: ${digest:-brak podpisu} zamiast ${KEYSTORE_DIGEST}."
+            echo "apksigner z build-tools $(basename "$build_tools") wypisał:"
+            printf '%s\n' "$signer"
             if [ ! -f plugins/with-release-signing.js ]; then
               echo "To wydanie powstało przed plugins/with-release-signing.js, więc jego APK ma podpis klucza debug."
             fi
