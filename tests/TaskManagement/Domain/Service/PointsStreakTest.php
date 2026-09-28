@@ -51,6 +51,31 @@ class PointsStreakTest extends TestCase
         $this->assertSame([], $run);
     }
 
+    public function testRunsSplitWhereADayFallsShortOrIsMissing(): void
+    {
+        $runs = PointsStreak::runs(DailyPoints::perDay([
+            $this->executionOn('2026-03-01', 30),
+            $this->executionOn('2026-03-02', 30),
+            $this->executionOn('2026-03-03', 5),
+            $this->executionOn('2026-03-04', 30),
+            $this->executionOn('2026-03-06', 30),
+            $this->executionOn('2026-03-07', 30),
+        ]), 20);
+
+        $this->assertSame([['2026-03-01', '2026-03-02'], ['2026-03-04'], ['2026-03-06', '2026-03-07']], $runs);
+    }
+
+    public function testARunGoesOnAcrossTheEndOfAMonth(): void
+    {
+        $runs = PointsStreak::runs(DailyPoints::perDay([
+            $this->executionOn('2026-02-27', 30),
+            $this->executionOn('2026-02-28', 30),
+            $this->executionOn('2026-03-01', 30),
+        ]), 20);
+
+        $this->assertSame([['2026-02-27', '2026-02-28', '2026-03-01']], $runs);
+    }
+
     private function executionOn(string $day, int $points = 10): TaskExecution
     {
         return TaskExecution::takeFromTemplate(

@@ -51,6 +51,28 @@ final class PointsStreak
     }
 
     /**
+     * @param array<string, int> $perDay
+     * @return list<list<string>>
+     */
+    public static function runs(array $perDay, int $pointsPerDay = 1): array
+    {
+        $runs = [];
+
+        foreach (DailyPoints::daysReaching($perDay, $pointsPerDay) as $day) {
+            $last = array_key_last($runs);
+
+            if ($last !== null && DailyPoints::day((string) end($runs[$last]))->diff(DailyPoints::day($day))->days === 1) {
+                $runs[$last][] = $day;
+                continue;
+            }
+
+            $runs[] = [$day];
+        }
+
+        return $runs;
+    }
+
+    /**
      * @param string[] $run
      * @return string[]
      */

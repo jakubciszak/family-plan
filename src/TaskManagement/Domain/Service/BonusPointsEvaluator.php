@@ -9,6 +9,7 @@ use App\Shared\Domain\Clock\ClockInterface;
 use App\Shared\Domain\ValueObject\Uuid;
 use DateTimeImmutable;
 use App\TaskManagement\Domain\Entity\BonusPointsRule;
+use App\TaskManagement\Domain\Entity\TaskExecution;
 use App\TaskManagement\Domain\Repository\TaskExecutionRepositoryInterface;
 use App\TaskManagement\Domain\ValueObject\RuleConfig;
 use App\TaskManagement\Domain\ValueObject\RuleType;
@@ -57,19 +58,49 @@ class BonusPointsEvaluator
      */
     public function earnedPeriodKeys(BonusPointsRule $rule, Uuid $userId): array
     {
-        if (!$this->isRuleMet($rule, $userId)) {
+        return array_map('strval', array_keys($this->earnedPeriods($rule, $userId)));
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public function earnedPeriods(BonusPointsRule $rule, Uuid $userId): array
+    {
+        if ($rule->type() === RuleType::CONSECUTIVE_DAYS) {
+            return $rule->isActive() ? $this->completedCycles($rule->config(), $userId) : [];
+        }
+
+        return $this->isRuleMet($rule, $userId) ? [$this->periodKey($rule, $userId) => $this->now()->format('Y-m-d')] : [];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function completedCycles(RuleConfig $config, Uuid $userId): array
+    {
+        $requiredDays = $config->requiredDays();
+
+        if ($requiredDays === null) {
             return [];
         }
 
-        if ($rule->type() !== RuleType::CONSECUTIVE_DAYS) {
-            return [$this->periodKey($rule, $userId)];
+        $pointsPerDay = $config->pointsPerDay() ?? 1;
+        $perDay = $this->streakDays($config, $userId);
+        $live = PointsStreak::aliveOn($perDay, $this->now()->format('Y-m-d'), $pointsPerDay);
+        $lateSince = $this->now()->modify(sprintf('-%d days', TaskExecution::BACKLOG_DAYS))->format('Y-m-d');
+        $cycles = [];
+
+        foreach (PointsStreak::runs($perDay, $pointsPerDay) as $run) {
+            foreach (array_chunk($run, $requiredDays) as $cycle) {
+                $completedOn = $cycle[count($cycle) - 1];
+
+                if (count($cycle) === $requiredDays && ($run === $live || $completedOn >= $lateSince)) {
+                    $cycles[$cycle[0]] = $completedOn;
+                }
+            }
         }
 
-        $requiredDays = $rule->config()->requiredDays();
-        $run = $this->liveStreak($rule->config(), $userId);
-        $cycles = array_filter(array_chunk($run, $requiredDays), static fn (array $cycle) => count($cycle) === $requiredDays);
-
-        return array_values(array_map(static fn (array $cycle) => $cycle[0], $cycles));
+        return $cycles;
     }
 
     private function evaluateConsecutiveDays(BonusPointsRule $rule, Uuid $userId): bool
