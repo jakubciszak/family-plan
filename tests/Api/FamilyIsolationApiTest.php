@@ -204,6 +204,32 @@ final class FamilyIsolationApiTest extends ApiTestCase
         ])->getStatusCode());
     }
 
+    public function testSharedChildDoesNotExposeTasksFromTheirOtherHome(): void
+    {
+        static::getContainer()->get(TeamMembershipRepositoryInterface::class)->join(
+            Uuid::fromString($this->teamB), $this->childA->id(), TeamRole::member()
+        );
+        $executionIds = [];
+        foreach ([[$this->parentA, $this->teamA], [$this->parentB, $this->teamB]] as [$parent, $team]) {
+            $this->loginAs($parent);
+            $template = $this->assertJsonResponse($this->postJson('/api/task-templates', [
+                'teamId' => $team, 'name' => 'Home task', 'points' => 10, 'frequency' => 'daily',
+            ]), 201);
+            $this->loginAs($this->childA);
+            $execution = $this->assertJsonResponse($this->postJson('/api/task-templates/' . $template['id'] . '/take', []), 201);
+            $executionIds[$team] = $execution['id'];
+        }
+        foreach ([[$this->parentA, $this->teamA], [$this->parentB, $this->teamB]] as [$parent, $team]) {
+            $this->loginAs($parent);
+            $executions = $this->getJson('/api/task-executions/of/' . $this->childA->id()->value())['executions'];
+            $this->assertSame([$executionIds[$team]], array_column($executions, 'id'));
+        }
+        static::getContainer()->get(TeamMembershipRepositoryInterface::class)->leave(Uuid::fromString($this->teamA), $this->childA->id());
+        $this->loginAs($this->childA);
+        $this->assertSame(403, $this->postJson('/api/task-executions/' . $executionIds[$this->teamA] . '/abandon', [])->getStatusCode());
+        $this->assertSame(204, $this->postJson('/api/task-executions/' . $executionIds[$this->teamB] . '/abandon', [])->getStatusCode());
+    }
+
     private function rule(): array
     {
         $this->assertSame(201, $this->postJson('/api/bonus-rules', ['teamId' => $this->teamA] + $this->ruleData())->getStatusCode());

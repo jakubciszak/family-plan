@@ -15,6 +15,8 @@ A family administrator must never be promoted to `ROLE_ADMIN` to configure their
 | Reference a task type from a bonus rule | Task type must belong to the rule's family |
 | Create a task | Administrator of that family; creator comes from authentication, never the payload |
 | Assign a task during creation | Assignee must belong to the same family |
+| Read another member's task executions | Only executions from families administered by the caller |
+| Abandon a task execution | Current family membership, plus assignee or assignment authority |
 | Read, complete or unassign a legacy task | Current family membership, plus the existing operation-specific checks |
 
 An inaccessible account or bonus rule returns 404 so that a supplied identifier does
