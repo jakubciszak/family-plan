@@ -163,7 +163,7 @@ final class FamilyIsolationApiTest extends ApiTestCase
     public function testTaskAccessAssignmentAndApprovalStayWithinFamily(): void
     {
         $task = $this->assertJsonResponse($this->postJson('/api/tasks', [
-            'name' => 'Own task', 'teamId' => $this->teamA, 'assignedUserId' => $this->childA->id()->value(),
+            'name' => 'Own task', 'points' => 10, 'teamId' => $this->teamA, 'assignedUserId' => $this->childA->id()->value(),
         ]), 201);
         $url = '/api/tasks/' . $task['id'];
         $this->loginAs($this->parentB);
@@ -183,7 +183,7 @@ final class FamilyIsolationApiTest extends ApiTestCase
     public function testRemovedAssigneeCannotCompleteOrUnassignTask(): void
     {
         $task = $this->assertJsonResponse($this->postJson('/api/tasks', [
-            'name' => 'Own task', 'teamId' => $this->teamA, 'assignedUserId' => $this->childA->id()->value(),
+            'name' => 'Own task', 'points' => 10, 'teamId' => $this->teamA, 'assignedUserId' => $this->childA->id()->value(),
         ]), 201);
         static::getContainer()->get(TeamMembershipRepositoryInterface::class)->leave(Uuid::fromString($this->teamA), $this->childA->id());
         $this->loginAs($this->childA);
