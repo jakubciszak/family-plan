@@ -152,7 +152,7 @@ test.describe('Complete User Workflow E2E', () => {
             });
 
             // Mock user points
-            await page.route('**/api/users/*/points', async route => {
+            await page.route('**/api/users/*/points*', async route => {
                 await route.fulfill({
                     status: 200,
                     contentType: 'application/json',
@@ -237,7 +237,7 @@ test.describe('Complete User Workflow E2E', () => {
                 });
             });
 
-            await page.route('**/api/users/*/points', async route => {
+            await page.route('**/api/users/*/points*', async route => {
                 await route.fulfill({
                     status: 200,
                     contentType: 'application/json',
@@ -322,7 +322,7 @@ test.describe('Complete User Workflow E2E', () => {
                 });
             });
 
-            await page.route('**/api/users/*/points', async route => {
+            await page.route('**/api/users/*/points*', async route => {
                 await route.fulfill({
                     status: 200,
                     contentType: 'application/json',
@@ -414,7 +414,7 @@ test.describe('Complete User Workflow E2E', () => {
                 });
             });
 
-            await page.route('**/api/users/*/points', async route => {
+            await page.route('**/api/users/*/points*', async route => {
                 await route.fulfill({
                     status: 200,
                     contentType: 'application/json',
@@ -583,7 +583,7 @@ test.describe('Complete User Workflow E2E', () => {
                 });
             });
 
-            await page.route('**/api/users/*/points', async route => {
+            await page.route('**/api/users/*/points*', async route => {
                 await route.fulfill({
                     status: 200,
                     contentType: 'application/json',
@@ -772,7 +772,7 @@ test.describe('Invitation Link Flow', () => {
         });
 
         // Mock user points
-        await page.route('**/api/users/*/points', async route => {
+        await page.route('**/api/users/*/points*', async route => {
             await route.fulfill({
                 status: 200,
                 contentType: 'application/json',
@@ -903,7 +903,7 @@ test.describe('Invitation Link Flow', () => {
         });
 
         // Mock user points
-        await page.route('**/api/users/*/points', async route => {
+        await page.route('**/api/users/*/points*', async route => {
             await route.fulfill({
                 status: 200,
                 contentType: 'application/json',
@@ -1047,7 +1047,7 @@ test.describe('Complete User Workflow - Integration Test', () => {
         });
 
         // Mock points
-        await page.route('**/api/users/*/points', async route => {
+        await page.route('**/api/users/*/points*', async route => {
             await route.fulfill({
                 status: 200,
                 contentType: 'application/json',

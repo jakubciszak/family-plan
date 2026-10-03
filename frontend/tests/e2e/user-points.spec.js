@@ -46,7 +46,7 @@ test.describe('User Points on Login', () => {
     });
 
     // Mock points endpoint
-    await page.route('**/api/users/*/points', async route => {
+    await page.route('**/api/users/*/points*', async route => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -102,7 +102,7 @@ test.describe('User Points on Login', () => {
     await setupAuthenticatedSession(page, 'user');
     
     // Mock points
-    await page.route('**/api/users/*/points', async route => {
+    await page.route('**/api/users/*/points*', async route => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
