@@ -26,8 +26,7 @@ final readonly class StreakDailyPoints
         RuleConfig $config,
         Uuid $userId,
         DateTimeImmutable $since,
-        DateTimeImmutable $until
-    ): array {
+        DateTimeImmutable $until, ?Uuid $teamId = null): array {
         $kinds = $config->accountKinds();
         $perDay = [];
 
@@ -36,7 +35,7 @@ final readonly class StreakDailyPoints
                 DailyPoints::perDay($this->executionRepository->findApprovedByUserSince(
                     $userId,
                     $since,
-                    $config->taskTemplateId()
+                    $config->taskTemplateId(), $teamId
                 )),
                 static fn (string $day) => $day >= $since->format('Y-m-d') && $day < $until->format('Y-m-d'),
                 ARRAY_FILTER_USE_KEY
@@ -48,7 +47,7 @@ final readonly class StreakDailyPoints
                 continue;
             }
 
-            foreach ($this->ledger->perDayBetween($userId, $since, $until, [$kind]) as $day => $points) {
+            foreach ($this->ledger->perDayBetween($userId, $since, $until, [$kind], $teamId) as $day => $points) {
                 $perDay[$day] = ($perDay[$day] ?? 0) + $points;
             }
         }

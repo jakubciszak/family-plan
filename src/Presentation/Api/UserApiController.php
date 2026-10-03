@@ -36,6 +36,7 @@ class UserApiController extends AbstractController
         private readonly UserWalletRepositoryInterface $userWalletRepository,
         private readonly PointsLedger $ledger,
         private readonly ResetUserPasswordHandler $resetUserPassword,
+        private readonly \App\Allowance\Application\Service\AllowanceAccess $allowanceAccess,
         private readonly TeamMembershipRepositoryInterface $memberships
     ) {
     }
@@ -210,7 +211,7 @@ class UserApiController extends AbstractController
             ]
         )
     )]
-    public function getPoints(string $id): JsonResponse
+    public function getPoints(string $id, \Symfony\Component\HttpFoundation\Request $request): JsonResponse
     {
         $this->assertMayRead($id, true);
         $user = $this->userRepository->findById(Uuid::fromString($id));
@@ -219,7 +220,9 @@ class UserApiController extends AbstractController
             return $this->json(['error' => 'User not found'], Response::HTTP_NOT_FOUND);
         }
 
-        $wallet = $this->userWalletRepository->findByUserId(Uuid::fromString($id));
+        $owner = Uuid::fromString($id);
+        $teamId = $this->allowanceAccess->teamFor($this->isGranted('ROLE_ADMIN') ? $owner : $this->callerId(), $owner, $request->query->get('teamId'));
+        $wallet = $this->userWalletRepository->findByUserId($owner, $teamId);
         $balance = 0;
         if ($wallet !== null) {
             $balance = $wallet->balance()->value();
@@ -228,7 +231,7 @@ class UserApiController extends AbstractController
         return $this->json([
             'userId' => $id,
             'balance' => $balance,
-            'accounts' => $this->ledger->balances(Uuid::fromString($id)),
+            'accounts' => $this->ledger->balances(Uuid::fromString($id), $teamId),
         ]);
     }
 

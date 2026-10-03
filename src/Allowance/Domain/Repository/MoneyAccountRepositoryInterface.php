@@ -10,12 +10,12 @@ use App\Shared\Domain\ValueObject\Uuid;
 
 interface MoneyAccountRepositoryInterface
 {
-    public function find(Uuid $userId, AccountKind $kind, ?Uuid $reference = null): ?MoneyAccount;
+    public function find(Uuid $userId, AccountKind $kind, ?Uuid $reference = null, ?Uuid $teamId = null): ?MoneyAccount;
 
     /**
      * @return MoneyAccount[]
      */
-    public function ofUser(Uuid $userId): array;
+    public function ofUser(Uuid $userId, ?Uuid $teamId = null): array;
 
     public function save(MoneyAccount $account): void;
 }

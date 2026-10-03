@@ -26,6 +26,14 @@ class Payout
      */
     private array $domainEvents = [];
 
+    #[ORM\Column(type: 'string', length: 36)]
+    private string $teamId = '';
+
+    public function teamId(): ?Uuid
+    {
+        return $this->teamId === '' ? null : Uuid::fromString($this->teamId);
+    }
+
     private function __construct(
         #[ORM\Id]
         #[ORM\Column(type: 'uuid')]
@@ -63,8 +71,7 @@ class Payout
         Money $amount,
         Uuid $offeredBy,
         ?string $note,
-        ClockInterface $clock
-    ): self {
+        ClockInterface $clock, ?Uuid $teamId = null): self {
         $amount->assertPositive('A payout');
 
         $offeredAt = $clock->now();
@@ -78,6 +85,8 @@ class Payout
             $offeredBy,
             $offeredAt
         );
+
+        $payout->teamId = $teamId?->value() ?? '';
 
         $payout->domainEvents[] = new PayoutOffered(
             $id,

@@ -17,7 +17,7 @@ use Doctrine\ORM\Mapping as ORM;
  */
 #[ORM\Entity]
 #[ORM\Table(name: 'allowance_week_closures')]
-#[ORM\UniqueConstraint(name: 'uniq_allowance_closure_user_week', columns: ['user_id', 'week_start'])]
+#[ORM\UniqueConstraint(name: 'uniq_allowance_closure_user_week', columns: ['team_id', 'user_id', 'week_start'])]
 #[ORM\Index(columns: ['team_id', 'week_start'])]
 class WeekClosure
 {

@@ -14,7 +14,7 @@ interface SavingsGoalRepositoryInterface
     /**
      * @return SavingsGoal[]
      */
-    public function ofUser(Uuid $userId, bool $openOnly = false): array;
+    public function ofUser(Uuid $userId, bool $openOnly = false, ?Uuid $teamId = null): array;
 
     public function save(SavingsGoal $goal): void;
 }

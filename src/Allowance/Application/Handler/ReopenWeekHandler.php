@@ -24,9 +24,10 @@ final readonly class ReopenWeekHandler
 
     public function __invoke(ReopenWeekCommand $command): void
     {
+        $teamId = $command->teamId === null ? null : \App\Shared\Domain\ValueObject\Uuid::fromString($command->teamId);
         $userId = Uuid::fromString($command->userId);
         $week = WeekStart::fromString($command->weekStart);
-        $closure = $this->closures->find($userId, $week);
+        $closure = $this->closures->find($userId, $week, teamId: $teamId);
 
         if ($closure === null) {
             throw new \DomainException('This week is not closed');
@@ -42,7 +43,7 @@ final readonly class ReopenWeekHandler
                 '',
                 null,
                 null,
-                ['week' => $week->value()]
+                ['week' => $week->value()], teamId: $teamId
             );
         }
 

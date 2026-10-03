@@ -14,12 +14,12 @@ interface PayoutRepositoryInterface
     /**
      * @return Payout[]
      */
-    public function awaitingConfirmation(Uuid $userId): array;
+    public function awaitingConfirmation(Uuid $userId, ?Uuid $teamId = null): array;
 
     /**
      * @return Payout[]
      */
-    public function ofUser(Uuid $userId, ?int $limit = 50): array;
+    public function ofUser(Uuid $userId, ?int $limit = 50, ?Uuid $teamId = null): array;
 
     public function save(Payout $payout): void;
 }

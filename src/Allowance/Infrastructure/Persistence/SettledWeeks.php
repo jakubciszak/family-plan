@@ -16,8 +16,8 @@ final readonly class SettledWeeks implements ClosedWeeksInterface
     {
     }
 
-    public function isClosedFor(Uuid $userId, DateTimeImmutable $day): bool
+    public function isClosedFor(Uuid $userId, DateTimeImmutable $day, ?Uuid $teamId = null): bool
     {
-        return $this->closures->find($userId, WeekStart::of($day)) !== null;
+        return $this->closures->find($userId, WeekStart::of($day), $teamId) !== null;
     }
 }

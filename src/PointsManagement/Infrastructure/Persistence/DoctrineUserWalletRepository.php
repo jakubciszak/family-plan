@@ -34,9 +34,9 @@ final readonly class DoctrineUserWalletRepository implements UserWalletRepositor
         return $this->repository->find($id);
     }
 
-    public function findByUserId(Uuid $userId): ?UserWallet
+    public function findByUserId(Uuid $userId, ?Uuid $teamId = null): ?UserWallet
     {
-        return $this->repository->findOneBy(['userId' => $userId]);
+        return $this->repository->findOneBy(['userId' => $userId, 'teamId' => $teamId?->value() ?? '']);
     }
 
     public function delete(UserWallet $wallet): void

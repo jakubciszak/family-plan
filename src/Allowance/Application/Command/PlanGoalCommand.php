@@ -11,7 +11,6 @@ final readonly class PlanGoalCommand
         public string $userId,
         public string $name,
         public int $target,
-        public ?string $wantedBy
-    ) {
+        public ?string $wantedBy, public ?string $teamId = null) {
     }
 }

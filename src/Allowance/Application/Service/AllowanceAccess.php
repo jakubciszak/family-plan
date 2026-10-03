@@ -13,7 +13,8 @@ final readonly class AllowanceAccess
 {
     public function __construct(
         private UserRepositoryInterface $users,
-        private Households $households
+        private Households $households,
+        private \App\TeamManagement\Domain\Repository\TeamMembershipRepositoryInterface $memberships
     ) {
     }
 
@@ -40,15 +41,39 @@ final readonly class AllowanceAccess
         return $member;
     }
 
-    public function adminTeamFor(Uuid $caller, Uuid $member): Uuid
+    public function adminTeamFor(Uuid $caller, Uuid $member, ?string $wantedTeam = null): Uuid
     {
-        $teamId = $this->households->sharedWithAdmin($caller, $member);
+        $teamId = $this->teamFor($caller, $member, $wantedTeam, true);
 
         if ($teamId === null) {
             throw new UnauthorizedTeamActionException('Only an admin of their team settles a week for a member');
         }
 
         return $teamId;
+    }
+
+    public function teamFor(Uuid $caller, Uuid $member, ?string $wantedTeam = null, bool $manage = false): ?Uuid
+    {
+        $teams = [];
+        foreach ($this->memberships->ofUser($member) as $membership) {
+            $team = $membership->teamId();
+            if (($caller->equals($member) && !$manage) || $this->memberships->isAdmin($caller, $team)) {
+                $teams[$team->value()] = $team;
+            }
+        }
+        if ($wantedTeam !== null) {
+            if (!isset($teams[$wantedTeam])) {
+                throw new UnauthorizedTeamActionException('This household is not available to you');
+            }
+            return $teams[$wantedTeam];
+        }
+        if (count($teams) > 1) {
+            throw new \DomainException('Choose a household using teamId');
+        }
+        if ($teams === [] && (!$caller->equals($member) || $manage)) {
+            throw new UnauthorizedTeamActionException('This household is not available to you');
+        }
+        return $teams === [] ? null : array_values($teams)[0];
     }
 
     public function assertSelf(Uuid $caller, Uuid $owner): void

@@ -11,12 +11,12 @@ use DateTimeImmutable;
 
 interface WeekClosureRepositoryInterface
 {
-    public function find(Uuid $userId, WeekStart $week): ?WeekClosure;
+    public function find(Uuid $userId, WeekStart $week, ?Uuid $teamId = null): ?WeekClosure;
 
     /**
      * @return WeekClosure[]
      */
-    public function ofUserBetween(Uuid $userId, DateTimeImmutable $from, DateTimeImmutable $to): array;
+    public function ofUserBetween(Uuid $userId, DateTimeImmutable $from, DateTimeImmutable $to, ?Uuid $teamId = null): array;
 
     public function save(WeekClosure $closure): void;
 

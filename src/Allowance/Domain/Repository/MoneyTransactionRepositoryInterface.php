@@ -17,5 +17,5 @@ interface MoneyTransactionRepositoryInterface
     /**
      * @return MoneyTransaction[]
      */
-    public function ofUser(Uuid $userId, ?DateTimeImmutable $from = null, ?DateTimeImmutable $to = null, int $limit = 100): array;
+    public function ofUser(Uuid $userId, ?DateTimeImmutable $from = null, ?DateTimeImmutable $to = null, int $limit = 100, ?Uuid $teamId = null): array;
 }

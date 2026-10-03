@@ -29,7 +29,7 @@ final readonly class DoctrineEntryRepository implements EntryRepositoryInterface
         return $this->entityManager->find(Entry::class, $id);
     }
 
-    public function sumBetween(Uuid $userId, DateTimeImmutable $from, DateTimeImmutable $to, array $kinds): int
+    public function sumBetween(Uuid $userId, DateTimeImmutable $from, DateTimeImmutable $to, array $kinds, ?Uuid $teamId = null): int
     {
         if ($kinds === []) {
             return 0;
@@ -40,6 +40,8 @@ final readonly class DoctrineEntryRepository implements EntryRepositoryInterface
             ->from(Entry::class, 'e')
             ->join(Account::class, 'a', 'WITH', 'a.id = e.accountId')
             ->where('a.userId = :userId')
+            ->andWhere('a.teamId = :teamId')
+            ->setParameter('teamId', $teamId?->value() ?? '')
             ->andWhere('a.kind IN (:kinds)')
             ->andWhere('e.bookedAt >= :from')
             ->andWhere('e.bookedAt < :to')
@@ -53,7 +55,7 @@ final readonly class DoctrineEntryRepository implements EntryRepositoryInterface
         return (int) $total;
     }
 
-    public function perDayBetween(Uuid $userId, DateTimeImmutable $from, DateTimeImmutable $to, array $kinds): array
+    public function perDayBetween(Uuid $userId, DateTimeImmutable $from, DateTimeImmutable $to, array $kinds, ?Uuid $teamId = null): array
     {
         if ($kinds === []) {
             return [];
@@ -64,6 +66,8 @@ final readonly class DoctrineEntryRepository implements EntryRepositoryInterface
             ->from(Entry::class, 'e')
             ->join(Account::class, 'a', 'WITH', 'a.id = e.accountId')
             ->where('a.userId = :userId')
+            ->andWhere('a.teamId = :teamId')
+            ->setParameter('teamId', $teamId?->value() ?? '')
             ->andWhere('a.kind IN (:kinds)')
             ->andWhere('e.bookedAt >= :from')
             ->andWhere('e.bookedAt < :to')
@@ -84,7 +88,7 @@ final readonly class DoctrineEntryRepository implements EntryRepositoryInterface
         return $perDay;
     }
 
-    public function between(Uuid $userId, DateTimeImmutable $from, DateTimeImmutable $to, array $kinds): array
+    public function between(Uuid $userId, DateTimeImmutable $from, DateTimeImmutable $to, array $kinds, ?Uuid $teamId = null): array
     {
         if ($kinds === []) {
             return [];
@@ -95,6 +99,8 @@ final readonly class DoctrineEntryRepository implements EntryRepositoryInterface
             ->from(Entry::class, 'e')
             ->join(Account::class, 'a', 'WITH', 'a.id = e.accountId')
             ->where('a.userId = :userId')
+            ->andWhere('a.teamId = :teamId')
+            ->setParameter('teamId', $teamId?->value() ?? '')
             ->andWhere('a.kind IN (:kinds)')
             ->andWhere('e.bookedAt >= :from')
             ->andWhere('e.bookedAt < :to')

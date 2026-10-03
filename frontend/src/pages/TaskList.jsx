@@ -208,7 +208,7 @@ function TaskList({ onNavigate, user, onInspectMember, onOpenPlan }) {
         </span>
     );
 
-    const myWeek = <WeekCalendar refreshToken={refreshToken} />;
+    const myWeek = <WeekCalendar teamId={selectedTeam?.id} refreshToken={refreshToken} />;
 
     const teamWeeks = <MemberWeeks teamId={selectedTeam?.id} refreshToken={refreshToken} />;
 

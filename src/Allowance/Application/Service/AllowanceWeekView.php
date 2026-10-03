@@ -28,13 +28,12 @@ final readonly class AllowanceWeekView
     ) {
     }
 
-    public function of(Uuid $userId, WeekStart $week): array
+    public function of(Uuid $userId, WeekStart $week, ?Uuid $teamId = null): array
     {
-        $teamId = $this->households->teamOf($userId);
-        $closure = $this->closures->find($userId, $week);
+        $closure = $this->closures->find($userId, $week, teamId: $teamId);
 
-        $tasksPerDay = $this->points->tasksPerDay($userId, $week);
-        $bonusPerDay = $this->points->bonusPerDay($userId, $week);
+        $tasksPerDay = $this->points->tasksPerDay($userId, $week, teamId: $teamId);
+        $bonusPerDay = $this->points->bonusPerDay($userId, $week, teamId: $teamId);
 
         $expected = $this->calculator->settle(
             $teamId === null ? [] : $this->rules->ofTeam($teamId),
@@ -61,6 +60,7 @@ final readonly class AllowanceWeekView
         return [
             'weekStart' => $week->value(),
             'currency' => $this->currency,
+            'teamId' => $teamId?->value(),
             'days' => $days,
             'points' => array_sum(array_column($days, 'points')),
             'bonusPoints' => array_sum(array_column($days, 'bonus')),

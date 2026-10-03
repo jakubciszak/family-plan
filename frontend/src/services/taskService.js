@@ -57,8 +57,9 @@ const taskService = {
         return await apiClient.get(`/api/points/leaderboard?${params}`);
     },
 
-    async getWeek(weekStart, userId) {
+    async getWeek(weekStart, userId, teamId) {
         const params = new URLSearchParams();
+        if (teamId) params.set('teamId', teamId);
         if (weekStart) {
             params.set('weekStart', weekStart);
         }
@@ -69,12 +70,13 @@ const taskService = {
         return await apiClient.get(`/api/points/week${query ? `?${query}` : ''}`);
     },
 
-    async takeBackBonus(entryId, userId) {
-        return await apiClient.delete(`/api/points/bonuses/${entryId}?userId=${userId}`);
+    async takeBackBonus(entryId, userId, teamId) {
+        return await apiClient.delete(`/api/points/bonuses/${entryId}?userId=${userId}${teamId ? `&teamId=${teamId}` : ''}`);
     },
 
-    async getDay(date, userId) {
+    async getDay(date, userId, teamId) {
         const params = new URLSearchParams({ date });
+        if (teamId) params.set('teamId', teamId);
         if (userId) {
             params.set('userId', userId);
         }

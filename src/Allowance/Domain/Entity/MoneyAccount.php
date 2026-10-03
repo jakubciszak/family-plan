@@ -13,10 +13,18 @@ use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity]
 #[ORM\Table(name: 'allowance_accounts')]
-#[ORM\UniqueConstraint(name: 'uniq_allowance_account', columns: ['user_id', 'kind', 'reference'])]
+#[ORM\UniqueConstraint(name: 'uniq_allowance_account', columns: ['team_id', 'user_id', 'kind', 'reference'])]
 #[ORM\Index(columns: ['user_id'])]
 class MoneyAccount
 {
+    #[ORM\Column(type: 'string', length: 36)]
+    private string $teamId = '';
+
+    public function teamId(): ?Uuid
+    {
+        return $this->teamId === '' ? null : Uuid::fromString($this->teamId);
+    }
+
     private function __construct(
         #[ORM\Id]
         #[ORM\Column(type: 'uuid')]
@@ -42,13 +50,16 @@ class MoneyAccount
     ) {
     }
 
-    public static function open(Uuid $id, Uuid $userId, AccountKind $kind, ClockInterface $clock, ?Uuid $reference = null): self
+    public static function open(Uuid $id, Uuid $userId, AccountKind $kind, ClockInterface $clock, ?Uuid $reference = null, ?Uuid $teamId = null): self
     {
         if ($kind->needsReference() && $reference === null) {
             throw new \DomainException(sprintf('An account of kind %s is always kept for something', $kind->value));
         }
 
-        return new self($id, $userId, $kind, $reference?->value() ?? '', 0, $clock->now());
+        $entity = new self($id, $userId, $kind, $reference?->value() ?? '', 0, $clock->now());
+        $entity->teamId = $teamId?->value() ?? '';
+
+        return $entity;
     }
 
     public function post(MoneyEntry $entry, ClockInterface $clock): void

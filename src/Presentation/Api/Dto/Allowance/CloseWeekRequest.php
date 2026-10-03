@@ -15,7 +15,6 @@ final readonly class CloseWeekRequest
 
         #[Assert\NotBlank]
         #[Assert\Date]
-        public string $weekStart
-    ) {
+        public string $weekStart, #[Assert\Uuid] public ?string $teamId = null) {
     }
 }

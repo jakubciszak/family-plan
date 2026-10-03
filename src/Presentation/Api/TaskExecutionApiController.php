@@ -133,7 +133,7 @@ class TaskExecutionApiController extends AbstractController
         $member = $this->memberFrom($request, $teamId);
         $doneOn = $this->doneOn($request);
 
-        if ($doneOn !== null && $this->closedWeeks->isClosedFor($member, $doneOn)) {
+        if ($doneOn !== null && $this->closedWeeks->isClosedFor($member, $doneOn, $teamId)) {
             throw new \DomainException('That week has already been settled, so nothing more can be booked into it');
         }
 
@@ -260,7 +260,7 @@ class TaskExecutionApiController extends AbstractController
 
         $doneOn = $this->doneOn($request);
 
-        if ($doneOn !== null && $this->closedWeeks->isClosedFor($this->callerId(), $doneOn)) {
+        if ($doneOn !== null && $this->closedWeeks->isClosedFor($this->callerId(), $doneOn, $this->teamOf($this->templateOf($execution)))) {
             throw new \DomainException('That week has already been settled, so nothing more can be booked into it');
         }
 
@@ -445,7 +445,7 @@ class TaskExecutionApiController extends AbstractController
                     sprintf('Execution removed: %s', $execution->name()?->value()),
                     $execution->id(),
                     'execution-removed',
-                    $execution->earnedOn()
+                    $execution->earnedOn(), teamId: $this->teamOf($this->templateOf($execution))
                 );
             }
 
@@ -468,7 +468,7 @@ class TaskExecutionApiController extends AbstractController
         $execution->assertApproved();
         $member = $execution->assignedUserId();
 
-        if ($member === null || $this->closedWeeks->isClosedFor($member, $execution->earnedOn())) {
+        if ($member === null || $this->closedWeeks->isClosedFor($member, $execution->earnedOn(), $teamId)) {
             throw new \DomainException('An execution in a settled week cannot be corrected');
         }
 

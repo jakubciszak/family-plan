@@ -22,6 +22,7 @@ final readonly class RecordIncomeHandler
 
     public function __invoke(RecordIncomeCommand $command): void
     {
+        $teamId = $command->teamId === null ? null : \App\Shared\Domain\ValueObject\Uuid::fromString($command->teamId);
         $this->ledger->transfer(
             Uuid::fromString($command->userId),
             AccountRef::income(),
@@ -30,7 +31,7 @@ final readonly class RecordIncomeHandler
             TransactionType::INCOME,
             $command->description,
             Uuid::fromString($command->id),
-            BookingDay::from($command->on)
+            BookingDay::from($command->on), teamId: $teamId
         );
     }
 }

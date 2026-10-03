@@ -29,12 +29,14 @@ import { useAppTheme } from '@/theme/theme-context';
 
 export default function PointsCalendar({
   userId,
+  teamId,
   canManage = false,
   revision = 0,
   title,
   onChanged,
 }: {
   userId?: string;
+  teamId?: string;
   title?: string;
   canManage?: boolean;
   revision?: number;
@@ -55,12 +57,12 @@ export default function PointsCalendar({
 
   const load = useCallback(async () => {
     try {
-      setWeek(await readCalendar(weekStart, userId));
+      setWeek(await readCalendar(weekStart, userId, teamId));
       setError(false);
     } catch {
       setError(true);
     }
-  }, [weekStart, userId]);
+  }, [weekStart, userId, teamId]);
 
   useFocusEffect(
     useCallback(() => {
@@ -70,7 +72,7 @@ export default function PointsCalendar({
 
   const openDay = async (date: string) => {
     try {
-      setDay(await readDay(date, userId));
+      setDay(await readDay(date, userId, teamId));
       setError(false);
     } catch {
       setError(true);
@@ -338,7 +340,7 @@ export default function PointsCalendar({
                   {canManage && !bonus.takenBack && bonus.points > 0 ? (
                     <Button
                       disabled={busy}
-                      onPress={() => void change(() => takeBackBonus(bonus.id, day.userId))}
+                      onPress={() => void change(() => takeBackBonus(bonus.id, day.userId, teamId))}
                     >
                       {t('common.delete')}
                     </Button>

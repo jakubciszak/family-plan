@@ -44,18 +44,18 @@ final readonly class BonusPointsPayout implements BonusSettlementInterface
                         sprintf('Bonus: %s', $rule->name()),
                         $rule->id(),
                         (string) $periodKey,
-                        $this->bookedOn($userId, $day)
+                        $this->bookedOn($userId, $day, $rule->teamId()), $rule->teamId()
                     );
                 }
             }
         }
     }
 
-    private function bookedOn(Uuid $userId, string $day): ?DateTimeImmutable
+    private function bookedOn(Uuid $userId, string $day, ?Uuid $teamId = null): ?DateTimeImmutable
     {
         $noon = DailyPoints::day($day)->setTime(12, 0);
 
-        if ($day >= $this->clock->now()->format('Y-m-d') || $this->closedWeeks->isClosedFor($userId, $noon)) {
+        if ($day >= $this->clock->now()->format('Y-m-d') || $this->closedWeeks->isClosedFor($userId, $noon, $teamId)) {
             return null;
         }
 

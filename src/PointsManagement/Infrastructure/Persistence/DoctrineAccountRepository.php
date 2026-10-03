@@ -16,17 +16,17 @@ final readonly class DoctrineAccountRepository implements AccountRepositoryInter
     {
     }
 
-    public function find(Uuid $userId, AccountKind $kind): ?Account
+    public function find(Uuid $userId, AccountKind $kind, ?Uuid $teamId = null): ?Account
     {
         return $this->entityManager->getRepository(Account::class)->findOneBy([
-            'userId' => $userId,
+            'userId' => $userId, 'teamId' => $teamId?->value() ?? '',
             'kind' => $kind,
         ]);
     }
 
-    public function ofUser(Uuid $userId): array
+    public function ofUser(Uuid $userId, ?Uuid $teamId = null): array
     {
-        return $this->entityManager->getRepository(Account::class)->findBy(['userId' => $userId]);
+        return $this->entityManager->getRepository(Account::class)->findBy(['userId' => $userId, 'teamId' => $teamId?->value() ?? '']);
     }
 
     public function save(Account $account): void

@@ -17,20 +17,22 @@ final readonly class DoctrineWeekClosureRepository implements WeekClosureReposit
     {
     }
 
-    public function find(Uuid $userId, WeekStart $week): ?WeekClosure
+    public function find(Uuid $userId, WeekStart $week, ?Uuid $teamId = null): ?WeekClosure
     {
         return $this->entityManager->getRepository(WeekClosure::class)->findOneBy([
-            'userId' => $userId,
+            'userId' => $userId, 'teamId' => $teamId,
             'weekStart' => $week->monday(),
         ]);
     }
 
-    public function ofUserBetween(Uuid $userId, DateTimeImmutable $from, DateTimeImmutable $to): array
+    public function ofUserBetween(Uuid $userId, DateTimeImmutable $from, DateTimeImmutable $to, ?Uuid $teamId = null): array
     {
         return $this->entityManager->createQueryBuilder()
             ->select('c')
             ->from(WeekClosure::class, 'c')
             ->where('c.userId = :userId')
+            ->andWhere('c.teamId = :teamId')
+            ->setParameter('teamId', $teamId?->value() ?? '')
             ->andWhere('c.weekStart >= :from')
             ->andWhere('c.weekStart < :to')
             ->setParameter('userId', $userId)

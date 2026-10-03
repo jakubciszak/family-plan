@@ -37,7 +37,7 @@ final readonly class CloseWeekHandler
         $teamId = Uuid::fromString($command->teamId);
         $week = WeekStart::fromString($command->weekStart);
 
-        if ($this->closures->find($userId, $week) !== null) {
+        if ($this->closures->find($userId, $week, teamId: $teamId) !== null) {
             throw new \DomainException('This week has already been closed');
         }
 
@@ -47,7 +47,7 @@ final readonly class CloseWeekHandler
 
         $settlement = $this->calculator->settle(
             $this->rules->ofTeam($teamId),
-            $this->points->of($userId, $week)
+            $this->points->of($userId, $week, teamId: $teamId)
         );
 
         $transactionId = null;
@@ -62,7 +62,7 @@ final readonly class CloseWeekHandler
                 '',
                 null,
                 null,
-                ['week' => $week->value()]
+                ['week' => $week->value()], teamId: $teamId
             )->id();
         }
 

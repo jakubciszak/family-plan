@@ -30,19 +30,20 @@ final readonly class GoalsView
     ) {
     }
 
-    public function of(Uuid $userId, bool $openOnly = true): array
+    public function of(Uuid $userId, bool $openOnly = true, ?Uuid $teamId = null): array
     {
-        $saved = $this->ledger->goalBalances($userId);
-        $pace = $this->weeklyPace($userId);
-        $available = $this->ledger->balance($userId, AccountRef::available());
+        $saved = $this->ledger->goalBalances($userId, teamId: $teamId);
+        $pace = $this->weeklyPace($userId, teamId: $teamId);
+        $available = $this->ledger->balance($userId, AccountRef::available(), teamId: $teamId);
 
         return [
             'currency' => $this->currency,
+            'teamId' => $teamId?->value(),
             'weeklyPace' => $pace->minorUnits(),
             'available' => $available->minorUnits(),
             'goals' => array_map(
                 fn (SavingsGoal $goal) => $this->describe($goal, $saved[$goal->id()->value()] ?? Money::zero(), $pace),
-                $this->goals->ofUser($userId, $openOnly)
+                $this->goals->ofUser($userId, $openOnly, teamId: $teamId)
             ),
         ];
     }
@@ -71,10 +72,10 @@ final readonly class GoalsView
         ];
     }
 
-    private function weeklyPace(Uuid $userId): Money
+    private function weeklyPace(Uuid $userId, ?Uuid $teamId = null): Money
     {
         $from = $this->clock->now()->modify(sprintf('-%d weeks', self::WEEKS_OF_PACE))->setTime(0, 0);
-        $closures = $this->closures->ofUserBetween($userId, $from, $this->clock->now());
+        $closures = $this->closures->ofUserBetween($userId, $from, $this->clock->now(), teamId: $teamId);
 
         if ($closures === []) {
             return Money::zero();

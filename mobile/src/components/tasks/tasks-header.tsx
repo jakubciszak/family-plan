@@ -15,7 +15,7 @@ import { useNotifications } from '@/notifications/notifications-context';
 import { usePersonalisation } from '@/personalisation/personalisation-context';
 import { useAppTheme } from '@/theme/theme-context';
 
-export default function TasksHeader({ revision }: { revision: number }) {
+export default function TasksHeader({ revision, teamId }: { revision: number; teamId?: string }) {
   const { t } = useTranslation();
   const { user, signOut } = useAuth();
   const { own, save } = usePersonalisation();
@@ -32,8 +32,8 @@ export default function TasksHeader({ revision }: { revision: number }) {
       let active = true;
       if (user && revision >= 0) {
         void Promise.all([
-          readCalendar(currentMonday()),
-          apiClient.get<{ balance: number }>(`/api/users/${user.id}/points`),
+          readCalendar(currentMonday(), undefined, teamId),
+          apiClient.get<{ balance: number }>(`/api/users/${user.id}/points${teamId ? `?teamId=${teamId}` : ''}`),
         ])
           .then(([week, account]) => {
             if (active) setPoints({ week: week.total, balance: account.balance });
@@ -43,7 +43,7 @@ export default function TasksHeader({ revision }: { revision: number }) {
       return () => {
         active = false;
       };
-    }, [user, revision]),
+    }, [user, revision, teamId]),
   );
   return (
     <View style={{ backgroundColor: theme.colors.surface, paddingTop: insets.top }}>

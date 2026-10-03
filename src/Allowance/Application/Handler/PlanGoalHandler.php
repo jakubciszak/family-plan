@@ -24,13 +24,14 @@ final readonly class PlanGoalHandler
 
     public function __invoke(PlanGoalCommand $command): void
     {
+        $teamId = $command->teamId === null ? null : \App\Shared\Domain\ValueObject\Uuid::fromString($command->teamId);
         $this->goals->save(SavingsGoal::plan(
             Uuid::fromString($command->id),
             Uuid::fromString($command->userId),
             $command->name,
             Money::fromMinorUnits($command->target),
             BookingDay::from($command->wantedBy),
-            $this->clock
+            $this->clock, $teamId
         ));
     }
 }

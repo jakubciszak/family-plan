@@ -30,19 +30,19 @@ final class InMemoryEntryRepository implements EntryRepositoryInterface
         return $this->entries[$id->value()] ?? null;
     }
 
-    public function sumBetween(Uuid $userId, DateTimeImmutable $from, DateTimeImmutable $to, array $kinds): int
+    public function sumBetween(Uuid $userId, DateTimeImmutable $from, DateTimeImmutable $to, array $kinds, ?Uuid $teamId = null): int
     {
         return array_sum(array_map(
             static fn (Entry $entry) => $entry->amount(),
-            $this->matching($userId, $from, $to, $kinds)
+            $this->matching($userId, $from, $to, $kinds, $teamId)
         ));
     }
 
-    public function perDayBetween(Uuid $userId, DateTimeImmutable $from, DateTimeImmutable $to, array $kinds): array
+    public function perDayBetween(Uuid $userId, DateTimeImmutable $from, DateTimeImmutable $to, array $kinds, ?Uuid $teamId = null): array
     {
         $perDay = [];
 
-        foreach ($this->matching($userId, $from, $to, $kinds) as $entry) {
+        foreach ($this->matching($userId, $from, $to, $kinds, $teamId) as $entry) {
             $day = $entry->bookedAt()->format('Y-m-d');
             $perDay[$day] = ($perDay[$day] ?? 0) + $entry->amount();
         }
@@ -50,9 +50,9 @@ final class InMemoryEntryRepository implements EntryRepositoryInterface
         return $perDay;
     }
 
-    public function between(Uuid $userId, DateTimeImmutable $from, DateTimeImmutable $to, array $kinds): array
+    public function between(Uuid $userId, DateTimeImmutable $from, DateTimeImmutable $to, array $kinds, ?Uuid $teamId = null): array
     {
-        $entries = array_values($this->matching($userId, $from, $to, $kinds));
+        $entries = array_values($this->matching($userId, $from, $to, $kinds, $teamId));
 
         usort($entries, static fn (Entry $a, Entry $b) => $a->bookedAt() <=> $b->bookedAt());
 
@@ -75,11 +75,11 @@ final class InMemoryEntryRepository implements EntryRepositoryInterface
     /**
      * @return Entry[]
      */
-    private function matching(Uuid $userId, DateTimeImmutable $from, DateTimeImmutable $to, array $kinds): array
+    private function matching(Uuid $userId, DateTimeImmutable $from, DateTimeImmutable $to, array $kinds, ?Uuid $teamId = null): array
     {
         $wanted = [];
 
-        foreach ($this->accounts->ofUser($userId) as $account) {
+        foreach ($this->accounts->ofUser($userId, $teamId) as $account) {
             if (in_array($account->kind(), $kinds, true)) {
                 $wanted[] = $account->id()->value();
             }

@@ -16,11 +16,11 @@ export type CalendarDay = {
   bonuses: { id: string; points: number; name: string; takenBack: boolean }[];
 };
 
-export const readCalendar = (weekStart: string, userId?: string): Promise<CalendarWeek> =>
-  apiClient.get(`/api/points/week?${new URLSearchParams({ weekStart, ...(userId ? { userId } : {}) })}`);
+export const readCalendar = (weekStart: string, userId?: string, teamId?: string): Promise<CalendarWeek> =>
+  apiClient.get(`/api/points/week?${new URLSearchParams({ weekStart, ...(userId ? { userId } : {}), ...(teamId ? { teamId } : {}) })}`);
 
-export const readDay = (date: string, userId?: string): Promise<CalendarDay> =>
-  apiClient.get(`/api/points/day?${new URLSearchParams({ date, ...(userId ? { userId } : {}) })}`);
+export const readDay = (date: string, userId?: string, teamId?: string): Promise<CalendarDay> =>
+  apiClient.get(`/api/points/day?${new URLSearchParams({ date, ...(userId ? { userId } : {}), ...(teamId ? { teamId } : {}) })}`);
 
 export type Standing = { userId: string; name: string; total: number; perDay?: Record<string, number> };
 
@@ -33,5 +33,5 @@ export const moveExecution = (id: string, doneOn: string): Promise<unknown> =>
 export const deleteExecution = (id: string): Promise<unknown> =>
   apiClient.delete(`/api/task-executions/${id}`);
 
-export const takeBackBonus = (id: string, userId: string): Promise<unknown> =>
-  apiClient.delete(`/api/points/bonuses/${id}?${new URLSearchParams({ userId })}`);
+export const takeBackBonus = (id: string, userId: string, teamId?: string): Promise<unknown> =>
+  apiClient.delete(`/api/points/bonuses/${id}?${new URLSearchParams({ userId, ...(teamId ? { teamId } : {}) })}`);

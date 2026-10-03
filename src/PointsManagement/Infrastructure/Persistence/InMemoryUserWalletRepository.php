@@ -28,10 +28,10 @@ final class InMemoryUserWalletRepository implements UserWalletRepositoryInterfac
         return $this->wallets[$id->value()] ?? null;
     }
 
-    public function findByUserId(Uuid $userId): ?UserWallet
+    public function findByUserId(Uuid $userId, ?Uuid $teamId = null): ?UserWallet
     {
         foreach ($this->wallets as $wallet) {
-            if ($wallet->userId()->equals($userId)) {
+            if ($wallet->userId()->equals($userId) && $wallet->teamId()?->value() === $teamId?->value()) {
                 return $wallet;
             }
         }

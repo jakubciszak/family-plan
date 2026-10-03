@@ -410,7 +410,7 @@ export default function TasksScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: ground }}>
-      <TasksHeader revision={revision} />
+      <TasksHeader teamId={selectedTeam?.id} revision={revision} />
       {celebrating ? (
         <Celebration withSound={own?.makesSound ?? false} onDone={endCelebration} />
       ) : null}
@@ -475,6 +475,7 @@ export default function TasksScreen() {
             if (part === 'week')
               return isAdmin ? (
                 <MemberWeeks
+                  teamId={selectedTeam?.id}
                   key={`${part}-${selectedTeam?.id}`}
                   storageKey={`hidden-week-members:${user?.id}:${selectedTeam?.id}`}
                   members={members}
@@ -482,11 +483,12 @@ export default function TasksScreen() {
                   revision={revision}
                 />
               ) : (
-                <PointsCalendar key={part} revision={revision} />
+                <PointsCalendar teamId={selectedTeam?.id} key={`${part}-${selectedTeam?.id}`} revision={revision} />
               );
             if (part === 'members')
               return !isAdmin ? (
                 <MemberWeeks
+                  teamId={selectedTeam?.id}
                   key={`${part}-${selectedTeam?.id}`}
                   storageKey={`hidden-week-members:${user?.id}:${selectedTeam?.id}`}
                   members={members}

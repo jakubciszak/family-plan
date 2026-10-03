@@ -11,7 +11,6 @@ final readonly class RecordExpenseCommand
         public string $userId,
         public int $amount,
         public string $description,
-        public ?string $on
-    ) {
+        public ?string $on, public ?string $teamId = null) {
     }
 }

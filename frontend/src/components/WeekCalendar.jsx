@@ -24,7 +24,7 @@ const shiftedBy = (day, days) => {
     return shifted.toLocaleDateString('sv');
 };
 
-function WeekCalendar({ refreshToken, userId, title, manage = false }) {
+function WeekCalendar({ refreshToken, teamId, userId, title, manage = false }) {
     const { t, i18n } = useTranslation();
     const [week, setWeek] = React.useState(null);
     const [weekStart, setWeekStart] = React.useState(null);
@@ -45,7 +45,7 @@ function WeekCalendar({ refreshToken, userId, title, manage = false }) {
     React.useEffect(() => {
         let abandoned = false;
 
-        taskService.getWeek(weekStart, userId)
+        taskService.getWeek(weekStart, userId, teamId)
             .then((data) => {
                 if (!abandoned) {
                     setWeek(data);
@@ -67,7 +67,7 @@ function WeekCalendar({ refreshToken, userId, title, manage = false }) {
         let abandoned = false;
         setDayDetail(null);
 
-        taskService.getDay(openDay, userId)
+        taskService.getDay(openDay, userId, teamId)
             .then((data) => {
                 if (!abandoned) {
                     setDayDetail(data);
@@ -78,10 +78,10 @@ function WeekCalendar({ refreshToken, userId, title, manage = false }) {
         return () => {
             abandoned = true;
         };
-    }, [openDay, userId, refreshToken, reloads]);
+    }, [openDay, userId, teamId, refreshToken, reloads]);
 
     const takeBack = (entryId) => {
-        taskService.takeBackBonus(entryId, userId)
+        taskService.takeBackBonus(entryId, userId, teamId)
             .then(() => setReloads((count) => count + 1))
             .catch(() => undefined);
     };

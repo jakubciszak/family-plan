@@ -26,10 +26,11 @@ final readonly class OfferPayoutHandler
 
     public function __invoke(OfferPayoutCommand $command): void
     {
+        $teamId = $command->teamId === null ? null : \App\Shared\Domain\ValueObject\Uuid::fromString($command->teamId);
         $userId = Uuid::fromString($command->userId);
         $amount = Money::fromMinorUnits($command->amount);
 
-        if ($amount->isGreaterThan($this->stillFree($userId))) {
+        if ($amount->isGreaterThan($this->stillFree($userId, $teamId))) {
             throw new \DomainException('There is less waiting to be paid out than that');
         }
 
@@ -39,15 +40,15 @@ final readonly class OfferPayoutHandler
             $amount,
             Uuid::fromString($command->offeredBy),
             $command->note,
-            $this->clock
+            $this->clock, $teamId
         ));
     }
 
-    private function stillFree(Uuid $userId): Money
+    private function stillFree(Uuid $userId, ?Uuid $teamId = null): Money
     {
-        $free = $this->ledger->balance($userId, AccountRef::pending());
+        $free = $this->ledger->balance($userId, AccountRef::pending(), teamId: $teamId);
 
-        foreach ($this->payouts->awaitingConfirmation($userId) as $awaiting) {
+        foreach ($this->payouts->awaitingConfirmation($userId, $teamId) as $awaiting) {
             $free = $free->minus($awaiting->amount());
         }
 

@@ -10,7 +10,7 @@ final readonly class GoalRequest
 {
     public function __construct(
         #[Assert\NotBlank]
-        #[Assert\Length(max: 120)]
+        #[Assert\Length(max: 120, #[Assert\Uuid] public ?string $teamId = null)]
         public string $name,
 
         #[Assert\NotNull]

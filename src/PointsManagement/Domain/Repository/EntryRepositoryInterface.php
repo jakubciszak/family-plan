@@ -18,13 +18,13 @@ interface EntryRepositoryInterface
      *
      * @param AccountKind[] $kinds
      */
-    public function sumBetween(Uuid $userId, DateTimeImmutable $from, DateTimeImmutable $to, array $kinds): int;
+    public function sumBetween(Uuid $userId, DateTimeImmutable $from, DateTimeImmutable $to, array $kinds, ?Uuid $teamId = null): int;
 
     /**
      * @param AccountKind[] $kinds
      * @return array<string, int> points per day, keyed by Y-m-d
      */
-    public function perDayBetween(Uuid $userId, DateTimeImmutable $from, DateTimeImmutable $to, array $kinds): array;
+    public function perDayBetween(Uuid $userId, DateTimeImmutable $from, DateTimeImmutable $to, array $kinds, ?Uuid $teamId = null): array;
 
     public function find(Uuid $id): ?Entry;
 
@@ -32,7 +32,7 @@ interface EntryRepositoryInterface
      * @param AccountKind[] $kinds
      * @return Entry[] what was booked, oldest first
      */
-    public function between(Uuid $userId, DateTimeImmutable $from, DateTimeImmutable $to, array $kinds): array;
+    public function between(Uuid $userId, DateTimeImmutable $from, DateTimeImmutable $to, array $kinds, ?Uuid $teamId = null): array;
 
     public function existsFor(Uuid $accountId, Uuid $reference, string $periodKey): bool;
 }

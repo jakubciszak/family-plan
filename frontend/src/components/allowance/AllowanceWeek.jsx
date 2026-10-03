@@ -23,7 +23,7 @@ const shiftedBy = (day, days) => {
     return shifted.toLocaleDateString('sv');
 };
 
-function AllowanceWeek({ userId, refreshToken, renderActions, mine = false }) {
+function AllowanceWeek({ teamId, userId, refreshToken, renderActions, mine = false }) {
     const { t, i18n } = useTranslation();
     const [week, setWeek] = React.useState(null);
     const [weekStart, setWeekStart] = React.useState(null);
@@ -35,7 +35,7 @@ function AllowanceWeek({ userId, refreshToken, renderActions, mine = false }) {
     React.useEffect(() => {
         let abandoned = false;
 
-        allowanceService.getWeek(weekStart, userId)
+        allowanceService.getWeek(weekStart, userId, teamId)
             .then((data) => {
                 if (!abandoned) {
                     setWeek(data);
@@ -46,7 +46,7 @@ function AllowanceWeek({ userId, refreshToken, renderActions, mine = false }) {
         return () => {
             abandoned = true;
         };
-    }, [weekStart, userId, refreshToken, reloads]);
+    }, [weekStart, userId, teamId, refreshToken, reloads]);
 
     if (!week) {
         return null;

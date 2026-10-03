@@ -20,9 +20,9 @@ final readonly class DoctrineSavingsGoalRepository implements SavingsGoalReposit
         return $this->entityManager->getRepository(SavingsGoal::class)->find($id->value());
     }
 
-    public function ofUser(Uuid $userId, bool $openOnly = false): array
+    public function ofUser(Uuid $userId, bool $openOnly = false, ?Uuid $teamId = null): array
     {
-        $criteria = ['userId' => $userId];
+        $criteria = ['userId' => $userId, 'teamId' => $teamId?->value() ?? ''];
 
         if ($openOnly) {
             $criteria['closedAt'] = null;

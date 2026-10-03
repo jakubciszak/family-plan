@@ -30,7 +30,7 @@ final readonly class AdjustGoalHandler
         $goal = Goals::open($this->goals, $command->goalId);
 
         $goal->adjust($command->name, Money::fromMinorUnits($command->target), BookingDay::from($command->wantedBy));
-        $goal->noteProgress($this->ledger->balance($goal->userId(), AccountRef::goal($goal->id())), $this->clock);
+        $goal->noteProgress($this->ledger->balance($goal->userId(), AccountRef::goal($goal->id()), teamId: $goal->teamId()), $this->clock);
 
         $this->goals->save($goal);
     }
