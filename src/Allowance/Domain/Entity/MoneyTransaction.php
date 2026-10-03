@@ -63,7 +63,9 @@ class MoneyTransaction
         string $description,
         DateTimeImmutable $bookedAt,
         ?Uuid $reference = null,
-        array $context = [], ?Uuid $teamId = null): self {
+        array $context = [],
+        ?Uuid $teamId = null
+    ): self {
         $entity = new self($id, $userId, $type, $description, $bookedAt, $reference?->value(), $context ?: null);
         $entity->teamId = $teamId?->value() ?? '';
 

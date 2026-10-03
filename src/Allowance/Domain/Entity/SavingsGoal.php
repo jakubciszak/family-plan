@@ -60,7 +60,9 @@ class SavingsGoal
         string $name,
         Money $target,
         ?DateTimeImmutable $wantedBy,
-        ClockInterface $clock, ?Uuid $teamId = null): self {
+        ClockInterface $clock,
+        ?Uuid $teamId = null
+    ): self {
         self::assertName($name);
         $target->assertPositive('A goal');
 

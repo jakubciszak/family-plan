@@ -26,7 +26,9 @@ final readonly class StreakDailyPoints
         RuleConfig $config,
         Uuid $userId,
         DateTimeImmutable $since,
-        DateTimeImmutable $until, ?Uuid $teamId = null): array {
+        DateTimeImmutable $until,
+        ?Uuid $teamId = null
+    ): array {
         $kinds = $config->accountKinds();
         $perDay = [];
 

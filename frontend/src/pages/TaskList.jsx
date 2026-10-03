@@ -28,7 +28,7 @@ function useLimitLabel() {
     };
 }
 
-function TaskList({ onNavigate, user, onInspectMember, onOpenPlan }) {
+function TaskList({ onNavigate, user, onInspectMember, onOpenPlan, onTeamChange }) {
     const { t } = useTranslation();
     const { own } = usePersonalisation();
     const [returning, setReturning] = React.useState(null);
@@ -49,6 +49,10 @@ function TaskList({ onNavigate, user, onInspectMember, onOpenPlan }) {
     const [handOutDate, setHandOutDate] = React.useState('');
     const [availableSearch, setAvailableSearch] = React.useState('');
     const limitLabel = useLimitLabel();
+
+    React.useEffect(() => {
+        onTeamChange?.(selectedTeam?.id);
+    }, [selectedTeam?.id, onTeamChange]);
 
     const isTeamAdmin = selectedTeam?.role === 'admin';
 
@@ -217,7 +221,7 @@ function TaskList({ onNavigate, user, onInspectMember, onOpenPlan }) {
             teamId={selectedTeam?.id}
             currentUserId={user?.id}
             refreshToken={refreshToken}
-            onSelectMember={isTeamAdmin ? onInspectMember : undefined}
+            onSelectMember={isTeamAdmin ? (member) => onInspectMember({ ...member, teamId: selectedTeam.id }) : undefined}
         />
     );
 

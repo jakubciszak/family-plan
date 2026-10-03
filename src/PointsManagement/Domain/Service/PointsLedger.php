@@ -34,7 +34,9 @@ final readonly class PointsLedger
         string $description,
         ?Uuid $reference = null,
         ?string $periodKey = null,
-        ?DateTimeImmutable $bookedAt = null, ?Uuid $teamId = null): void {
+        ?DateTimeImmutable $bookedAt = null,
+        ?Uuid $teamId = null
+    ): void {
         $account = $this->accountFor($userId, $kind, $teamId);
 
         if ($reference !== null && $periodKey !== null

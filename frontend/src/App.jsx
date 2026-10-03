@@ -96,6 +96,7 @@ function App() {
     const windowClass = useWindowClass();
     const [isAuthenticated, setIsAuthenticated] = React.useState(null);
     const [user, setUser] = React.useState(null);
+    const [pointsTeam, setPointsTeam] = React.useState(null);
     const [userPoints, setUserPoints] = React.useState(0);
     const [weekPoints, setWeekPoints] = React.useState(0);
     const [currentPage, setCurrentPage] = React.useState(() => window.location.pathname === '/day-planning' ? 'day-planning' : 'tasks');
@@ -143,15 +144,19 @@ function App() {
         }
     }, [inviteToken]);
 
-    const refreshPoints = React.useCallback((userId) => {
-        apiClient.get(`/api/users/${userId}/points`)
+    const refreshPoints = React.useCallback((userId, teamId) => {
+        apiClient.get(`/api/users/${userId}/points${teamId ? `?teamId=${teamId}` : ''}`)
             .then((pointsData) => setUserPoints(pointsData.balance))
             .catch(() => setUserPoints(0));
 
-        taskService.getWeek()
+        taskService.getWeek(undefined, undefined, teamId)
             .then((week) => setWeekPoints(week.total))
             .catch(() => setWeekPoints(0));
     }, []);
+
+    React.useEffect(() => {
+        if (user?.id && pointsTeam) refreshPoints(user.id, pointsTeam);
+    }, [user?.id, pointsTeam, refreshPoints]);
 
     const refreshTeamAdminFlag = React.useCallback(() => {
         teamService.getTeams()
@@ -289,10 +294,11 @@ function App() {
                 {currentPage === 'day-planning' && <DayPlanning key={user.id} user={user} onFullscreenChange={setCalendarFocus} />}
                 {currentPage === 'action-plans' && <ActionPlans key={user.id} user={user} onFocusChange={setActionFocus}
                     taskPlan={taskPlan} onConsumeTaskPlan={() => setTaskPlan(null)}
-                    onTaskCompleted={() => refreshPoints(user.id)}
+                    onTaskCompleted={() => refreshPoints(user.id, pointsTeam)}
                     onBackToTasks={() => { setTaskPlan(null); setCurrentPage('tasks'); }} />}
                 {currentPage === 'tasks' && (
                     <TaskList
+                        onTeamChange={setPointsTeam}
                         onOpenPlan={(task) => { setTaskPlan(task); setCurrentPage('action-plans'); }}
                         onNavigate={setCurrentPage}
                         user={user}

@@ -176,7 +176,7 @@ final class TaskManagementContext extends AcceptanceContext
     public function shouldHavePoints(string $user, int $points): void
     {
         $userId = $this->users[$user];
-        $wallet = $this->walletRepository->findByUserId($userId);
+        $wallet = $this->walletRepository->findByUserId($userId, $this->teamId);
 
         Assert::assertNotNull($wallet, "Wallet for {$user} not found");
         Assert::assertEquals(
@@ -190,7 +190,7 @@ final class TaskManagementContext extends AcceptanceContext
     public function shouldHaveNoWalletYet(string $user): void
     {
         $userId = $this->users[$user];
-        $wallet = $this->walletRepository->findByUserId($userId);
+        $wallet = $this->walletRepository->findByUserId($userId, $this->teamId);
 
         Assert::assertNull($wallet, "{$user} should not have a wallet yet");
     }

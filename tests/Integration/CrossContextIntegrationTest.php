@@ -184,24 +184,24 @@ class CrossContextIntegrationTest extends TestCase
         $this->assertEquals('completed', $this->taskRepository->findById($task3Id)->status()->value);
         
         // Phase 4: Points Management - No wallet exists yet
-        $this->assertNull($this->walletRepository->findByUserId($userId));
+        $this->assertNull($this->walletRepository->findByUserId($userId, $teamId));
         
         // Phase 5: Task Approval - Admin approves tasks one by one
         ($this->approveTaskHandler)(new ApproveTaskCommand($task1Id->value(), $adminId->value()));
         
         // After first approval, wallet is created with 50 points
-        $wallet = $this->walletRepository->findByUserId($userId);
+        $wallet = $this->walletRepository->findByUserId($userId, $teamId);
         $this->assertNotNull($wallet);
         $this->assertEquals(50, $wallet->balance()->value());
         
         // Approve second task
         ($this->approveTaskHandler)(new ApproveTaskCommand($task2Id->value(), $adminId->value()));
-        $wallet = $this->walletRepository->findByUserId($userId);
+        $wallet = $this->walletRepository->findByUserId($userId, $teamId);
         $this->assertEquals(150, $wallet->balance()->value()); // 50 + 100
         
         // Approve third task
         ($this->approveTaskHandler)(new ApproveTaskCommand($task3Id->value(), $adminId->value()));
-        $wallet = $this->walletRepository->findByUserId($userId);
+        $wallet = $this->walletRepository->findByUserId($userId, $teamId);
         $this->assertEquals(350, $wallet->balance()->value()); // 50 + 100 + 200
         
         // Verify all tasks are approved
@@ -215,11 +215,11 @@ class CrossContextIntegrationTest extends TestCase
             \App\PointsManagement\Domain\ValueObject\AccountKind::TASKS,
             -100,
             \App\PointsManagement\Domain\ValueObject\EntrySource::ADJUSTMENT,
-            'Movie night reward'
+            'Movie night reward', teamId: $teamId
         );
         
         // Final wallet balance
-        $finalWallet = $this->walletRepository->findByUserId($userId);
+        $finalWallet = $this->walletRepository->findByUserId($userId, $teamId);
         $this->assertEquals(250, $finalWallet->balance()->value()); // 350 - 100
     }
 
@@ -295,9 +295,9 @@ class CrossContextIntegrationTest extends TestCase
         $this->createCompleteAndApproveTask($user3Id, $adminId, $teamId, 35);
         
         // Then - Each user has their own wallet with correct balance
-        $wallet1 = $this->walletRepository->findByUserId($user1Id);
-        $wallet2 = $this->walletRepository->findByUserId($user2Id);
-        $wallet3 = $this->walletRepository->findByUserId($user3Id);
+        $wallet1 = $this->walletRepository->findByUserId($user1Id, $teamId);
+        $wallet2 = $this->walletRepository->findByUserId($user2Id, $teamId);
+        $wallet3 = $this->walletRepository->findByUserId($user3Id, $teamId);
         
         $this->assertEquals(80, $wallet1->balance()->value());  // 50 + 30
         $this->assertEquals(75, $wallet2->balance()->value());  // 75

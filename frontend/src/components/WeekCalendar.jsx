@@ -56,7 +56,7 @@ function WeekCalendar({ refreshToken, teamId, userId, title, manage = false }) {
         return () => {
             abandoned = true;
         };
-    }, [refreshToken, userId, weekStart, reloads]);
+    }, [refreshToken, userId, teamId, weekStart, reloads]);
 
     React.useEffect(() => {
         if (!openDay) {

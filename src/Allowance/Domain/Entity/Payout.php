@@ -71,7 +71,9 @@ class Payout
         Money $amount,
         Uuid $offeredBy,
         ?string $note,
-        ClockInterface $clock, ?Uuid $teamId = null): self {
+        ClockInterface $clock,
+        ?Uuid $teamId = null
+    ): self {
         $amount->assertPositive('A payout');
 
         $offeredAt = $clock->now();

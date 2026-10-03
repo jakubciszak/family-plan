@@ -36,8 +36,8 @@ final class HouseholdLedgerApiTest extends ApiTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->homeA = $this->createTeamAndAdmin();
-        $this->homeB = $this->createTeamAndAdmin();
+        $this->homeA = $this->home();
+        $this->homeB = $this->home();
         $this->child = User::create(Uuid::generate(), 'Shared child', Email::fromString(Uuid::generate()->value() . '@example.com'), password_hash('password123', PASSWORD_BCRYPT), Role::USER);
         static::getContainer()->get(UserRepositoryInterface::class)->save($this->child);
         foreach ([$this->homeA, $this->homeB] as $home) {
@@ -129,6 +129,15 @@ final class HouseholdLedgerApiTest extends ApiTestCase
         $this->client->request('GET', '/api/allowance/wallet?teamId=' . $this->homeA['teamId']);
         $this->assertResponseStatusCodeSame(403);
         $this->getJson('/api/allowance/wallet');
+    }
+
+    private function home(): array
+    {
+        $parent = User::create(Uuid::generate(), 'Parent', Email::fromString(Uuid::generate()->value() . '@example.com'), password_hash('password123', PASSWORD_BCRYPT), Role::USER);
+        static::getContainer()->get(UserRepositoryInterface::class)->save($parent);
+        $team = Uuid::generate();
+        static::getContainer()->get('command.bus')->dispatch(new \App\TeamManagement\Application\Command\CreateTeamCommand($team->value(), 'Home', null, $parent->id()->value()));
+        return ['teamId' => $team->value(), 'user' => $parent];
     }
 
     private function url(string $path, array $home): string

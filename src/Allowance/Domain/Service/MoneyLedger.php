@@ -36,7 +36,9 @@ final readonly class MoneyLedger
         string $description,
         ?Uuid $reference = null,
         ?DateTimeImmutable $on = null,
-        array $context = [], ?Uuid $teamId = null): MoneyTransaction {
+        array $context = [],
+        ?Uuid $teamId = null
+    ): MoneyTransaction {
         $source = $this->accountFor($userId, $from, $teamId);
         $destination = $this->accountFor($userId, $to, $teamId);
 

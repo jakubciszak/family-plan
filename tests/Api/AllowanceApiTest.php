@@ -341,12 +341,12 @@ class AllowanceApiTest extends ApiTestCase
     {
         $repository = static::getContainer()->get(PayoutRepositoryInterface::class);
         $clock = new FixedClock(new DateTimeImmutable('2026-01-01'));
-        $awaiting = Payout::offer(Uuid::generate(), $this->child->id(), Money::fromMinorUnits(100), $this->admin->id(), null, $clock);
+        $awaiting = Payout::offer(Uuid::generate(), $this->child->id(), Money::fromMinorUnits(100), $this->admin->id(), null, $clock, teamId: Uuid::fromString($this->teamId));
         $repository->save($awaiting);
 
         for ($i = 0; $i < 51; ++$i) {
             $clock = new FixedClock(new DateTimeImmutable('2026-02-01'));
-            $payout = Payout::offer(Uuid::generate(), $this->child->id(), Money::fromMinorUnits(100), $this->admin->id(), null, $clock);
+            $payout = Payout::offer(Uuid::generate(), $this->child->id(), Money::fromMinorUnits(100), $this->admin->id(), null, $clock, teamId: Uuid::fromString($this->teamId));
             $payout->confirm(Uuid::generate(), $clock);
             $repository->save($payout);
         }
