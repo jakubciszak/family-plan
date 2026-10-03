@@ -34,6 +34,18 @@ final class FamilyIsolationApiTest extends ApiTestCase
         $this->loginAs($this->parentA);
     }
 
+    public function testAnonymousRequestsCannotReadOrCreateAccounts(): void
+    {
+        $this->client->restart();
+        foreach (['/api/users', '/api/tasks', '/api/bonus-rules'] as $url) {
+            $this->client->request('GET', $url);
+            $this->assertResponseStatusCodeSame(401);
+        }
+        $this->assertSame(401, $this->postJson('/api/users', [
+            'name' => 'Anonymous', 'email' => 'anonymous@example.com', 'password' => 'password123', 'role' => 'ROLE_ADMIN',
+        ])->getStatusCode());
+    }
+
     public function testDirectoryContainsOnlySelfAndFamily(): void
     {
         $ids = array_column($this->getJson('/api/users')['users'], 'id');
