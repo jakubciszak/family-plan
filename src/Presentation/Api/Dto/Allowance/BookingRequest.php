@@ -18,7 +18,10 @@ final readonly class BookingRequest
         public string $description,
 
         #[Assert\Date]
-        public ?string $on = null
+        public ?string $on = null,
+
+        #[Assert\Uuid]
+        public ?string $teamId = null
     ) {
     }
 }

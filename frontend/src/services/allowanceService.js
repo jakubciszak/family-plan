@@ -21,24 +21,24 @@ const allowanceService = {
         return apiClient.delete(`/api/allowance/rules/${pointsAccount}${query({ teamId })}`);
     },
 
-    getWeek(weekStart, userId) {
-        return apiClient.get(`/api/allowance/weeks${query({ weekStart, userId })}`);
+    getWeek(weekStart, userId, teamId) {
+        return apiClient.get(`/api/allowance/weeks${query({ weekStart, userId, teamId })}`);
     },
 
-    closeWeek(userId, weekStart) {
-        return apiClient.post('/api/allowance/weeks/close', { userId, weekStart });
+    closeWeek(userId, weekStart, teamId) {
+        return apiClient.post('/api/allowance/weeks/close', { userId, weekStart, teamId });
     },
 
-    reopenWeek(userId, weekStart) {
-        return apiClient.post('/api/allowance/weeks/reopen', { userId, weekStart });
+    reopenWeek(userId, weekStart, teamId) {
+        return apiClient.post('/api/allowance/weeks/reopen', { userId, weekStart, teamId });
     },
 
-    getWallet(userId) {
-        return apiClient.get(`/api/allowance/wallet${query({ userId })}`);
+    getWallet(userId, teamId) {
+        return apiClient.get(`/api/allowance/wallet${query({ userId, teamId })}`);
     },
 
-    getLedger(userId, params = {}) {
-        return apiClient.get(`/api/allowance/ledger${query({ userId, ...params })}`);
+    getLedger(userId, params = {}, teamId) {
+        return apiClient.get(`/api/allowance/ledger${query({ userId, ...params, teamId })}`);
     },
 
     addIncome(booking) {
@@ -49,8 +49,8 @@ const allowanceService = {
         return apiClient.post('/api/allowance/expenses', booking);
     },
 
-    getPayouts(userId) {
-        return apiClient.get(`/api/allowance/payouts${query({ userId })}`);
+    getPayouts(userId, teamId) {
+        return apiClient.get(`/api/allowance/payouts${query({ userId, teamId })}`);
     },
 
     offerPayout(payout) {
@@ -65,8 +65,8 @@ const allowanceService = {
         return apiClient.post(`/api/allowance/payouts/${payoutId}/cancel`, {});
     },
 
-    getGoals(userId, all = false) {
-        return apiClient.get(`/api/allowance/goals${query({ userId, all: all ? '1' : '' })}`);
+    getGoals(userId, all = false, teamId) {
+        return apiClient.get(`/api/allowance/goals${query({ userId, teamId, all: all ? '1' : '' })}`);
     },
 
     planGoal(goal) {

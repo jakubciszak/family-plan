@@ -49,7 +49,7 @@ class SavingsGoalApiController extends AbstractController
         $userId = $this->access->inspected($this->caller(), $request->query->get('userId'));
         $this->access->assertSelf($this->caller(), $userId);
 
-        return $this->json($this->goals->of($userId, !$request->query->getBoolean('all', false)));
+        return $this->json($this->goals->of($userId, !$request->query->getBoolean('all', false), $this->access->teamFor($this->caller(), $userId, $request->query->get('teamId'))));
     }
 
     #[Route('', name: 'plan', methods: ['POST'])]
@@ -58,16 +58,20 @@ class SavingsGoalApiController extends AbstractController
     public function plan(#[MapRequestPayload] GoalRequest $request): JsonResponse
     {
         $caller = $this->caller();
+        $teamId = $this->access->teamFor($caller, $caller, $request->teamId);
+        if ($teamId === null) {
+            throw new \DomainException('Join a household before managing money');
+        }
 
         $this->commandBus->dispatch(new PlanGoalCommand(
             Uuid::generate()->value(),
             $caller->value(),
             $request->name,
             $request->target,
-            $request->wantedBy
+            $request->wantedBy, $teamId?->value()
         ));
 
-        return $this->json($this->goals->of($caller), Response::HTTP_CREATED);
+        return $this->json($this->goals->of($caller, teamId: $teamId), Response::HTTP_CREATED);
     }
 
     #[Route('/{id}', name: 'adjust', methods: ['PUT'])]
@@ -79,7 +83,7 @@ class SavingsGoalApiController extends AbstractController
 
         $this->commandBus->dispatch(new AdjustGoalCommand($id, $request->name, $request->target, $request->wantedBy));
 
-        return $this->json($this->goals->of($owner));
+        return $this->json($this->goals->of($owner, teamId: $this->repository->find(Uuid::fromString($id))->teamId()));
     }
 
     #[Route('/{id}/put-aside', name: 'put_aside', methods: ['POST'])]
@@ -92,7 +96,7 @@ class SavingsGoalApiController extends AbstractController
 
         $this->commandBus->dispatch(new PutAsideForGoalCommand($id, $request->amount));
 
-        return $this->json($this->goals->of($owner));
+        return $this->json($this->goals->of($owner, teamId: $this->repository->find(Uuid::fromString($id))->teamId()));
     }
 
     #[Route('/{id}/take-back', name: 'take_back', methods: ['POST'])]
@@ -104,7 +108,7 @@ class SavingsGoalApiController extends AbstractController
 
         $this->commandBus->dispatch(new TakeBackFromGoalCommand($id, $request->amount));
 
-        return $this->json($this->goals->of($owner));
+        return $this->json($this->goals->of($owner, teamId: $this->repository->find(Uuid::fromString($id))->teamId()));
     }
 
     #[Route('/{id}/spend', name: 'spend', methods: ['POST'])]
@@ -116,7 +120,7 @@ class SavingsGoalApiController extends AbstractController
 
         $this->commandBus->dispatch(new SpendGoalCommand($id, $request->amount, $request->description ?? ''));
 
-        return $this->json($this->goals->of($owner));
+        return $this->json($this->goals->of($owner, teamId: $this->repository->find(Uuid::fromString($id))->teamId()));
     }
 
     #[Route('/{id}', name: 'close', methods: ['DELETE'])]
@@ -128,7 +132,7 @@ class SavingsGoalApiController extends AbstractController
 
         $this->commandBus->dispatch(new CloseGoalCommand($id));
 
-        return $this->json($this->goals->of($owner));
+        return $this->json($this->goals->of($owner, teamId: $this->repository->find(Uuid::fromString($id))->teamId()));
     }
 
     private function owner(string $goalId): Uuid
@@ -141,6 +145,7 @@ class SavingsGoalApiController extends AbstractController
 
         $caller = $this->caller();
         $this->access->assertSelf($caller, $goal->userId());
+        $this->access->teamFor($caller, $caller, $goal->teamId()?->value());
 
         return $caller;
     }

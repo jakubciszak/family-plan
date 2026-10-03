@@ -25,20 +25,20 @@ final readonly class WeeklyPoints
     /**
      * @return array<string, int>
      */
-    public function of(Uuid $userId, WeekStart $week): array
+    public function of(Uuid $userId, WeekStart $week, ?Uuid $teamId = null): array
     {
         return [
-            AccountKind::TASKS->value => array_sum($this->tasksPerDay($userId, $week)),
-            AccountKind::BONUSES->value => array_sum($this->bonusPerDay($userId, $week)),
+            AccountKind::TASKS->value => array_sum($this->tasksPerDay($userId, $week, teamId: $teamId)),
+            AccountKind::BONUSES->value => array_sum($this->bonusPerDay($userId, $week, teamId: $teamId)),
         ];
     }
 
     /**
      * @return array<string, int>
      */
-    public function tasksPerDay(Uuid $userId, WeekStart $week): array
+    public function tasksPerDay(Uuid $userId, WeekStart $week, ?Uuid $teamId = null): array
     {
-        $earned = $this->executions->findApprovedByUserSince($userId, $week->monday());
+        $earned = $this->executions->findApprovedByUserSince($userId, $week->monday(), teamId: $teamId);
 
         return array_filter(
             DailyPoints::perDay($earned),
@@ -50,8 +50,8 @@ final readonly class WeeklyPoints
     /**
      * @return array<string, int>
      */
-    public function bonusPerDay(Uuid $userId, WeekStart $week): array
+    public function bonusPerDay(Uuid $userId, WeekStart $week, ?Uuid $teamId = null): array
     {
-        return $this->ledger->perDayBetween($userId, $week->monday(), $week->nextMonday(), [AccountKind::BONUSES]);
+        return $this->ledger->perDayBetween($userId, $week->monday(), $week->nextMonday(), [AccountKind::BONUSES], teamId: $teamId);
     }
 }

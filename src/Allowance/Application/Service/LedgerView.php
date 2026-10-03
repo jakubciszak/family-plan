@@ -25,12 +25,12 @@ final readonly class LedgerView
     ) {
     }
 
-    public function of(Uuid $userId, ?DateTimeImmutable $from = null, ?DateTimeImmutable $to = null, int $limit = 100): array
+    public function of(Uuid $userId, ?DateTimeImmutable $from = null, ?DateTimeImmutable $to = null, int $limit = 100, ?Uuid $teamId = null): array
     {
-        $transactions = $this->transactions->ofUser($userId, $from, $to, $limit);
+        $transactions = $this->transactions->ofUser($userId, $from, $to, $limit, teamId: $teamId);
 
         $kinds = [];
-        foreach ($this->accounts->ofUser($userId) as $account) {
+        foreach ($this->accounts->ofUser($userId, teamId: $teamId) as $account) {
             $kinds[$account->id()->value()] = $account;
         }
 
@@ -72,6 +72,7 @@ final readonly class LedgerView
 
         return [
             'currency' => $this->currency,
+            'teamId' => $teamId?->value(),
             'bookings' => $bookings,
         ];
     }

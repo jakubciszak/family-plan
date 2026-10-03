@@ -21,13 +21,14 @@ final readonly class WalletView
     ) {
     }
 
-    public function payoutsOf(Uuid $userId): array
+    public function payoutsOf(Uuid $userId, ?Uuid $teamId = null): array
     {
-        $payouts = $this->payouts->ofUser($userId, null);
+        $payouts = $this->payouts->ofUser($userId, null, teamId: $teamId);
 
         return [
             'currency' => $this->currency,
-            'pending' => $this->ledger->balances($userId)[AccountKind::PENDING->value]->minorUnits(),
+            'teamId' => $teamId?->value(),
+            'pending' => $this->ledger->balances($userId, teamId: $teamId)[AccountKind::PENDING->value]->minorUnits(),
             'paid' => array_sum(array_map(
                 static fn (Payout $payout) => $payout->status() === PayoutStatus::CONFIRMED
                     ? $payout->amount()->minorUnits()
@@ -46,19 +47,20 @@ final readonly class WalletView
         ];
     }
 
-    public function of(Uuid $userId): array
+    public function of(Uuid $userId, ?Uuid $teamId = null): array
     {
-        $balances = $this->ledger->balances($userId);
+        $balances = $this->ledger->balances($userId, teamId: $teamId);
         $putAside = array_reduce(
-            $this->ledger->goalBalances($userId),
+            $this->ledger->goalBalances($userId, teamId: $teamId),
             static fn (Money $carried, Money $saved) => $carried->plus($saved),
             Money::zero()
         );
 
-        $awaiting = $this->payouts->awaitingConfirmation($userId);
+        $awaiting = $this->payouts->awaitingConfirmation($userId, teamId: $teamId);
 
         return [
             'currency' => $this->currency,
+            'teamId' => $teamId?->value(),
             'pending' => $balances[AccountKind::PENDING->value]->minorUnits(),
             'available' => $balances[AccountKind::AVAILABLE->value]->minorUnits(),
             'putAside' => $putAside->minorUnits(),

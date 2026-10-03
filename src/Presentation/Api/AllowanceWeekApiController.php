@@ -41,9 +41,10 @@ class AllowanceWeekApiController extends AbstractController
     public function show(Request $request): JsonResponse
     {
         $userId = $this->access->inspected($this->caller(), $request->query->get('userId'));
+        $teamId = $this->access->teamFor($this->caller(), $userId, $request->query->get('teamId'));
         $week = $this->weekFrom($request->query->get('weekStart'));
 
-        return $this->json($this->weeks->of($userId, $week));
+        return $this->json($this->weeks->of($userId, $week, $teamId));
     }
 
     #[Route('/close', name: 'close', methods: ['POST'])]
@@ -55,7 +56,7 @@ class AllowanceWeekApiController extends AbstractController
     {
         $caller = $this->caller();
         $member = Uuid::fromString($request->userId);
-        $teamId = $this->access->adminTeamFor($caller, $member);
+        $teamId = $this->access->adminTeamFor($caller, $member, $request->teamId);
 
         $this->commandBus->dispatch(new CloseWeekCommand(
             $teamId->value(),
@@ -64,7 +65,7 @@ class AllowanceWeekApiController extends AbstractController
             $caller->value()
         ));
 
-        return $this->json($this->weeks->of($member, WeekStart::fromString($request->weekStart)));
+        return $this->json($this->weeks->of($member, WeekStart::fromString($request->weekStart), $teamId));
     }
 
     #[Route('/reopen', name: 'reopen', methods: ['POST'])]
@@ -75,11 +76,11 @@ class AllowanceWeekApiController extends AbstractController
     {
         $caller = $this->caller();
         $member = Uuid::fromString($request->userId);
-        $this->access->adminTeamFor($caller, $member);
+        $teamId = $this->access->adminTeamFor($caller, $member, $request->teamId);
 
-        $this->commandBus->dispatch(new ReopenWeekCommand($member->value(), $request->weekStart));
+        $this->commandBus->dispatch(new ReopenWeekCommand($member->value(), $request->weekStart, $teamId->value()));
 
-        return $this->json($this->weeks->of($member, WeekStart::fromString($request->weekStart)));
+        return $this->json($this->weeks->of($member, WeekStart::fromString($request->weekStart), $teamId));
     }
 
     private function weekFrom(?string $day): WeekStart

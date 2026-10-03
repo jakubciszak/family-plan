@@ -70,7 +70,7 @@ export default function SettleMembers({
             {week.closure ? (
               <Button
                 disabled={busy}
-                onPress={() => onChanged(() => reopenWeek(member.userId, week.weekStart))}
+                onPress={() => onChanged(() => reopenWeek(member.userId, week.weekStart, week.teamId))}
               >
                 {t('allowance.reopenWeek')}
               </Button>
@@ -78,7 +78,7 @@ export default function SettleMembers({
               <Button
                 mode="contained-tonal"
                 disabled={busy || !week.isOver}
-                onPress={() => onChanged(() => closeWeek(member.userId, week.weekStart))}
+                onPress={() => onChanged(() => closeWeek(member.userId, week.weekStart, week.teamId))}
               >
                 {t('allowance.closeWeek')}
               </Button>
@@ -127,7 +127,7 @@ export default function SettleMembers({
               <Button
                 mode="contained"
                 disabled={busy || free <= 0}
-                onPress={() => onChanged(() => offerPayout(member.userId, free))}
+                onPress={() => onChanged(() => offerPayout(member.userId, free, undefined, wallet.teamId))}
               >
                 {t('allowance.payEverything')}
               </Button>
@@ -166,7 +166,7 @@ export default function SettleMembers({
                 const minor = toMinorUnits(amount);
                 const who = paying;
                 setPaying(null);
-                if (who && minor !== null) onChanged(() => offerPayout(who, minor, note.trim()));
+                if (who && minor !== null) onChanged(() => offerPayout(who, minor, note.trim(), wallet?.teamId));
               }}
             >
               {t('common.save')}

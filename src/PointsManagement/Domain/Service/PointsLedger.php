@@ -34,9 +34,10 @@ final readonly class PointsLedger
         string $description,
         ?Uuid $reference = null,
         ?string $periodKey = null,
-        ?DateTimeImmutable $bookedAt = null
+        ?DateTimeImmutable $bookedAt = null,
+        ?Uuid $teamId = null
     ): void {
-        $account = $this->accountFor($userId, $kind);
+        $account = $this->accountFor($userId, $kind, $teamId);
 
         if ($reference !== null && $periodKey !== null
             && $this->entries->existsFor($account->id(), $reference, $periodKey)) {
@@ -59,17 +60,17 @@ final readonly class PointsLedger
         $this->entries->save($entry);
         $this->accounts->save($account);
 
-        $this->refreshSummary($userId);
+        $this->refreshSummary($userId, $teamId);
     }
 
     /**
      * Books the opposite of a bonus entry, on the day that bonus was booked.
      * A bonus can be taken back only once; the rule that paid it will not pay it again.
      */
-    public function takeBackBonus(Uuid $userId, Uuid $entryId): bool
+    public function takeBackBonus(Uuid $userId, Uuid $entryId, ?Uuid $teamId = null): bool
     {
         $entry = $this->entries->find($entryId);
-        $account = $this->accountFor($userId, AccountKind::BONUSES);
+        $account = $this->accountFor($userId, AccountKind::BONUSES, $teamId);
 
         if ($entry === null || !$entry->belongsTo($account->id())) {
             return false;
@@ -83,7 +84,7 @@ final readonly class PointsLedger
             sprintf('Taken back: %s', $entry->description()),
             $entry->id(),
             'taken-back',
-            $entry->bookedAt()
+            $entry->bookedAt(), $teamId
         );
 
         return true;
@@ -92,33 +93,33 @@ final readonly class PointsLedger
     /**
      * @param AccountKind[] $kinds
      */
-    public function sumBetween(Uuid $userId, DateTimeImmutable $from, DateTimeImmutable $to, array $kinds = []): int
+    public function sumBetween(Uuid $userId, DateTimeImmutable $from, DateTimeImmutable $to, array $kinds = [], ?Uuid $teamId = null): int
     {
-        return $this->entries->sumBetween($userId, $from, $to, $kinds ?: AccountKind::all());
+        return $this->entries->sumBetween($userId, $from, $to, $kinds ?: AccountKind::all(), $teamId);
     }
 
     /**
      * @param AccountKind[] $kinds
      * @return array<string, int>
      */
-    public function perDayBetween(Uuid $userId, DateTimeImmutable $from, DateTimeImmutable $to, array $kinds = []): array
+    public function perDayBetween(Uuid $userId, DateTimeImmutable $from, DateTimeImmutable $to, array $kinds = [], ?Uuid $teamId = null): array
     {
-        return $this->entries->perDayBetween($userId, $from, $to, $kinds ?: AccountKind::all());
+        return $this->entries->perDayBetween($userId, $from, $to, $kinds ?: AccountKind::all(), $teamId);
     }
 
     /**
      * @param AccountKind[] $kinds
      * @return Entry[]
      */
-    public function between(Uuid $userId, DateTimeImmutable $from, DateTimeImmutable $to, array $kinds = []): array
+    public function between(Uuid $userId, DateTimeImmutable $from, DateTimeImmutable $to, array $kinds = [], ?Uuid $teamId = null): array
     {
-        return $this->entries->between($userId, $from, $to, $kinds ?: AccountKind::all());
+        return $this->entries->between($userId, $from, $to, $kinds ?: AccountKind::all(), $teamId);
     }
 
     /**
      * @return array<string, int> balance per account kind
      */
-    public function balances(Uuid $userId): array
+    public function balances(Uuid $userId, ?Uuid $teamId = null): array
     {
         $balances = [];
 
@@ -126,19 +127,19 @@ final readonly class PointsLedger
             $balances[$kind->value] = 0;
         }
 
-        foreach ($this->accounts->ofUser($userId) as $account) {
+        foreach ($this->accounts->ofUser($userId, $teamId) as $account) {
             $balances[$account->kind()->value] = $account->balance()->value();
         }
 
         return $balances;
     }
 
-    private function accountFor(Uuid $userId, AccountKind $kind): Account
+    private function accountFor(Uuid $userId, AccountKind $kind, ?Uuid $teamId = null): Account
     {
-        $account = $this->accounts->find($userId, $kind);
+        $account = $this->accounts->find($userId, $kind, $teamId);
 
         if ($account === null) {
-            $account = Account::open(Uuid::generate(), $userId, $kind, $this->clock);
+            $account = Account::open(Uuid::generate(), $userId, $kind, $this->clock, $teamId);
             $this->accounts->save($account);
         }
 
@@ -148,14 +149,14 @@ final readonly class PointsLedger
     /**
      * The wallet is the summary account: its balance is the sum of the detail accounts.
      */
-    private function refreshSummary(Uuid $userId): void
+    private function refreshSummary(Uuid $userId, ?Uuid $teamId = null): void
     {
-        $total = array_sum($this->balances($userId));
+        $total = array_sum($this->balances($userId, $teamId));
 
-        $wallet = $this->wallets->findByUserId($userId);
+        $wallet = $this->wallets->findByUserId($userId, $teamId);
 
         if ($wallet === null) {
-            $wallet = UserWallet::create(Uuid::generate(), $userId, $this->clock);
+            $wallet = UserWallet::create(Uuid::generate(), $userId, $this->clock, $teamId);
         }
 
         $wallet->summarise($total, $this->clock);

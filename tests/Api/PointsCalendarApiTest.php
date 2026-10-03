@@ -20,6 +20,7 @@ use Symfony\Component\HttpFoundation\Response;
 
 class PointsCalendarApiTest extends ApiTestCase
 {
+    private ?Uuid $home = null;
     public function testTheWeekShowsPointsEarnedOnEachDay(): void
     {
         $monday = $this->mondayOfThisWeek();
@@ -172,7 +173,8 @@ class PointsCalendarApiTest extends ApiTestCase
 
     private function teamOfCurrentUser(): string
     {
-        $teamId = Uuid::generate()->value();
+        $this->home = Uuid::generate();
+        $teamId = $this->home->value();
 
         static::getContainer()->get('command.bus')->dispatch(
             new CreateTeamCommand($teamId, 'Rodzina', null, $this->currentUser->id()->value())
@@ -206,6 +208,7 @@ class PointsCalendarApiTest extends ApiTestCase
             Frequency::fromString('daily'),
             ScheduleConfig::daily()
         );
+        $template->assignToTeam($this->home);
         static::getContainer()->get(TaskTemplateRepositoryInterface::class)->save($template);
 
         $clock = new FixedClock($on);

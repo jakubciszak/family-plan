@@ -18,7 +18,10 @@ final readonly class GoalRequest
         public int $target,
 
         #[Assert\Date]
-        public ?string $wantedBy = null
+        public ?string $wantedBy = null,
+
+        #[Assert\Uuid]
+        public ?string $teamId = null
     ) {
     }
 }

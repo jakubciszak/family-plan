@@ -16,12 +16,21 @@ use Doctrine\ORM\Mapping as ORM;
  */
 #[ORM\Entity]
 #[ORM\Table(name: 'allowance_transactions')]
+#[ORM\Index(name: 'idx_allowance_transactions_team_user', columns: ['team_id', 'user_id'])]
 #[ORM\Index(columns: ['user_id', 'booked_at'])]
 class MoneyTransaction
 {
     /** @var MoneyEntry[] */
     #[ORM\Transient]
     private array $entries = [];
+
+    #[ORM\Column(type: 'string', length: 36)]
+    private string $teamId = '';
+
+    public function teamId(): ?Uuid
+    {
+        return $this->teamId === '' ? null : Uuid::fromString($this->teamId);
+    }
 
     private function __construct(
         #[ORM\Id]
@@ -55,14 +64,24 @@ class MoneyTransaction
         string $description,
         DateTimeImmutable $bookedAt,
         ?Uuid $reference = null,
-        array $context = []
+        array $context = [],
+        ?Uuid $teamId = null
     ): self {
-        return new self($id, $userId, $type, $description, $bookedAt, $reference?->value(), $context ?: null);
+        $entity = new self($id, $userId, $type, $description, $bookedAt, $reference?->value(), $context ?: null);
+        $entity->teamId = $teamId?->value() ?? '';
+
+        return $entity;
     }
 
     public function transfer(MoneyAccount $from, MoneyAccount $to, Money $amount, ClockInterface $clock): void
     {
         $amount->assertPositive('A transfer');
+
+        foreach ([$from, $to] as $account) {
+            if (!$account->userId()->equals($this->userId) || $account->teamId()?->value() !== $this->teamId()?->value()) {
+                throw new \DomainException('Accounts must belong to the transaction owner and household');
+            }
+        }
 
         if ($from->id()->equals($to->id())) {
             throw new \DomainException('Money cannot be moved onto the account it came from');

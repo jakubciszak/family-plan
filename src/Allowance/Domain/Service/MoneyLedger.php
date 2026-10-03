@@ -36,10 +36,11 @@ final readonly class MoneyLedger
         string $description,
         ?Uuid $reference = null,
         ?DateTimeImmutable $on = null,
-        array $context = []
+        array $context = [],
+        ?Uuid $teamId = null
     ): MoneyTransaction {
-        $source = $this->accountFor($userId, $from);
-        $destination = $this->accountFor($userId, $to);
+        $source = $this->accountFor($userId, $from, $teamId);
+        $destination = $this->accountFor($userId, $to, $teamId);
 
         $transaction = MoneyTransaction::open(
             Uuid::generate(),
@@ -48,7 +49,7 @@ final readonly class MoneyLedger
             $description,
             $on ?? $this->clock->now(),
             $reference,
-            $context
+            $context, $teamId
         );
 
         $transaction->transfer($source, $destination, $amount, $this->clock);
@@ -66,27 +67,27 @@ final readonly class MoneyLedger
         return $transaction;
     }
 
-    public function accountFor(Uuid $userId, AccountRef $ref): MoneyAccount
+    public function accountFor(Uuid $userId, AccountRef $ref, ?Uuid $teamId = null): MoneyAccount
     {
-        $account = $this->accounts->find($userId, $ref->kind(), $ref->reference());
+        $account = $this->accounts->find($userId, $ref->kind(), $ref->reference(), $teamId);
 
         if ($account === null) {
-            $account = MoneyAccount::open(Uuid::generate(), $userId, $ref->kind(), $this->clock, $ref->reference());
+            $account = MoneyAccount::open(Uuid::generate(), $userId, $ref->kind(), $this->clock, $ref->reference(), $teamId);
             $this->accounts->save($account);
         }
 
         return $account;
     }
 
-    public function balance(Uuid $userId, AccountRef $ref): Money
+    public function balance(Uuid $userId, AccountRef $ref, ?Uuid $teamId = null): Money
     {
-        return $this->accounts->find($userId, $ref->kind(), $ref->reference())?->balance() ?? Money::zero();
+        return $this->accounts->find($userId, $ref->kind(), $ref->reference(), $teamId)?->balance() ?? Money::zero();
     }
 
     /**
      * @return array<string, Money> balance per account kind, goals left out
      */
-    public function balances(Uuid $userId): array
+    public function balances(Uuid $userId, ?Uuid $teamId = null): array
     {
         $balances = [];
 
@@ -96,7 +97,7 @@ final readonly class MoneyLedger
             }
         }
 
-        foreach ($this->accounts->ofUser($userId) as $account) {
+        foreach ($this->accounts->ofUser($userId, $teamId) as $account) {
             if ($account->kind() === AccountKind::GOAL) {
                 continue;
             }
@@ -110,11 +111,11 @@ final readonly class MoneyLedger
     /**
      * @return array<string, Money> balance per goal id
      */
-    public function goalBalances(Uuid $userId): array
+    public function goalBalances(Uuid $userId, ?Uuid $teamId = null): array
     {
         $balances = [];
 
-        foreach ($this->accounts->ofUser($userId) as $account) {
+        foreach ($this->accounts->ofUser($userId, $teamId) as $account) {
             if ($account->kind() === AccountKind::GOAL && $account->reference() !== null) {
                 $balances[$account->reference()->value()] = $account->balance();
             }

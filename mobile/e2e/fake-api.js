@@ -455,7 +455,7 @@ const route$ = async (world, call) => {
   }
 
   if (head === 'allowance') {
-    return allowance(world, { method, rest, body });
+    return allowance(world, { method, rest, body, query });
   }
 
   if (head === 'users' && rest[1] === 'points') {
@@ -758,10 +758,11 @@ const rules = (list, { method, rest, body }, shape) => {
   return undefined;
 };
 
-const allowance = (world, { method, rest, body }) => {
+const allowance = (world, { method, rest, body, query }) => {
+  const teamId = query.get('teamId') || body.teamId || world.teams[0]?.id;
   if (rest[0] === 'weeks' && method === 'POST') {
     world.allowanceWeek.closure = rest[1] === 'close' ? { closedAt: new Date().toISOString(), total: world.allowanceWeek.expected.total, lines: structuredClone(world.allowanceWeek.expected.lines) } : null;
-    return ok(world.allowanceWeek);
+    return ok({ ...world.allowanceWeek, teamId });
   }
   if (['income', 'expenses'].includes(rest[0]) && method === 'POST') {
     const expense = rest[0] === 'expenses';
@@ -788,7 +789,7 @@ const allowance = (world, { method, rest, body }) => {
     goal.saved -= body.amount;
     world.wallet.putAside -= body.amount;
     goal.reached = goal.saved >= goal.target;
-    return ok(world.goals);
+    return ok({ ...world.goals, teamId });
   }
   if (rest[0] === 'payouts' && method === 'POST') {
     if (rest[2] === 'confirm') {
@@ -797,15 +798,15 @@ const allowance = (world, { method, rest, body }) => {
     return ok({});
   }
   if (rest[0] === 'wallet' && method === 'GET') {
-    return ok(world.wallet);
+    return ok({ ...world.wallet, teamId });
   }
 
   if (rest[0] === 'goals' && method === 'GET') {
-    return ok(world.goals);
+    return ok({ ...world.goals, teamId });
   }
 
   if (rest[0] === 'ledger' && method === 'GET') {
-    return ok(world.ledger);
+    return ok({ ...world.ledger, teamId });
   }
 
   if (rest[0] === 'rules' && method === 'GET') {
@@ -826,7 +827,7 @@ const allowance = (world, { method, rest, body }) => {
   }
 
   if (rest[0] === 'weeks' && method === 'GET') {
-    return ok(world.allowanceWeek);
+    return ok({ ...world.allowanceWeek, teamId });
   }
 
   return undefined;

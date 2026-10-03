@@ -41,7 +41,8 @@ class PointsCalendarApiController extends AbstractController
         private readonly TeamMembershipRepositoryInterface $memberships,
         private readonly PointsLedger $ledger,
         private readonly StreakDailyPoints $streakPoints,
-        private readonly ClosedWeeksInterface $closedWeeks
+        private readonly ClosedWeeksInterface $closedWeeks,
+        private readonly \App\Allowance\Application\Service\AllowanceAccess $access
     ) {
     }
 
@@ -92,7 +93,7 @@ class PointsCalendarApiController extends AbstractController
                 continue;
             }
 
-            $perDay = $this->earnedPerDay($membership->userId(), $monday, $nextMonday);
+            $perDay = $this->earnedPerDay($membership->userId(), $monday, $nextMonday, teamId: $teamId);
 
             $standings[] = [
                 'userId' => $membership->userId()->value(),
@@ -123,8 +124,9 @@ class PointsCalendarApiController extends AbstractController
     public function week(Request $request): JsonResponse
     {
         $userId = $this->inspected($request);
+        $teamId = $this->access->teamFor($this->callerId(), $userId, $request->query->get('teamId'));
         $monday = $this->mondayOf($request->query->get('weekStart'));
-        $rule = $this->streakRule($userId);
+        $rule = $this->streakRule($userId, $teamId);
         $pointsPerDay = $rule?->config()->pointsPerDay() ?? 1;
 
         $since = $rule === null ? $monday : new DateTimeImmutable('1970-01-01');
@@ -132,7 +134,7 @@ class PointsCalendarApiController extends AbstractController
         $earned = $this->executionRepository->findApprovedByUserSince(
             $userId,
             $since,
-            $rule?->config()->taskTemplateId()
+            $rule?->config()->taskTemplateId(), teamId: $teamId
         );
 
         $perDay = DailyPoints::perDay($earned);
@@ -140,11 +142,11 @@ class PointsCalendarApiController extends AbstractController
             $userId,
             $monday,
             $monday->modify('+7 days'),
-            [AccountKind::BONUSES]
+            [AccountKind::BONUSES], teamId: $teamId
         );
         $counted = $rule === null
             ? []
-            : $this->streakPoints->perDay($rule->config(), $userId, $since, $monday->modify('+7 days'));
+            : $this->streakPoints->perDay($rule->config(), $userId, $since, $monday->modify('+7 days'), teamId: $teamId);
         $today = (new DateTimeImmutable())->format('Y-m-d');
         $lastDay = min($today, $monday->modify('+6 days')->format('Y-m-d'));
         $streakDays = $rule === null ? [] : PointsStreak::cycle(
@@ -192,17 +194,18 @@ class PointsCalendarApiController extends AbstractController
     public function day(Request $request): JsonResponse
     {
         $userId = $this->inspected($request);
+        $teamId = $this->access->teamFor($this->callerId(), $userId, $request->query->get('teamId'));
         $day = DailyPoints::day((string) $request->query->get('date'));
         $next = $day->modify('+1 day');
 
         $done = array_values(array_filter(
-            $this->executionRepository->findApprovedByUserSince($userId, $day),
+            $this->executionRepository->findApprovedByUserSince($userId, $day, teamId: $teamId),
             static fn ($execution) => $execution->earnedOn() >= $day && $execution->earnedOn() < $next
         ));
 
         usort($done, static fn ($a, $b) => $a->earnedOn() <=> $b->earnedOn());
 
-        $bonuses = $this->ledger->between($userId, $day, $next, [AccountKind::BONUSES]);
+        $bonuses = $this->ledger->between($userId, $day, $next, [AccountKind::BONUSES], teamId: $teamId);
         $takenBack = array_filter(array_map(
             static fn ($entry) => $entry->periodKey() === 'taken-back' ? $entry->reference() : null,
             $bonuses
@@ -210,7 +213,7 @@ class PointsCalendarApiController extends AbstractController
 
         return $this->json([
             'date' => $day->format('Y-m-d'),
-            'closed' => $this->closedWeeks->isClosedFor($userId, $day),
+            'closed' => $this->closedWeeks->isClosedFor($userId, $day, teamId: $teamId),
             'userId' => $userId->value(),
             'tasks' => array_map(static fn ($execution) => [
                 'id' => $execution->id()->value(),
@@ -239,8 +242,9 @@ class PointsCalendarApiController extends AbstractController
     public function takeBackBonus(string $entryId, Request $request): JsonResponse
     {
         $userId = $this->lookedAfter($request);
+        $teamId = $this->access->adminTeamFor($this->callerId(), $userId, $request->query->get('teamId'));
 
-        if (!$this->ledger->takeBackBonus($userId, Uuid::fromString($entryId))) {
+        if (!$this->ledger->takeBackBonus($userId, Uuid::fromString($entryId), teamId: $teamId)) {
             return $this->json(['message' => 'No such bonus'], 404);
         }
 
@@ -250,15 +254,15 @@ class PointsCalendarApiController extends AbstractController
     /**
      * @return array<string, int>
      */
-    private function earnedPerDay(Uuid $userId, DateTimeImmutable $monday, DateTimeImmutable $nextMonday): array
+    private function earnedPerDay(Uuid $userId, DateTimeImmutable $monday, DateTimeImmutable $nextMonday, ?Uuid $teamId = null): array
     {
         $perDay = array_filter(
-            DailyPoints::perDay($this->executionRepository->findApprovedByUserSince($userId, $monday)),
+            DailyPoints::perDay($this->executionRepository->findApprovedByUserSince($userId, $monday, teamId: $teamId)),
             static fn (string $day) => $day < $nextMonday->format('Y-m-d'),
             ARRAY_FILTER_USE_KEY
         );
 
-        foreach ($this->ledger->perDayBetween($userId, $monday, $nextMonday, [AccountKind::BONUSES]) as $day => $bonus) {
+        foreach ($this->ledger->perDayBetween($userId, $monday, $nextMonday, [AccountKind::BONUSES], teamId: $teamId) as $day => $bonus) {
             $perDay[$day] = ($perDay[$day] ?? 0) + $bonus;
         }
 
@@ -309,9 +313,9 @@ class PointsCalendarApiController extends AbstractController
         return $within->modify('monday this week')->setTime(0, 0);
     }
 
-    private function streakRule(Uuid $userId): ?BonusPointsRule
+    private function streakRule(Uuid $userId, ?Uuid $teamId = null): ?BonusPointsRule
     {
-        foreach ($this->responsibilities->organizationsWhereMay($userId, ResponsibilityType::takeTask()) as $teamId) {
+        foreach ($teamId === null ? [] : [$teamId->value()] as $teamId) {
             foreach ($this->ruleRepository->findActiveByTeamId(Uuid::fromString($teamId)) as $rule) {
                 if ($rule->config()->type() === RuleType::CONSECUTIVE_DAYS) {
                     return $rule;

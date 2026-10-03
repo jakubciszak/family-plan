@@ -12,5 +12,5 @@ use DateTimeImmutable;
  */
 interface ClosedWeeksInterface
 {
-    public function isClosedFor(Uuid $userId, DateTimeImmutable $day): bool;
+    public function isClosedFor(Uuid $userId, DateTimeImmutable $day, ?Uuid $teamId = null): bool;
 }

@@ -10,11 +10,13 @@ import { useAppTheme } from '@/theme/theme-context';
 
 export default function MemberWeeks({
   members,
+  teamId,
   storageKey,
   revision,
   canManage,
 }: {
   members: Member[];
+  teamId?: string;
   storageKey: string;
   revision: number;
   canManage: boolean;
@@ -84,6 +86,7 @@ export default function MemberWeeks({
         .filter((member) => !hidden.includes(member.userId))
         .map((member) => (
           <PointsCalendar
+            teamId={teamId}
             key={member.userId}
             userId={member.userId}
             title={member.userName}

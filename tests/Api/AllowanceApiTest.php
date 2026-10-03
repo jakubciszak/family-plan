@@ -341,12 +341,12 @@ class AllowanceApiTest extends ApiTestCase
     {
         $repository = static::getContainer()->get(PayoutRepositoryInterface::class);
         $clock = new FixedClock(new DateTimeImmutable('2026-01-01'));
-        $awaiting = Payout::offer(Uuid::generate(), $this->child->id(), Money::fromMinorUnits(100), $this->admin->id(), null, $clock);
+        $awaiting = Payout::offer(Uuid::generate(), $this->child->id(), Money::fromMinorUnits(100), $this->admin->id(), null, $clock, teamId: Uuid::fromString($this->teamId));
         $repository->save($awaiting);
 
         for ($i = 0; $i < 51; ++$i) {
             $clock = new FixedClock(new DateTimeImmutable('2026-02-01'));
-            $payout = Payout::offer(Uuid::generate(), $this->child->id(), Money::fromMinorUnits(100), $this->admin->id(), null, $clock);
+            $payout = Payout::offer(Uuid::generate(), $this->child->id(), Money::fromMinorUnits(100), $this->admin->id(), null, $clock, teamId: Uuid::fromString($this->teamId));
             $payout->confirm(Uuid::generate(), $clock);
             $repository->save($payout);
         }
@@ -370,7 +370,7 @@ class AllowanceApiTest extends ApiTestCase
         $this->loginAs($this->admin);
 
         $summary = $this->getJson('/api/allowance/wallet?userId=' . $this->child->id()->value());
-        $this->assertSame(['currency', 'pending', 'paid', 'awaitingConfirmation'], array_keys($summary));
+        $this->assertSame(['currency', 'teamId', 'pending', 'paid', 'awaitingConfirmation'], array_keys($summary));
         $this->assertSame(600, $summary['pending']);
         $this->assertSame(0, $summary['paid']);
 
@@ -544,6 +544,7 @@ class AllowanceApiTest extends ApiTestCase
             Frequency::fromString('daily'),
             ScheduleConfig::daily()
         );
+        $template->assignToTeam(Uuid::fromString($this->teamId));
         static::getContainer()->get(TaskTemplateRepositoryInterface::class)->save($template);
 
         $clock = new FixedClock($on);

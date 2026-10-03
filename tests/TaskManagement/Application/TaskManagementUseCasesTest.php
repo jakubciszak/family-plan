@@ -71,8 +71,13 @@ class TaskManagementUseCasesTest extends TestCase
         );
     }
 
+    private array $testHomes = [];
+
     private function createTeamWithAdmin(\App\Shared\Domain\ValueObject\Uuid $adminId): \App\Shared\Domain\ValueObject\Uuid
     {
+        if (isset($this->testHomes[$adminId->value()])) {
+            return $this->testHomes[$adminId->value()];
+        }
         $organizationId = UuidMother::random();
 
         // Create Person for admin
@@ -92,7 +97,7 @@ class TaskManagementUseCasesTest extends TestCase
         );
         $this->relationshipRepository->save($relationship);
 
-        return $organizationId;
+        return $this->testHomes[$adminId->value()] = $organizationId;
     }
 
     public function testCreateTaskUseCaseCreatesAndPersistsTask(): void
@@ -215,7 +220,7 @@ class TaskManagementUseCasesTest extends TestCase
         TaskAssert::assertTaskWasApprovedAt($approvedTask);
 
         // Verify points were awarded to wallet
-        $wallet = $this->walletRepository->findByUserId($userId);
+        $wallet = $this->walletRepository->findByUserId($userId, $this->createTeamWithAdmin($adminId));
         $this->assertNotNull($wallet);
         $this->assertEquals(PointsMother::medium()->value(), $wallet->balance()->value());
     }
@@ -277,7 +282,7 @@ class TaskManagementUseCasesTest extends TestCase
         $task = $this->taskRepository->findById($taskId);
         TaskAssert::assertTaskIsApproved($task);
 
-        $wallet = $this->walletRepository->findByUserId($userId);
+        $wallet = $this->walletRepository->findByUserId($userId, $this->createTeamWithAdmin($adminId));
         $this->assertEquals(PointsMother::high()->value(), $wallet->balance()->value());
     }
 

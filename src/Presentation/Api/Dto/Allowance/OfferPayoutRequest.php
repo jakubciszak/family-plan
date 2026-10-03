@@ -18,7 +18,10 @@ final readonly class OfferPayoutRequest
         public int $amount,
 
         #[Assert\Length(max: 255)]
-        public ?string $note = null
+        public ?string $note = null,
+
+        #[Assert\Uuid]
+        public ?string $teamId = null
     ) {
     }
 }

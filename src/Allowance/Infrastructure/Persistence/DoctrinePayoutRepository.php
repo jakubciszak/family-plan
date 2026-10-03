@@ -21,18 +21,18 @@ final readonly class DoctrinePayoutRepository implements PayoutRepositoryInterfa
         return $this->entityManager->getRepository(Payout::class)->find($id->value());
     }
 
-    public function awaitingConfirmation(Uuid $userId): array
+    public function awaitingConfirmation(Uuid $userId, ?Uuid $teamId = null): array
     {
         return $this->entityManager->getRepository(Payout::class)->findBy(
-            ['userId' => $userId, 'status' => PayoutStatus::AWAITING_CONFIRMATION],
+            ['userId' => $userId, 'teamId' => $teamId?->value() ?? '', 'status' => PayoutStatus::AWAITING_CONFIRMATION],
             ['offeredAt' => 'ASC']
         );
     }
 
-    public function ofUser(Uuid $userId, ?int $limit = 50): array
+    public function ofUser(Uuid $userId, ?int $limit = 50, ?Uuid $teamId = null): array
     {
         return $this->entityManager->getRepository(Payout::class)->findBy(
-            ['userId' => $userId],
+            ['userId' => $userId, 'teamId' => $teamId?->value() ?? ''],
             ['offeredAt' => 'DESC'],
             $limit
         );

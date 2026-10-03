@@ -23,12 +23,14 @@ use DateTimeImmutable;
 class BonusPointsEvaluatorTest extends IntegrationTestCase
 {
     private BonusPointsEvaluator $evaluator;
+    private Uuid $teamId;
 
     private TaskExecutionRepositoryInterface $executions;
 
     protected function setUp(): void
     {
         parent::setUp();
+        $this->teamId = $this->team($this->user());
 
         $this->executions = $this->service(TaskExecutionRepositoryInterface::class);
         $this->evaluator = new BonusPointsEvaluator($this->executions);
@@ -131,7 +133,7 @@ class BonusPointsEvaluatorTest extends IntegrationTestCase
 
         $rule = BonusPointsRule::create(
             Uuid::generate(),
-            Uuid::generate(),
+            $this->teamId,
             'Trzy w miesiacu',
             'opis',
             Points::fromInt(50),
@@ -149,7 +151,7 @@ class BonusPointsEvaluatorTest extends IntegrationTestCase
 
         $rule = BonusPointsRule::create(
             Uuid::generate(),
-            Uuid::generate(),
+            $this->teamId,
             'Trzy w miesiacu',
             'opis',
             Points::fromInt(50),
@@ -169,7 +171,7 @@ class BonusPointsEvaluatorTest extends IntegrationTestCase
 
         $rule = BonusPointsRule::create(
             Uuid::generate(),
-            Uuid::generate(),
+            $this->teamId,
             'Piętnaście w tygodniu',
             'opis',
             Points::fromInt(5),
@@ -183,7 +185,7 @@ class BonusPointsEvaluatorTest extends IntegrationTestCase
     {
         return BonusPointsRule::create(
             Uuid::generate(),
-            Uuid::generate(),
+            $this->teamId,
             sprintf('%d dni z rzedu', $days),
             'opis',
             Points::fromInt(50),
@@ -202,6 +204,7 @@ class BonusPointsEvaluatorTest extends IntegrationTestCase
             ScheduleConfig::daily()
         );
 
+        $template->assignToTeam($this->teamId);
         $this->service(TaskTemplateRepositoryInterface::class)->save($template);
 
         return $template;

@@ -8,7 +8,6 @@ final readonly class ReopenWeekCommand
 {
     public function __construct(
         public string $userId,
-        public string $weekStart
-    ) {
+        public string $weekStart, public ?string $teamId = null) {
     }
 }

@@ -15,9 +15,18 @@ use Doctrine\ORM\Mapping as ORM;
  */
 #[ORM\Entity]
 #[ORM\Table(name: 'allowance_goals')]
+#[ORM\Index(name: 'idx_allowance_goals_team_user', columns: ['team_id', 'user_id'])]
 #[ORM\Index(columns: ['user_id'])]
 class SavingsGoal
 {
+    #[ORM\Column(type: 'string', length: 36)]
+    private string $teamId = '';
+
+    public function teamId(): ?Uuid
+    {
+        return $this->teamId === '' ? null : Uuid::fromString($this->teamId);
+    }
+
     private function __construct(
         #[ORM\Id]
         #[ORM\Column(type: 'uuid')]
@@ -52,12 +61,16 @@ class SavingsGoal
         string $name,
         Money $target,
         ?DateTimeImmutable $wantedBy,
-        ClockInterface $clock
+        ClockInterface $clock,
+        ?Uuid $teamId = null
     ): self {
         self::assertName($name);
         $target->assertPositive('A goal');
 
-        return new self($id, $userId, trim($name), $target->minorUnits(), $wantedBy?->setTime(0, 0), $clock->now());
+        $entity = new self($id, $userId, trim($name), $target->minorUnits(), $wantedBy?->setTime(0, 0), $clock->now());
+        $entity->teamId = $teamId?->value() ?? '';
+
+        return $entity;
     }
 
     public function adjust(string $name, Money $target, ?DateTimeImmutable $wantedBy): void

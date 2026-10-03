@@ -42,14 +42,14 @@ interface TaskExecutionRepositoryInterface
      *
      * @return TaskExecution[]
      */
-    public function findApprovedByUserSince(Uuid $userId, DateTimeImmutable $since, ?Uuid $taskTemplateId = null): array;
+    public function findApprovedByUserSince(Uuid $userId, DateTimeImmutable $since, ?Uuid $taskTemplateId = null, ?Uuid $teamId = null): array;
 
     /**
      * Count approved executions in the current month for a specific user
      * @param Uuid $userId
      * @return int
      */
-    public function countApprovedInCurrentMonth(Uuid $userId): int;
+    public function countApprovedInCurrentMonth(Uuid $userId, ?Uuid $teamId = null): int;
 
     /**
      * Find approved executions for a specific user, task template and date

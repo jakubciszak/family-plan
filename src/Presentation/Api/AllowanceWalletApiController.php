@@ -48,7 +48,7 @@ class AllowanceWalletApiController extends AbstractController
     #[OA\Response(response: 200, description: 'Own balances or member pending and paid totals, with payouts awaiting confirmation')]
     public function show(Request $request): JsonResponse
     {
-        return $this->json($this->visibleWallet($this->inspected($request)));
+        return $this->json($this->visibleWallet($this->inspected($request), $this->access->teamFor($this->caller(), $this->inspected($request), $request->query->get('teamId'))));
     }
 
     #[Route('/ledger', name: 'ledger', methods: ['GET'])]
@@ -65,7 +65,7 @@ class AllowanceWalletApiController extends AbstractController
             $this->inspected($request),
             $this->day($request->query->get('from')),
             $this->day($request->query->get('to')),
-            min(500, max(1, $request->query->getInt('limit', 100)))
+            min(500, max(1, $request->query->getInt('limit', 100))), teamId: $this->access->teamFor($this->caller(), $this->inspected($request), $request->query->get('teamId'))
         ));
     }
 
@@ -75,16 +75,20 @@ class AllowanceWalletApiController extends AbstractController
     public function income(#[MapRequestPayload] BookingRequest $request): JsonResponse
     {
         $caller = $this->caller();
+        $teamId = $this->access->teamFor($caller, $caller, $request->teamId);
+        if ($teamId === null) {
+            throw new \DomainException('Join a household before managing money');
+        }
 
         $this->commandBus->dispatch(new RecordIncomeCommand(
             Uuid::generate()->value(),
             $caller->value(),
             $request->amount,
             $request->description,
-            $request->on
+            $request->on, $teamId?->value()
         ));
 
-        return $this->json($this->wallet->of($caller), Response::HTTP_CREATED);
+        return $this->json($this->wallet->of($caller, $teamId), Response::HTTP_CREATED);
     }
 
     #[Route('/expenses', name: 'expense', methods: ['POST'])]
@@ -94,16 +98,20 @@ class AllowanceWalletApiController extends AbstractController
     public function expense(#[MapRequestPayload] BookingRequest $request): JsonResponse
     {
         $caller = $this->caller();
+        $teamId = $this->access->teamFor($caller, $caller, $request->teamId);
+        if ($teamId === null) {
+            throw new \DomainException('Join a household before managing money');
+        }
 
         $this->commandBus->dispatch(new RecordExpenseCommand(
             Uuid::generate()->value(),
             $caller->value(),
             $request->amount,
             $request->description,
-            $request->on
+            $request->on, $teamId?->value()
         ));
 
-        return $this->json($this->wallet->of($caller), Response::HTTP_CREATED);
+        return $this->json($this->wallet->of($caller, $teamId), Response::HTTP_CREATED);
     }
 
     #[Route('/payouts', name: 'payouts', methods: ['GET'])]
@@ -122,7 +130,7 @@ class AllowanceWalletApiController extends AbstractController
                     'offeredAt' => $payout->offeredAt()->format('c'),
                     'settledAt' => $payout->settledAt()?->format('c'),
                 ],
-                $this->payouts->ofUser($this->inspected($request))
+                $this->payouts->ofUser($this->inspected($request), teamId: $this->access->teamFor($this->caller(), $this->inspected($request), $request->query->get('teamId')))
             ),
         ]);
     }
@@ -135,17 +143,17 @@ class AllowanceWalletApiController extends AbstractController
     {
         $caller = $this->caller();
         $member = Uuid::fromString($request->userId);
-        $this->access->adminTeamFor($caller, $member);
+        $teamId = $this->access->adminTeamFor($caller, $member, $request->teamId);
 
         $this->commandBus->dispatch(new OfferPayoutCommand(
             Uuid::generate()->value(),
             $member->value(),
             $request->amount,
             $caller->value(),
-            $request->note
+            $request->note, $teamId->value()
         ));
 
-        return $this->json($this->visibleWallet($member), Response::HTTP_CREATED);
+        return $this->json($this->visibleWallet($member, $teamId), Response::HTTP_CREATED);
     }
 
     #[Route('/payouts/{id}/confirm', name: 'confirm_payout', methods: ['POST'])]
@@ -156,9 +164,15 @@ class AllowanceWalletApiController extends AbstractController
     {
         $caller = $this->caller();
 
+        $payout = $this->payouts->find(Uuid::fromString($id));
+        if ($payout === null || !$payout->userId()->equals($caller)) {
+            throw new \DomainException('No such payout is waiting for you');
+        }
+        $this->access->teamFor($caller, $caller, $payout->teamId()?->value());
+
         $this->commandBus->dispatch(new ConfirmPayoutCommand($id, $caller->value()));
 
-        return $this->json($this->wallet->of($caller));
+        return $this->json($this->wallet->of($caller, $payout->teamId()));
     }
 
     #[Route('/payouts/{id}/cancel', name: 'cancel_payout', methods: ['POST'])]
@@ -172,18 +186,18 @@ class AllowanceWalletApiController extends AbstractController
             throw new \DomainException('No such payout');
         }
 
-        $this->access->adminTeamFor($this->caller(), $payout->userId());
+        $this->access->adminTeamFor($this->caller(), $payout->userId(), $payout->teamId()?->value());
 
         $this->commandBus->dispatch(new CancelPayoutCommand($id));
 
-        return $this->json($this->visibleWallet($payout->userId()));
+        return $this->json($this->visibleWallet($payout->userId(), $payout->teamId()));
     }
 
-    private function visibleWallet(Uuid $owner): array
+    private function visibleWallet(Uuid $owner, ?Uuid $teamId = null): array
     {
         return $this->caller()->equals($owner)
-            ? $this->wallet->of($owner)
-            : $this->wallet->payoutsOf($owner);
+            ? $this->wallet->of($owner, $teamId)
+            : $this->wallet->payoutsOf($owner, $teamId);
     }
 
     private function inspected(Request $request): Uuid

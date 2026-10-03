@@ -1,5 +1,5 @@
 import { useFocusEffect } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import {
@@ -40,9 +40,11 @@ export default function AllowanceScreen() {
   const theme = useTheme();
   const ground = useScreenBackground();
 
+  const loadVersion = useRef(0);
   const [weekStart, setWeekStart] = useState(currentMonday);
   const [tab, setTab] = useState<Tab>('settle');
   const [teams, setTeams] = useState<Team[]>([]);
+  const [homes, setHomes] = useState<Team[]>([]);
   const [teamId, setTeamId] = useState<string | null>(null);
 
   const [wallet, setWallet] = useState<Wallet | null>(null);
@@ -63,8 +65,11 @@ export default function AllowanceScreen() {
 
   const load = useCallback(
     async (wantedTeam?: string | null) => {
+      const version = ++loadVersion.current;
       try {
-        const candidates = (await listTeams()).filter((one) => one.role === 'admin');
+        const allTeams = await listTeams();
+        setHomes(allTeams);
+        const candidates = allTeams.filter((one) => one.role === 'admin');
         const crews: Record<string, Member[]> = Object.fromEntries(
           await Promise.all(
             candidates.map(async (one) => [
@@ -77,12 +82,15 @@ export default function AllowanceScreen() {
         setTeams(administered);
 
         if (!administered.length || tab === 'mine') {
+          const home = allTeams.find((one) => one.id === (wantedTeam ?? teamId))?.id ?? allTeams[0]?.id;
+          setTeamId(home ?? null);
           const [mine, wanted, book, thisWeek] = await Promise.all([
-            readWallet(),
-            readGoals(),
-            readLedger(),
-            readWeek(undefined, weekStart),
+            readWallet(undefined, home),
+            readGoals(undefined, home),
+            readLedger(home),
+            readWeek(undefined, weekStart, home),
           ]);
+          if (version !== loadVersion.current) return;
           setWallet(mine);
           setGoals(wanted);
           setLedger(book);
@@ -104,15 +112,16 @@ export default function AllowanceScreen() {
         const balances = await Promise.all(
           children.map(async (one) => ({
             userId: one.userId,
-            week: await readWeek(one.userId, weekStart),
-            wallet: await readPayoutSummary(one.userId),
+            week: await readWeek(one.userId, weekStart, chosen),
+            wallet: await readPayoutSummary(one.userId, chosen),
           })),
         );
+        if (version !== loadVersion.current) return;
         setWeeks(Object.fromEntries(balances.map((one) => [one.userId, one.week])));
         setWallets(Object.fromEntries(balances.map((one) => [one.userId, one.wallet])));
         setError(null);
       } catch {
-        setError(t('errors.generic'));
+        if (version === loadVersion.current) setError(t('errors.generic'));
       }
     },
     [t, teamId, weekStart, tab],
@@ -162,6 +171,15 @@ export default function AllowanceScreen() {
         contentContainerStyle={styles.page}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void refresh()} />}
       >
+        {(!administers || tab === 'mine') && homes.length > 1 ? (
+          <View style={styles.chips}>
+            {homes.map((home) => (
+              <Chip key={home.id} selected={teamId === home.id} onPress={() => { setWallet(null); setGoals(null); setWeek(null); void load(home.id); }}>
+                {home.name}
+              </Chip>
+            ))}
+          </View>
+        ) : null}
         {tab !== 'rules' ? (
           <WeekPicker value={weekStart} onChange={setWeekStart} disabled={busy} />
         ) : null}
@@ -184,7 +202,7 @@ export default function AllowanceScreen() {
                     key={one.id}
                     selected={teamId === one.id}
                     showSelectedCheck
-                    onPress={() => void load(one.id)}
+                    onPress={() => { setWallets({}); setWeeks({}); void load(one.id); }}
                   >
                     {one.name}
                   </Chip>
@@ -195,6 +213,7 @@ export default function AllowanceScreen() {
             {tab === 'mine' ? (
               wallet && goals && week ? (
                 <MyMoney
+                  key={teamId}
                   wallet={wallet}
                   goals={goals}
                   ledger={ledger}
@@ -226,6 +245,7 @@ export default function AllowanceScreen() {
           </>
         ) : wallet && goals && week ? (
           <MyMoney
+                  key={teamId}
             wallet={wallet}
             goals={goals}
             ledger={ledger}

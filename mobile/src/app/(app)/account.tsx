@@ -1,9 +1,10 @@
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ScrollView, StyleSheet } from 'react-native';
-import { Banner, Card, List, TextInput, Text } from 'react-native-paper';
+import { ScrollView, StyleSheet, View } from 'react-native';
+import { Banner, Card, Chip, List, TextInput, Text } from 'react-native-paper';
 
+import { listTeams, type Team } from '@/api/teams';
 import { readCalendar } from '@/api/calendar';
 import apiClient, { ApiError } from '@/api/client';
 import { useAuth } from '@/auth/auth-context';
@@ -18,6 +19,8 @@ export default function AccountScreen() {
   const { user } = useAuth();
   const { own } = usePersonalisation();
   const ground = useScreenBackground();
+  const [homes, setHomes] = useState<Team[]>([]);
+  const [teamId, setTeamId] = useState<string | undefined>();
   const [points, setPoints] = useState<number | null>(null);
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -29,7 +32,12 @@ export default function AccountScreen() {
   useFocusEffect(
     useCallback(() => {
       let active = true;
-      void readCalendar(currentMonday())
+      void listTeams().then((teams) => {
+          if (active) setHomes(teams);
+          const chosen = teams.find((team) => team.id === teamId)?.id ?? teams[0]?.id;
+          if (active) setTeamId(chosen);
+          return readCalendar(currentMonday(), undefined, chosen);
+        })
         .then((week) => {
           if (active) setPoints(week.total);
         })
@@ -39,7 +47,7 @@ export default function AccountScreen() {
       return () => {
         active = false;
       };
-    }, [t]),
+    }, [t, teamId]),
   );
 
   const changePassword = async () => {
@@ -79,6 +87,9 @@ export default function AccountScreen() {
       contentContainerStyle={styles.page}
       keyboardShouldPersistTaps="handled"
     >
+      {homes.length > 1 ? <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+        {homes.map((home) => <Chip key={home.id} selected={home.id === teamId} onPress={() => { setPoints(null); setTeamId(home.id); }}>{home.name}</Chip>)}
+      </View> : null}
       <Card style={styles.card}>
         <Card.Title
           title={own?.nickname || user?.name}

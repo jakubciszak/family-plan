@@ -16,18 +16,18 @@ final readonly class DoctrineMoneyAccountRepository implements MoneyAccountRepos
     {
     }
 
-    public function find(Uuid $userId, AccountKind $kind, ?Uuid $reference = null): ?MoneyAccount
+    public function find(Uuid $userId, AccountKind $kind, ?Uuid $reference = null, ?Uuid $teamId = null): ?MoneyAccount
     {
         return $this->entityManager->getRepository(MoneyAccount::class)->findOneBy([
-            'userId' => $userId,
+            'userId' => $userId, 'teamId' => $teamId?->value() ?? '',
             'kind' => $kind,
             'reference' => $reference?->value() ?? '',
         ]);
     }
 
-    public function ofUser(Uuid $userId): array
+    public function ofUser(Uuid $userId, ?Uuid $teamId = null): array
     {
-        return $this->entityManager->getRepository(MoneyAccount::class)->findBy(['userId' => $userId]);
+        return $this->entityManager->getRepository(MoneyAccount::class)->findBy(['userId' => $userId, 'teamId' => $teamId?->value() ?? '']);
     }
 
     public function save(MoneyAccount $account): void

@@ -22,6 +22,7 @@ import '../styles/allowance.css';
 function Allowance({ user }) {
     const { t } = useTranslation();
     const [tab, setTab] = React.useState(null);
+    const [homes, setHomes] = React.useState([]);
     const [adminTeams, setAdminTeams] = React.useState(null);
     const [teamId, setTeamId] = React.useState(null);
     const [members, setMembers] = React.useState([]);
@@ -56,7 +57,12 @@ function Allowance({ user }) {
             .catch(() => []);
 
         teamService.getTeams()
-            .then((data) => (data.teams || []).filter((team) => team.role === 'admin'))
+            .then((data) => {
+                const all = data.teams || [];
+                setHomes(all);
+                setTeamId((current) => current || all.find((team) => team.role === 'admin')?.id || all[0]?.id || null);
+                return all.filter((team) => team.role === 'admin');
+            })
             .then((administered) => Promise.all(
                 administered.map((team) => membersOf(team.id).then((people) => [team, people.length]))
             ))
@@ -83,36 +89,38 @@ function Allowance({ user }) {
             .then((data) => {
                 const people = (data.members || []).filter((member) => member.role !== 'admin');
                 setMembers(people);
-                setMemberId((current) => current || people[0]?.userId || null);
+                setMemberId((current) => people.some((person) => person.userId === current) ? current : people[0]?.userId || null);
             })
             .catch(() => setMembers([]));
     }, [teamId]);
 
     React.useEffect(() => {
-        if (tab !== 'mine') {
-            return;
-        }
-
-        allowanceService.getWallet().then(setWallet).catch(() => setWallet(null));
-        allowanceService.getLedger().then(setLedger).catch(() => setLedger(null));
-        allowanceService.getGoals().then(setGoals).catch(() => setGoals(null));
-    }, [tab, refresh]);
+        if (tab !== 'mine' || !teamId) return;
+        let active = true;
+        setWallet(null);
+        setGoals(null);
+        setLedger(null);
+        allowanceService.getWallet(undefined, teamId).then((data) => { if (active) setWallet(data); }).catch(() => { if (active) setWallet(null); });
+        allowanceService.getLedger(undefined, {}, teamId).then((data) => { if (active) setLedger(data); }).catch(() => { if (active) setLedger(null); });
+        allowanceService.getGoals(undefined, false, teamId).then((data) => { if (active) setGoals(data); }).catch(() => { if (active) setGoals(null); });
+        return () => { active = false; };
+    }, [tab, refresh, teamId]);
 
     React.useEffect(() => {
-        if (!teamId || tab === 'mine') {
-            return;
-        }
-
-        allowanceService.getRules(teamId).then(setRules).catch(() => setRules(null));
+        if (!teamId || tab === 'mine') return;
+        let active = true;
+        setRules(null);
+        allowanceService.getRules(teamId).then((data) => { if (active) setRules(data); }).catch(() => { if (active) setRules(null); });
+        return () => { active = false; };
     }, [teamId, tab, refresh]);
 
     React.useEffect(() => {
-        if (!memberId || tab !== 'settle') {
-            return;
-        }
-
-        allowanceService.getWallet(memberId).then(setMemberWallet).catch(() => setMemberWallet(null));
-    }, [memberId, tab, refresh]);
+        if (!memberId || tab !== 'settle') return;
+        let active = true;
+        setMemberWallet(null);
+        allowanceService.getWallet(memberId, teamId).then((data) => { if (active) setMemberWallet(data); }).catch(() => { if (active) setMemberWallet(null); });
+        return () => { active = false; };
+    }, [memberId, tab, refresh, teamId]);
 
     const administers = (adminTeams || []).length > 0;
     const tabs = administers ? ['settle', 'rules'] : [];
@@ -153,15 +161,15 @@ function Allowance({ user }) {
 
             {error && <p className="form-error" role="alert">{error}</p>}
 
-            {administers && adminTeams.length > 1 && (
+            {(tab === 'mine' ? homes : adminTeams || []).length > 1 && (
                 <div className="allowance-page__teams" role="group" aria-label={t('allowance.whichTeam')}>
-                    {adminTeams.map((team) => (
+                    {(tab === 'mine' ? homes : adminTeams || []).map((team) => (
                         <button
                             key={team.id}
                             type="button"
                             className={`member-chip${teamId === team.id ? ' is-shown' : ''}`}
                             aria-pressed={teamId === team.id}
-                            onClick={() => { setTeamId(team.id); setMemberId(null); }}
+                            onClick={() => { setDialog(null); setWallet(null); setMemberWallet(null); setGoals(null); setLedger(null); setTeamId(team.id); setMemberId(null); }}
                         >
                             {team.name}
                         </button>
@@ -179,7 +187,7 @@ function Allowance({ user }) {
                     </Section>
 
                     <Section id="weeks" icon="calendar" title={t('allowance.myWeeks')}>
-                        <AllowanceWeek userId={user?.id} refreshToken={refresh} mine />
+                        <AllowanceWeek teamId={teamId} key={teamId} userId={user?.id} refreshToken={refresh} mine />
                     </Section>
 
                     <Section
@@ -235,7 +243,7 @@ function Allowance({ user }) {
                     >
                         <BookingForm
                             kind="income"
-                            onSubmit={(booking) => run(allowanceService.addIncome(booking))}
+                            onSubmit={(booking) => run(allowanceService.addIncome({ ...booking, teamId }))}
                             onCancel={() => setDialog(null)}
                         />
                     </Dialog>
@@ -247,7 +255,7 @@ function Allowance({ user }) {
                     >
                         <BookingForm
                             kind="expense"
-                            onSubmit={(booking) => run(allowanceService.addExpense(booking))}
+                            onSubmit={(booking) => run(allowanceService.addExpense({ ...booking, teamId }))}
                             onCancel={() => setDialog(null)}
                         />
                     </Dialog>
@@ -258,7 +266,7 @@ function Allowance({ user }) {
                         headline={t('allowance.planGoal')}
                     >
                         <GoalForm
-                            onPlan={(goal) => run(allowanceService.planGoal(goal))}
+                            onPlan={(goal) => run(allowanceService.planGoal({ ...goal, teamId }))}
                             onCancel={() => setDialog(null)}
                         />
                     </Dialog>
@@ -285,7 +293,7 @@ function Allowance({ user }) {
                     {memberId && (
                         <>
                             <Section id="member-weeks" icon="calendar" title={t('allowance.memberWeeks')}>
-                            <AllowanceWeek
+                            <AllowanceWeek teamId={teamId} key={teamId}
                                 userId={memberId}
                                 refreshToken={refresh}
                                 renderActions={(week) => (
@@ -295,7 +303,7 @@ function Allowance({ user }) {
                                                 <Button
                                                     variant="filled"
                                                     disabled={!week.isOver}
-                                                    onClick={() => quiet(run(allowanceService.closeWeek(memberId, week.weekStart)))}
+                                                    onClick={() => quiet(run(allowanceService.closeWeek(memberId, week.weekStart, teamId)))}
                                                 >
                                                     {t('allowance.closeWeek')}
                                                 </Button>
@@ -306,7 +314,7 @@ function Allowance({ user }) {
                                         ) : (
                                             <Button
                                                 variant="outlined"
-                                                onClick={() => quiet(run(allowanceService.reopenWeek(memberId, week.weekStart)))}
+                                                onClick={() => quiet(run(allowanceService.reopenWeek(memberId, week.weekStart, teamId)))}
                                             >
                                                 {t('allowance.reopenWeek')}
                                             </Button>
@@ -321,7 +329,7 @@ function Allowance({ user }) {
 
                                 <PayoutForm
                                     wallet={memberWallet}
-                                    onOffer={(payout) => run(allowanceService.offerPayout({ ...payout, userId: memberId }))}
+                                    onOffer={(payout) => run(allowanceService.offerPayout({ ...payout, userId: memberId, teamId }))}
                                 />
                             </Section>
 

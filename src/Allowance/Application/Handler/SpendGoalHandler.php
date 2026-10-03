@@ -37,10 +37,10 @@ final readonly class SpendGoalHandler
             $command->description,
             $goal->id(),
             null,
-            ['goal' => $goal->name()]
+            ['goal' => $goal->name()], teamId: $goal->teamId()
         );
 
-        $goal->noteProgress($this->ledger->balance($goal->userId(), AccountRef::goal($goal->id())), $this->clock);
+        $goal->noteProgress($this->ledger->balance($goal->userId(), AccountRef::goal($goal->id()), teamId: $goal->teamId()), $this->clock);
 
         $this->goals->save($goal);
     }

@@ -85,7 +85,7 @@ export default function MyMoney({ wallet, goals, ledger, week, busy, onChanged }
     setDescription('');
 
     onChanged(() =>
-      kind === 'income' ? addIncome(minor, said, bookedOn) : addExpense(minor, said, bookedOn),
+      kind === 'income' ? addIncome(minor, said, bookedOn, wallet.teamId) : addExpense(minor, said, bookedOn, wallet.teamId),
     );
   };
 
@@ -386,7 +386,7 @@ export default function MyMoney({ wallet, goals, ledger, week, busy, onChanged }
                 setWantedBy('');
 
                 if (target !== null) {
-                  onChanged(() => planGoal(name, target, wantedBy || undefined));
+                  onChanged(() => planGoal(name, target, wantedBy || undefined, wallet.teamId));
                 }
               }}
             >

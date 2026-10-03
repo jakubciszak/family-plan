@@ -312,7 +312,7 @@ async function setupAuthenticatedSession(page, role = 'user') {
   });
 
   // Mock the user points endpoint
-  await page.route('**/api/users/*/points', async route => {
+  await page.route('**/api/users/*/points*', async route => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',

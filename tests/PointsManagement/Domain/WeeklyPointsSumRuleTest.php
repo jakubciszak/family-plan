@@ -30,6 +30,7 @@ final class WeeklyPointsSumRuleTest extends TestCase
     private PointsLedger $ledger;
     private BonusPointsEvaluator $evaluator;
     private Uuid $userId;
+    private Uuid $teamId;
 
     /**
      * @var TaskExecution[]
@@ -41,6 +42,7 @@ final class WeeklyPointsSumRuleTest extends TestCase
         // A Wednesday, so the week has a past and a future
         $this->clock = new FixedClock(new DateTimeImmutable(self::TODAY));
         $this->userId = Uuid::generate();
+        $this->teamId = Uuid::generate();
 
         $accounts = new InMemoryAccountRepository();
         $this->ledger = new PointsLedger(
@@ -111,10 +113,10 @@ final class WeeklyPointsSumRuleTest extends TestCase
         $rule = $this->rule(50, ['tasks']);
         $periodKey = $this->evaluator->periodKey($rule, $this->userId);
 
-        $this->ledger->post($this->userId, AccountKind::BONUSES, 25, EntrySource::BONUS_RULE, 'Bonus', $rule->id(), $periodKey);
-        $this->ledger->post($this->userId, AccountKind::BONUSES, 25, EntrySource::BONUS_RULE, 'Bonus', $rule->id(), $periodKey);
+        $this->ledger->post($this->userId, AccountKind::BONUSES, 25, EntrySource::BONUS_RULE, 'Bonus', $rule->id(), $periodKey, teamId: $this->teamId);
+        $this->ledger->post($this->userId, AccountKind::BONUSES, 25, EntrySource::BONUS_RULE, 'Bonus', $rule->id(), $periodKey, teamId: $this->teamId);
 
-        $this->assertSame(25, $this->ledger->balances($this->userId)[AccountKind::BONUSES->value]);
+        $this->assertSame(25, $this->ledger->balances($this->userId, teamId: $this->teamId)[AccountKind::BONUSES->value]);
     }
 
     /**
@@ -124,7 +126,7 @@ final class WeeklyPointsSumRuleTest extends TestCase
     {
         return BonusPointsRule::create(
             Uuid::generate(),
-            Uuid::generate(),
+            $this->teamId,
             'Tygodniowa zbiórka',
             'Zbierz punkty w ciągu tygodnia',
             Points::fromInt(25),
@@ -147,6 +149,6 @@ final class WeeklyPointsSumRuleTest extends TestCase
 
     private function book(AccountKind $kind, int $amount): void
     {
-        $this->ledger->post($this->userId, $kind, $amount, EntrySource::BONUS_RULE, 'Booked');
+        $this->ledger->post($this->userId, $kind, $amount, EntrySource::BONUS_RULE, 'Booked', teamId: $this->teamId);
     }
 }

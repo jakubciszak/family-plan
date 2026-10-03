@@ -26,7 +26,7 @@ final readonly class CloseGoalHandler
     public function __invoke(CloseGoalCommand $command): void
     {
         $goal = Goals::open($this->goals, $command->goalId);
-        $putAside = $this->ledger->balance($goal->userId(), AccountRef::goal($goal->id()));
+        $putAside = $this->ledger->balance($goal->userId(), AccountRef::goal($goal->id()), teamId: $goal->teamId());
 
         if ($putAside->isPositive()) {
             $this->ledger->transfer(
@@ -38,7 +38,7 @@ final readonly class CloseGoalHandler
                 '',
                 $goal->id(),
                 null,
-                ['goal' => $goal->name()]
+                ['goal' => $goal->name()], teamId: $goal->teamId()
             );
         }
 

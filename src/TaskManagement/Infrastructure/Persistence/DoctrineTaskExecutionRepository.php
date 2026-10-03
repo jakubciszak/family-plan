@@ -116,7 +116,7 @@ final class DoctrineTaskExecutionRepository implements TaskExecutionRepositoryIn
             ->getResult();
     }
 
-    public function findApprovedByUserSince(Uuid $userId, DateTimeImmutable $since, ?Uuid $taskTemplateId = null): array
+    public function findApprovedByUserSince(Uuid $userId, DateTimeImmutable $since, ?Uuid $taskTemplateId = null, ?Uuid $teamId = null): array
     {
         $builder = $this->entityManager->getRepository(TaskExecution::class)
             ->createQueryBuilder('te')
@@ -133,16 +133,23 @@ final class DoctrineTaskExecutionRepository implements TaskExecutionRepositoryIn
                 ->setParameter('templateId', $taskTemplateId->value());
         }
 
+        $builder->join(\App\TaskManagement\Domain\Entity\TaskTemplate::class, 'scope', 'WITH', 'scope.id = te.taskTemplateId');
+        if ($teamId === null) {
+            $builder->andWhere('scope.teamId IS NULL');
+        } else {
+            $builder->andWhere('scope.teamId = :scopeTeam')->setParameter('scopeTeam', $teamId->value());
+        }
+
         return $builder->getQuery()->getResult();
     }
 
-    public function countApprovedInCurrentMonth(Uuid $userId): int
+    public function countApprovedInCurrentMonth(Uuid $userId, ?Uuid $teamId = null): int
     {
         $now = new DateTimeImmutable();
         $startOfMonth = new DateTimeImmutable($now->format('Y-m-01 00:00:00'));
         $endOfMonth = new DateTimeImmutable($now->format('Y-m-t 23:59:59'));
 
-        return (int) $this->entityManager->getRepository(TaskExecution::class)
+        $builder = $this->entityManager->getRepository(TaskExecution::class)
             ->createQueryBuilder('te')
             ->select('COUNT(te.id)')
             ->where('te.assignedUserId = :userId')
@@ -152,9 +159,16 @@ final class DoctrineTaskExecutionRepository implements TaskExecutionRepositoryIn
             ->setParameter('userId', $userId->value())
             ->setParameter('status', ExecutionStatus::APPROVED->value)
             ->setParameter('start', $startOfMonth)
-            ->setParameter('end', $endOfMonth)
-            ->getQuery()
-            ->getSingleScalarResult();
+            ->setParameter('end', $endOfMonth);
+
+        $builder->join(\App\TaskManagement\Domain\Entity\TaskTemplate::class, 'scope', 'WITH', 'scope.id = te.taskTemplateId');
+        if ($teamId === null) {
+            $builder->andWhere('scope.teamId IS NULL');
+        } else {
+            $builder->andWhere('scope.teamId = :scopeTeam')->setParameter('scopeTeam', $teamId->value());
+        }
+
+        return (int) $builder->getQuery()->getSingleScalarResult();
     }
 
     public function findApprovedByUserTemplateAndDate(Uuid $userId, Uuid $taskTemplateId, DateTimeImmutable $date): array

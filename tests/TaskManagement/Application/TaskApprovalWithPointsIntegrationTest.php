@@ -72,8 +72,13 @@ class TaskApprovalWithPointsIntegrationTest extends TestCase
         );
     }
 
+    private array $testHomes = [];
+
     private function createTeamWithAdmin(\App\Shared\Domain\ValueObject\Uuid $adminId): \App\Shared\Domain\ValueObject\Uuid
     {
+        if (isset($this->testHomes[$adminId->value()])) {
+            return $this->testHomes[$adminId->value()];
+        }
         $organizationId = UuidMother::random();
 
         // Create Person for admin
@@ -93,7 +98,7 @@ class TaskApprovalWithPointsIntegrationTest extends TestCase
         );
         $this->relationshipRepository->save($relationship);
 
-        return $organizationId;
+        return $this->testHomes[$adminId->value()] = $organizationId;
     }
 
     public function testCompleteTaskApprovalWorkflowWithPointsAwarding(): void
@@ -141,7 +146,7 @@ class TaskApprovalWithPointsIntegrationTest extends TestCase
         TaskAssert::assertTaskIsCompleted($task);
         
         // And - User has no wallet yet
-        $walletBefore = $this->walletRepository->findByUserId($userId);
+        $walletBefore = $this->walletRepository->findByUserId($userId, $this->createTeamWithAdmin($adminId));
         $this->assertNull($walletBefore);
         
         // When - Admin approves the task
@@ -153,7 +158,7 @@ class TaskApprovalWithPointsIntegrationTest extends TestCase
         TaskAssert::assertTaskIsApproved($approvedTask);
         
         // And - User wallet is created with awarded points
-        $wallet = $this->walletRepository->findByUserId($userId);
+        $wallet = $this->walletRepository->findByUserId($userId, $this->createTeamWithAdmin($adminId));
         $this->assertNotNull($wallet);
         $this->assertEquals($taskPoints, $wallet->balance()->value());
     }
@@ -183,7 +188,7 @@ class TaskApprovalWithPointsIntegrationTest extends TestCase
         $this->createAndApproveTask($task3Id, $userId, $adminId, 20);
         
         // Then - Points accumulate to 100
-        $wallet = $this->walletRepository->findByUserId($userId);
+        $wallet = $this->walletRepository->findByUserId($userId, $this->createTeamWithAdmin($adminId));
         $this->assertEquals(100, $wallet->balance()->value());
     }
 
@@ -237,14 +242,14 @@ class TaskApprovalWithPointsIntegrationTest extends TestCase
         $this->userRepository->save($user);
         
         // Verify no wallet exists
-        $this->assertNull($this->walletRepository->findByUserId($userId));
+        $this->assertNull($this->walletRepository->findByUserId($userId, $this->createTeamWithAdmin($adminId)));
         
         // When - Task is created, completed, and approved
         $taskId = UuidMother::random();
         $this->createAndApproveTask($taskId, $userId, $adminId, 75);
         
         // Then - Wallet is automatically created with points
-        $wallet = $this->walletRepository->findByUserId($userId);
+        $wallet = $this->walletRepository->findByUserId($userId, $this->createTeamWithAdmin($adminId));
         $this->assertNotNull($wallet);
         $this->assertEquals(75, $wallet->balance()->value());
     }
@@ -273,8 +278,8 @@ class TaskApprovalWithPointsIntegrationTest extends TestCase
         $this->createAndApproveTask(UuidMother::random(), $user2Id, $adminId, 20);
         
         // Then - Each user has their own wallet with correct balance
-        $wallet1 = $this->walletRepository->findByUserId($user1Id);
-        $wallet2 = $this->walletRepository->findByUserId($user2Id);
+        $wallet1 = $this->walletRepository->findByUserId($user1Id, $this->createTeamWithAdmin($adminId));
+        $wallet2 = $this->walletRepository->findByUserId($user2Id, $this->createTeamWithAdmin($adminId));
         
         $this->assertEquals(100, $wallet1->balance()->value());
         $this->assertEquals(50, $wallet2->balance()->value());

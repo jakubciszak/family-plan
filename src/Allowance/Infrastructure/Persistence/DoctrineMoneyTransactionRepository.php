@@ -27,12 +27,14 @@ final readonly class DoctrineMoneyTransactionRepository implements MoneyTransact
         return $this->entityManager->getRepository(MoneyTransaction::class)->find($id->value());
     }
 
-    public function ofUser(Uuid $userId, ?DateTimeImmutable $from = null, ?DateTimeImmutable $to = null, int $limit = 100): array
+    public function ofUser(Uuid $userId, ?DateTimeImmutable $from = null, ?DateTimeImmutable $to = null, int $limit = 100, ?Uuid $teamId = null): array
     {
         $query = $this->entityManager->createQueryBuilder()
             ->select('t')
             ->from(MoneyTransaction::class, 't')
             ->where('t.userId = :userId')
+            ->andWhere('t.teamId = :teamId')
+            ->setParameter('teamId', $teamId?->value() ?? '')
             ->setParameter('userId', $userId)
             ->orderBy('t.bookedAt', 'DESC')
             ->setMaxResults($limit);

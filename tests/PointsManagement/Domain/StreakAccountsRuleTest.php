@@ -30,6 +30,7 @@ final class StreakAccountsRuleTest extends TestCase
     private PointsLedger $ledger;
     private BonusPointsEvaluator $evaluator;
     private Uuid $userId;
+    private Uuid $teamId;
 
     /**
      * @var TaskExecution[]
@@ -40,6 +41,7 @@ final class StreakAccountsRuleTest extends TestCase
     {
         $this->clock = new FixedClock(new DateTimeImmutable(self::TODAY));
         $this->userId = Uuid::generate();
+        $this->teamId = Uuid::generate();
 
         $accounts = new InMemoryAccountRepository();
         $this->ledger = new PointsLedger(
@@ -117,9 +119,9 @@ final class StreakAccountsRuleTest extends TestCase
             $keys = $this->evaluator->earnedPeriodKeys($rule, $this->userId);
             $this->assertCount(intdiv($day, 5), $keys);
             foreach ($keys as $key) {
-                $this->ledger->post($this->userId, AccountKind::BONUSES, 5, EntrySource::BONUS_RULE, 'Seria', $rule->id(), $key);
+                $this->ledger->post($this->userId, AccountKind::BONUSES, 5, EntrySource::BONUS_RULE, 'Seria', $rule->id(), $key, teamId: $this->teamId);
             }
-            $this->assertSame(intdiv($day, 5) * 5, $this->ledger->balances($this->userId)['bonuses']);
+            $this->assertSame(intdiv($day, 5) * 5, $this->ledger->balances($this->userId, teamId: $this->teamId)['bonuses']);
         }
         $this->assertSame(['2026-09-01', '2026-09-06', '2026-09-11', '2026-09-16'], $keys);
     }
@@ -131,7 +133,7 @@ final class StreakAccountsRuleTest extends TestCase
     {
         return BonusPointsRule::create(
             Uuid::generate(),
-            Uuid::generate(),
+            $this->teamId,
             'Dni z rzędu',
             'Seria dni z punktami',
             Points::fromInt(100),
@@ -156,7 +158,7 @@ final class StreakAccountsRuleTest extends TestCase
     {
         $this->clock->setTime((new DateTimeImmutable(self::TODAY))->modify($when));
 
-        $this->ledger->post($this->userId, $kind, $amount, EntrySource::BONUS_RULE, 'Test');
+        $this->ledger->post($this->userId, $kind, $amount, EntrySource::BONUS_RULE, 'Test', teamId: $this->teamId);
 
         $this->clock->setTime(new DateTimeImmutable(self::TODAY));
     }

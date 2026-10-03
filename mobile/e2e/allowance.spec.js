@@ -64,3 +64,22 @@ test('administrator zleca wypłatę z notatką', async ({ app, page }) => {
   await expect.poll(() => app.sent('POST', '/api/allowance/payouts').length).toBe(1);
   expect(app.lastSent('POST', '/api/allowance/payouts').body).toMatchObject({ amount: 1500, note: 'Gotówka' });
 });
+
+test('dziecko wybiera dom do odczytu salda i zapisania dochodu', async ({ app, page }) => {
+  app.world.teams[0].role = 'member';
+  app.world.teams[0].name = 'Dom A';
+  app.world.teams.push({ ...app.world.teams[0], id: 'home-b', name: 'Dom B' });
+  await app.signIn();
+  await app.goTo('Kieszonkowe');
+  await page.getByRole('button', { name: 'Dom B', exact: true }).click();
+  for (const path of ['wallet', 'goals', 'ledger', 'weeks']) {
+    await expect.poll(() => app.lastSent('GET', `/api/allowance/${path}`)?.query.teamId).toBe('home-b');
+  }
+  await page.getByRole('button', { name: 'Dopisz dochód' }).click();
+  await app.field('Kwota').fill('10');
+  await app.field('Skąd te pieniądze').fill('Prezent w domu B');
+  await page.getByRole('button', { name: 'Zapisz' }).filter({ visible: true }).last().click();
+  await expect.poll(() => app.lastSent('POST', '/api/allowance/income')?.body.teamId).toBe('home-b');
+  await page.getByRole('button', { name: 'Dom A', exact: true }).click();
+  await expect.poll(() => app.lastSent('GET', '/api/allowance/wallet')?.query.teamId).toBe(app.world.teams[0].id);
+});

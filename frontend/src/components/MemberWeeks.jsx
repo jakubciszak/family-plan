@@ -84,7 +84,7 @@ function MemberWeeks({ teamId, refreshToken }) {
             {members
                 .filter((member) => !hidden.has(member.userId))
                 .map((member) => (
-                    <WeekCalendar
+                    <WeekCalendar teamId={teamId}
                         key={member.userId}
                         userId={member.userId}
                         title={member.userName}

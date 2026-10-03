@@ -22,6 +22,7 @@ final readonly class RecordExpenseHandler
 
     public function __invoke(RecordExpenseCommand $command): void
     {
+        $teamId = $command->teamId === null ? null : \App\Shared\Domain\ValueObject\Uuid::fromString($command->teamId);
         $this->ledger->transfer(
             Uuid::fromString($command->userId),
             AccountRef::available(),
@@ -30,7 +31,7 @@ final readonly class RecordExpenseHandler
             TransactionType::EXPENSE,
             $command->description,
             Uuid::fromString($command->id),
-            BookingDay::from($command->on)
+            BookingDay::from($command->on), teamId: $teamId
         );
     }
 }

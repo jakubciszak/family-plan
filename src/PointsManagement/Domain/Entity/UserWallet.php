@@ -18,18 +18,28 @@ use Doctrine\ORM\Mapping as ORM;
  */
 #[ORM\Entity]
 #[ORM\Table(name: 'user_wallets')]
+#[ORM\Index(name: 'idx_user_wallets_team_user', columns: ['team_id', 'user_id'])]
+#[ORM\UniqueConstraint(name: 'uniq_user_wallets_user_id', columns: ['team_id', 'user_id'])]
 #[ORM\Index(columns: ['user_id'])]
 class UserWallet
 {
     #[ORM\Transient]
     private array $domainEvents = [];
 
+    #[ORM\Column(type: 'string', length: 36)]
+    private string $teamId = '';
+
+    public function teamId(): ?Uuid
+    {
+        return $this->teamId === '' ? null : Uuid::fromString($this->teamId);
+    }
+
     private function __construct(
         #[ORM\Id]
         #[ORM\Column(type: 'uuid')]
         private Uuid $id,
         
-        #[ORM\Column(type: 'uuid', unique: true)]
+        #[ORM\Column(type: 'uuid')]
         private Uuid $userId,
         
         #[ORM\Column(type: 'integer')]
@@ -43,7 +53,7 @@ class UserWallet
     ) {
     }
 
-    public static function create(Uuid $id, Uuid $userId, ClockInterface $clock): self
+    public static function create(Uuid $id, Uuid $userId, ClockInterface $clock, ?Uuid $teamId = null): self
     {
         $now = $clock->now();
         $wallet = new self(
@@ -52,6 +62,8 @@ class UserWallet
             0, // Start with zero balance
             $now
         );
+
+        $wallet->teamId = $teamId?->value() ?? '';
 
         $wallet->record(new UserWalletCreated($id, $userId, $now));
 

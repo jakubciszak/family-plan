@@ -38,7 +38,7 @@ final readonly class ConfirmPayoutHandler
             $payout->amount(),
             TransactionType::PAYOUT,
             $payout->note() ?? '',
-            $payout->id()
+            $payout->id(), teamId: $payout->teamId()
         );
 
         $payout->confirm($transaction->id(), $this->clock);

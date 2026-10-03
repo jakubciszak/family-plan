@@ -11,7 +11,6 @@ final readonly class OfferPayoutCommand
         public string $userId,
         public int $amount,
         public string $offeredBy,
-        public ?string $note
-    ) {
+        public ?string $note, public ?string $teamId = null) {
     }
 }

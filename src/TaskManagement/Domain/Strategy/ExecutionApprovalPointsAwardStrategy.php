@@ -15,7 +15,7 @@ use App\TaskManagement\Domain\Entity\TaskExecution;
  */
 final readonly class ExecutionApprovalPointsAwardStrategy implements ExecutionPointsAwardStrategyInterface
 {
-    public function __construct(private PointsLedger $ledger)
+    public function __construct(private PointsLedger $ledger, private \App\TaskManagement\Domain\Repository\TaskTemplateRepositoryInterface $templates)
     {
     }
 
@@ -27,6 +27,11 @@ final readonly class ExecutionApprovalPointsAwardStrategy implements ExecutionPo
             throw new \DomainException('Task execution has no points assigned');
         }
 
+        $template = $execution->taskTemplateId() === null ? null : $this->templates->findById($execution->taskTemplateId());
+        if ($template?->teamId() === null) {
+            throw new \DomainException('An execution needs a household before points can be booked');
+        }
+
         $name = $execution->name() ? $execution->name()->value() : 'Task execution';
 
         $this->ledger->post(
@@ -36,7 +41,7 @@ final readonly class ExecutionApprovalPointsAwardStrategy implements ExecutionPo
             EntrySource::TASK_EXECUTION,
             sprintf('Task execution approved: %s', $name),
             $execution->id(),
-            'execution'
+            'execution', teamId: $template->teamId()
         );
     }
 }

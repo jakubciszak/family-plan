@@ -16,7 +16,7 @@ interface UserWalletRepositoryInterface
 
     public function findById(Uuid $id): ?UserWallet;
 
-    public function findByUserId(Uuid $userId): ?UserWallet;
+    public function findByUserId(Uuid $userId, ?Uuid $teamId = null): ?UserWallet;
 
     public function delete(UserWallet $wallet): void;
 }

@@ -35,6 +35,7 @@ final class BonusPointsPayoutTest extends TestCase
     private PointsLedger $ledger;
     private BonusPointsPayout $payout;
     private Uuid $userId;
+    private Uuid $teamId;
     private string $settledBefore = '';
 
     /**
@@ -46,7 +47,8 @@ final class BonusPointsPayoutTest extends TestCase
     {
         $this->clock = new FixedClock(new DateTimeImmutable('2026-09-28 19:00:00'));
         $this->userId = Uuid::generate();
-        $teamId = Uuid::generate();
+        $this->teamId = Uuid::generate();
+        $teamId = $this->teamId;
 
         $accounts = new InMemoryAccountRepository();
         $this->ledger = new PointsLedger($accounts, new InMemoryEntryRepository($accounts), new InMemoryUserWalletRepository(), $this->clock);
@@ -96,7 +98,7 @@ final class BonusPointsPayoutTest extends TestCase
 
         $this->payout->settleFor($this->userId);
 
-        $entries = $this->ledger->between($this->userId, new DateTimeImmutable('2026-09-21'), new DateTimeImmutable('2026-10-05'), [AccountKind::BONUSES]);
+        $entries = $this->ledger->between($this->userId, new DateTimeImmutable('2026-09-21'), new DateTimeImmutable('2026-10-05'), [AccountKind::BONUSES], teamId: $this->teamId);
         $this->assertCount(1, $entries);
         $this->assertSame('2026-09-27 18:30', $entries[0]->bookedAt()->format('Y-m-d H:i'));
     }
@@ -173,6 +175,6 @@ final class BonusPointsPayoutTest extends TestCase
      */
     private function bonuses(): array
     {
-        return $this->ledger->perDayBetween($this->userId, new DateTimeImmutable('2026-09-01'), new DateTimeImmutable('2026-10-12'), [AccountKind::BONUSES]);
+        return $this->ledger->perDayBetween($this->userId, new DateTimeImmutable('2026-09-01'), new DateTimeImmutable('2026-10-12'), [AccountKind::BONUSES], teamId: $this->teamId);
     }
 }

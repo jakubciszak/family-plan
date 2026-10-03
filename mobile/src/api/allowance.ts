@@ -9,6 +9,7 @@ export type Payout = {
 };
 
 export type PayoutSummary = {
+  teamId?: string;
   currency: string;
   pending: number;
   paid: number;
@@ -16,6 +17,7 @@ export type PayoutSummary = {
 };
 
 export type Wallet = {
+  teamId?: string;
   currency: string;
   pending: number;
   available: number;
@@ -41,6 +43,7 @@ export type Goal = {
 };
 
 export type Goals = {
+  teamId?: string;
   currency: string;
   weeklyPace: number;
   available: number;
@@ -67,6 +70,7 @@ export type Booking = {
 export const OUTGOING = ['expense', 'goal_allocation', 'goal_spending', 'week_reopened'];
 
 export type Ledger = {
+  teamId?: string;
   currency: string;
   bookings: Booking[];
 };
@@ -88,6 +92,7 @@ export type ExpectedLine = {
 };
 
 export type Week = {
+  teamId?: string;
   weekStart: string;
   currency: string;
   days: WeekDay[];
@@ -131,42 +136,43 @@ export const setRule = (rule: {
 export const removeRule = (teamId: string, pointsAccount: PointsAccount): Promise<unknown> =>
   apiClient.delete(`/api/allowance/rules/${pointsAccount}?teamId=${teamId}`);
 
-export const closeWeek = (userId: string, weekStart: string): Promise<unknown> =>
-  apiClient.post('/api/allowance/weeks/close', { userId, weekStart });
+export const closeWeek = (userId: string, weekStart: string, teamId?: string): Promise<unknown> =>
+  apiClient.post('/api/allowance/weeks/close', { userId, weekStart, teamId });
 
-export const reopenWeek = (userId: string, weekStart: string): Promise<unknown> =>
-  apiClient.post('/api/allowance/weeks/reopen', { userId, weekStart });
+export const reopenWeek = (userId: string, weekStart: string, teamId?: string): Promise<unknown> =>
+  apiClient.post('/api/allowance/weeks/reopen', { userId, weekStart, teamId });
 
-export const offerPayout = (userId: string, amount: number, note?: string): Promise<unknown> =>
-  apiClient.post('/api/allowance/payouts', { userId, amount, note: note || null });
+export const offerPayout = (userId: string, amount: number, note?: string, teamId?: string): Promise<unknown> =>
+  apiClient.post('/api/allowance/payouts', { userId, amount, note: note || null, teamId });
 
-export const readPayoutSummary = (userId: string): Promise<PayoutSummary> =>
-  apiClient.get<PayoutSummary>(`/api/allowance/wallet?userId=${encodeURIComponent(userId)}`);
+export const readPayoutSummary = (userId: string, teamId?: string): Promise<PayoutSummary> =>
+  apiClient.get<PayoutSummary>(`/api/allowance/wallet?userId=${encodeURIComponent(userId)}${teamId ? `&teamId=${teamId}` : ''}`);
 
-export const readWallet = (userId?: string): Promise<Wallet> =>
+export const readWallet = (userId?: string, teamId?: string): Promise<Wallet> =>
   apiClient.get<Wallet>(
-    `/api/allowance/wallet${userId ? `?userId=${encodeURIComponent(userId)}` : ''}`,
+    `/api/allowance/wallet?${new URLSearchParams({ ...(userId ? { userId } : {}), ...(teamId ? { teamId } : {}) })}`,
   );
 
-export const readGoals = (userId?: string): Promise<Goals> =>
+export const readGoals = (userId?: string, teamId?: string): Promise<Goals> =>
   apiClient.get<Goals>(
-    `/api/allowance/goals${userId ? `?userId=${encodeURIComponent(userId)}` : ''}`,
+    `/api/allowance/goals?${new URLSearchParams({ ...(userId ? { userId } : {}), ...(teamId ? { teamId } : {}) })}`,
   );
 
-export const readLedger = (): Promise<Ledger> => apiClient.get<Ledger>('/api/allowance/ledger');
+export const readLedger = (teamId?: string): Promise<Ledger> => apiClient.get<Ledger>(`/api/allowance/ledger${teamId ? `?teamId=${teamId}` : ''}`);
 
-export const readWeek = (userId?: string, weekStart?: string): Promise<Week> => {
+export const readWeek = (userId?: string, weekStart?: string, teamId?: string): Promise<Week> => {
   const query = new URLSearchParams();
+  if (teamId) query.set('teamId', teamId);
   if (userId) query.set('userId', userId);
   if (weekStart) query.set('weekStart', weekStart);
   return apiClient.get<Week>(`/api/allowance/weeks?${query}`);
 };
 
-export const addIncome = (amount: number, description: string, on?: string): Promise<unknown> =>
-  apiClient.post('/api/allowance/income', { amount, description, on });
+export const addIncome = (amount: number, description: string, on?: string, teamId?: string): Promise<unknown> =>
+  apiClient.post('/api/allowance/income', { amount, description, on, teamId });
 
-export const addExpense = (amount: number, description: string, on?: string): Promise<unknown> =>
-  apiClient.post('/api/allowance/expenses', { amount, description, on });
+export const addExpense = (amount: number, description: string, on?: string, teamId?: string): Promise<unknown> =>
+  apiClient.post('/api/allowance/expenses', { amount, description, on, teamId });
 
 export const confirmPayout = (id: string): Promise<unknown> =>
   apiClient.post(`/api/allowance/payouts/${id}/confirm`);
@@ -174,8 +180,8 @@ export const confirmPayout = (id: string): Promise<unknown> =>
 export const cancelPayout = (id: string): Promise<unknown> =>
   apiClient.post(`/api/allowance/payouts/${id}/cancel`);
 
-export const planGoal = (name: string, target: number, wantedBy?: string): Promise<unknown> =>
-  apiClient.post('/api/allowance/goals', { name, target, wantedBy });
+export const planGoal = (name: string, target: number, wantedBy?: string, teamId?: string): Promise<unknown> =>
+  apiClient.post('/api/allowance/goals', { name, target, wantedBy, teamId });
 
 export const putAside = (id: string, amount: number): Promise<unknown> =>
   apiClient.post(`/api/allowance/goals/${id}/put-aside`, { amount });

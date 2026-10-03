@@ -28,7 +28,7 @@ final readonly class TaskApprovalPointsAwardStrategy implements PointsAwardStrat
             EntrySource::TASK_EXECUTION,
             sprintf('Task approved: %s', $task->name()->value()),
             $task->id(),
-            'task'
+            'task', teamId: $task->teamId()
         );
     }
 }
