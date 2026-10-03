@@ -16,6 +16,7 @@ use Doctrine\ORM\Mapping as ORM;
  */
 #[ORM\Entity]
 #[ORM\Table(name: 'allowance_transactions')]
+#[ORM\Index(name: 'idx_allowance_transactions_team_user', columns: ['team_id', 'user_id'])]
 #[ORM\Index(columns: ['user_id', 'booked_at'])]
 class MoneyTransaction
 {

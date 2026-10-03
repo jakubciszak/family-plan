@@ -150,12 +150,12 @@ export const readPayoutSummary = (userId: string, teamId?: string): Promise<Payo
 
 export const readWallet = (userId?: string, teamId?: string): Promise<Wallet> =>
   apiClient.get<Wallet>(
-    `/api/allowance/wallet${userId ? `?userId=${encodeURIComponent(userId)}${teamId ? `&teamId=${teamId}` : ''}` : ''}`,
+    `/api/allowance/wallet?${new URLSearchParams({ ...(userId ? { userId } : {}), ...(teamId ? { teamId } : {}) })}`,
   );
 
 export const readGoals = (userId?: string, teamId?: string): Promise<Goals> =>
   apiClient.get<Goals>(
-    `/api/allowance/goals${userId ? `?userId=${encodeURIComponent(userId)}${teamId ? `&teamId=${teamId}` : ''}` : ''}`,
+    `/api/allowance/goals?${new URLSearchParams({ ...(userId ? { userId } : {}), ...(teamId ? { teamId } : {}) })}`,
   );
 
 export const readLedger = (teamId?: string): Promise<Ledger> => apiClient.get<Ledger>(`/api/allowance/ledger${teamId ? `?teamId=${teamId}` : ''}`);

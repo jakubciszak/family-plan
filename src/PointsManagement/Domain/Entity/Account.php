@@ -13,6 +13,7 @@ use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity]
 #[ORM\Table(name: 'points_accounts')]
+#[ORM\Index(name: 'idx_points_accounts_team_user', columns: ['team_id', 'user_id'])]
 #[ORM\UniqueConstraint(name: 'uniq_account_user_kind', columns: ['team_id', 'user_id', 'kind'])]
 #[ORM\Index(columns: ['user_id'])]
 class Account

@@ -370,7 +370,7 @@ class AllowanceApiTest extends ApiTestCase
         $this->loginAs($this->admin);
 
         $summary = $this->getJson('/api/allowance/wallet?userId=' . $this->child->id()->value());
-        $this->assertSame(['currency', 'pending', 'paid', 'awaitingConfirmation'], array_keys($summary));
+        $this->assertSame(['currency', 'teamId', 'pending', 'paid', 'awaitingConfirmation'], array_keys($summary));
         $this->assertSame(600, $summary['pending']);
         $this->assertSame(0, $summary['paid']);
 

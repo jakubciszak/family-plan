@@ -18,6 +18,7 @@ use Doctrine\ORM\Mapping as ORM;
  */
 #[ORM\Entity]
 #[ORM\Table(name: 'allowance_payouts')]
+#[ORM\Index(name: 'idx_allowance_payouts_team_user', columns: ['team_id', 'user_id'])]
 #[ORM\Index(columns: ['user_id', 'status'])]
 class Payout
 {

@@ -7,7 +7,7 @@ A family administrator must never be promoted to `ROLE_ADMIN` to configure their
 | Operation | Allowed caller |
 | --- | --- |
 | List accounts and read basic profiles | Own account and current family members; service administrators can read all accounts |
-| Read a user's aggregate points through `/api/users/{id}/points` | Self, administrator of a shared family, or service administrator |
+| Read a user's household points through `/api/users/{id}/points` | Self, administrator of a shared family, or service administrator |
 | Create an account through `/api/users` or reset its password | Service administrator only; family membership alone is insufficient |
 | Register an account | Public registration, always `ROLE_USER` |
 | Read bonus rules | Current members of the owning family |
@@ -28,7 +28,6 @@ role escalation, password resets, direct object access, mutations, creator spoof
 assignment and notifications. Existing service-administrator tests preserve the
 explicit administration workflow.
 
-This change secures the existing API boundaries. It does not introduce child accounts,
-a password-recovery flow, new family roles or separate financial ledgers per household.
-Points and allowance remain user-level aggregates: a shared child's accounting across
-multiple homes requires the separate product/model change described in the roadmap.
+Points and allowance are scoped to a household. Administrators can inspect only the
+households they administer; members choose their own household. See
+[household accounting](HOUSEHOLD_ACCOUNTING.md) for the API contract and migration.

@@ -18,7 +18,8 @@ use Doctrine\ORM\Mapping as ORM;
  */
 #[ORM\Entity]
 #[ORM\Table(name: 'user_wallets')]
-#[ORM\UniqueConstraint(name: 'uniq_wallet_team_user', columns: ['team_id', 'user_id'])]
+#[ORM\Index(name: 'idx_user_wallets_team_user', columns: ['team_id', 'user_id'])]
+#[ORM\UniqueConstraint(name: 'uniq_user_wallets_user_id', columns: ['team_id', 'user_id'])]
 #[ORM\Index(columns: ['user_id'])]
 class UserWallet
 {

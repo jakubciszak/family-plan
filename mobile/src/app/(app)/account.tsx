@@ -87,6 +87,9 @@ export default function AccountScreen() {
       contentContainerStyle={styles.page}
       keyboardShouldPersistTaps="handled"
     >
+      {homes.length > 1 ? <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+        {homes.map((home) => <Chip key={home.id} selected={home.id === teamId} onPress={() => { setPoints(null); setTeamId(home.id); }}>{home.name}</Chip>)}
+      </View> : null}
       <Card style={styles.card}>
         <Card.Title
           title={own?.nickname || user?.name}

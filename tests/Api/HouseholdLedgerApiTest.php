@@ -131,6 +131,35 @@ final class HouseholdLedgerApiTest extends ApiTestCase
         $this->getJson('/api/allowance/wallet');
     }
 
+    public function testBonusConditionsCountOnlyTheRulesHousehold(): void
+    {
+        $this->week = (new DateTimeImmutable('today'))->format('Y-m-d');
+        $this->earn($this->homeA, 10);
+        $this->earn($this->homeB, 40);
+        $evaluator = static::getContainer()->get(\App\TaskManagement\Domain\Service\BonusPointsEvaluator::class);
+        foreach ([$this->homeA, $this->homeB] as $home) {
+            $rule = \App\TaskManagement\Domain\Entity\BonusPointsRule::create(Uuid::generate(), Uuid::fromString($home['teamId']), 'Monthly', '', Points::fromInt(5), \App\TaskManagement\Domain\ValueObject\RuleConfig::monthlyTaskCount(2));
+            $this->assertFalse($evaluator->isRuleMet($rule, $this->child->id()));
+        }
+        $rule = \App\TaskManagement\Domain\Entity\BonusPointsRule::create(Uuid::generate(), Uuid::fromString($this->homeA['teamId']), 'Weekly', '', Points::fromInt(5), \App\TaskManagement\Domain\ValueObject\RuleConfig::weeklyPointsSum(20, ['tasks']));
+        $this->assertFalse($evaluator->isRuleMet($rule, $this->child->id()));
+        $this->earn($this->homeA, 10);
+        $this->assertTrue($evaluator->isRuleMet($rule, $this->child->id()));
+    }
+
+    public function testClosingOneHomeDoesNotLockTaskBookingInTheOther(): void
+    {
+        $a = $this->earn($this->homeA, 10);
+        $b = $this->earn($this->homeB, 40);
+        $day = (new DateTimeImmutable('sunday last week'))->format('Y-m-d');
+        $this->loginAs($this->homeA['user']);
+        $this->assertSame(200, $this->postJson('/api/allowance/weeks/close', $this->weekPayload($this->homeA))->getStatusCode());
+        $this->assertSame(400, $this->postJson('/api/task-templates/' . $a->id()->value() . '/book', ['userId' => $this->child->id()->value(), 'doneOn' => $day])->getStatusCode());
+        $this->loginAs($this->homeB['user']);
+        $this->assertSame(201, $this->postJson('/api/task-templates/' . $b->id()->value() . '/book', ['userId' => $this->child->id()->value(), 'doneOn' => $day])->getStatusCode());
+        $this->assertSame(80, $this->getJson('/api/users/' . $this->child->id()->value() . '/points?teamId=' . $this->homeB['teamId'])['balance']);
+    }
+
     private function home(): array
     {
         $parent = User::create(Uuid::generate(), 'Parent', Email::fromString(Uuid::generate()->value() . '@example.com'), password_hash('password123', PASSWORD_BCRYPT), Role::USER);
@@ -155,7 +184,7 @@ final class HouseholdLedgerApiTest extends ApiTestCase
         static::getContainer()->get(PointsLedger::class)->post($this->child->id(), AccountKind::BONUSES, $points, EntrySource::BONUS_RULE, 'Bonus', Uuid::generate(), 'week', new DateTimeImmutable($this->week), Uuid::fromString($home['teamId']));
     }
 
-    private function earn(array $home, int $points): void
+    private function earn(array $home, int $points): TaskTemplate
     {
         $team = Uuid::fromString($home['teamId']);
         $on = new DateTimeImmutable($this->week);
@@ -167,5 +196,6 @@ final class HouseholdLedgerApiTest extends ApiTestCase
         $execution->approve($home['user']->id(), $clock);
         static::getContainer()->get(TaskExecutionRepositoryInterface::class)->save($execution);
         static::getContainer()->get(PointsLedger::class)->post($this->child->id(), AccountKind::TASKS, $points, EntrySource::TASK_EXECUTION, 'Task', $execution->id(), 'execution', $on, $team);
+        return $template;
     }
 }

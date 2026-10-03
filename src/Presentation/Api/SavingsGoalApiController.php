@@ -59,6 +59,9 @@ class SavingsGoalApiController extends AbstractController
     {
         $caller = $this->caller();
         $teamId = $this->access->teamFor($caller, $caller, $request->teamId);
+        if ($teamId === null) {
+            throw new \DomainException('Join a household before managing money');
+        }
 
         $this->commandBus->dispatch(new PlanGoalCommand(
             Uuid::generate()->value(),

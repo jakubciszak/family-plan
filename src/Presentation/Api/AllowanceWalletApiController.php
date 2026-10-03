@@ -76,6 +76,9 @@ class AllowanceWalletApiController extends AbstractController
     {
         $caller = $this->caller();
         $teamId = $this->access->teamFor($caller, $caller, $request->teamId);
+        if ($teamId === null) {
+            throw new \DomainException('Join a household before managing money');
+        }
 
         $this->commandBus->dispatch(new RecordIncomeCommand(
             Uuid::generate()->value(),
@@ -96,6 +99,9 @@ class AllowanceWalletApiController extends AbstractController
     {
         $caller = $this->caller();
         $teamId = $this->access->teamFor($caller, $caller, $request->teamId);
+        if ($teamId === null) {
+            throw new \DomainException('Join a household before managing money');
+        }
 
         $this->commandBus->dispatch(new RecordExpenseCommand(
             Uuid::generate()->value(),
