@@ -10,7 +10,7 @@ final readonly class GoalRequest
 {
     public function __construct(
         #[Assert\NotBlank]
-        #[Assert\Length(max: 120, #[Assert\Uuid] public ?string $teamId = null)]
+        #[Assert\Length(max: 120)]
         public string $name,
 
         #[Assert\NotNull]
@@ -18,7 +18,10 @@ final readonly class GoalRequest
         public int $target,
 
         #[Assert\Date]
-        public ?string $wantedBy = null
+        public ?string $wantedBy = null,
+
+        #[Assert\Uuid]
+        public ?string $teamId = null
     ) {
     }
 }

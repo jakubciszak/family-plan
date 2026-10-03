@@ -10,7 +10,7 @@ final readonly class BookingRequest
 {
     public function __construct(
         #[Assert\NotNull]
-        #[Assert\Range(min: 1, max: 100000000, #[Assert\Uuid] public ?string $teamId = null)]
+        #[Assert\Range(min: 1, max: 100000000)]
         public int $amount,
 
         #[Assert\NotBlank]
@@ -18,7 +18,10 @@ final readonly class BookingRequest
         public string $description,
 
         #[Assert\Date]
-        public ?string $on = null
+        public ?string $on = null,
+
+        #[Assert\Uuid]
+        public ?string $teamId = null
     ) {
     }
 }

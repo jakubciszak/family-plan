@@ -14,11 +14,14 @@ final readonly class OfferPayoutRequest
         public string $userId,
 
         #[Assert\NotNull]
-        #[Assert\Range(min: 1, max: 100000000, #[Assert\Uuid] public ?string $teamId = null)]
+        #[Assert\Range(min: 1, max: 100000000)]
         public int $amount,
 
         #[Assert\Length(max: 255)]
-        public ?string $note = null
+        public ?string $note = null,
+
+        #[Assert\Uuid]
+        public ?string $teamId = null
     ) {
     }
 }

@@ -544,6 +544,7 @@ class AllowanceApiTest extends ApiTestCase
             Frequency::fromString('daily'),
             ScheduleConfig::daily()
         );
+        $template->assignToTeam(Uuid::fromString($this->teamId));
         static::getContainer()->get(TaskTemplateRepositoryInterface::class)->save($template);
 
         $clock = new FixedClock($on);
