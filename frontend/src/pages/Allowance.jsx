@@ -95,29 +95,31 @@ function Allowance({ user }) {
     }, [teamId]);
 
     React.useEffect(() => {
-        if (tab !== 'mine' || !teamId) {
-            return;
-        }
-
-        allowanceService.getWallet(undefined, teamId).then(setWallet).catch(() => setWallet(null));
-        allowanceService.getLedger(undefined, {}, teamId).then(setLedger).catch(() => setLedger(null));
-        allowanceService.getGoals(undefined, false, teamId).then(setGoals).catch(() => setGoals(null));
+        if (tab !== 'mine' || !teamId) return;
+        let active = true;
+        setWallet(null);
+        setGoals(null);
+        setLedger(null);
+        allowanceService.getWallet(undefined, teamId).then((data) => { if (active) setWallet(data); }).catch(() => { if (active) setWallet(null); });
+        allowanceService.getLedger(undefined, {}, teamId).then((data) => { if (active) setLedger(data); }).catch(() => { if (active) setLedger(null); });
+        allowanceService.getGoals(undefined, false, teamId).then((data) => { if (active) setGoals(data); }).catch(() => { if (active) setGoals(null); });
+        return () => { active = false; };
     }, [tab, refresh, teamId]);
 
     React.useEffect(() => {
-        if (!teamId || tab === 'mine') {
-            return;
-        }
-
-        allowanceService.getRules(teamId).then(setRules).catch(() => setRules(null));
+        if (!teamId || tab === 'mine') return;
+        let active = true;
+        setRules(null);
+        allowanceService.getRules(teamId).then((data) => { if (active) setRules(data); }).catch(() => { if (active) setRules(null); });
+        return () => { active = false; };
     }, [teamId, tab, refresh]);
 
     React.useEffect(() => {
-        if (!memberId || tab !== 'settle') {
-            return;
-        }
-
-        allowanceService.getWallet(memberId, teamId).then(setMemberWallet).catch(() => setMemberWallet(null));
+        if (!memberId || tab !== 'settle') return;
+        let active = true;
+        setMemberWallet(null);
+        allowanceService.getWallet(memberId, teamId).then((data) => { if (active) setMemberWallet(data); }).catch(() => { if (active) setMemberWallet(null); });
+        return () => { active = false; };
     }, [memberId, tab, refresh, teamId]);
 
     const administers = (adminTeams || []).length > 0;
@@ -167,7 +169,7 @@ function Allowance({ user }) {
                             type="button"
                             className={`member-chip${teamId === team.id ? ' is-shown' : ''}`}
                             aria-pressed={teamId === team.id}
-                            onClick={() => { setWallet(null); setMemberWallet(null); setGoals(null); setLedger(null); setTeamId(team.id); setMemberId(null); }}
+                            onClick={() => { setDialog(null); setWallet(null); setMemberWallet(null); setGoals(null); setLedger(null); setTeamId(team.id); setMemberId(null); }}
                         >
                             {team.name}
                         </button>

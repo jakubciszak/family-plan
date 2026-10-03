@@ -1,5 +1,5 @@
 import { useFocusEffect } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import {
@@ -40,6 +40,7 @@ export default function AllowanceScreen() {
   const theme = useTheme();
   const ground = useScreenBackground();
 
+  const loadVersion = useRef(0);
   const [weekStart, setWeekStart] = useState(currentMonday);
   const [tab, setTab] = useState<Tab>('settle');
   const [teams, setTeams] = useState<Team[]>([]);
@@ -64,6 +65,7 @@ export default function AllowanceScreen() {
 
   const load = useCallback(
     async (wantedTeam?: string | null) => {
+      const version = ++loadVersion.current;
       try {
         const allTeams = await listTeams();
         setHomes(allTeams);
@@ -88,6 +90,7 @@ export default function AllowanceScreen() {
             readLedger(home),
             readWeek(undefined, weekStart, home),
           ]);
+          if (version !== loadVersion.current) return;
           setWallet(mine);
           setGoals(wanted);
           setLedger(book);
@@ -113,11 +116,12 @@ export default function AllowanceScreen() {
             wallet: await readPayoutSummary(one.userId, chosen),
           })),
         );
+        if (version !== loadVersion.current) return;
         setWeeks(Object.fromEntries(balances.map((one) => [one.userId, one.week])));
         setWallets(Object.fromEntries(balances.map((one) => [one.userId, one.wallet])));
         setError(null);
       } catch {
-        setError(t('errors.generic'));
+        if (version === loadVersion.current) setError(t('errors.generic'));
       }
     },
     [t, teamId, weekStart, tab],
@@ -209,6 +213,7 @@ export default function AllowanceScreen() {
             {tab === 'mine' ? (
               wallet && goals && week ? (
                 <MyMoney
+                  key={teamId}
                   wallet={wallet}
                   goals={goals}
                   ledger={ledger}
@@ -240,6 +245,7 @@ export default function AllowanceScreen() {
           </>
         ) : wallet && goals && week ? (
           <MyMoney
+                  key={teamId}
             wallet={wallet}
             goals={goals}
             ledger={ledger}

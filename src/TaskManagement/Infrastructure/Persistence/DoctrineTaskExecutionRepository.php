@@ -133,9 +133,11 @@ final class DoctrineTaskExecutionRepository implements TaskExecutionRepositoryIn
                 ->setParameter('templateId', $taskTemplateId->value());
         }
 
-        if ($teamId !== null) {
-            $builder->join(\App\TaskManagement\Domain\Entity\TaskTemplate::class, 'scope', 'WITH', 'scope.id = te.taskTemplateId')
-                ->andWhere('scope.teamId = :scopeTeam')->setParameter('scopeTeam', $teamId->value());
+        $builder->join(\App\TaskManagement\Domain\Entity\TaskTemplate::class, 'scope', 'WITH', 'scope.id = te.taskTemplateId');
+        if ($teamId === null) {
+            $builder->andWhere('scope.teamId IS NULL');
+        } else {
+            $builder->andWhere('scope.teamId = :scopeTeam')->setParameter('scopeTeam', $teamId->value());
         }
 
         return $builder->getQuery()->getResult();
@@ -159,9 +161,11 @@ final class DoctrineTaskExecutionRepository implements TaskExecutionRepositoryIn
             ->setParameter('start', $startOfMonth)
             ->setParameter('end', $endOfMonth);
 
-        if ($teamId !== null) {
-            $builder->join(\App\TaskManagement\Domain\Entity\TaskTemplate::class, 'scope', 'WITH', 'scope.id = te.taskTemplateId')
-                ->andWhere('scope.teamId = :scopeTeam')->setParameter('scopeTeam', $teamId->value());
+        $builder->join(\App\TaskManagement\Domain\Entity\TaskTemplate::class, 'scope', 'WITH', 'scope.id = te.taskTemplateId');
+        if ($teamId === null) {
+            $builder->andWhere('scope.teamId IS NULL');
+        } else {
+            $builder->andWhere('scope.teamId = :scopeTeam')->setParameter('scopeTeam', $teamId->value());
         }
 
         return (int) $builder->getQuery()->getSingleScalarResult();

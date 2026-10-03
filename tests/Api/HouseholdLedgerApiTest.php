@@ -119,6 +119,8 @@ final class HouseholdLedgerApiTest extends ApiTestCase
 
     public function testAmbiguousSelectionAndRemovedMembershipAreRejected(): void
     {
+        $this->earn($this->homeA, 10);
+        $this->earn($this->homeB, 40);
         $this->loginAs($this->child);
         foreach (['/api/points/week', '/api/allowance/wallet', '/api/allowance/weeks', '/api/allowance/goals', '/api/allowance/ledger'] as $url) {
             $this->client->request('GET', $url);
@@ -129,6 +131,8 @@ final class HouseholdLedgerApiTest extends ApiTestCase
         $this->client->request('GET', '/api/allowance/wallet?teamId=' . $this->homeA['teamId']);
         $this->assertResponseStatusCodeSame(403);
         $this->getJson('/api/allowance/wallet');
+        static::getContainer()->get(TeamMembershipRepositoryInterface::class)->leave(Uuid::fromString($this->homeB['teamId']), $this->child->id());
+        $this->assertSame(0, $this->getJson('/api/points/week?weekStart=' . $this->week)['total']);
     }
 
     public function testBonusConditionsCountOnlyTheRulesHousehold(): void
