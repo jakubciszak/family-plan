@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\TaskManagement\Application\Service;
 
+use App\Shared\Domain\Clock\ClockInterface;
+use App\TaskManagement\Domain\Entity\TaskExecution;
 use App\TaskManagement\Domain\Entity\TaskTemplate;
 use App\TaskManagement\Domain\ValueObject\ExecutionStatus;
 use App\TaskManagement\Domain\Repository\TaskExecutionRepositoryInterface;
@@ -12,19 +14,22 @@ use DateTimeImmutable;
 final readonly class TaskTypePool
 {
     public function __construct(
-        private TaskExecutionRepositoryInterface $executionRepository
+        private TaskExecutionRepositoryInterface $executionRepository,
+        private ClockInterface $clock
     ) {
     }
 
     public function remaining(TaskTemplate $template): ?int
     {
-        return $template->executionLimit()->remaining($this->takenInCurrentWindow($template));
+        return $template->executionLimit()->remaining($this->takenInWindowOf($template, $this->clock->now()));
     }
 
-    public function hasRoomForAnother(TaskTemplate $template): bool
+    public function hasRoomForAnother(TaskTemplate $template, ?DateTimeImmutable $day = null): bool
     {
         return !$this->hasUnfinishedAssignment($template)
-            && $template->executionLimit()->allowsAnother($this->takenInCurrentWindow($template));
+            && $template->executionLimit()->allowsAnother(
+                $this->takenInWindowOf($template, $day ?? $this->clock->now())
+            );
     }
 
     private function hasUnfinishedAssignment(TaskTemplate $template): bool
@@ -42,18 +47,19 @@ final readonly class TaskTypePool
         return false;
     }
 
-    public function takenInCurrentWindow(TaskTemplate $template): int
+    public function takenInWindowOf(TaskTemplate $template, DateTimeImmutable $day): int
     {
         $executions = $this->executionRepository->findByRoutineTask($template->id());
-        $windowStart = $template->executionLimit()->windowStart(new DateTimeImmutable());
+        $limit = $template->executionLimit();
+        $window = $limit->windowStart($day);
 
-        if ($windowStart === null) {
+        if ($window === null) {
             return count($executions);
         }
 
         return count(array_filter(
             $executions,
-            static fn ($execution) => $execution->createdAt() >= $windowStart
+            static fn (TaskExecution $execution) => $limit->windowStart($execution->earnedOn()) == $window
         ));
     }
 }

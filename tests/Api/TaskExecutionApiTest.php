@@ -120,7 +120,7 @@ class TaskExecutionApiTest extends ApiTestCase
             'userId' => $context['member']->id()->value(),
         ]), 201);
         static::getContainer()->get(\Doctrine\ORM\EntityManagerInterface::class)->getConnection()->executeStatement(
-            "UPDATE task_executions SET created_at = :yesterday WHERE id = :id",
+            "UPDATE task_executions SET created_at = :yesterday, scheduled_for = :yesterday WHERE id = :id",
             ['yesterday' => (new \DateTimeImmutable('yesterday'))->format('Y-m-d H:i:s'), 'id' => $taken['id']]
         );
 
@@ -904,6 +904,66 @@ class TaskExecutionApiTest extends ApiTestCase
             (new \DateTimeImmutable())->format('Y-m-d'),
             substr($booked['completedAt'], 0, 10)
         );
+    }
+
+    public function testABackloggedTaskDoesNotSpendTodaysRun(): void
+    {
+        $context = $this->teamWithMember();
+        $type = $this->defineType($context['teamId'], ['type' => 'per_day', 'count' => 1]);
+
+        $this->assertJsonResponse(
+            $this->postJson("/api/task-templates/{$type['id']}/book", [
+                'userId' => $context['member']->id()->value(),
+                'doneOn' => (new \DateTimeImmutable('yesterday'))->format('Y-m-d'),
+            ]),
+            Response::HTTP_CREATED
+        );
+
+        $this->assertSame(1, $this->typeById($type['id'])['remaining']);
+        $this->assertTrue($this->typeById($type['id'])['isAvailable']);
+
+        $this->loginAs($context['member']);
+        $this->assertJsonResponse(
+            $this->postJson("/api/task-templates/{$type['id']}/take", []),
+            Response::HTTP_CREATED
+        );
+    }
+
+    public function testABackloggedTaskIsRefusedOnADayWhoseRunsAreAlreadySpent(): void
+    {
+        $context = $this->teamWithMember();
+        $type = $this->defineType($context['teamId'], ['type' => 'per_day', 'count' => 1]);
+        $yesterday = (new \DateTimeImmutable('yesterday'))->format('Y-m-d');
+        $book = fn () => $this->postJson("/api/task-templates/{$type['id']}/book", [
+            'userId' => $context['member']->id()->value(),
+            'doneOn' => $yesterday,
+        ]);
+
+        $this->assertJsonResponse($book(), Response::HTTP_CREATED);
+
+        $this->assertSame(Response::HTTP_CONFLICT, $book()->getStatusCode());
+    }
+
+    public function testFinishingATakenTaskOnAnEarlierDayGivesTodaysRunBack(): void
+    {
+        $context = $this->teamWithMember();
+        $type = $this->defineType($context['teamId'], ['type' => 'per_day', 'count' => 1]);
+
+        $this->loginAs($context['member']);
+        $taken = $this->assertJsonResponse(
+            $this->postJson("/api/task-templates/{$type['id']}/take", []),
+            Response::HTTP_CREATED
+        );
+        $this->assertSame(0, $this->typeById($type['id'])['remaining']);
+
+        $this->assertJsonResponse(
+            $this->postJson("/api/task-executions/{$taken['id']}/complete", [
+                'doneOn' => (new \DateTimeImmutable('yesterday'))->format('Y-m-d'),
+            ]),
+            Response::HTTP_OK
+        );
+
+        $this->assertSame(1, $this->typeById($type['id'])['remaining']);
     }
 
     public function testATaskCannotBeWrittenDownIntoASettledWeek(): void

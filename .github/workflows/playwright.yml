@@ -9,7 +9,7 @@ on:
 jobs:
   test-calendar-real-api:
     name: Calendar with real API
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     env:
       APP_ENV: test
@@ -47,7 +47,7 @@ jobs:
   test-mocked:
     name: Mocked E2E Tests
     timeout-minutes: 60
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     
     steps:
     - uses: actions/checkout@v4

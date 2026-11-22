@@ -128,10 +128,10 @@ class TaskExecutionApiController extends AbstractController
     #[OA\Response(response: 403, description: 'Caller does not administer this member')]
     public function book(string $id, Request $request): JsonResponse
     {
-        $template = $this->available($id);
+        $doneOn = $this->doneOn($request);
+        $template = $this->available($id, $doneOn);
         $teamId = $this->teamOf($template);
         $member = $this->memberFrom($request, $teamId);
-        $doneOn = $this->doneOn($request);
 
         if ($doneOn !== null && $this->closedWeeks->isClosedFor($member, $doneOn)) {
             throw new \DomainException('That week has already been settled, so nothing more can be booked into it');
@@ -512,7 +512,7 @@ class TaskExecutionApiController extends AbstractController
     /**
      * @return string[]
      */
-    private function available(string $templateId): TaskTemplate
+    private function available(string $templateId, ?DateTimeImmutable $day = null): TaskTemplate
     {
         $template = $this->taskTemplateRepository->findById(Uuid::fromString($templateId));
 
@@ -524,7 +524,7 @@ class TaskExecutionApiController extends AbstractController
             throw new ConflictHttpException('This task type is no longer available');
         }
 
-        if (!$this->pool->hasRoomForAnother($template)) {
+        if (!$this->pool->hasRoomForAnother($template, $day)) {
             throw new ConflictHttpException('This task type is already assigned or has no runs left');
         }
 
@@ -557,7 +557,7 @@ class TaskExecutionApiController extends AbstractController
     {
         return $this->entityManager->wrapInTransaction(function () use ($template, $member, $scheduledFor): TaskExecution {
             $this->entityManager->refresh($template, LockMode::PESSIMISTIC_WRITE);
-            $this->available($template->id()->value());
+            $this->available($template->id()->value(), $scheduledFor);
 
             $execution = TaskExecution::takeFromTemplate(
                 Uuid::generate(),
