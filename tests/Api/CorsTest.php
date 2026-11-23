@@ -205,6 +205,8 @@ class CorsTest extends WebTestCase
             $adminData['id']
         );
         $commandBus->dispatch($createTeamCommand);
+        $client->loginUser($container->get(\App\UserManagement\Domain\Repository\UserRepositoryInterface::class)
+            ->findById(\App\Shared\Domain\ValueObject\Uuid::fromString($adminData['id'])));
 
         // Create a task
         $taskData = [

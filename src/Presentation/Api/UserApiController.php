@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Presentation\Api;
 
+use App\TeamManagement\Domain\Repository\TeamMembershipRepositoryInterface;
+use App\UserManagement\Domain\ValueObject\Email;
 use App\PointsManagement\Domain\Repository\UserWalletRepositoryInterface;
 use App\PointsManagement\Domain\Service\PointsLedger;
 use App\Presentation\Api\Dto\User\ResetPasswordRequest;
@@ -25,6 +27,7 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 #[Route('/api/users', name: 'api_user_')]
 #[OA\Tag(name: 'Users')]
+#[IsGranted('ROLE_USER')]
 class UserApiController extends AbstractController
 {
     public function __construct(
@@ -32,14 +35,15 @@ class UserApiController extends AbstractController
         private readonly CreateUserHandler $createUserHandler,
         private readonly UserWalletRepositoryInterface $userWalletRepository,
         private readonly PointsLedger $ledger,
-        private readonly ResetUserPasswordHandler $resetUserPassword
+        private readonly ResetUserPasswordHandler $resetUserPassword,
+        private readonly TeamMembershipRepositoryInterface $memberships
     ) {
     }
 
     #[Route('', name: 'list', methods: ['GET'])]
     #[OA\Get(
         path: '/api/users',
-        summary: 'List all users',
+        summary: 'List family members, or all accounts for a service administrator',
         tags: ['Users']
     )]
     #[OA\Response(
@@ -64,7 +68,12 @@ class UserApiController extends AbstractController
     )]
     public function list(): JsonResponse
     {
-        $users = $this->userRepository->findAll();
+        $users = $this->isGranted('ROLE_ADMIN')
+            ? $this->userRepository->findAll()
+            : array_values(array_filter(array_map(
+                fn (Uuid $id): ?User => $this->userRepository->findById($id),
+                $this->visibleUserIds()
+            )));
 
         return $this->json([
             'users' => array_map(fn(User $user) => $this->serializeUser($user), $users),
@@ -101,6 +110,7 @@ class UserApiController extends AbstractController
             ]
         )
     )]
+    #[IsGranted('ROLE_ADMIN')]
     public function create(Request $request): JsonResponse
     {
         $data = json_decode($request->getContent(), true);
@@ -157,6 +167,7 @@ class UserApiController extends AbstractController
     )]
     public function get(string $id): JsonResponse
     {
+        $this->assertMayRead($id);
         $user = $this->userRepository->findById(Uuid::fromString($id));
 
         if (!$user) {
@@ -201,6 +212,7 @@ class UserApiController extends AbstractController
     )]
     public function getPoints(string $id): JsonResponse
     {
+        $this->assertMayRead($id, true);
         $user = $this->userRepository->findById(Uuid::fromString($id));
 
         if (!$user) {
@@ -251,6 +263,40 @@ class UserApiController extends AbstractController
         ($this->resetUserPassword)(new ResetUserPasswordCommand($id, $request->newPassword));
 
         return $this->json(['message' => 'Password reset successfully']);
+    }
+
+    private function callerId(): Uuid
+    {
+        return $this->userRepository->findByEmail(
+            Email::fromString($this->getUser()->getUserIdentifier())
+        )->id();
+    }
+
+    /** @return array<string, Uuid> */
+    private function visibleUserIds(bool $managedOnly = false): array
+    {
+        $caller = $this->callerId();
+        $ids = [$caller->value() => $caller];
+        foreach ($this->memberships->ofUser($caller) as $membership) {
+            if ($managedOnly && !$membership->isAdmin()) {
+                continue;
+            }
+            foreach ($this->memberships->ofTeam($membership->teamId()) as $member) {
+                $ids[$member->userId()->value()] = $member->userId();
+            }
+        }
+
+        return $ids;
+    }
+
+    private function assertMayRead(string $id, bool $managedOnly = false): void
+    {
+        if (!Uuid::isValid($id)) {
+            throw $this->createNotFoundException('User not found');
+        }
+        if (!$this->isGranted('ROLE_ADMIN') && !isset($this->visibleUserIds($managedOnly)[Uuid::fromString($id)->value()])) {
+            throw $this->createNotFoundException('User not found');
+        }
     }
 
     private function serializeUser(User $user): array

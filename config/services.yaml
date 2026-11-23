@@ -183,7 +183,6 @@ services:
     App\Presentation\Api\BonusPointsRuleApiController:
         arguments:
             $commandBus: '@command.bus'
-            $queryBus: '@query.bus'
 
     App\Presentation\Api\StatusChangeRuleApiController:
         arguments:

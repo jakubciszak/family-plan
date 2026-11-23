@@ -10,12 +10,11 @@ use App\TaskManagement\Application\BonusRule\Command\ActivateBonusPointsRuleComm
 use App\TaskManagement\Application\BonusRule\Command\CreateBonusPointsRuleCommand;
 use App\TaskManagement\Application\BonusRule\Command\DeactivateBonusPointsRuleCommand;
 use App\TaskManagement\Application\BonusRule\Command\UpdateBonusPointsRuleCommand;
-use App\TaskManagement\Application\BonusRule\Query\FindBonusPointsRuleByIdQuery;
-use App\TaskManagement\Application\BonusRule\Query\GetAllBonusPointsRulesQuery;
 use App\TaskManagement\Domain\Entity\BonusPointsRule;
 use App\Presentation\Api\Dto\BonusRule\CreateBonusRuleRequest;
 use App\Presentation\Api\Dto\BonusRule\UpdateBonusRuleRequest;
 use App\TaskManagement\Domain\Repository\BonusPointsRuleRepositoryInterface;
+use App\TaskManagement\Domain\Repository\TaskTemplateRepositoryInterface;
 use App\TeamManagement\Domain\Exception\UnauthorizedTeamActionException;
 use App\TeamManagement\Domain\Repository\TeamMembershipRepositoryInterface;
 use App\UserManagement\Domain\Repository\UserRepositoryInterface;
@@ -28,7 +27,6 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
 use Symfony\Component\Messenger\Exception\HandlerFailedException;
 use Symfony\Component\Messenger\MessageBusInterface;
-use Symfony\Component\Messenger\Stamp\HandledStamp;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
@@ -39,10 +37,10 @@ class BonusPointsRuleApiController extends AbstractController
 {
     public function __construct(
         private readonly MessageBusInterface $commandBus,
-        private readonly MessageBusInterface $queryBus,
         private readonly UserRepositoryInterface $userRepository,
         private readonly TeamMembershipRepositoryInterface $memberships,
-        private readonly BonusPointsRuleRepositoryInterface $ruleRepository
+        private readonly BonusPointsRuleRepositoryInterface $ruleRepository,
+        private readonly TaskTemplateRepositoryInterface $templates
     ) {
     }
 
@@ -137,12 +135,7 @@ class BonusPointsRuleApiController extends AbstractController
     )]
     public function get(string $id): JsonResponse
     {
-        $rule = $this->queryBus->dispatch(new FindBonusPointsRuleByIdQuery($id))
-            ->last(HandledStamp::class)->getResult();
-
-        if ($rule === null) {
-            return $this->json(['error' => 'Rule not found'], Response::HTTP_NOT_FOUND);
-        }
+        $rule = $this->accessibleRule($id);
 
         return $this->json($this->serializeRule($rule));
     }
@@ -182,6 +175,7 @@ class BonusPointsRuleApiController extends AbstractController
         #[MapRequestPayload] CreateBonusRuleRequest $request
     ): JsonResponse {
         $this->assertTeamAdmin(Uuid::fromString($request->teamId));
+        $this->assertTemplateScope($request->ruleConfig, Uuid::fromString($request->teamId));
 
         foreach ($request->ruleConfig['accounts'] ?? [] as $account) {
             if (!is_string($account) || AccountKind::tryFrom($account) === null) {
@@ -291,6 +285,9 @@ class BonusPointsRuleApiController extends AbstractController
         string $id,
         #[MapRequestPayload] UpdateBonusRuleRequest $request
     ): JsonResponse {
+        $rule = $this->accessibleRule($id, true);
+        $this->assertTemplateScope($request->ruleConfig, $rule->teamId());
+
         $command = new UpdateBonusPointsRuleCommand(
             $id,
             $request->name,
@@ -334,6 +331,7 @@ class BonusPointsRuleApiController extends AbstractController
     )]
     public function activate(string $id): JsonResponse
     {
+        $this->accessibleRule($id, true);
         $this->commandBus->dispatch(new ActivateBonusPointsRuleCommand($id));
 
         return $this->json(['message' => 'Rule activated successfully']);
@@ -357,9 +355,37 @@ class BonusPointsRuleApiController extends AbstractController
     )]
     public function deactivate(string $id): JsonResponse
     {
+        $this->accessibleRule($id, true);
         $this->commandBus->dispatch(new DeactivateBonusPointsRuleCommand($id));
 
         return $this->json(['message' => 'Rule deactivated successfully']);
+    }
+
+    private function accessibleRule(string $id, bool $manage = false): BonusPointsRule
+    {
+        $rule = Uuid::isValid($id) ? $this->ruleRepository->findById(Uuid::fromString($id)) : null;
+        if ($rule === null || !$this->memberships->isMember($this->currentUserId(), $rule->teamId())) {
+            throw $this->createNotFoundException('Rule not found');
+        }
+        if ($manage) {
+            $this->assertTeamAdmin($rule->teamId());
+        }
+
+        return $rule;
+    }
+
+    private function assertTemplateScope(array $config, Uuid $teamId): void
+    {
+        $id = $config['taskTemplateId'] ?? null;
+        if ($id === null) {
+            return;
+        }
+        $template = is_string($id) && Uuid::isValid($id)
+            ? $this->templates->findById(Uuid::fromString($id))
+            : null;
+        if ($template === null || ($template->teamId() === null || !$teamId->equals($template->teamId()))) {
+            throw $this->createNotFoundException('Task type not found in this team');
+        }
     }
 
     private function serializeRule(BonusPointsRule $rule): array

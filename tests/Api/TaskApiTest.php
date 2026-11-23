@@ -168,6 +168,8 @@ class TaskApiTest extends ApiTestCase
         // Create team B with admin B
         $contextB = $this->createTeamAndAdmin();
 
+        // Each family is configured by its authenticated administrator.
+        $this->loginAs($contextA['user']);
         // Create task in team A
         $taskDataA = [
             'name' => 'Team A Task',
@@ -179,6 +181,7 @@ class TaskApiTest extends ApiTestCase
         ];
         $this->postJson('/api/tasks', $taskDataA);
 
+        $this->loginAs($contextB['user']);
         // Create task in team B
         $taskDataB = [
             'name' => 'Team B Task',
@@ -213,6 +216,8 @@ class TaskApiTest extends ApiTestCase
         // Create team B with admin B
         $contextB = $this->createTeamAndAdmin();
 
+        // Each family is configured by its authenticated administrator.
+        $this->loginAs($contextA['user']);
         // Create task in team A
         $taskDataA = [
             'name' => 'Team A Task',
@@ -225,6 +230,7 @@ class TaskApiTest extends ApiTestCase
         $responseA = $this->postJson('/api/tasks', $taskDataA);
         $createdTaskA = $this->assertJsonResponse($responseA, 201);
 
+        $this->loginAs($contextB['user']);
         // Create task in team B
         $taskDataB = [
             'name' => 'Team B Task',

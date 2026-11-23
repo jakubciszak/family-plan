@@ -10,7 +10,6 @@ use App\TaskManagement\Application\Command\AssignTaskCommand;
 use App\TaskManagement\Application\Command\CompleteTaskCommand;
 use App\TaskManagement\Application\Command\CreateTaskCommand;
 use App\TaskManagement\Application\Query\FindTaskByIdQuery;
-use App\TaskManagement\Application\Query\GetAllTasksQuery;
 use App\TaskManagement\Application\Query\GetTasksByUserTeamsQuery;
 use App\TaskManagement\Domain\Entity\Task;
 use App\TaskManagement\Domain\Repository\TaskRepositoryInterface;
@@ -27,9 +26,11 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Component\Messenger\Stamp\HandledStamp;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 #[Route('/api/tasks', name: 'api_task_')]
 #[OA\Tag(name: 'Tasks')]
+#[IsGranted('ROLE_USER')]
 class TaskApiController extends AbstractController
 {
     public function __construct(
@@ -85,22 +86,6 @@ class TaskApiController extends AbstractController
         $user = $this->getUser();
         $teamId = $request->query->get('teamId');
 
-        // If no user is authenticated, return all tasks or filter by teamId if provided
-        // (for backward compatibility with tests)
-        // In production, authentication middleware should be enforced
-        if (!$user) {
-            if ($teamId) {
-                // Filter by specific team
-                $tasks = $this->taskRepository->findByTeamId(Uuid::fromString($teamId));
-            } else {
-                $tasks = $this->queryBus->dispatch(new GetAllTasksQuery())->last(HandledStamp::class)->getResult();
-            }
-
-            return $this->json([
-                'tasks' => array_map(fn(Task $task) => $this->serializeTask($task), $tasks),
-            ]);
-        }
-
         $userId = $user->getUserIdentifier();
         $userEntity = $this->userRepository->findByEmail(\App\UserManagement\Domain\ValueObject\Email::fromString($userId));
 
@@ -127,14 +112,13 @@ class TaskApiController extends AbstractController
     #[OA\RequestBody(
         required: true,
         content: new OA\JsonContent(
-            required: ['name', 'points', 'frequency', 'teamId', 'createdBy'],
+            required: ['name', 'points', 'frequency', 'teamId'],
             properties: [
                 new OA\Property(property: 'name', type: 'string', minLength: 1, maxLength: 255, example: 'Clean the kitchen'),
                 new OA\Property(property: 'description', type: 'string', example: 'Wash dishes and mop floor'),
                 new OA\Property(property: 'points', type: 'integer', minimum: 0, maximum: 1000, example: 50),
                 new OA\Property(property: 'frequency', type: 'string', enum: ['once', 'daily', 'weekly', 'monthly'], example: 'daily'),
                 new OA\Property(property: 'teamId', type: 'string', format: 'uuid', example: '550e8400-e29b-41d4-a716-446655440001'),
-                new OA\Property(property: 'createdBy', type: 'string', format: 'uuid', example: '550e8400-e29b-41d4-a716-446655440002'),
                 new OA\Property(property: 'assignedUserId', type: 'string', format: 'uuid', nullable: true, example: '550e8400-e29b-41d4-a716-446655440003')
             ]
         )
@@ -163,8 +147,13 @@ class TaskApiController extends AbstractController
             return $this->json(['error' => 'teamId is required'], Response::HTTP_BAD_REQUEST);
         }
 
-        if (empty($data['createdBy'])) {
-            return $this->json(['error' => 'createdBy is required'], Response::HTTP_BAD_REQUEST);
+        $actor = Uuid::fromString($this->currentUserId());
+        $teamId = Uuid::fromString($data['teamId']);
+        if (!$this->memberships->isAdmin($actor, $teamId)) {
+            throw new UnauthorizedTaskActionException('Only team admins create tasks');
+        }
+        if (!empty($data['assignedUserId']) && !$this->memberships->isMember(Uuid::fromString($data['assignedUserId']), $teamId)) {
+            throw new UnauthorizedTaskActionException('The assignee must belong to the team');
         }
 
         $id = Uuid::generate()->value();
@@ -174,7 +163,7 @@ class TaskApiController extends AbstractController
             $data['description'] ?? '',
             $data['points'] ?? 0,
             $data['frequency'] ?? 'once',
-            $data['createdBy'],
+            $actor->value(),
             $data['teamId'],
             $data['assignedUserId'] ?? null
         );
@@ -238,25 +227,7 @@ class TaskApiController extends AbstractController
             return $this->json(['error' => 'Task not found'], Response::HTTP_NOT_FOUND);
         }
 
-        $user = $this->getUser();
-
-        // If user is authenticated, check team membership
-        if ($user) {
-            $userId = $user->getUserIdentifier();
-            $userEntity = $this->userRepository->findByEmail(\App\UserManagement\Domain\ValueObject\Email::fromString($userId));
-
-            if ($userEntity && $task->teamId() !== null) {
-                // Check if user has access to this task (is member of the task's team)
-                $userTasks = $this->queryBus->dispatch(
-                    new GetTasksByUserTeamsQuery($userEntity->id()->value(), $task->teamId()->value())
-                )->last(HandledStamp::class)->getResult();
-
-                // If the query returns empty, user is not a member of the team
-                if (empty($userTasks)) {
-                    return $this->json(['error' => 'Task not found'], Response::HTTP_NOT_FOUND);
-                }
-            }
-        }
+        $this->assertTaskMember($this->taskEntity($id));
 
         return $this->json($this->serializeTask($task));
     }
@@ -300,6 +271,7 @@ class TaskApiController extends AbstractController
     )]
     public function complete(string $id, Request $request): JsonResponse
     {
+        $this->assertTaskMember($this->taskEntity($id));
         $command = new CompleteTaskCommand($id, $this->currentUserId());
         $this->commandBus->dispatch($command);
 
@@ -479,6 +451,7 @@ class TaskApiController extends AbstractController
         $actor = Uuid::fromString($this->currentUserId());
         $teamId = $task->teamId();
 
+        $this->assertTaskMember($task);
         $isTeamAdmin = $teamId !== null && $this->memberships->isAdmin($actor, $teamId);
         $isAssignee = $task->assignedUserId() !== null && $task->assignedUserId()->equals($actor);
 
@@ -492,6 +465,13 @@ class TaskApiController extends AbstractController
         return $this->json($this->serializeTask(
             $this->queryBus->dispatch(new FindTaskByIdQuery($id))->last(HandledStamp::class)->getResult()
         ));
+    }
+
+    private function assertTaskMember(\App\TaskManagement\Domain\Entity\Task $task): void
+    {
+        if ($task->teamId() === null || !$this->memberships->isMember(Uuid::fromString($this->currentUserId()), $task->teamId())) {
+            throw $this->createNotFoundException('Task not found');
+        }
     }
 
     private function currentUserId(): string

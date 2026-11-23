@@ -183,7 +183,16 @@ class TaskExecutionApiController extends AbstractController
         return $this->json([
             'executions' => array_values(array_map(
                 fn (TaskExecution $execution) => $this->serialize($execution),
-                $this->executionRepository->findByAssignedUser($member)
+                array_filter(
+                    $this->executionRepository->findByAssignedUser($member),
+                    function (TaskExecution $execution): bool {
+                        $templateId = $execution->taskTemplateId();
+                        $template = $templateId === null ? null : $this->taskTemplateRepository->findById($templateId);
+
+                        return $template?->teamId() !== null
+                            && $this->memberships->isAdmin($this->callerId(), $template->teamId());
+                    }
+                )
             )),
         ]);
     }
@@ -357,6 +366,10 @@ class TaskExecutionApiController extends AbstractController
     public function abandon(string $id): JsonResponse
     {
         $execution = $this->execution($id);
+
+        if (!$this->memberships->isMember($this->callerId(), $this->teamOf($this->templateOf($execution)))) {
+            throw new UnauthorizedTaskActionException('Only current team members can give a task back');
+        }
 
         if (!$this->isAssignedToCaller($execution) && !$this->carriesAssignment($execution)) {
             throw new UnauthorizedTaskActionException('Only the person who took the task or a team admin can give it back');
